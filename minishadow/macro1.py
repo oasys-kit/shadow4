@@ -2,7 +2,8 @@ import numpy
 
 from conicset import conicset
 from shrot import shrot
-
+from shtranslation import shtranslation
+from conicintercept import conicintercept
 
 def calculate_source(iwrite=0):
     import Shadow
@@ -22,7 +23,7 @@ def calculate_source(iwrite=0):
     oe0.F_PHOT = 0
     oe0.HDIV1 = 5e-06
     oe0.HDIV2 = 5e-06
-    oe0.NPOINT = 50000
+    oe0.NPOINT = 500
     oe0.PH1 = 1000.0
 
     #Run SHADOW to create the source
@@ -90,9 +91,12 @@ a = calculate_source(iwrite=0)
 a1 = shrot(a,alpha,axis=2,rad=1)
 
 # a2= shrot(a1,theta,axis=1,/rad)
+
+a2= shrot(a1,theta,axis=1,rad=1)
+
 # a3= shtranslation(a2,[0D,-p*cos(theta),p*sin(theta)])
 
-
+a3= shtranslation(a2,[0.0,-p*numpy.cos(theta),p*numpy.sin(theta)])
 
 # ;
 #
@@ -107,7 +111,6 @@ x1 = numpy.array(a.getshcol([1,2,3]))
 v1 = numpy.array(a.getshcol([4,5,6]))
 flag = numpy.array(a.getshonecol(10))
 
-print(">>>>>>",x1.shape)
 # ;
 #
 # ; calculates x2,v2,flag
@@ -120,6 +123,22 @@ print(">>>>>>",x1.shape)
 #   flag[kk]=iflag
 # ENDFOR
 #
+
+
+x2 = x1.copy()
+v2 = v1.copy()
+
+for kk in range(flag.size):
+    t,iflag = conicintercept(ccc,x1[:,kk],v1[:,kk],flag)
+    # print ('kk,t,iflag: ',kk,t,flag)
+    x2[:,kk] = x1[:,kk] + v1[:,kk] * t
+    flag[kk] = iflag
+
+
+
+
+
+
 # ;
 # ; Calculates the normal at each intercept [see shadow's normal.F]
 # ;
