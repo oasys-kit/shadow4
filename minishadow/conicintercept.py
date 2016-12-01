@@ -1,4 +1,7 @@
-def conicintercept(CCC,XIN,VIN,keep=0):
+
+import numpy
+
+def conicintercept(CCC,XIN1,VIN1,keep=0):
 
 # FUNCTION conicintercept,ccc,xIn1,vIn1,iflag,keep=keep
 #
@@ -121,11 +124,15 @@ def conicintercept(CCC,XIN,VIN,keep=0):
 #       		  + CCC[9-1]*XIN[3-1,*]  $
 #       		  + CCC[10-1]
 
+
+
+    XIN = XIN1.T
+    VIN = VIN1.T
+
     if XIN.shape==(3,):
         XIN.shape = (3,1)
     if VIN.shape==(3,):
         VIN.shape = (3,1)
-
 
     AA 	=       CCC[1-1]*VIN[1-1,:]**2  \
                     + CCC[2-1]*VIN[2-1,:]**2  \
@@ -147,7 +154,7 @@ def conicintercept(CCC,XIN,VIN,keep=0):
                     + CCC[8-1] * VIN[2-1,:]    \
                     + CCC[9-1] * VIN[3-1,:]
 
-    CC 	=       CCC[1-1] * XIN[1-1,:]**2    \
+    CC 	=             CCC[1-1] * XIN[1-1,:]**2    \
                     + CCC[2-1] * XIN[2-1,:]**2    \
                     + CCC[3-1] * XIN[3-1,:]**2    \
                     + CCC[4-1] * XIN[2-1,:] * XIN[1-1,:]    \
@@ -158,7 +165,7 @@ def conicintercept(CCC,XIN,VIN,keep=0):
                     + CCC[9-1] * XIN[3-1,:]    \
                     + CCC[10-1]
 
-    return 0.0,0
+
 # ;C
 # ;C Solve now the second deg. equation **
 # ;C
@@ -173,11 +180,62 @@ def conicintercept(CCC,XIN,VIN,keep=0):
 #          TPAR2 = AA*0.0D0
 #          IFLAG = Long(AA*0)+1L
 #
+
+    DENOM = AA*0.0
+    DETER = AA*0.0
+    TPAR1 = AA*0.0
+    TPAR2 = AA*0.0
+    IFLAG = numpy.ones(AA.size) # int(AA*0)+1
+
+
 # ; normal case
 #          iTest1 = where(ABS(AA) GT 1.0D-15)
-#          IF itest1[0] NE -1 THEN BEGIN
+
+    itest1 = numpy.argwhere( numpy.abs(AA) > 1e-15)
+
+    if len(itest1) > 0:
+
+        DENOM[itest1] = 0.5 / AA[itest1]
+        DETER[itest1] = BB[itest1]**2 - CC[itest1] * AA[itest1] * 4
+
+        TMP = DETER[itest1]
+
+        ibad = numpy.argwhere(TMP < 0)
+        if len(ibad) == 0:
+            # print('CONICINTERCEPT: Warning. Discriminant LT 0',len(ibad))
+            IFLAG[itest1[ibad]] = -1
+
+        igood = numpy.argwhere(TMP >= 0)
+        if len(igood) > 0:
+            itmp = itest1[igood]
+            TPAR1[itmp] = -(BB[itmp] + numpy.sqrt(DETER[itmp])) * DENOM[itmp]
+            TPAR2[itmp] = -(BB[itmp] - numpy.sqrt(DETER[itmp])) * DENOM[itmp]
+
+            # CASE keep OF
+            # 0: TPAR	=   TPAR1>TPAR2
+            # 1: TPAR	=   TPAR1<TPAR2
+            # 2: TPAR	=   TPAR1
+            # 3: TPAR	=   TPAR2
+            # else: TPAR = TPAR1
+            # ENDCASE
+
+            if keep == 0:
+                TPAR = numpy.maximum(TPAR1,TPAR2)
+            elif keep == 1:
+                TPAR = numpy.minimum(TPAR1,TPAR2)
+            elif keep == 2:
+                TPAR = TPAR1
+            elif keep == 3:
+                TPAR = TPAR2
+            else:
+                TPAR = TPAR1
+
+
+    # print("XIN",XIN,"VIN",VIN,"a,b,c: ",AA,BB,CC,TPAR)
+
+# IF itest1[0] NE -1 THEN BEGIN
 # ;print,'>>conicIntercept: conic ',N_Elements(iTest1)
-# 	   DENOM[iTest1] = 0.5D0/AA[iTest1]
+# 	         DENOM[iTest1] = 0.5D0/AA[iTest1]
 #
 #            DETER[iTest1] = BB[iTest1]^2 - CC[iTest1]*AA[iTest1]*4
 #
@@ -185,27 +243,31 @@ def conicintercept(CCC,XIN,VIN,keep=0):
 #            iBad = Where(TMP LT 0)
 #            IF iBad[0] NE -1 THEN BEGIN
 #       	     Print,'CONICINTERCEPT: Warning. Discriminant LT 0',N_ELEMENTS(iBad)
-# 	     iFlag[itest1[iBad]] = -1
+# 	             iFlag[itest1[iBad]] = -1
 #            ENDIF
 #
 #            iGood = Where(TMP GE 0)
 #            IF iGood[0] NE -1 THEN BEGIN
 #              iTmp = iTest1[iGood]
-# 	     TPAR1[iTmp] = -(BB[iTmp] + SQRT(DETER[iTmp]))*DENOM[iTmp]
-# 	     TPAR2[iTmp] = -(BB[iTmp] - SQRT(DETER[iTmp]))*DENOM[iTmp]
+# 	           TPAR1[iTmp] = -(BB[iTmp] + SQRT(DETER[iTmp]))*DENOM[iTmp]
+# 	           TPAR2[iTmp] = -(BB[iTmp] - SQRT(DETER[iTmp]))*DENOM[iTmp]
 #
-# ;help,keep
+# ;            help,keep
 #              CASE keep OF
-#      	       0: TPAR	=   TPAR1>TPAR2
-#      	       1: TPAR	=   TPAR1<TPAR2
-#      	       2: TPAR	=   TPAR1
-#      	       3: TPAR	=   TPAR2
-#                else: TPAR = TPAR1
+#      	           0: TPAR	=   TPAR1>TPAR2
+#      	           1: TPAR	=   TPAR1<TPAR2
+#      	           2: TPAR	=   TPAR1
+#      	           3: TPAR	=   TPAR2
+#                    else: TPAR = TPAR1
 #              ENDCASE
 #            ENDIF
 #
-#          ENDIF
+# ENDIF
 #
+
+
+
+
 # ; linear equation
 #          iTest1 = where(AA EQ 0.0D0 AND BB NE 0.0D0)
 #          IF itest1[0] NE -1 THEN BEGIN
@@ -232,3 +294,5 @@ def conicintercept(CCC,XIN,VIN,keep=0):
 #      	RETURN,TPAR
 #
 #      	END
+
+    return TPAR,IFLAG

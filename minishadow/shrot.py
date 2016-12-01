@@ -103,23 +103,21 @@ def shrot(a0,theta1,axis=1,file=None,rad=0):
 
     for i in range(len(tstart)):
 
-        tstarti = tstart - 1
-        cols = [0,1,2] + tstart[i]
-        colsi = cols - 1
         newaxis = axis + tstart[i] - 1
         newaxisi = newaxis - 1
         newtorot = torot + tstart[i] - 1
         newtoroti = newtorot -1
-        # print('>>> ' )
-        # print('>>> colsi             : ',colsi )
-        # print('>>> rotatingi(fix,1,2): ',newaxisi,newtoroti )
 
-        ray1[newtoroti[0],:] =  ray0[newtoroti[0],:] * costh + ray0[newtoroti[1],:] * sinth
-        ray1[newtoroti[1],:] = -ray0[newtoroti[0],:] * sinth + ray0[newtoroti[1],:] * costh
-        ray1[newaxisi,:]     =  ray0[newaxisi,:]
+        print(ray0.shape,ray1.shape,"rotating axes %d, %d around axis %d"%(1+newtoroti[0],1+newtoroti[1],1+newaxisi))
+        ray1[:,newtoroti[0]] =  ray0[:,newtoroti[0]] * costh + ray0[:,newtoroti[1]] * sinth
+        ray1[:,newtoroti[1]] = -ray0[:,newtoroti[0]] * sinth + ray0[:,newtoroti[1]] * costh
+        ray1[:,newaxisi]     =  ray0[:,newaxisi]
 
+
+    # a.rays = ray1
 
     if file is not None:
         a.write(file)
 
-    return a0
+
+    return a

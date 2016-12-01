@@ -18,9 +18,9 @@ def shtranslation(a0,qdist1,file=None):
 # ray[1,*]=ray[1,*]+qdist[1]
 # ray[2,*]=ray[2,*]+qdist[2]
 
-    a.rays[0,:] = a0.rays[0,:] + qdist1[0]
-    a.rays[1,:] = a0.rays[1,:] + qdist1[1]
-    a.rays[2,:] = a0.rays[2,:] + qdist1[2]
+    a.rays[:,0] = a0.rays[:,0] + qdist1[0]
+    a.rays[:,1] = a0.rays[:,1] + qdist1[1]
+    a.rays[:,2] = a0.rays[:,2] + qdist1[2]
 
     return a
 
