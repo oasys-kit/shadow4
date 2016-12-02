@@ -70,6 +70,10 @@ normal = x1*0D0
 normal[0,*]=2*CCC(1-1)*X2[0,*] + CCC(4-1)*x2[1,*] + CCC(6-1)*x2[2,*] + CCC(7-1)
 normal[1,*]=2*CCC(2-1)*X2[1,*] + CCC(4-1)*x2[0,*] + CCC(5-1)*x2[2,*] + CCC(8-1)
 normal[2,*]=2*CCC(3-1)*X2[2,*] + CCC(5-1)*x2[1,*] + CCC(6-1)*x2[0,*] + CCC(9-1)
+
+
+
+
 normalmod = normal*0
 normalmod[0,*] =  sqrt( normal[0,*]^2+normal[1,*]^2+normal[2,*]^2 )
 normalmod[1,*] =  normalmod[0,*]
@@ -77,8 +81,9 @@ normalmod[2,*] =  normalmod[0,*]
 ;help,normal,normalmod
 normal=normal/normalmod
 ;help,normal
+;print,"<><><><><>normal",normal[0,0:10],"  ",normal[1,0:10],"  ",normal[2,0:10]
 
-;print,normal[*,0:10]
+
 ;
 ; reflection
 ;
@@ -108,6 +113,11 @@ a5 = shrot(a4,theta,axis=1,/rad)
 putrays,a5,"shrot.01"
 a6 = retrace(a5,dist=q,/resetY)
 putrays,a6,fileI
+
+for i=0,9 do begin
+  ;print,i,x1[*,i],v1[*,i],x2[*,i],v2[*,i]
+  print,a6.ray[0:5,i]
+endfor
 
 END
 

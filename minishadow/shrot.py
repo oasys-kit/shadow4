@@ -35,33 +35,13 @@ def shrot(a0,theta1,axis=1,file=None,rad=0):
 # ;	M. Sanchez del Rio. ESRF. Grenoble May 2007
 # ;
 # ;-
-# on_error,2
-#
-# IF N_ELEMENTS(theta1) EQ 0 THEN theta=0.0 ELSE theta=theta1 ; t_incidence[deg]
-# IF N_ELEMENTS(axis) EQ 0 THEN axis = 1
-#
-# ;
-# ;
-# ;
-# IF Not(Keyword_Set(rad)) THEN theta=theta*!dpi/180  ; rads
+
 
     if not rad:
         theta1 = theta1 * numpy.pi / 180
-#
-# a0=readsh(a0)
-# a=a0
-# ray0=a0.ray
-# ray1=a.ray
 
-    a = a0.duplicate()
-    ray0 = a0.rays
-    ray1 = a.rays
+    a1 = a0.copy()
 
-#
-#
-# torot = IndGen(3)+1
-# torot = torot[Where(torot NE axis)]
-# print,'torot: ',torot
     if axis == 1:
         torot = [2,3]
     elif axis == 2:
@@ -69,37 +49,11 @@ def shrot(a0,theta1,axis=1,file=None,rad=0):
     elif axis == 3:
         torot = [1,2]
 
-# costh = cos(theta)
-# sinth = sin(theta)
-#
-# tstart = [1,4,7,16]
 
     costh = numpy.cos(theta1)
     sinth = numpy.sin(theta1)
 
     tstart = numpy.array([1,4,7,16])
-
-#
-# FOR i=0,N_Elements(tstart)-1 DO BEGIN
-#   tstarti=tstart-1
-#   cols = IndGen(3) + tstart[i]
-#   colsi=cols-1
-#   newaxis= axis + tstart[i] -1
-#   newaxisi = newaxis-1
-#   newtorot = torot + tstart[i] -1
-#   newtoroti = newtorot -1
-# ;print,'>>> '
-# ;print,'>>> colsi             : ',colsi
-# ;print,'>>> rotatingi(fix,1,2): ',newaxisi,newtoroti
-#
-# ray1[newtoroti[0],*] =  $
-#    ray0[newtoroti[0],*]*costh + ray0[newtoroti[1],*]*sinth
-# ray1[newtoroti[1],*] = $
-#   -ray0[newtoroti[0],*]*sinth + ray0[newtoroti[1],*]*costh
-# ray1[newaxisi,*]     =  ray0[newaxisi,*]
-#
-# ENDFOR
-
 
     for i in range(len(tstart)):
 
@@ -108,16 +62,10 @@ def shrot(a0,theta1,axis=1,file=None,rad=0):
         newtorot = torot + tstart[i] - 1
         newtoroti = newtorot -1
 
-        print(ray0.shape,ray1.shape,"rotating axes %d, %d around axis %d"%(1+newtoroti[0],1+newtoroti[1],1+newaxisi))
-        ray1[:,newtoroti[0]] =  ray0[:,newtoroti[0]] * costh + ray0[:,newtoroti[1]] * sinth
-        ray1[:,newtoroti[1]] = -ray0[:,newtoroti[0]] * sinth + ray0[:,newtoroti[1]] * costh
-        ray1[:,newaxisi]     =  ray0[:,newaxisi]
+        print(a0.shape,a1.shape,"rotating axes %d, %d around axis %d"%(1+newtoroti[0],1+newtoroti[1],1+newaxisi))
+        a1[newtoroti[0],:] =  a0[newtoroti[0],:] * costh + a0[newtoroti[1],:] * sinth
+        a1[newtoroti[1],:] = -a0[newtoroti[0],:] * sinth + a0[newtoroti[1],:] * costh
+        a1[newaxisi]     =  a0[newaxisi,:]
 
 
-    # a.rays = ray1
-
-    if file is not None:
-        a.write(file)
-
-
-    return a
+    return a1
