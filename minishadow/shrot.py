@@ -62,7 +62,7 @@ def shrot(a0,theta1,axis=1,file=None,rad=0):
         newtorot = torot + tstart[i] - 1
         newtoroti = newtorot -1
 
-        print(a0.shape,a1.shape,"rotating axes %d, %d around axis %d"%(1+newtoroti[0],1+newtoroti[1],1+newaxisi))
+        # print(a0.shape,a1.shape,"rotating axes %d, %d around axis %d"%(1+newtoroti[0],1+newtoroti[1],1+newaxisi))
         a1[newtoroti[0],:] =  a0[newtoroti[0],:] * costh + a0[newtoroti[1],:] * sinth
         a1[newtoroti[1],:] = -a0[newtoroti[0],:] * sinth + a0[newtoroti[1],:] * costh
         a1[newaxisi]     =  a0[newaxisi,:]
