@@ -12,13 +12,13 @@ def dump_shadow_file(a0,file):
     ncol,npoint = a0.shape
     if ncol != 18:
         raise Exception("dump_shadow_file: Not a beam (must have [18,:] ).")
-    print("ncol = ",ncol,"npoint = ",npoint)
+    print("ncol = ",ncol,"; npoint = ",npoint)
 
     beam = Shadow.Beam(N=npoint)
 
-    beam.rays = a0.T
+    beam.rays = a0.T.copy()
 
-    beam.write("file")
+    beam.write(file)
     print("File %s written to disk. "%file)
 
     return beam
@@ -44,7 +44,7 @@ def calculate_source_from_start_file(iwrite=0):
     oe0 = Shadow.Source()
 
 
-    str = open('start.00', 'r').read()
+    str = open('../idl/start.00', 'r').read()
     lines = str.split("\n")
     for line in lines:
         command = "oe0."+line
@@ -228,7 +228,7 @@ a6[1,:] = 0.0
 print("\n\n")
 
 for i in range(10):
-    print("<><> i: ",i,a6[0:5,i])
+    print("<><> i: ",i,a6[0:6,i])
 
 
 dump_shadow_file(a4,fileM)

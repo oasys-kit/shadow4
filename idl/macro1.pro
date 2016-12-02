@@ -116,7 +116,7 @@ putrays,a6,fileI
 
 for i=0,9 do begin
   ;print,i,x1[*,i],v1[*,i],x2[*,i],v2[*,i]
-  print,a6.ray[0:5,i]
+  print,i,a6.ray[0:5,i]
 endfor
 
 END
