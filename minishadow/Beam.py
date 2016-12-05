@@ -18,8 +18,9 @@ class Beam(object):
             ncol, N = array.shape
             if ncol != 18:
                 raise Exception ("Bar array: must be [18,npoints]")
-
-        self.rays = numpy.zeros((18,N))
+            self.rays = array.copy()
+        else:
+            self.rays = numpy.zeros((18,N))
 
     @classmethod
     def initialize_from_array(cls, array):
@@ -53,6 +54,9 @@ class Beam(object):
     #
     # getters
     #
+
+    def get_rays(self):
+        return self.rays.copy()
 
     def get_number_of_rays(self,nolost=0):
 
@@ -179,6 +183,14 @@ class Beam(object):
                 print ('Beam.get_column: no BAD rays, returning empty array')
                 return numpy.empty(0)
             return out[f].copy()
+
+    def get_columns(self,columns,nolost=0):
+        ret = []
+        if isinstance(columns, int): return self.get_column(column,nolost=nolost)
+        for c in columns:
+            ret.append(self.get_column(c,nolost=nolost))
+        return numpy.array(tuple(ret))
+
 
 
     def get_standard_deviation(self,col, nolost=1, ref=0):

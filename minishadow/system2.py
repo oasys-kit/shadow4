@@ -1,12 +1,12 @@
 import numpy
 
 from conicset import conicset
-from shrot import shrot
-from shtranslation import shtranslation
 from conicintercept import conicintercept
 import platform
 
+
 import Shadow
+from Beam import Beam
 
 
 def compare_results():
@@ -150,6 +150,9 @@ def minishadow_run(iwrite=1):
     # ; get the starting points x1 and directions v1
     # ;
     beam,a = calculate_source_from_start_file(iwrite=iwrite)
+
+    newbeam = Beam.initialize_from_array(a)
+
     oe1 = calculate_system_from_start_file(beam,iwrite=iwrite)
 
 
@@ -174,24 +177,20 @@ def minishadow_run(iwrite=1):
 
     print(">>> T_INCIDENCE",oe1.T_INCIDENCE)
     ccc = conicset(p,q,theta,itype=fmirr,cylindrical=fcyl)
-
-
-    #
-    #
     #
 
 
-    a1 = shrot(a,alpha,axis=2,rad=1)
-    a2 = shrot(a1,theta,axis=1,rad=1)
-    a3 = shtranslation(a2,[0.0,-p*numpy.cos(theta),p*numpy.sin(theta)])
+    newbeam.rotate(alpha,axis=2)
+    newbeam.rotate(theta,axis=1)
+    newbeam.translation([0.0,-p*numpy.cos(theta),p*numpy.sin(theta)])
 
 
     # ;
     # ; TRACING...
     # ;
-    x1 =   a3[[0,1,2],:] # numpy.array(a3.getshcol([1,2,3]))
-    v1 =   a3[[3,4,5],:] # numpy.array(a3.getshcol([4,5,6]))
-    flag = a3[9,:]       # numpy.array(a3.getshonecol(10))
+    x1 =   newbeam.get_columns([1,2,3]) # numpy.array(a3.getshcol([1,2,3]))
+    v1 =   newbeam.get_columns([4,5,6]) # numpy.array(a3.getshcol([4,5,6]))
+    flag = newbeam.get_column(10)        # numpy.array(a3.getshonecol(10))
 
     x2 = numpy.zeros_like(x1)
 
@@ -214,8 +213,8 @@ def minishadow_run(iwrite=1):
     normal[0,:] /= normalmod
     normal[1,:] /= normalmod
     normal[2,:] /= normalmod
-
-
+    #
+    #
     # ;
     # ; reflection
     # ;
@@ -233,22 +232,27 @@ def minishadow_run(iwrite=1):
     # ;
     # ; writes the mirr.XX file
     # ;
-    a4 = a3.copy()
-    a4[[0,1,2],:] = x2
-    a4[[3,4,5],:] = v2
-    a4[9,:] = flag
+
+    newbeam.set_column(1, x2[0])
+    newbeam.set_column(2, x2[1])
+    newbeam.set_column(3, x2[2])
+    newbeam.set_column(4, v2[0])
+    newbeam.set_column(5, v2[1])
+    newbeam.set_column(6, v2[2])
+    newbeam.set_column(10, flag )
+
+    # tracing end
+
+
+    dump_shadow_file(newbeam.get_rays(),fileM)
 
     #
     # image
     #
-    a5 = shrot(a4,theta,axis=1,rad=1)
-    a6 = retrace(a5,q,resetY=True)
+    newbeam.rotate(theta,axis=1)
+    newbeam.retrace(q,resetY=True)
 
-
-
-    dump_shadow_file(a4,fileM)
-    dump_shadow_file(a6,fileI)
-
+    dump_shadow_file(newbeam.get_rays(),fileI)
 
 if __name__ == "__main__":
     minishadow_run()
