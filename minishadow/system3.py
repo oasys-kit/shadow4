@@ -1,13 +1,13 @@
 import numpy
 
-from conicset import conicset
-from conicintercept import conicintercept
+# from conicset import conicset
+# from conicintercept import conicintercept
 import platform
 
 
 import Shadow
 from Beam import Beam
-
+from SurfaceConic import SurfaceConic
 
 def compare_results():
     Shadow.ShadowTools.plotxy("minimirr.01",2,1,nbins=101,nolost=1,title="Mirror (Python)")
@@ -32,21 +32,6 @@ def dump_shadow_file(a0,file):
 
     return beam
 
-# def retrace(a0,dist,resetY=False):
-#     a1 = a0.copy()
-#     try:
-#         tof = (-a0[1,:] + dist)/a0[4,:]
-#         a1[0,:] += tof * a0[3,:]
-#         a1[1,:] += tof * a0[4,:]
-#         a1[2,:] += tof * a0[5,:]
-# 
-#         if resetY:
-#             a1[1,:] = 0.0
-# 
-#     except AttributeError:
-#         print ('retrace: No rays')
-# 
-#     return a1
 
 
 def calculate_source_from_start_file(iwrite=0):
@@ -139,79 +124,79 @@ def calculate_system_from_start_file(beamIn,iwrite=0):
 
 
 
-def vector_reflection(v1,normal):
-    tmp = v1 * normal
-    tmp2 = tmp[0,:] + tmp[1,:] + tmp[2,:]
-    tmp3 = normal.copy()
-
-    for jj in (0,1,2):
-        tmp3[jj,:] = tmp3[jj,:] * tmp2
-
-    v2 = v1 - 2 * tmp3
-    v2mod = numpy.sqrt(v2[0,:]**2 + v2[1,:]**2 + v2[2,:]**2)
-    v2 /= v2mod
-
-    return v2
-
-def ccc_normal(ccc,x2):
-    # ;
-    # ; Calculates the normal at each intercept [see shadow's normal.F]
-    # ;
-    normal = numpy.zeros_like(x2)
-
-    normal[0,:] = 2 * ccc[1-1] * x2[0,:] + ccc[4-1] * x2[1,:] + ccc[6-1] * x2[2,:] + ccc[7-1]
-    normal[1,:] = 2 * ccc[2-1] * x2[1,:] + ccc[4-1] * x2[0,:] + ccc[5-1] * x2[2,:] + ccc[8-1]
-    normal[2,:] = 2 * ccc[3-1] * x2[2,:] + ccc[5-1] * x2[1,:] + ccc[6-1] * x2[0,:] + ccc[9-1]
-
-    normalmod =  numpy.sqrt( normal[0,:]**2 + normal[1,:]**2 + normal[2,:]**2 )
-    normal[0,:] /= normalmod
-    normal[1,:] /= normalmod
-    normal[2,:] /= normalmod
-
-    return normal
-
-
-def ccc_reflection_beam(ccc,newbeam):
-    # ;
-    # ; TRACING...
-    # ;
-
-    x1 =   newbeam.get_columns([1,2,3]) # numpy.array(a3.getshcol([1,2,3]))
-    v1 =   newbeam.get_columns([4,5,6]) # numpy.array(a3.getshcol([4,5,6]))
-    flag = newbeam.get_column(10)        # numpy.array(a3.getshonecol(10))
-
-
-    t,iflag = conicintercept(ccc,x1,v1)
-    x2 = x1 + v1 * t
-    for i in range(flag.size):
-        if iflag[i] < 0: flag[i] = -100
-
-
-    # ;
-    # ; Calculates the normal at each intercept [see shadow's normal.F]
-    # ;
-
-    normal = ccc_normal(ccc,x2)
-
-    # ;
-    # ; reflection
-    # ;
-
-    v2 = vector_reflection(v1,normal)
-
-    # ;
-    # ; writes the mirr.XX file
-    # ;
-
-    newbeam.set_column(1, x2[0])
-    newbeam.set_column(2, x2[1])
-    newbeam.set_column(3, x2[2])
-    newbeam.set_column(4, v2[0])
-    newbeam.set_column(5, v2[1])
-    newbeam.set_column(6, v2[2])
-    newbeam.set_column(10, flag )
-
-    return newbeam
+# def vector_reflection(v1,normal):
+#     tmp = v1 * normal
+#     tmp2 = tmp[0,:] + tmp[1,:] + tmp[2,:]
+#     tmp3 = normal.copy()
+#
+#     for jj in (0,1,2):
+#         tmp3[jj,:] = tmp3[jj,:] * tmp2
+#
+#     v2 = v1 - 2 * tmp3
+#     v2mod = numpy.sqrt(v2[0,:]**2 + v2[1,:]**2 + v2[2,:]**2)
+#     v2 /= v2mod
+#
+#     return v2
+#
+# def ccc_normal(ccc,x2):
+#     # ;
+#     # ; Calculates the normal at each intercept [see shadow's normal.F]
+#     # ;
+#     normal = numpy.zeros_like(x2)
+#
+#     normal[0,:] = 2 * ccc[1-1] * x2[0,:] + ccc[4-1] * x2[1,:] + ccc[6-1] * x2[2,:] + ccc[7-1]
+#     normal[1,:] = 2 * ccc[2-1] * x2[1,:] + ccc[4-1] * x2[0,:] + ccc[5-1] * x2[2,:] + ccc[8-1]
+#     normal[2,:] = 2 * ccc[3-1] * x2[2,:] + ccc[5-1] * x2[1,:] + ccc[6-1] * x2[0,:] + ccc[9-1]
+#
+#     normalmod =  numpy.sqrt( normal[0,:]**2 + normal[1,:]**2 + normal[2,:]**2 )
+#     normal[0,:] /= normalmod
+#     normal[1,:] /= normalmod
+#     normal[2,:] /= normalmod
+#
+#     return normal
+#
+#
+# def ccc_reflection_beam(ccc,newbeam):
+#     # ;
+#     # ; TRACING...
+#     # ;
+#
+#     x1 =   newbeam.get_columns([1,2,3]) # numpy.array(a3.getshcol([1,2,3]))
+#     v1 =   newbeam.get_columns([4,5,6]) # numpy.array(a3.getshcol([4,5,6]))
+#     flag = newbeam.get_column(10)        # numpy.array(a3.getshonecol(10))
+#
+#
+#     t,iflag = conicintercept(ccc,x1,v1)
+#     x2 = x1 + v1 * t
+#     for i in range(flag.size):
+#         if iflag[i] < 0: flag[i] = -100
+#
+#
+#     # ;
+#     # ; Calculates the normal at each intercept [see shadow's normal.F]
+#     # ;
+#
+#     normal = ccc_normal(ccc,x2)
+#
+#     # ;
+#     # ; reflection
+#     # ;
+#
+#     v2 = vector_reflection(v1,normal)
+#
+#     # ;
+#     # ; writes the mirr.XX file
+#     # ;
+#
+#     newbeam.set_column(1, x2[0])
+#     newbeam.set_column(2, x2[1])
+#     newbeam.set_column(3, x2[2])
+#     newbeam.set_column(4, v2[0])
+#     newbeam.set_column(5, v2[1])
+#     newbeam.set_column(6, v2[2])
+#     newbeam.set_column(10, flag )
+#
+#     return newbeam
 
 
 def minishadow_run(iwrite=1):
