@@ -1,47 +1,28 @@
 import numpy
-
-# from conicset import conicset
-# from conicintercept import conicintercept
 import platform
 
+from numpy.testing import assert_equal, assert_almost_equal
 
+#
+# shadow3
+#
 import Shadow
+
+#
+# minishadow
+#
 from Beam import Beam
 from SurfaceConic import SurfaceConic
 
 
 
-def compare_results():
-    Shadow.ShadowTools.plotxy("minimirr.01",2,1,nbins=101,nolost=1,title="Mirror (Python)")
-    Shadow.ShadowTools.plotxy("mirr.01",2,1,nbins=101,nolost=1,title="Mirror (SHADOW)")
-
-    Shadow.ShadowTools.plotxy("ministar.01",1,3,nbins=101,nolost=1,title="Image (Python)")
-    Shadow.ShadowTools.plotxy("star.01",1,3,nbins=101,nolost=1,title="Image (SHADOW)")
-
-def dump_shadow3_file(a0,file):
-
-    ncol,npoint = a0.shape
-    if ncol != 18:
-        raise Exception("dump_shadow_file: Not a beam (must have [18,:] ).")
-    # print("ncol = ",ncol,"; npoint = ",npoint)
-
-    beam = Shadow.Beam(N=npoint)
-
-    beam.rays = a0.T.copy()
-
-    beam.write(file)
-    print("File %s written to disk. "%file)
-
-    return beam
-
-
-
-def calculate_source_from_start_file(iwrite=0):
+def run_shadow3_from_start_files(iwrite=0):
     #
     # initialize shadow3 source (oe0) and beam
     #
     beam = Shadow.Beam()
     oe0 = Shadow.Source()
+    oe0_before_run = Shadow.Source()
 
 
     # TODO: this is a turn-around for the Linux bug...
@@ -53,9 +34,16 @@ def calculate_source_from_start_file(iwrite=0):
             try:
                 exec(command)
             except:
-                print("calculate_source_from_start_file: Failed to exec: %s"%command)
+                print("run_shadow3_from_start_files: Failed to exec: %s"%command)
+
+            command = "oe0_before_run."+line
+            try:
+                exec(command)
+            except:
+                print("run_shadow3_from_start_files: Failed to exec: %s"%command)
     else:
         oe0.load("start.00")
+        oe0_before_run.load("start.00")
 
     beam.genSource(oe0)
 
@@ -64,16 +52,11 @@ def calculate_source_from_start_file(iwrite=0):
         beam.write("begin.dat")
 
 
-    return beam,beam.rays.T.copy()
+    beam_source = beam.duplicate()
+    # return beam,beam.rays.T.copy()
 
-
-def calculate_system_from_start_file(beamIn,iwrite=0):
-    #
-    # initialize shadow3 source (oe0) and beam
-    #
-    beam = beamIn.duplicate()
     oe1 = Shadow.OE()
-    oe1bis = Shadow.OE()
+    oe1_before_run = Shadow.OE()
 
 
     if platform.system() == "Linux":
@@ -90,7 +73,7 @@ def calculate_system_from_start_file(beamIn,iwrite=0):
             .replace("(8)","[7]")\
             .replace("(9)","[8]")\
             .replace("(10)","[9]")
-            command2 = "oe1bis."+line.replace("(1)","[0]")\
+            command2 = "oe1_before_run."+line.replace("(1)","[0]")\
             .replace("(2)","[1]")\
             .replace("(3)","[2]")\
             .replace("(4)","[3]")\
@@ -104,17 +87,17 @@ def calculate_system_from_start_file(beamIn,iwrite=0):
             try:
                 exec(command1)
             except:
-                print("calculate_system_from_start_file: Failed to exec: %s"%command1)
+                print("run_shadow3_from_start_files: Failed to exec: %s"%command1)
 
             try:
                 exec(command2)
             except:
-                print("calculate_system_from_start_file: Failed to exec: %s"%command2)
+                print("run_shadow3_from_start_files: Failed to exec: %s"%command2)
 
 
     else:
         oe1.load("start.01")
-        oe1bis.load("start.01")
+        oe1_before_run.load("start.01")
 
     beam.traceOE(oe1,1)
 
@@ -122,150 +105,113 @@ def calculate_system_from_start_file(beamIn,iwrite=0):
         oe1.write("end.01")
         beam.write("star.01")
 
-    return oe1bis
+    return beam_source,beam,oe0_before_run,oe1_before_run
 
 
 
-# def vector_reflection(v1,normal):
-#     tmp = v1 * normal
-#     tmp2 = tmp[0,:] + tmp[1,:] + tmp[2,:]
-#     tmp3 = normal.copy()
-#
-#     for jj in (0,1,2):
-#         tmp3[jj,:] = tmp3[jj,:] * tmp2
-#
-#     v2 = v1 - 2 * tmp3
-#     v2mod = numpy.sqrt(v2[0,:]**2 + v2[1,:]**2 + v2[2,:]**2)
-#     v2 /= v2mod
-#
-#     return v2
-#
-# def ccc_normal(ccc,x2):
-#     # ;
-#     # ; Calculates the normal at each intercept [see shadow's normal.F]
-#     # ;
-#     normal = numpy.zeros_like(x2)
-#
-#     normal[0,:] = 2 * ccc[1-1] * x2[0,:] + ccc[4-1] * x2[1,:] + ccc[6-1] * x2[2,:] + ccc[7-1]
-#     normal[1,:] = 2 * ccc[2-1] * x2[1,:] + ccc[4-1] * x2[0,:] + ccc[5-1] * x2[2,:] + ccc[8-1]
-#     normal[2,:] = 2 * ccc[3-1] * x2[2,:] + ccc[5-1] * x2[1,:] + ccc[6-1] * x2[0,:] + ccc[9-1]
-#
-#     normalmod =  numpy.sqrt( normal[0,:]**2 + normal[1,:]**2 + normal[2,:]**2 )
-#     normal[0,:] /= normalmod
-#     normal[1,:] /= normalmod
-#     normal[2,:] /= normalmod
-#
-#     return normal
-#
-#
-# def ccc_reflection_beam(ccc,newbeam):
-#     # ;
-#     # ; TRACING...
-#     # ;
-#
-#     x1 =   newbeam.get_columns([1,2,3]) # numpy.array(a3.getshcol([1,2,3]))
-#     v1 =   newbeam.get_columns([4,5,6]) # numpy.array(a3.getshcol([4,5,6]))
-#     flag = newbeam.get_column(10)        # numpy.array(a3.getshonecol(10))
-#
-#
-#     t,iflag = conicintercept(ccc,x1,v1)
-#     x2 = x1 + v1 * t
-#     for i in range(flag.size):
-#         if iflag[i] < 0: flag[i] = -100
-#
-#
-#     # ;
-#     # ; Calculates the normal at each intercept [see shadow's normal.F]
-#     # ;
-#
-#     normal = ccc_normal(ccc,x2)
-#
-#     # ;
-#     # ; reflection
-#     # ;
-#
-#     v2 = vector_reflection(v1,normal)
-#
-#     # ;
-#     # ; writes the mirr.XX file
-#     # ;
-#
-#     newbeam.set_column(1, x2[0])
-#     newbeam.set_column(2, x2[1])
-#     newbeam.set_column(3, x2[2])
-#     newbeam.set_column(4, v2[0])
-#     newbeam.set_column(5, v2[1])
-#     newbeam.set_column(6, v2[2])
-#     newbeam.set_column(10, flag )
-#
-#     return newbeam
+def compare_results(do_assert=True):
+    Shadow.ShadowTools.plotxy("minimirr.01",2,1,nbins=101,nolost=1,title="Mirror (Python)")
+    Shadow.ShadowTools.plotxy("mirr.01",2,1,nbins=101,nolost=1,title="Mirror (SHADOW)")
+
+    Shadow.ShadowTools.plotxy("ministar.01",1,3,nbins=101,nolost=1,title="Image (Python)")
+    Shadow.ShadowTools.plotxy("star.01",1,3,nbins=101,nolost=1,title="Image (SHADOW)")
 
 
-def minishadow_run(iwrite=1):
+    if do_assert:
+
+        minimirr = Shadow.Beam()
+        minimirr.load("minimirr.01")
+        mirr     = Shadow.Beam()
+        mirr.load("mirr.01")
+        assert_almost_equal(minimirr.rays[:,0:6],mirr.rays[:,0:6])
 
 
+        ministar = Shadow.Beam()
+        ministar.load("ministar.01")
+        star     = Shadow.Beam()
+        star.load("star.01")
+        assert_almost_equal(ministar.rays[:,0:6],star.rays[:,0:6])
+
+
+def minishadow_run_conic_mirror():
 
     # ;
-    # ; 1) reads shadow source 
-    #
-    shadow_beam,a = calculate_source_from_start_file(iwrite=iwrite)
-    newbeam = Beam.initialize_from_array(a)
-
-
-    #
-    # runs the system with shadow3
-    oe1 = calculate_system_from_start_file(shadow_beam,iwrite=iwrite)
-
-
-
-
-    # ;
-    # ; ray tracing of a single conic mirror calculating the ray intersection
-    # ; analytically
+    # ; ray tracing of a single conic mirror using minishadow
+    # ; results are compared with shadow3
     # ;
     #
 
+    # ;
+    # ; Runs shadow3
+    #
+    shadow3_beam_source,shadow3_beam,oe0,oe1 = run_shadow3_from_start_files(iwrite=1)
+
+
+    # copy source to new Beam object
+    newbeam = Beam.initialize_from_array(shadow3_beam_source.rays.T.copy())
 
     # ;
     # ; INPUTS
     # ;
     #
-    fmirr   = oe1.FMIRR  # 1
-    p       = oe1.T_SOURCE  # 1000.0       # source-mirror
-    q       = oe1.T_IMAGE  # 300.0        # mirror-image
-    alpha   = oe1.ALPHA  # 0.0      # mirror orientation angle
-    theta   = (90.0-oe1.T_INCIDENCE) * numpy.pi / 180  # 5e-3     # grazing angle, rad
-    fcyl    = oe1.FCYL
+    fmirr         = oe1.FMIRR    # 1
+    p             = oe1.T_SOURCE # 1000.0       # source-mirror
+    q             = oe1.T_IMAGE  # 300.0        # mirror-image
+    alpha         = oe1.ALPHA    # 0.0      # mirror orientation angle
+    theta_grazing = (90.0-oe1.T_INCIDENCE) * numpy.pi / 180  # 5e-3     # grazing angle, rad
+    fcyl          = oe1.FCYL
+    f_convex      = oe1.F_CONVEX
 
-    print("fmirr = %s, p=%f, q=%f, alpha=%f, theta=%f rad, fcyl=%d"%\
-              (fmirr,p,q,alpha,theta,fcyl))
+    print("fmirr = %s, p=%f, q=%f, alpha=%f, theta_grazing=%f rad, fcyl=%d"%\
+              (fmirr,p,q,alpha,theta_grazing,fcyl))
 
-    ccc = SurfaceConic()
-    ccc.set_sphere_from_focal_distances(p,q,theta,itype=fmirr,cylindrical=fcyl)
+    # ccc = SurfaceConic()
+    # ccc.set_sphere_from_focal_distances(p,q,theta_grazing,itype=fmirr,cylindrical=fcyl)
 
+
+    if fmirr == 1: # sphere
+        ccc = SurfaceConic.initialize_as_sphere_from_focal_distances(p,q,theta_grazing,cylindrical=fcyl,switch_convexity=f_convex)
+    elif fmirr == 2: # Ellipsoid
+        ccc = SurfaceConic.initialize_as_ellipsoid_from_focal_distances(p,q,theta_grazing,cylindrical=fcyl,switch_convexity=f_convex)
+    elif fmirr == 3: # Toroidal
+        raise Exception("fmirr=3 (toroidal) is NOT A CONIC surface")
+    elif fmirr == 4: # Paraboloid
+        ccc = SurfaceConic.initialize_as_paraboloid_from_focal_distances(p,q,theta_grazing,cylindrical=fcyl,switch_convexity=f_convex)
+    elif fmirr == 5:
+        ccc = SurfaceConic.initialize_as_plane()
+    elif fmirr == 6: # Codling slit
+        raise Exception("fmirr=6 (Codling slit) is NOT A CONIC surface")
+    elif fmirr == 7: # Hyperboloid
+        ccc = SurfaceConic.initialize_as_hyperboloid_from_focal_distances(p,q,theta_grazing,cylindrical=fcyl,switch_convexity=f_convex)
+    elif fmirr == 8: # Cone
+        raise Exception("fmirr=8 (Cone) is NOT A CONIC surface")
+    else:
+        raise Exception("fmirr invalid")
 
     #
     # put beam in mirror reference system
     #
+    # TODO: calculate rotation matrices? Invert them for putting back to the lab system?
+
     newbeam.rotate(alpha,axis=2)
-    newbeam.rotate(theta,axis=1)
-    newbeam.translation([0.0,-p*numpy.cos(theta),p*numpy.sin(theta)])
+    newbeam.rotate(theta_grazing,axis=1)
+    newbeam.translation([0.0,-p*numpy.cos(theta_grazing),p*numpy.sin(theta_grazing)])
 
 
     #
     # reflect beam in the mirror surface and dump mirr.01
     #
     newbeam = ccc.apply_specular_reflection_on_beam(newbeam)
-    dump_shadow3_file(newbeam.get_rays(),'minimirr.01')
+    newbeam.dump_shadow3_file('minimirr.01')
 
     #
     # put beam in lab frame and compute image
     #
-    newbeam.rotate(theta,axis=1)
+    newbeam.rotate(theta_grazing,axis=1)
     # TODO what about alpha?
     newbeam.retrace(q,resetY=True)
-    dump_shadow3_file(newbeam.get_rays(),'ministar.01')
+    newbeam.dump_shadow3_file('ministar.01')
 
 if __name__ == "__main__":
-    minishadow_run()
+    minishadow_run_conic_mirror()
     compare_results()

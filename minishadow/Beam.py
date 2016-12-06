@@ -330,6 +330,20 @@ class Beam(object):
             self.rays[newaxisi]       =  a1[newaxisi,:]
 
     #
+    # file i/o
+    #
+
+
+    def dump_shadow3_file(self,file):
+        #TODO this dump uses now shadow3. To be removed after checking or write using fully python
+        import Shadow
+        beam_shadow3 = Shadow.Beam(N=self.get_number_of_rays())
+        beam_shadow3.rays = self.get_rays().T.copy()
+        beam_shadow3.write(file)
+        print("File %s written to disk. "%file)
+
+
+    #
     # histograms
     #
     # TODO: histo1, histo2
