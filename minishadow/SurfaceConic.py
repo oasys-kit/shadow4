@@ -29,6 +29,8 @@ class SurfaceConic(object):
         return SurfaceConic(numpy.array([0,0,0,0,0,0,0,0,-1.,0]))
 
 
+
+
     def duplicate(self):
         return SurfaceConic.initialize_from_coefficients(self.ccc.copy())
 
@@ -66,14 +68,13 @@ class SurfaceConic(object):
 
     def get_normal(self,x2):
         # ;
-        # ; Calculates the normal at each intercept [see shadow's normal.F]
+        # ; Calculates the normal at intercept points x2 [see shadow's normal.F]
         # ;
         normal = numpy.zeros_like(x2)
-        ccc = self.ccc
 
-        normal[0,:] = 2 * ccc[1-1] * x2[0,:] + ccc[4-1] * x2[1,:] + ccc[6-1] * x2[2,:] + ccc[7-1]
-        normal[1,:] = 2 * ccc[2-1] * x2[1,:] + ccc[4-1] * x2[0,:] + ccc[5-1] * x2[2,:] + ccc[8-1]
-        normal[2,:] = 2 * ccc[3-1] * x2[2,:] + ccc[5-1] * x2[1,:] + ccc[6-1] * x2[0,:] + ccc[9-1]
+        normal[0,:] = 2 * self.ccc[1-1] * x2[0,:] + self.ccc[4-1] * x2[1,:] + self.ccc[6-1] * x2[2,:] + self.ccc[7-1]
+        normal[1,:] = 2 * self.ccc[2-1] * x2[1,:] + self.ccc[4-1] * x2[0,:] + self.ccc[5-1] * x2[2,:] + self.ccc[8-1]
+        normal[2,:] = 2 * self.ccc[3-1] * x2[2,:] + self.ccc[5-1] * x2[1,:] + self.ccc[6-1] * x2[0,:] + self.ccc[9-1]
 
         normalmod =  numpy.sqrt( normal[0,:]**2 + normal[1,:]**2 + normal[2,:]**2 )
         normal[0,:] /= normalmod
@@ -83,7 +84,7 @@ class SurfaceConic(object):
         return normal
 
 
-    def calculate_reflected_beam(self,newbeam):
+    def apply_specular_reflection_on_beam(self,newbeam):
         # ;
         # ; TRACING...
         # ;
@@ -103,13 +104,13 @@ class SurfaceConic(object):
         # ; Calculates the normal at each intercept [see shadow's normal.F]
         # ;
 
-        normal = ccc_normal(ccc,x2)
+        normal = self.get_normal(x2)
 
         # ;
         # ; reflection
         # ;
 
-        v2 = vector_reflection(v1,normal)
+        v2 = self.vector_reflection(v1,normal)
 
         # ;
         # ; writes the mirr.XX file
@@ -284,8 +285,9 @@ class SurfaceConic(object):
                 else:
                     TPAR = TPAR1
 
-
         return TPAR,IFLAG
+
+
 
     def set_cylindrical(self,CIL_ANG):
 
@@ -315,140 +317,49 @@ class SurfaceConic(object):
         self.ccc[9-1] =  A_9						 # Z
         self.ccc[10-1]=  A_10
 
+    def switch_convexity(self):
+        self.ccc[5-1]  = - self.ccc[5-1]
+        self.ccc[6-1]  = - self.ccc[6-1]
+        self.ccc[9-1]  = - self.ccc[9-1]
 
 
-    def set_sphere_from_focal_distances(p, q, theta1, itype=1, cylindrical=0, cylangle=0.0, convex=0, anglenordeg=0):
+    def set_sphere_from_focal_distances(self, p, q, theta1, itype=1, cylindrical=0, cylangle=0.0, convex=0, anglenordeg=0):
 
-            ssour = float(p)
-            simag = float(q)
-            theta = float(theta1)
+        ssour = float(p)
+        simag = float(q)
+        theta = float(theta1)
 
-        #
-        #
-            oeType=['0',
-                    'Spherical-1',
-                    'Ellipsoidal-2',
-                    'Toroidal-3',
-                    'Paraboloid-4',
-                    'Plane-5',
-                    '6',
-                    'Hyperboloid-7',
-                    'Cone-8??',
-                    'Polynomial-9??']
-        #
-        #
-            if anglenordeg == 0:
-                angleTxt='Grazing angle [rad]: '
-            else:
-                angleTxt='Angle to normal [deg]: '
+        # if anglenordeg == 0:
+        #     angleTxt='Grazing angle [rad]: '
+        # else:
+        #     angleTxt='Angle to normal [deg]: '
 
+        if anglenordeg == 0:
+           theta = (numpy.pi/2)-theta
+        else:
+           theta = theta * numpy.pi / 180.0
 
-            txt = ""
-        #
-        # 	  txt = ['************ conicset *************',$
-        #              'Computation of conic equation of the form: ',$
-        #              '    c[0]*X^2 + c[1]*Y^2 + c[2]*Z^2 + ',$
-        #              '    c[3]*X*Y + c[4]*Y*Z + c[5]*X*Z  + ',$
-        #              '    c[6]*X + c[7]*Y + c[8]*Z + c[9] = 0  ',$
-        #              '','Inputs: ',$
-        #                 String('p[cm]: ',p,Format='(A40,G20.15)'),$
-        #                 String('q[cm]: ',q,Format='(A40,G20.15)'),$
-        #                 String(angleNorDeg,theta, $
-        #                        Format='(A40,G20.15)'),$
-        #                 String('Conic type: ', $
-        #                        oeType[iType], $
-        #                        Format='(2A40)'),$
-        #                 String('Invert convexity flag: ', $
-        #                        convex, $
-        #                        Format='(A40,I5)'),$
-        #                 String('Cylindrical symmetry flag: ', $
-        #                        cyl, $
-        #                        Format='(A40,I5)'),$
-        #                 String('Cylindrial axes to X [deg]: ', $
-        #                        cylAngle, $
-        #                        Format='(A40,G20.15)'), $
-        #              '','','','Outputs: ']
-        #
-        # ;COSTHE=sin(theta) ; For shadow, theta is measured with respect to the normal
-        # ;SINTHE=cos(theta)
+        print('Angle with respect to the surface normal [rad]:',theta)
 
-
-
-        # ;
-        # ; theta in rad with respect to the normal
-        # ;
-        #
-        # IF angleNorDeg EQ 0 THEN BEGIN
-        #    theta = (!dpi/2)-theta ; *1D-3
-        # ENDIF ELSE BEGIN
-        #    theta = theta*!dpi/180.0
-        # ENDELSE
-        # ; print,'Angle with respect to the surface normal [rad]:',theta
-        #
-
-
-            if anglenordeg == 0:
-               theta = (numpy.pi/2)-theta
-            else:
-               theta = theta * numpy.pi / 180.0
-
-            print('Angle with respect to the surface normal [rad]:',theta)
-
-            COSTHE = numpy.cos(theta)
-            SINTHE = numpy.sin(theta)
-
+        COSTHE = numpy.cos(theta)
+        rmirr = ssour * simag * 2 / COSTHE / (ssour + simag)
 
         #
         #
         # ccc = DblArr(10)
-            ccc = numpy.zeros(10)
-        #
-            if itype == 0:
-                pass
-            elif itype == 1:  # Spherical
-                # 		;rmirr=2D0*p*q/(p+q)/sin(theta)
-                rmirr = ssour * simag * 2 / COSTHE / (ssour + simag)
-
-                ccc[1-1] =  1.0	        # X^2  # = 0 in cylinder case
-                ccc[2-1] =  1.0	        # Y^2
-                ccc[3-1] =  1.0	        # Z^2
-                ccc[4-1] =   .0	        # X*Y   # = 0 in cylinder case
-                ccc[5-1] =   .0	        # Y*Z
-                ccc[6-1] =   .0	        # X*Z   # = 0 in cylinder case
-                ccc[7-1] =   .0	        # X     # = 0 in cylinder case
-                ccc[8-1] =   .0	        # Y
-                ccc[9-1] = -2 * rmirr	# Z
-                ccc[10-1]  =   .0       # G
-                txt += "%s Spherical radius: %f \n"%(" "*40,rmirr)
-            else:
-                raise Exception("itype Not yet implemented")
-
-
-
-
-
-
-        #      	ENDIF
-        # ;C
-        # ;C Set the correct mirror convexity, i.e., Z->-Z
-        # ;C
-        #      	IF CONVEX EQ 1 THEN BEGIN
-
-        #      	ENDIF
-
-                if convex:
-                    ccc[5-1]  = - ccc[5-1]
-                    ccc[6-1]  = - ccc[6-1]
-                    ccc[9-1]  = - ccc[9-1]
-
-        #
-        #       txt=[txt,'','']
-        #       FOR i=0,9 DO txt=[txt,String(' c['+StrCompress(i,/Rem)+']=',$
-        #          ccc[i],Format='(A6,G20.10)')]
-        #
-            print(txt)
-            return ccc
-
+        ccc = numpy.zeros(10)
+        ccc[1-1] =  1.0	        # X^2  # = 0 in cylinder case
+        ccc[2-1] =  1.0	        # Y^2
+        ccc[3-1] =  1.0	        # Z^2
+        ccc[4-1] =   .0	        # X*Y   # = 0 in cylinder case
+        ccc[5-1] =   .0	        # Y*Z
+        ccc[6-1] =   .0	        # X*Z   # = 0 in cylinder case
+        ccc[7-1] =   .0	        # X     # = 0 in cylinder case
+        ccc[8-1] =   .0	        # Y
+        ccc[9-1] = -2 * rmirr	# Z
+        ccc[10-1]  =   .0       # G
+        print(">>>> Spherical radius: %f \n"%(rmirr))
+        self.set_coefficients(ccc)
 
 
     #

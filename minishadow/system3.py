@@ -9,6 +9,8 @@ import Shadow
 from Beam import Beam
 from SurfaceConic import SurfaceConic
 
+
+
 def compare_results():
     Shadow.ShadowTools.plotxy("minimirr.01",2,1,nbins=101,nolost=1,title="Mirror (Python)")
     Shadow.ShadowTools.plotxy("mirr.01",2,1,nbins=101,nolost=1,title="Mirror (SHADOW)")
@@ -16,7 +18,7 @@ def compare_results():
     Shadow.ShadowTools.plotxy("ministar.01",1,3,nbins=101,nolost=1,title="Image (Python)")
     Shadow.ShadowTools.plotxy("star.01",1,3,nbins=101,nolost=1,title="Image (SHADOW)")
 
-def dump_shadow_file(a0,file):
+def dump_shadow3_file(a0,file):
 
     ncol,npoint = a0.shape
     if ncol != 18:
@@ -238,7 +240,8 @@ def minishadow_run(iwrite=1):
     print("fmirr = %s, p=%f, q=%f, alpha=%f, theta=%f rad, fcyl=%d"%\
               (fmirr,p,q,alpha,theta,fcyl))
 
-    ccc = conicset(p,q,theta,itype=fmirr,cylindrical=fcyl)
+    ccc = SurfaceConic()
+    ccc.set_sphere_from_focal_distances(p,q,theta,itype=fmirr,cylindrical=fcyl)
 
 
     #
@@ -252,8 +255,8 @@ def minishadow_run(iwrite=1):
     #
     # reflect beam in the mirror surface and dump mirr.01
     #
-    newbeam = ccc_reflection_beam(ccc,newbeam)
-    dump_shadow_file(newbeam.get_rays(),'minimirr.01')
+    newbeam = ccc.apply_specular_reflection_on_beam(newbeam)
+    dump_shadow3_file(newbeam.get_rays(),'minimirr.01')
 
     #
     # put beam in lab frame and compute image
@@ -261,7 +264,7 @@ def minishadow_run(iwrite=1):
     newbeam.rotate(theta,axis=1)
     # TODO what about alpha?
     newbeam.retrace(q,resetY=True)
-    dump_shadow_file(newbeam.get_rays(),'ministar.01')
+    dump_shadow3_file(newbeam.get_rays(),'ministar.01')
 
 if __name__ == "__main__":
     minishadow_run()
