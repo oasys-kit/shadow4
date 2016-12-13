@@ -4,8 +4,9 @@ import scipy.constants as codata
 import json
 import os
 
-SHADOW3_BINARY = "/users/srio/OASYS_VE/shadow3/shadow3"
+import Shadow
 
+SHADOW3_BINARY = "/Users/srio/Oasys/OASYS_VE/shadow3/shadow3"
 
 angstroms_to_eV = codata.h*codata.c/codata.e*1e10
 
@@ -37,17 +38,6 @@ def info_dictionary(h):
     txt += "k: %f \n"%(h['K'])
     return txt
 
-def epath_shadow3(jsn):
-
-    input = "epath\n2\n%f \n%f \n%f \n%d \n1.\nxshundul.par\nxshundul.traj\n1\nxshundul.plt\nexit\n"% \
-    (jsn["LAMBDAU"],jsn["K"],jsn["E_ENERGY"],jsn["NG_E"])
-
-    filename = "shadow3_epath.inp"
-    f = open(filename,'w')
-    f.write(input)
-    f.close()
-
-    os.system(SHADOW3_BINARY+" < "+filename)
 
 
 def epath_compare():
@@ -59,80 +49,81 @@ def epath_compare():
     from srxraylib.plot.gol import plot
     plot(a[2],a[0],xtitle="Z(along)",ytitle="X(Horizontal)",title="trajectory at the edges??")
 
-def undul_set_shadow3(jsn):
 
-    input = "undul_set\n0\n0\n%d \n%d \n%d \nxshundul.traj\n%d\n%f\n%f\n%f\n%f\n0\n1000\nexit\n"% \
-    (jsn["NG_E"],jsn["NG_T"],jsn["NG_P"],
-     jsn["NPERIODS"],jsn["EMIN"],jsn["EMAX"],jsn["INTENSITY"],jsn["MAXANGLE"])
-    filename = "shadow3_undul_set.inp"
-    f = open(filename,'w')
-    f.write(input)
+def shadow3_commands(commands="exit\n",input_file="shadow3_tmp.inp"):
+
+    f = open(input_file,'w')
+    f.write(commands)
     f.close()
 
-    os.system(SHADOW3_BINARY+" < "+filename)
-
-def undul_phot_shadow3():
-    input = "undul_phot\nexit\n"
-    filename = "shadow3_undul_phot.inp"
-    f = open(filename,'w')
-    f.write(input)
-    f.close()
-
-    os.system(SHADOW3_BINARY+" < "+filename)
+    os.system(SHADOW3_BINARY+" < "+input_file)
 
 
-def undul_cdf_shadow3():
 
-    input = "undul_cdf\n0\n1\nxshundul.sha\nxshundul.info\nexit\n"
-    filename = "shadow3_undul_cdf.inp"
-    f = open(filename,'w')
-    f.write(input)
-    f.close()
+def compare_results(do_assert=False):
+    Shadow.ShadowTools.plotxy("begin.dat",3,6,nbins=101,nolost=1,title="Undulator (SHADOW)")
 
-    os.system(SHADOW3_BINARY+" < "+filename)
 
-def input_source_shadow3(jsn):
 
-    input = """input_source
-1
-0
-15000
-36255
-0
-2
-xshundul.sha
-0.039999999
-0.0010000000
-4.0000000e-07
-0
-3.9999999e-09
-0
-3
-1
-1
-source
-systemfile
-exit"""
+    if do_assert:
 
-    input = "input source\n1\n0\n%d \n%d \n0 \n2 \nxshundul.sha\n%g\n%g\n%g\n%d\n%g\n%d\n%d\n%d\n%d\nsource\nsystemfile\nexit\n"% \
-    (jsn["NRAYS"],jsn["SEED"],jsn["SX"],jsn["SZ"],jsn["EX"],0,jsn["EZ"],0,3,1,1)
-    filename = "shadow3_input_source.inp"
-    f = open(filename,'w')
-    f.write(input)
-    f.close()
+        minimirr = Shadow.Beam()
+        minimirr.load("minimirr.01")
+        mirr     = Shadow.Beam()
+        mirr.load("mirr.01")
+        assert_almost_equal(minimirr.rays[:,0:6],mirr.rays[:,0:6])
 
-    os.system(SHADOW3_BINARY+" < "+filename)
+
+        ministar = Shadow.Beam()
+        ministar.load("ministar.01")
+        star     = Shadow.Beam()
+        star.load("star.01")
+        assert_almost_equal(ministar.rays[:,0:6],star.rays[:,0:6])
+
+def undulator(code='shadow3'):
+    jsn = read_json("xshundul.json")
+    os.system("rm -f xshundul.plt xshundul.par xshundul.traj xshundul.info xshundul.sha")
+    print(info_dictionary(jsn))
+
+    if code == 'shadow3':
+
+
+        # epath
+
+        commands = "epath\n2\n%f \n%f \n%f \n%d \n1.\nxshundul.par\nxshundul.traj\n1\nxshundul.plt\nexit\n"% \
+        (jsn["LAMBDAU"],jsn["K"],jsn["E_ENERGY"],jsn["NG_E"])
+        shadow3_commands(commands=commands,input_file="shadow3_epath.inp")
+
+        # undul_set
+        commands = "undul_set\n0\n0\n%d \n%d \n%d \nxshundul.traj\n%d\n%f\n%f\n%f\n%f\n0\n1000\nexit\n"% \
+            (jsn["NG_E"],jsn["NG_T"],jsn["NG_P"],
+             jsn["NPERIODS"],jsn["EMIN"],jsn["EMAX"],jsn["INTENSITY"],jsn["MAXANGLE"])
+        shadow3_commands(commands=commands,input_file="shadow3_undul_set.inp")
+
+        # undul_phot
+        shadow3_commands(commands="undul_phot\nexit\n",input_file="shadow3_undul_phot.inp")
+
+        # undul_cdf
+
+
+        shadow3_commands(commands="undul_cdf\n0\n1\nxshundul.sha\nxshundul.info\nexit\n",
+                        input_file="shadow3_undul_cdf.inp")
+
+
+        # input source
+        commands = "input source\n1\n0\n%d \n%d \n0 \n2 \nxshundul.sha\n%g\n%g\n%g\n%d\n%g\n%d\n%d\n%d\n%d\nexit\n"% \
+        (jsn["NRAYS"],jsn["SEED"],jsn["SX"],jsn["SZ"],jsn["EX"],0,jsn["EZ"],0,3,1,1)
+
+
+        shadow3_commands(commands=commands,input_file="shadow3_input_source.inp")
+
+        # run source
+        commands = "source\nsystemfile\nexit\n"
+        shadow3_commands(commands=commands,input_file="shadow3_source.inp")
+
+        compare_results()
 
 
 if __name__ == "__main__":
-    jsn = read_json("xshundul.json")
-    os.system("rm -f xshundul.plt xshundul.par xshundul.traj")
-    print(info_dictionary(jsn))
 
-    epath_shadow3(jsn)
-    # epath_compare()
-
-    undul_set_shadow3(jsn)
-    undul_phot_shadow3()
-    undul_cdf_shadow3()
-    input_source_shadow3(jsn)
+    undulator(code='shadow3')
