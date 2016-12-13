@@ -76,6 +76,65 @@ def compare_results(do_assert=True):
         assert_almost_equal(begin_shadow3.rays[:,0:6],begin_minishadow.rays[:,0:6],3)
 
 
+def load_uphot_dot_dat(file_in="uphot.dat"):
+    #
+    # read uphot.dat file (like in SHADOW undul_phot_dump)
+    #
+    f = open(file_in,'r')
+    firstline = f.readline()
+    f.close()
+
+    NG_E,NG_T,NG_P = numpy.fromstring(firstline,dtype=int,sep=" ")
+    print("NG_E,NG_T,NG_P  %d  %d  %d \n"%(NG_E,NG_T,NG_P ))
+
+    tmp = numpy.loadtxt(file_in,skiprows=1)
+
+    if tmp.size != 3*(NG_E*NG_T*NG_P)+NG_E+NG_E*NG_T:
+        raise Exception("File not understood")
+
+    E = numpy.zeros(NG_E)
+    T = numpy.zeros(NG_T)
+    P = numpy.zeros(NG_P)
+
+
+    # for e in E:
+    #     f.write("%g \n"%(e))
+    #
+    itmp = 0
+    for ie,e in enumerate(E):
+        E[ie] = tmp[itmp]
+        itmp += 1
+
+    for ie in range(NG_E):
+        for it in range(NG_T):
+            T[it] = tmp[itmp]
+            itmp += 1
+
+    for ie in range(NG_E):
+        for it in range(NG_T):
+            for ip in range(NG_P):
+                P[ip] = tmp[itmp]
+                itmp += 1
+
+    Z2 = numpy.zeros((NG_E,NG_T,NG_P))
+    Z3 = numpy.zeros((NG_E,NG_T,NG_P))
+
+    for e in range(E.size):
+        for t in range(T.size):
+            for p in range(P.size):
+                Z2[e,t,p] = tmp[itmp]
+                itmp += 1
+
+    for e in range(E.size):
+        for t in range(T.size):
+            for p in range(P.size):
+                Z3[e,t,p] = tmp[itmp]
+                itmp += 1
+
+
+    return Z2,Z3,E,T,P
+
+
 def undulator(code='shadow3'):
     jsn = read_json("xshundul.json")
     os.system("rm -f xshundul.plt xshundul.par xshundul.traj xshundul.info xshundul.sha")
@@ -97,6 +156,7 @@ def undulator(code='shadow3'):
 
         # undul_phot
         shadow3_commands(commands="undul_phot\nexit\n",input_file="shadow3_undul_phot.inp")
+        shadow3_commands(commands="undul_phot_dump\nexit\n",input_file="shadow3_undul_phot_dump.inp")
 
         # undul_cdf
 
@@ -130,7 +190,7 @@ def undulator(code='shadow3'):
 
         # undul_phot
         undul_phot(jsn)
-
+        shadow3_commands(commands="undul_phot_dump\nexit\n",input_file="shadow3_undul_phot_dump.inp")
 
 
         # undul_cdf
@@ -159,7 +219,15 @@ def undulator(code='shadow3'):
 
 if __name__ == "__main__":
 
-    undulator(code='shadow3')
-    undulator(code='minishadow')
+    # undulator(code='shadow3')
+    # undulator(code='minishadow')
+    #
+    # compare_results()
+    Z2,Z3,E,T,P = load_uphot_dot_dat()
+    print("Z2,Z3",Z2.shape,Z3.shape)
+    print("E",E)
+    print("T",T)
+    print("P",P)
 
-    compare_results()
+    from srxraylib.plot.gol import plot_image
+    plot_image(Z2[0,:,:],T*1e6,P,xtitle="Theta [urad]",ytitle="Phi [rad]",aspect='auto')
