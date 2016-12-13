@@ -4,6 +4,8 @@ import scipy.constants as codata
 import json
 import os
 
+from numpy.testing import assert_equal, assert_almost_equal
+
 import Shadow
 
 SHADOW3_BINARY = "/Users/srio/Oasys/OASYS_VE/shadow3/shadow3"
@@ -60,25 +62,19 @@ def shadow3_commands(commands="exit\n",input_file="shadow3_tmp.inp"):
 
 
 
-def compare_results(do_assert=False):
-    Shadow.ShadowTools.plotxy("begin.dat",3,6,nbins=101,nolost=1,title="Undulator (SHADOW)")
+def compare_results(do_assert=True):
+    Shadow.ShadowTools.plotxy("begin_shadow3.dat",3,6,nbins=101,nolost=1,title="Undulator (SHADOW)")
 
-
+    Shadow.ShadowTools.plotxy("begin_minishadow.dat",3,6,nbins=101,nolost=1,title="Undulator (minishadow)")
 
     if do_assert:
 
-        minimirr = Shadow.Beam()
-        minimirr.load("minimirr.01")
-        mirr     = Shadow.Beam()
-        mirr.load("mirr.01")
-        assert_almost_equal(minimirr.rays[:,0:6],mirr.rays[:,0:6])
+        begin_shadow3 = Shadow.Beam()
+        begin_shadow3.load("begin_shadow3.dat")
+        begin_minishadow     = Shadow.Beam()
+        begin_minishadow.load("begin_minishadow.dat")
+        assert_almost_equal(begin_shadow3.rays[:,0:6],begin_minishadow.rays[:,0:6],3)
 
-
-        ministar = Shadow.Beam()
-        ministar.load("ministar.01")
-        star     = Shadow.Beam()
-        star.load("star.01")
-        assert_almost_equal(ministar.rays[:,0:6],star.rays[:,0:6])
 
 def undulator(code='shadow3'):
     jsn = read_json("xshundul.json")
@@ -86,7 +82,6 @@ def undulator(code='shadow3'):
     print(info_dictionary(jsn))
 
     if code == 'shadow3':
-
 
         # epath
 
@@ -121,9 +116,50 @@ def undulator(code='shadow3'):
         commands = "source\nsystemfile\nexit\n"
         shadow3_commands(commands=commands,input_file="shadow3_source.inp")
 
-        compare_results()
+        os.system("cp begin.dat begin_shadow3.dat")
+    else:
+
+        from undul_phot import undul_phot
+
+        # epath
+
+        commands = "epath\n2\n%f \n%f \n%f \n%d \n1.\nxshundul.par\nxshundul.traj\n1\nxshundul.plt\nexit\n"% \
+        (jsn["LAMBDAU"],jsn["K"],jsn["E_ENERGY"],jsn["NG_E"])
+        shadow3_commands(commands=commands,input_file="shadow3_epath.inp")
+
+
+        # undul_phot
+        undul_phot(jsn)
+
+
+
+        # undul_cdf
+
+
+        shadow3_commands(commands="undul_cdf\n0\n1\nxshundul.sha\nxshundul.info\nexit\n",
+                        input_file="shadow3_undul_cdf.inp")
+
+
+        # input source
+        commands = "input source\n1\n0\n%d \n%d \n0 \n2 \nxshundul.sha\n%g\n%g\n%g\n%d\n%g\n%d\n%d\n%d\n%d\nexit\n"% \
+        (jsn["NRAYS"],jsn["SEED"],jsn["SX"],jsn["SZ"],jsn["EX"],0,jsn["EZ"],0,3,1,1)
+
+
+        shadow3_commands(commands=commands,input_file="shadow3_input_source.inp")
+
+        # run source
+        commands = "source\nsystemfile\nexit\n"
+        shadow3_commands(commands=commands,input_file="shadow3_source.inp")
+
+        os.system("cp begin.dat begin_minishadow.dat")
+
+
+
 
 
 if __name__ == "__main__":
 
     undulator(code='shadow3')
+    undulator(code='minishadow')
+
+    compare_results()
