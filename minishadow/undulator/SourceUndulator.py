@@ -5,6 +5,7 @@ import json
 import os
 
 from numpy.testing import assert_equal, assert_almost_equal
+from srxraylib.plot.gol import plot,plot_image,plot_show
 
 import Shadow
 
@@ -76,7 +77,7 @@ def compare_results(do_assert=True):
         assert_almost_equal(begin_shadow3.rays[:,0:6],begin_minishadow.rays[:,0:6],3)
 
 
-def load_uphot_dot_dat(file_in="uphot.dat"):
+def load_uphot_dot_dat(file_in="uphot.dat",do_plot=False):
     #
     # read uphot.dat file (like in SHADOW undul_phot_dump)
     #
@@ -93,8 +94,8 @@ def load_uphot_dot_dat(file_in="uphot.dat"):
         raise Exception("File not understood")
 
     E = numpy.zeros(NG_E)
-    T = numpy.zeros(NG_T)
-    P = numpy.zeros(NG_P)
+    T = numpy.zeros((NG_E,NG_T))
+    P = numpy.zeros((NG_E,NG_T,NG_P))
 
 
     # for e in E:
@@ -107,32 +108,196 @@ def load_uphot_dot_dat(file_in="uphot.dat"):
 
     for ie in range(NG_E):
         for it in range(NG_T):
-            T[it] = tmp[itmp]
+            T[ie,it] = tmp[itmp]
             itmp += 1
 
     for ie in range(NG_E):
         for it in range(NG_T):
             for ip in range(NG_P):
-                P[ip] = tmp[itmp]
+                P[ie,it,ip] = tmp[itmp]
                 itmp += 1
 
-    Z2 = numpy.zeros((NG_E,NG_T,NG_P))
-    Z3 = numpy.zeros((NG_E,NG_T,NG_P))
+    RN0 = numpy.zeros((NG_E,NG_T,NG_P))
+    POL_DEG = numpy.zeros((NG_E,NG_T,NG_P))
 
-    for e in range(E.size):
-        for t in range(T.size):
-            for p in range(P.size):
-                Z2[e,t,p] = tmp[itmp]
+    for e in range(NG_E):
+        for t in range(NG_T):
+            for p in range(NG_P):
+                RN0[e,t,p] = tmp[itmp]
                 itmp += 1
 
-    for e in range(E.size):
-        for t in range(T.size):
-            for p in range(P.size):
-                Z3[e,t,p] = tmp[itmp]
+    for e in range(NG_E):
+        for t in range(NG_T):
+            for p in range(NG_P):
+                POL_DEG[e,t,p] = tmp[itmp]
+                itmp += 1
+
+    if do_plot:
+        # with anscissas
+        # plot_image(RN0[0,:,:],T.flatten()[0:NG_T].copy()*1e6,P.flatten()[0:NG_P].copy(),title="RN0[0]",xtitle="Theta [urad]",ytitle="Phi [rad]",aspect='auto',show=0)
+        # plot_image(POL_DEG[0,:,:],T.flatten()[0:NG_T].copy()*1e6,P.flatten()[0:NG_P].copy(),title="POL_DEG[0]",xtitle="Theta [urad]",ytitle="Phi [rad]",aspect='auto',show=1)
+
+        # with indices
+        plot_image(RN0[0,:,:],numpy.arange(NG_T),numpy.arange(NG_P),title="RN0[0]",xtitle="Theta [index]",ytitle="Phi [index]",aspect=None,show=0)
+        plot_image(POL_DEG[0,:,:],numpy.arange(NG_T),numpy.arange(NG_P),title="POL_DEG[0]",xtitle="Theta [index]",ytitle="Phi [index]",aspect=None,show=0)
+
+
+    return RN0, POL_DEG, E, T.flatten()[0:NG_T].copy(), P.flatten()[0:NG_P].copy()
+
+
+def load_xshundun_dot_sha(file_in="xshundul.sha",do_plot=False):
+    #
+    # read uphot.dat file (like in SHADOW undul_phot_dump)
+    #
+    f = open(file_in,'r')
+    firstline = f.readline()
+    f.close()
+
+    NG_E,NG_T,NG_P, IANGLE = numpy.fromstring(firstline,dtype=int,sep=" ")
+    print("NG_E,NG_T,NG_P, IANGLE  %d  %d  %d %d \n"%(NG_E,NG_T,NG_P,IANGLE ))
+
+    tmp = numpy.loadtxt(file_in,skiprows=1)
+
+    if tmp.size != 2*(NG_E + NG_E*NG_T + NG_E*NG_T*NG_P) + NG_E*NG_T*NG_P:
+        raise Exception("File not understood")
+
+    E = numpy.zeros(NG_E)
+    T = numpy.zeros((NG_E,NG_T))
+    P = numpy.zeros((NG_E,NG_T,NG_P))
+
+
+    # for e in E:
+    #     f.write("%g \n"%(e))
+    #
+    itmp = 0
+    for ie,e in enumerate(E):
+        E[ie] = tmp[itmp]
+        itmp += 1
+
+    for ie in range(NG_E):
+        for it in range(NG_T):
+            T[ie,it] = tmp[itmp]
+            itmp += 1
+
+    for ie in range(NG_E):
+        for it in range(NG_T):
+            for ip in range(NG_P):
+                P[ie,it,ip] = tmp[itmp]
+                itmp += 1
+
+    TWO = numpy.zeros((NG_E))
+    ONE = numpy.zeros((NG_E,NG_T))
+    ZERO = numpy.zeros((NG_E,NG_T,NG_P))
+    POL_DEGREE = numpy.zeros_like(ZERO)
+
+
+    for e in range(NG_E):
+        TWO[e] = tmp[itmp]
+        itmp += 1
+
+    for e in range(NG_E):
+        for t in range(NG_T):
+            ONE[e,t] = tmp[itmp]
+            itmp += 1
+
+    for e in range(NG_E):
+        for t in range(NG_T):
+            for p in range(NG_P):
+                ZERO[e,t,p] = tmp[itmp]
+                itmp += 1
+
+    for e in range(NG_E):
+        for t in range(NG_T):
+            for p in range(NG_P):
+                POL_DEGREE[e,t,p] = tmp[itmp]
                 itmp += 1
 
 
-    return Z2,Z3,E,T,P
+    plot(E,TWO,title="TWO %s"%file_in,xtitle="E",ytitle="TWO",show=0)
+    plot_image(ONE,numpy.arange(NG_E),numpy.arange(NG_T),title="ONE %s "%file_in,xtitle="index Energy",ytitle="index Theta",show=0)
+    plot_image(ZERO[0,:,:],numpy.arange(NG_T),numpy.arange(NG_P),title="ZERO[0] %s"%file_in,xtitle="index Theta",ytitle="index Phi",show=0)
+    # plot_image(POL_DEGREE[0,:,:],numpy.arange(NG_T),numpy.arange(NG_P),title="POL_DEGREE[0]",xtitle="index Theta",ytitle="index Phi",show=0)
+
+
+    return TWO,ONE,ZERO,E,T,P,POL_DEGREE
+
+def undul_cdf(file_out=None,do_plot=False):
+    #
+    # read uphot.dat file (like in SHADOW undul_phot_dump)
+    #
+    RN0,POL_DEG,E,T,P = load_uphot_dot_dat(do_plot=False)
+
+
+    NG_E,NG_T,NG_P = RN0.shape
+    print("NG_E,NG_T,NG_P, %d  %d %d \n"%(NG_E,NG_T,NG_P))
+
+    # TWO = numpy.zeros(NG_E)
+    # ONE = numpy.zeros((NG_E,NG_T))
+    # ZERO = numpy.zeros((NG_E,NG_T,NG_P))
+
+    RN1 = RN0.sum(axis=2) * 2 * numpy.pi * (P[1]-P[0])  # RN1(e,t)
+    RN2 = RN1.sum(axis=1) * (T[1]-T[0])  # RN2(e)
+
+
+
+    ZERO  = numpy.cumsum(RN0,axis=2) # CDF(e,t,p)
+    ONE   = numpy.cumsum(RN1,axis=1) # CDF(e,t)
+    TWO   = numpy.cumsum(RN2)        # CDF(e)
+
+    print("Shadow ZERO,ONE,TWO: ",ZERO.shape,ONE.shape,TWO.shape)
+
+    if do_plot:
+        plot(E,TWO,title="NEW TWO",xtitle="E",ytitle="TWO",show=0)
+        plot_image(ONE,numpy.arange(NG_E),numpy.arange(NG_T),title="NEW ONE",xtitle="index Energy",ytitle="index Theta",show=0)
+        plot_image(ZERO[0,:,:],numpy.arange(NG_T),numpy.arange(NG_P),title="NEW ZERO[0]",xtitle="index Theta",ytitle="index Phi",show=0)
+        #plot_image(POL_DEGREE[0,:,:],numpy.arange(NG_T),numpy.arange(NG_P),title="POL_DEGREE[0]",xtitle="index Theta",ytitle="index Phi",show=0)
+
+
+
+    #
+    # create xshundul.sha file (like in SHADOW undul_cdf)
+    #
+    if file_out is not None:
+        f = open(file_out,'w')
+        f.write("%d  %d  %d 1 \n"%(NG_E,NG_T,NG_P))
+
+        for e in E:
+            f.write("%g \n"%(e))
+
+        for e in E:
+            for t in T:
+                f.write("%g \n"%t)
+
+        for e in E:
+            for t in T:
+                for p in P:
+                    f.write("%g \n"%p)
+
+        for e in numpy.arange(NG_E):
+            f.write("%g \n"%(TWO[e]))
+
+        for e in numpy.arange(NG_E):
+            for t in numpy.arange(NG_T):
+                f.write("%g \n"%(ONE[e,t]))
+
+        for e in numpy.arange(NG_E):
+            for t in numpy.arange(NG_T):
+                for p in numpy.arange(NG_P):
+                    f.write("%g \n"%(ZERO[e,t,p]))
+
+        for e in numpy.arange(NG_E):
+            for t in numpy.arange(NG_T):
+                for p in numpy.arange(NG_P):
+                    f.write("%g \n"%(POL_DEG[e,t,p]))
+
+
+        f.close()
+        print("File written to disk: %s"%file_out)
+
+
+
+
+    return TWO,ONE,ZERO,E,T,P
 
 
 def undulator(code='shadow3'):
@@ -223,11 +388,32 @@ if __name__ == "__main__":
     # undulator(code='minishadow')
     #
     # compare_results()
-    Z2,Z3,E,T,P = load_uphot_dot_dat()
-    print("Z2,Z3",Z2.shape,Z3.shape)
-    print("E",E)
-    print("T",T)
-    print("P",P)
 
-    from srxraylib.plot.gol import plot_image
-    plot_image(Z2[0,:,:],T*1e6,P,xtitle="Theta [urad]",ytitle="Phi [rad]",aspect='auto')
+    # uphot.dat
+
+    # RN0,POL_DEG,E,T,P = load_uphot_dot_dat(do_plot=True)
+    # print("RN0,POL_DEG",RN0.shape,POL_DEG.shape)
+    # print("E",E)
+    # print("T",T)
+    # print("P",P)
+    #
+
+
+    # xshundul.sha
+    # TWO,ONE,ZERO,E,T,P,POL_DEGREE = load_xshundun_dot_sha(do_plot=True)
+    # print("Shadow TWO",TWO.shape)
+    # print("Shadow ONE",ONE.shape)
+    # print("Shadow ZERO",ZERO.shape)
+    #
+    # print("Total TWO",  TWO.sum())
+    # print("Total ONE",  ONE.sum())
+    # print("Total ZERO",ZERO.sum())
+    # NG_E,NG_T,NG_P = ZERO.shape
+
+    # new undul_cdf
+    # TWO,ONE,ZERO,E,T,P,POL_DEGREE = undul_cdf(do_plot=True)
+    TWO,ONE,ZERO,E,T,P = undul_cdf(do_plot=False,file_out="xshundul2.sha")
+    load_xshundun_dot_sha(file_in="xshundul.sha",do_plot=True)
+    load_xshundun_dot_sha(file_in="xshundul2.sha",do_plot=True)
+
+    plot_show()
