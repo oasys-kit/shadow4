@@ -6,10 +6,15 @@ import os
 
 from numpy.testing import assert_equal, assert_almost_equal
 from srxraylib.plot.gol import plot,plot_image,plot_show
+import scipy.integrate
 
 import Shadow
 
-SHADOW3_BINARY = "/Users/srio/Oasys/OASYS_VE/shadow3/shadow3"
+import platform
+if platform.system() == "Linux":
+    SHADOW3_BINARY = "/users/srio/OASYS_VE/shadow3/shadow3"
+else:
+    SHADOW3_BINARY = "/Users/srio/Oasys/OASYS_VE/shadow3/shadow3"
 
 angstroms_to_eV = codata.h*codata.c/codata.e*1e10
 
@@ -86,12 +91,12 @@ def load_uphot_dot_dat(file_in="uphot.dat",do_plot=False):
     f.close()
 
     NG_E,NG_T,NG_P = numpy.fromstring(firstline,dtype=int,sep=" ")
-    print("NG_E,NG_T,NG_P  %d  %d  %d \n"%(NG_E,NG_T,NG_P ))
+    print("load_uphot_dot_dat: NG_E,NG_T,NG_P  %d  %d  %d \n"%(NG_E,NG_T,NG_P ))
 
     tmp = numpy.loadtxt(file_in,skiprows=1)
 
     if tmp.size != 3*(NG_E*NG_T*NG_P)+NG_E+NG_E*NG_T:
-        raise Exception("File not understood")
+        raise Exception("load_uphot_dot_dat: File not understood")
 
     E = numpy.zeros(NG_E)
     T = numpy.zeros((NG_E,NG_T))
@@ -102,7 +107,7 @@ def load_uphot_dot_dat(file_in="uphot.dat",do_plot=False):
     #     f.write("%g \n"%(e))
     #
     itmp = 0
-    for ie,e in enumerate(E):
+    for ie in range(NG_E):
         E[ie] = tmp[itmp]
         itmp += 1
 
@@ -132,8 +137,14 @@ def load_uphot_dot_dat(file_in="uphot.dat",do_plot=False):
                 POL_DEG[e,t,p] = tmp[itmp]
                 itmp += 1
 
+    TT = T.flatten()[0:NG_T].copy()
+    PP = P.flatten()[0:NG_P].copy()
+    print("load_uphot_dot_dat: Step in E: %f, Interval in E: %f"%( (E[1]-E[0]), (E[-1]-E[0]) ))
+    print("load_uphot_dot_dat: Step in P: %f, Interval in P: %f"%( (PP[1]-PP[0]), (PP[-1]-PP[0]) ))
+    print("load_uphot_dot_dat: Step in T: %f, Interval in T: %f"%( (TT[1]-TT[0]), (TT[-1]-TT[0]) ))
+
     if do_plot:
-        # with anscissas
+        # with abscissas
         # plot_image(RN0[0,:,:],T.flatten()[0:NG_T].copy()*1e6,P.flatten()[0:NG_P].copy(),title="RN0[0]",xtitle="Theta [urad]",ytitle="Phi [rad]",aspect='auto',show=0)
         # plot_image(POL_DEG[0,:,:],T.flatten()[0:NG_T].copy()*1e6,P.flatten()[0:NG_P].copy(),title="POL_DEG[0]",xtitle="Theta [urad]",ytitle="Phi [rad]",aspect='auto',show=1)
 
@@ -142,7 +153,7 @@ def load_uphot_dot_dat(file_in="uphot.dat",do_plot=False):
         plot_image(POL_DEG[0,:,:],numpy.arange(NG_T),numpy.arange(NG_P),title="POL_DEG[0]",xtitle="Theta [index]",ytitle="Phi [index]",aspect=None,show=0)
 
 
-    return RN0, POL_DEG, E, T.flatten()[0:NG_T].copy(), P.flatten()[0:NG_P].copy()
+    return RN0, POL_DEG, E, TT, PP
 
 
 def load_xshundun_dot_sha(file_in="xshundul.sha",do_plot=False):
@@ -221,30 +232,42 @@ def load_xshundun_dot_sha(file_in="xshundul.sha",do_plot=False):
 
     return TWO,ONE,ZERO,E,T,P,POL_DEGREE
 
-def undul_cdf(file_out=None,do_plot=False):
+def undul_cdf(file_in="uphot.dat",file_out=None,method='trapz',do_plot=False):
     #
     # read uphot.dat file (like in SHADOW undul_phot_dump)
     #
-    RN0,POL_DEG,E,T,P = load_uphot_dot_dat(do_plot=False)
+    RN0,POL_DEG,E,T,P = load_uphot_dot_dat(file_in=file_in,do_plot=do_plot)
 
 
     NG_E,NG_T,NG_P = RN0.shape
-    print("NG_E,NG_T,NG_P, %d  %d %d \n"%(NG_E,NG_T,NG_P))
-
-    # TWO = numpy.zeros(NG_E)
-    # ONE = numpy.zeros((NG_E,NG_T))
-    # ZERO = numpy.zeros((NG_E,NG_T,NG_P))
-
-    RN1 = RN0.sum(axis=2) * 2 * numpy.pi * (P[1]-P[0])  # RN1(e,t)
-    RN2 = RN1.sum(axis=1) * (T[1]-T[0])  # RN2(e)
+    print("undul_cdf: NG_E,NG_T,NG_P, %d  %d %d \n"%(NG_E,NG_T,NG_P))
 
 
+    YRN0 = numpy.zeros_like(RN0)
+    for e in numpy.arange(NG_E):
+        for t in numpy.arange(NG_T):
+            for p in numpy.arange(NG_P):
+                YRN0[e,t,p] = RN0[e,t,p] * T[t]
 
-    ZERO  = numpy.cumsum(RN0,axis=2) # CDF(e,t,p)
-    ONE   = numpy.cumsum(RN1,axis=1) # CDF(e,t)
-    TWO   = numpy.cumsum(RN2)        # CDF(e)
 
-    print("Shadow ZERO,ONE,TWO: ",ZERO.shape,ONE.shape,TWO.shape)
+    if method == "sum":
+        RN1 = YRN0.sum(axis=2) * (P[1]-P[0])               # RN1(e,t)
+        RN2 = RN1.sum(axis=1) * (T[1]-T[0])                # RN2(e)
+        ZERO  = numpy.cumsum(RN0,axis=2)   * (P[1] - P[0]) # CDF(e,t,p)
+        ONE   = numpy.cumsum(RN1,axis=1)   * (T[1] - T[0]) # CDF(e,t)
+        TWO   = numpy.cumsum(RN2)          * (E[1] - E[0]) # CDF(e)
+    else:
+        RN1 = numpy.trapz(YRN0,axis=2) * (P[1]-P[0])                            # RN1(e,t)
+        RN2 = numpy.trapz(RN1,axis=1)  * (T[1]-T[0])                            # RN2(e)
+        ZERO  = scipy.integrate.cumtrapz(RN0,initial=0,axis=2)  * (P[1] - P[0]) # CDF(e,t,p)
+        ONE   = scipy.integrate.cumtrapz(RN1,initial=0,axis=1)  * (T[1] - T[0]) # CDF(e,t)
+        TWO   = scipy.integrate.cumtrapz(RN2,initial=0)         * (E[1] - E[0]) # CDF(e)
+
+
+
+    print("undul_cdf: Shadow ZERO,ONE,TWO: ",ZERO.shape,ONE.shape,TWO.shape)
+    print("undul_cdf: Total Power emitted in the specified angles is: %g Watts."%(RN2.sum()*(E[1]-E[0])*codata.e))
+
 
     if do_plot:
         plot(E,TWO,title="NEW TWO",xtitle="E",ytitle="TWO",show=0)
@@ -292,7 +315,7 @@ def undul_cdf(file_out=None,do_plot=False):
 
 
         f.close()
-        print("File written to disk: %s"%file_out)
+        print("undul_cdf: File written to disk: %s"%file_out)
 
 
 
@@ -384,7 +407,7 @@ def undulator(code='shadow3'):
 
 if __name__ == "__main__":
 
-    # undulator(code='shadow3')
+    undulator(code='shadow3')
     # undulator(code='minishadow')
     #
     # compare_results()
@@ -412,8 +435,12 @@ if __name__ == "__main__":
 
     # new undul_cdf
     # TWO,ONE,ZERO,E,T,P,POL_DEGREE = undul_cdf(do_plot=True)
-    TWO,ONE,ZERO,E,T,P = undul_cdf(do_plot=False,file_out="xshundul2.sha")
+
+    TWO,ONE,ZERO,E,T,P = undul_cdf(do_plot=False,method='sum',file_out="xshundul2.sha")
+    TWO,ONE,ZERO,E,T,P = undul_cdf(do_plot=False,method='trapz',file_out="xshundul3.sha")
+
     load_xshundun_dot_sha(file_in="xshundul.sha",do_plot=True)
     load_xshundun_dot_sha(file_in="xshundul2.sha",do_plot=True)
+    load_xshundun_dot_sha(file_in="xshundul3.sha",do_plot=True)
 
     plot_show()

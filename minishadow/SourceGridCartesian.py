@@ -277,8 +277,8 @@ class SourceGridCartesian(object):
 if __name__ == "__main__":
 
     a = SourceGridCartesian.initialize_point_source(
-                direction_space        = [1e-3,1e-3],
-                direction_space_points = [20,  10],
+                direction_space        = [2e-3,2e-3],
+                direction_space_points = [20,  20],
                 direction_space_center = [0.0, 0.0] )
     print(a.info())
 
@@ -296,10 +296,7 @@ if __name__ == "__main__":
 
     VP = a.get_volume_divergences()
     print("VP",VP.shape,VP.size)
-    # for i in range(200):
-    #     print(i,VP[0,i],VP[1,i],VP[2,i])
 
-    print(numpy.outer(VP,VP).shape)
 
     Vx = a.get_volume_real_space()
     print("Vx: ",Vx.shape)
@@ -307,13 +304,26 @@ if __name__ == "__main__":
     V = a.get_volume()
     print("V: ",V.shape)
 
-    a = SourceGridCartesian.initialize_collimated_source(real_space=[1.,0.0,1.0],real_space_points=[100,1,100])
-    print(a.info())
-    beam_shadow3 = a.get_beam_shadow3()
-    # import Shadow
-    # Shadow.ShadowTools.plotxy(beam_shadow3,1,3)
 
-    beam = a.get_beam()
-    from srxraylib.plot.gol import plot_scatter
-    plot_scatter(beam.get_column(1),beam.get_column(3))
-    print(beam.info())
+    beam_shadow3 = a.get_beam_shadow3()
+    beam_shadow3.write("begin.dat")
+
+    import Shadow
+    Shadow.ShadowTools.plotxy(beam_shadow3,4,6)
+
+
+
+
+
+    #
+    #
+    # a = SourceGridCartesian.initialize_collimated_source(real_space=[1.,0.0,1.0],real_space_points=[100,1,100])
+    # print(a.info())
+    # beam_shadow3 = a.get_beam_shadow3()
+    # # import Shadow
+    # # Shadow.ShadowTools.plotxy(beam_shadow3,1,3)
+    #
+    # beam = a.get_beam()
+    # from srxraylib.plot.gol import plot_scatter
+    # plot_scatter(beam.get_column(1),beam.get_column(3))
+    # print(beam.info())
