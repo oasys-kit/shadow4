@@ -81,7 +81,8 @@ def energy_radiated(omega=2.53465927101*10**17,trajectory=np.zeros((11,10)) , x=
         E[k] = np.trapz(integrand[k], trajectory[0])
         #E[k] = integrate.simps(integrand[k], trajectory[0])
     # np.linalg.norm
-    return (np.abs(E[0]) ** 2 + np.abs(E[1])** 2 + np.abs(E[2])** 2)
+    pol_deg = (np.abs(E[0])**2 / (np.abs(E[0])**2 + np.abs(E[1])**2 ) )
+    return (np.abs(E[0]) ** 2 + np.abs(E[1])** 2 + np.abs(E[2])** 2), pol_deg
 #
 # END COPY OF SOPHIE'S CODE
 #
@@ -144,13 +145,17 @@ def undul_phot(myinput):
 
     if gridding == 0:
         Z2 = np.zeros((E.size,X.size,Y.size))
+        POL_DEG = np.zeros_like(Z2)
         for o in range(omega_array.size):
             print("Calculating energy %g eV (%d of %d)"%(E[o],o+1,omega_array.size))
             for i in range(X.size):
                 for j in range(Y.size):
-                    Z2[o,i,j] = c6*energy_radiated(omega=omega_array[o],trajectory=T , x=X[i] , y=Y[j], D=D )
+                    intensity, pol_deg=energy_radiated(omega=omega_array[o],trajectory=T , x=X[i] , y=Y[j], D=D )
+                    Z2[o,i,j] = c6*intensity
+                    POL_DEG[o,i,j] = pol_deg
     elif gridding == 1:
         Z2 = np.zeros((omega_array.size,theta.size,phi.size))
+        POL_DEG = np.zeros_like(Z2)
         for o in range(omega_array.size):
             print("Calculating energy %g eV (%d of %d)"%(E[o],o+1,omega_array.size))
             for t in range(theta.size):
@@ -159,7 +164,9 @@ def undul_phot(myinput):
                     r = R * np.sin(theta[t])
                     X = r * np.cos(phi[p])
                     Y = r * np.sin(phi[p])
-                    Z2[o,t,p] = c6*energy_radiated(omega=omega_array[o],trajectory=T , x=X , y=Y, D=D )
+                    intensity, pol_deg = energy_radiated(omega=omega_array[o],trajectory=T , x=X , y=Y, D=D )
+                    Z2[o,t,p] = c6*intensity
+                    POL_DEG[o,t,p] = pol_deg
 
 
     #
@@ -189,7 +196,7 @@ def undul_phot(myinput):
     for e in range(E.size):
         for t in range(theta.size):
             for p in range(phi.size):
-                f.write("1.0 \n")
+                f.write("%g \n"%POL_DEG[e,t,p])
 
     f.close()
     print("File written to disk: %s"%file_out)
