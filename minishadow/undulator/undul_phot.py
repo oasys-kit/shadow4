@@ -122,7 +122,7 @@ def undul_phot(myinput):
 
 
 
-    E = np.linspace(h["EMIN"],h["EMAX"],h["NG_E"])
+    E = np.linspace(h["EMIN"],h["EMAX"],h["NG_E"],dtype=float)
     wavelength_array_in_A = angstroms_to_eV / E
     omega_array = 2*np.pi * codata.c / (wavelength_array_in_A * 1e-10)
 
@@ -133,13 +133,13 @@ def undul_phot(myinput):
 
     if gridding == 0:
         D = None
-        X = np.linspace(0.0,h["MAXANGLE"]*1e-3,h["NG_T"])
-        Y = np.linspace(0.0,h["MAXANGLE"]*1e-3,h["NG_T"])
+        X = np.linspace(0.0,h["MAXANGLE"]*1e-3,h["NG_T"],dtype=float)
+        Y = np.linspace(0.0,h["MAXANGLE"]*1e-3,h["NG_T"],dtype=float)
 
     else:
         D = 100.0 # placed far away (100 m)
-        theta = np.linspace(0,h["MAXANGLE"]*1e-3,h["NG_T"])
-        phi = np.linspace(0,np.pi/2,h["NG_P"])
+        theta = np.linspace(0,h["MAXANGLE"]*1e-3,h["NG_T"],dtype=float)
+        phi = np.linspace(0,np.pi/2,h["NG_P"],dtype=float)
 
     c6= codata.e*1e-10/(8.0*np.pi**2*codata.epsilon_0*codata.c*codata.h)
 
@@ -175,28 +175,28 @@ def undul_phot(myinput):
     file_out = "uphot.dat"
     f = open(file_out,'w')
     f.write("%d  %d  %d \n"%(h["NG_E"],h["NG_T"],h["NG_P"]))
-    for e in E:
-        f.write("%g \n"%(e))
+    for e in range(h["NG_E"]):
+        f.write("%20.10f \n"%(E[e]))
 
-    for e in E:
-        for t in theta:
-            f.write("%g \n"%t)
+    for e in range(h["NG_E"]):
+        for t in range(h["NG_T"]):
+            f.write("%20.10f \n"%(theta[t]))
 
-    for e in E:
-        for t in theta:
-            for p in phi:
-                f.write("%g \n"%p)
+    for e in range(h["NG_E"]):
+        for t in range(h["NG_T"]):
+            for p in range(h["NG_P"]):
+                f.write("%20.10f \n"%(phi[p]))
 
 
-    for e in range(E.size):
-        for t in range(theta.size):
-            for p in range(phi.size):
-                f.write("%g \n"%Z2[e,t,p])
+    for e in range(h["NG_E"]):
+        for t in range(h["NG_T"]):
+            for p in range(h["NG_P"]):
+                f.write("%20.10f \n"%Z2[e,t,p])
 
-    for e in range(E.size):
-        for t in range(theta.size):
-            for p in range(phi.size):
-                f.write("%g \n"%POL_DEG[e,t,p])
+    for e in range(h["NG_E"]):
+        for t in range(h["NG_T"]):
+            for p in range(h["NG_P"]):
+                f.write("%20.10f \n"%POL_DEG[e,t,p])
 
     f.close()
     print("File written to disk: %s"%file_out)

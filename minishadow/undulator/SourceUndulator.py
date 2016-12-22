@@ -53,7 +53,7 @@ def info_dictionary(h):
 #
 # run full sequence
 #
-def undulator(code='shadow3'):
+def undulator(code='shadow3',force_shadow3_undul_cdf=False,force_srw_undul_phot=False):
     jsn = read_json("xshundul.json")
     os.system("rm -f xshundul.plt xshundul.par xshundul.traj xshundul.info xshundul.sha")
     print(info_dictionary(jsn))
@@ -96,45 +96,9 @@ def undulator(code='shadow3'):
         os.system("cp xshundul.sha xshundul_shadow3.sha")
 
 
-    elif code == "hybrid":
-
-        # epath
-        commands = "epath\n2\n%f \n%f \n%f \n%d \n1.\nxshundul.par\nxshundul.traj\n1\nxshundul.plt\nexit\n"% \
-        (jsn["LAMBDAU"],jsn["K"],jsn["E_ENERGY"],jsn["NG_E"])
-        shadow3_commands(commands=commands,input_file="shadow3_epath.inp")
-
-        # undul_set
-        commands = "undul_set\n0\n0\n%d \n%d \n%d \nxshundul.traj\n%d\n%f\n%f\n%f\n%f\n0\n1000\nexit\n"% \
-            (jsn["NG_E"],jsn["NG_T"],jsn["NG_P"],
-             jsn["NPERIODS"],jsn["EMIN"],jsn["EMAX"],jsn["INTENSITY"],jsn["MAXANGLE"])
-        shadow3_commands(commands=commands,input_file="shadow3_undul_set.inp")
-
-        # undul_phot
-        shadow3_commands(commands="undul_phot\nexit\n",input_file="shadow3_undul_phot.inp")
-        shadow3_commands(commands="undul_phot_dump\nexit\n",input_file="shadow3_undul_phot_dump.inp")
-
-        # undul_cdf  PYTHON ONE
-
-        undul_cdf(file_in="uphot.dat",method='trapz',file_out="xshundul.sha",do_plot=False)
-
-        # input source
-        commands = "input source\n1\n0\n%d \n%d \n0 \n2 \nxshundul.sha\n%g\n%g\n%g\n%d\n%g\n%d\n%d\n%d\n%d\nexit\n"% \
-        (jsn["NRAYS"],jsn["SEED"],jsn["SX"],jsn["SZ"],jsn["EX"],0,jsn["EZ"],0,3,1,1)
-
-
-        shadow3_commands(commands=commands,input_file="shadow3_input_source.inp")
-
-        # run source
-        commands = "source\nsystemfile\nexit\n"
-        shadow3_commands(commands=commands,input_file="shadow3_source.inp")
-
-        os.system("cp begin.dat begin_hybrid.dat")
-        os.system("cp uphot.dat uphot_hybrid.dat")
-        os.system("cp xshundul.sha xshundul_hybrid.sha")
-
     elif code == 'minishadow':
 
-        from undul_phot import undul_phot
+
         # epath
         commands = "epath\n2\n%f \n%f \n%f \n%d \n1.\nxshundul.par\nxshundul.traj\n1\nxshundul.plt\nexit\n"% \
         (jsn["LAMBDAU"],jsn["K"],jsn["E_ENERGY"],jsn["NG_E"])
@@ -142,7 +106,12 @@ def undulator(code='shadow3'):
 
 
         # undul_phot
-        undul_phot(jsn)
+        if force_srw_undul_phot:
+            from undul_phot_srw import undul_phot_srw
+            undul_phot_srw(jsn)
+        else:
+            from undul_phot import undul_phot
+            undul_phot(jsn)
         shadow3_commands(commands="undul_phot_dump\nexit\n",input_file="shadow3_undul_phot_dump.inp")
 
         # undul_cdf
@@ -185,7 +154,8 @@ def load_uphot_dot_dat(file_in="uphot.dat",do_plot=False):
     f.close()
 
     NG_E,NG_T,NG_P = numpy.fromstring(firstline,dtype=int,sep=" ")
-    print("load_uphot_dot_dat: NG_E,NG_T,NG_P  %d  %d  %d \n"%(NG_E,NG_T,NG_P ))
+    print("\nload_uphot_dot_dat: file is %s"%(file_in))
+    print("load_uphot_dot_dat: NG_E,NG_T,NG_P  %d  %d  %d"%(NG_E,NG_T,NG_P ))
 
     tmp = numpy.loadtxt(file_in,skiprows=1)
 
@@ -236,6 +206,9 @@ def load_uphot_dot_dat(file_in="uphot.dat",do_plot=False):
     print("load_uphot_dot_dat: Step in E: %f, Interval in E: %f"%( (E[1]-E[0]), (E[-1]-E[0]) ))
     print("load_uphot_dot_dat: Step in P: %f, Interval in P: %f"%( (PP[1]-PP[0]), (PP[-1]-PP[0]) ))
     print("load_uphot_dot_dat: Step in T: %f, Interval in T: %f"%( (TT[1]-TT[0]), (TT[-1]-TT[0]) ))
+
+    print("load_uphot_dot_dat: RN0 max: %f min: %f"%(RN0.max(),RN0.min()) )
+    print("load_uphot_dot_dat: POL_DEG max: %f min: %f"%(POL_DEG.max(),POL_DEG.min()) )
 
     if do_plot:
         # with abscissas
@@ -480,22 +453,20 @@ if __name__ == "__main__":
     # test_undul_cdf(do_plot=False)
 
 
-    os.system("rm -f begin*.dat")
+    os.system("rm -f begin*.dat uphot*.dat")
     undulator(code='shadow3')
 
+    # TODO: check polarization
+    undulator(code='minishadow',force_shadow3_undul_cdf=False,force_srw_undul_phot=False)
 
-    undulator(code='minishadow')
-    # undulator(code='hybrid')
 
 
 
     load_uphot_dot_dat("uphot_shadow3.dat",do_plot=True)
-    # load_uphot_dot_dat("uphot_hybrid.dat",do_plot=True)
     load_uphot_dot_dat("uphot_minishadow.dat",do_plot=True)
     # load_uphot_dot_dat("uphot.dat",do_plot=True)
 
-    # compare_shadow3_files("begin_shadow3.dat","begin_minishadow.dat",do_assert=True)
-    # compare_shadow3_files(file1="begin_shadow3.dat",file2="begin_hybrid.dat",do_assert=True)
+    compare_shadow3_files("begin_shadow3.dat","begin_minishadow.dat",do_assert=True)
 
     # uphot.dat
 
