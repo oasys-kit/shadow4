@@ -95,6 +95,10 @@ def undulator(code='shadow3',force_shadow3_undul_cdf=False,force_srw_undul_phot=
         os.system("cp uphot.dat uphot_shadow3.dat")
         os.system("cp xshundul.sha xshundul_shadow3.sha")
 
+        # make script
+        oe0 = Shadow.Source()
+        oe0.load("start.00")
+        Shadow.ShadowTools.make_python_script_from_list([oe0],script_file="script_undulator.py")
 
     elif code == 'minishadow':
 
@@ -119,15 +123,36 @@ def undulator(code='shadow3',force_shadow3_undul_cdf=False,force_srw_undul_phot=
 
 
         # input source
-        commands = "input source\n1\n0\n%d \n%d \n0 \n2 \nxshundul.sha\n%g\n%g\n%g\n%d\n%g\n%d\n%d\n%d\n%d\nexit\n"% \
-        (jsn["NRAYS"],jsn["SEED"],jsn["SX"],jsn["SZ"],jsn["EX"],0,jsn["EZ"],0,3,1,1)
-
-
-        shadow3_commands(commands=commands,input_file="shadow3_input_source.inp")
-
-        # run source
-        commands = "source\nsystemfile\nexit\n"
-        shadow3_commands(commands=commands,input_file="shadow3_source.inp")
+        use_shadow3_binary = False
+        if use_shadow3_binary:
+            commands = "input source\n1\n0\n%d \n%d \n0 \n2 \nxshundul.sha\n%g\n%g\n%g\n%d\n%g\n%d\n%d\n%d\n%d\nexit\n"% \
+            (jsn["NRAYS"],jsn["SEED"],jsn["SX"],jsn["SZ"],jsn["EX"],0,jsn["EZ"],0,3,1,1)
+            shadow3_commands(commands=commands,input_file="shadow3_input_source.inp")
+            # run source
+            commands = "source\nsystemfile\nexit\n"
+            shadow3_commands(commands=commands,input_file="shadow3_source.inp")
+        else:
+            iwrite = 1
+            # initialize shadow3 source (oe0) and beam
+            oe0 = Shadow.Source()
+            beam = Shadow.Beam()
+            oe0.EPSI_X = jsn["EX"]
+            oe0.EPSI_Z = jsn["EZ"]
+            oe0.SIGDIX = 0.0
+            oe0.SIGDIZ = 0.0
+            oe0.SIGMAX = jsn["SX"]
+            oe0.SIGMAY = 0.0
+            oe0.SIGMAZ = jsn["SZ"]
+            oe0.FILE_TRAJ = b'xshundul.sha'
+            oe0.ISTAR1 = jsn["SEED"]
+            oe0.NPOINT = jsn["NRAYS"]
+            oe0.F_WIGGLER = 2
+            if iwrite:
+                oe0.write("start.00")
+            beam.genSource(oe0)
+            if iwrite:
+                oe0.write("end.00")
+                beam.write("begin.dat")
 
         os.system("cp begin.dat begin_minishadow.dat")
         os.system("cp uphot.dat uphot_minishadow.dat")
@@ -138,8 +163,6 @@ def shadow3_commands(commands="exit\n",input_file="shadow3_tmp.inp"):
     f.write(commands)
     f.close()
     os.system(SHADOW3_BINARY+" < "+input_file)
-
-
 
 
 #

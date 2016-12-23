@@ -101,15 +101,21 @@ def Stokes0ToArrays(stk):
   Shape = (4,stk.mesh.ny,stk.mesh.nx,stk.mesh.ne)
   data = numpy.ndarray(buffer=stk.arS, shape=Shape,dtype=stk.arS.typecode)
   data0 = data[0]
+  data1 = data[1]
   x = numpy.linspace(stk.mesh.xStart,stk.mesh.xFin,stk.mesh.nx)
   y = numpy.linspace(stk.mesh.yStart,stk.mesh.yFin,stk.mesh.ny)
   e = numpy.linspace(stk.mesh.eStart,stk.mesh.eFin,stk.mesh.ne)
   Z2 = numpy.zeros((e.size,x.size,y.size))
+  POL_DEG = numpy.zeros((e.size,x.size,y.size))
   for ie in range(e.size):
       for ix in range(x.size):
           for iy in range(y.size):
             Z2[ie,ix,iy] = data0[iy,ix,ie]
-  return Z2,e,x,y
+            Ex = numpy.sqrt(numpy.abs(0.5*(data0[iy,ix,ie]+data1[iy,ix,ie])))
+            Ey = numpy.sqrt(numpy.abs(0.5*(data0[iy,ix,ie]-data1[iy,ix,ie])))
+            # POL_DEG[ie,ix,iy] =  0.5*(data0[iy,ix,ie]+data1[iy,ix,ie]) / data0[iy,ix,ie]
+            POL_DEG[ie,ix,iy] =  Ex / (Ex + Ey)
+  return Z2,POL_DEG,e,x,y
 
 def Stokes0ToSpec(stk, fname="srw_xshundul.spec"):
   #
@@ -296,12 +302,13 @@ def undul_phot_srw(myinput):
     theta = numpy.linspace(0,h["MAXANGLE"]*1e-3,h["NG_T"])
     phi = numpy.linspace(0,numpy.pi/2,h["NG_P"])
     Z2 = numpy.zeros((h["NG_E"],h["NG_T"],h["NG_P"]))
-
+    POL_DEG = numpy.zeros((h["NG_E"],h["NG_T"],h["NG_P"]))
 
     # interpolate on polar grid
-    radiation,e,x,y = Stokes0ToArrays(stk)
+    radiation,pol_deg,e,x,y = Stokes0ToArrays(stk)
     for ie in range(e.size):
       tck = myinterpol_object(x,y,radiation[ie])
+      tck_pol_deg = myinterpol_object(x,y,pol_deg[ie])
       for itheta in range(theta.size):
         for iphi in range(phi.size):
           R = slit_distance / numpy.cos(theta[itheta])
@@ -310,7 +317,11 @@ def undul_phot_srw(myinput):
           Y = r * numpy.sin(phi[iphi])
           tmp = tck(X,Y)
           Z2[ie,itheta,iphi] = tmp
+          POL_DEG[ie,itheta,iphi] = tck_pol_deg(X,Y)
 
+    # !C SHADOW defines the degree of polarization by |E| instead of |E|^2
+    # !C i.e.  P = |Ex|/(|Ex|+|Ey|)   instead of   |Ex|^2/(|Ex|^2+|Ey|^2)
+    # POL_DEG = numpy.sqrt(POL_DEG2)/(numpy.sqrt(POL_DEG2)+numpy.sqrt(1.0-POL_DEG2))
 
     #
     # plot at first energy point
@@ -349,7 +360,7 @@ def undul_phot_srw(myinput):
     for ie in range(h["NG_E"]):
         for t in range(h["NG_T"]):
             for p in range(h["NG_P"]):
-                f.write("%20.10f \n"%(1.0)) # POL_DEG[ie,t,p])
+                f.write("%20.10f \n"%(POL_DEG[ie,t,p]))
 
     f.close()
     print("File written to disk: %s"%file_out)
