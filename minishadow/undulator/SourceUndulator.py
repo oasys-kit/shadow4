@@ -1,82 +1,188 @@
 
 import numpy
-import scipy.constants as codata
+# import scipy.constants as codata
 import json
 import os
 
 from numpy.testing import assert_equal, assert_almost_equal
 from srxraylib.plot.gol import plot,plot_image,plot_show
-import scipy.integrate
+
 
 import Shadow
+from SourceUndulatorFactory import undul_cdf, undul_phot, undul_phot_srw
 
 import platform
-if platform.system() == "Linux":
-    SHADOW3_BINARY = "/users/srio/OASYS_VE/shadow3/shadow3"
-else:
-    SHADOW3_BINARY = "/Users/srio/Oasys/OASYS_VE/shadow3/shadow3"
 
-angstroms_to_eV = codata.h*codata.c/codata.e*1e10
 
-#
-# read inputs
-#
-def read_json(myinput="xshundul.json"):
-    #
-    # read inputs from a file created by ShadowVUI ----------------------------
-    #
-    if isinstance(myinput,str):
-        inFileTxt = myinput # "xshundul.json"
+# angstroms_to_eV = codata.h*codata.c/codata.e*1e10
+
+
+
+class SourceUndulator(object):
+    def __init__(self):
+        self.dict = {
+            "LAMBDAU":     0.0320000015,
+            "K":      0.250000000,
+            "E_ENERGY":       6.03999996,
+            "E_ENERGY_SPREAD":    0.00100000005,
+            "NPERIODS": 50,
+            "EMIN":       10498.0000,
+            "EMAX":       10499.0000,
+            "INTENSITY":      0.200000003,
+            "MAXANGLE":      0.100000001,
+            "NG_E": 101,
+            "NG_T": 51,
+            "NG_P": 11,
+            "NG_PLOT(1)":"1",
+            "NG_PLOT(2)":"No",
+            "NG_PLOT(3)":"Yes",
+            "UNDUL_PHOT_FLAG(1)":"4",
+            "UNDUL_PHOT_FLAG(2)":"Shadow code",
+            "UNDUL_PHOT_FLAG(3)":"Urgent code",
+            "UNDUL_PHOT_FLAG(4)":"SRW code",
+            "UNDUL_PHOT_FLAG(5)":"Gaussian Approximation",
+            "UNDUL_PHOT_FLAG(6)":"ESRF python code",
+            "SEED": 36255,
+            "SX":     0.0399999991,
+            "SZ":    0.00100000005,
+            "EX":   4.00000005E-07,
+            "EZ":   3.99999989E-09,
+            "FLAG_EMITTANCE(1)":"0",
+            "FLAG_EMITTANCE(2)":"No",
+            "FLAG_EMITTANCE(3)":"Yes",
+            "NRAYS": 15000,
+            "F_BOUND_SOUR": 0,
+            "FILE_BOUND":"NONESPECIFIED",
+            "SLIT_DISTANCE":       1000.00000,
+            "SLIT_XMIN":      -1.00000000,
+            "SLIT_XMAX":       1.00000000,
+            "SLIT_ZMIN":      -1.00000000,
+            "SLIT_ZMAX":       1.00000000,
+            "NTOTALPOINT": 10000000,
+            "JUNK4JSON":0
+            }
+
+        if platform.system() == "Linux":
+            self.SHADOW3_BINARY = "/users/srio/OASYS_VE/shadow3/shadow3"
+        else:
+            self.SHADOW3_BINARY = "/Users/srio/Oasys/OASYS_VE/shadow3/shadow3"
+
+    def to_dictionary(self):
+        """
+        returns a python dictionary of the Shadow.Source instance
+        :return: a dictionary
+        """
+        return(self.dict)
+
+    def duplicate(self):
+        """
+        makes a copy of the source
+        :return: new instance of Shadow.Source()
+        """
+        pass
+
+
+    def set_energy_monochromatic(self,emin):
+        """
+        Sets a single energy line for the source (monochromatic)
+        :param emin: the energy in eV
+        :return: self
+        """
+        pass
+
+    def set_energy_box(self,emin,emax):
+        """
+        Sets a box energy distribution for the source (monochromatic)
+        :param emin: minimum energy in eV
+        :param emax: maximum energy in eV
+        :return: self
+        """
+        pass
+
+
+    def sourcinfo(self,title=None):
+        '''
+        mimics SHADOW sourcinfo postprocessor. Returns a text array.
+        :return: a text string
+        '''
+
+        txt = ''
+        TOPLIN = '+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++\n'
+
+
+        txt += TOPLIN
+        txt += '**************  S O U R C E       D E S C R I P T I O N  **************\n'
+        if title == None:
+            txt += '\n\n'
+        else:
+            txt += title+'\n'
+        txt += TOPLIN
+
+        txt += TOPLIN
+        txt += '***************                 E N D                  ***************\n'
+        txt += TOPLIN
+        return (txt)
+
+
+    def set_from_dictionary(self,myinput):
+        #TODO copy one by one
+        self.dict = myinput
+
+
+    def load_json_shadowvui(self,inFileTxt):
+        #
+        # read inputs from a file created by ShadowVUI ----------------------------
+        #
+
         with open(inFileTxt, mode='r') as f1:
             h = json.load(f1)
+        self.dict = h
 
-    elif isinstance(myinput,dict):
-        h = myinput
-    else:
-        raise Exception("Unknown input")
+    def load(self,inFileTxt):
+        pass
 
-    return h
+    def write(self,file_out):
+        pass
 
+    def info(self):
 
-def info_dictionary(h):
+        # list all non-empty keywords
+        txt = "-----------------------------------------------------\n"
+        for i,j in self.dict.items():
+            if (j != None):
+                txt += "%s = %s\n" %(i,j)
+        txt += "-----------------------------------------------------\n"
+        txt += "k: %f \n"%(self.dict['K'])
+        return txt
 
-    # list all non-empty keywords
-    txt = "-----------------------------------------------------\n"
-    for i,j in h.items():
-        if (j != None):
-            txt += "%s = %s\n" %(i,j)
-    txt += "-----------------------------------------------------\n"
-    txt += "k: %f \n"%(h['K'])
-    return txt
+    def shadow3_commands(self,commands="exit\n",input_file="shadow3_tmp.inp"):
+        f = open(input_file,'w')
+        f.write(commands)
+        f.close()
+        os.system(self.SHADOW3_BINARY+" < "+input_file)
 
-
-#
-# run full sequence
-#
-def undulator(code='shadow3',force_shadow3_undul_cdf=False,force_srw_undul_phot=False):
-    jsn = read_json("xshundul.json")
-    os.system("rm -f xshundul.plt xshundul.par xshundul.traj xshundul.info xshundul.sha")
-    print(info_dictionary(jsn))
-
-    if code == 'shadow3':
+    def run_using_preprocessors(self):
+        jsn = self.dict
+        print(self.info())
+        os.system("rm -f xshundul.plt xshundul.par xshundul.traj xshundul.info xshundul.sha")
 
         # epath
         commands = "epath\n2\n%f \n%f \n%f \n%d \n1.\nxshundul.par\nxshundul.traj\n1\nxshundul.plt\nexit\n"% \
         (jsn["LAMBDAU"],jsn["K"],jsn["E_ENERGY"],jsn["NG_E"])
-        shadow3_commands(commands=commands,input_file="shadow3_epath.inp")
+        self.shadow3_commands(commands=commands,input_file="shadow3_epath.inp")
 
         # undul_set
         commands = "undul_set\n0\n0\n%d \n%d \n%d \nxshundul.traj\n%d\n%f\n%f\n%f\n%f\n0\n1000\nexit\n"% \
             (jsn["NG_E"],jsn["NG_T"],jsn["NG_P"],
              jsn["NPERIODS"],jsn["EMIN"],jsn["EMAX"],jsn["INTENSITY"],jsn["MAXANGLE"])
-        shadow3_commands(commands=commands,input_file="shadow3_undul_set.inp")
+        self.shadow3_commands(commands=commands,input_file="shadow3_undul_set.inp")
 
         # undul_phot
-        shadow3_commands(commands="undul_phot\nexit\n",input_file="shadow3_undul_phot.inp")
-        shadow3_commands(commands="undul_phot_dump\nexit\n",input_file="shadow3_undul_phot_dump.inp")
+        self.shadow3_commands(commands="undul_phot\nexit\n",input_file="shadow3_undul_phot.inp")
+        self.shadow3_commands(commands="undul_phot_dump\nexit\n",input_file="shadow3_undul_phot_dump.inp")
 
         # undul_cdf
-        shadow3_commands(commands="undul_cdf\n0\n1\nxshundul.sha\nxshundul.info\nexit\n",
+        self.shadow3_commands(commands="undul_cdf\n0\n1\nxshundul.sha\nxshundul.info\nexit\n",
                         input_file="shadow3_undul_cdf.inp")
 
 
@@ -85,53 +191,52 @@ def undulator(code='shadow3',force_shadow3_undul_cdf=False,force_srw_undul_phot=
         (jsn["NRAYS"],jsn["SEED"],jsn["SX"],jsn["SZ"],jsn["EX"],0,jsn["EZ"],0,3,1,1)
 
 
-        shadow3_commands(commands=commands,input_file="shadow3_input_source.inp")
+        self.shadow3_commands(commands=commands,input_file="shadow3_input_source.inp")
 
         # run source
         commands = "source\nsystemfile\nexit\n"
-        shadow3_commands(commands=commands,input_file="shadow3_source.inp")
+        self.shadow3_commands(commands=commands,input_file="shadow3_source.inp")
 
-        os.system("cp begin.dat begin_shadow3.dat")
-        os.system("cp uphot.dat uphot_shadow3.dat")
-        os.system("cp xshundul.sha xshundul_shadow3.sha")
 
-        # make script
-        oe0 = Shadow.Source()
-        oe0.load("start.00")
-        Shadow.ShadowTools.make_python_script_from_list([oe0],script_file="script_undulator.py")
+        # return shadow3 beam
+        beam = Shadow.Beam()
+        beam.load("begin.dat")
+        return beam
 
-    elif code == 'minishadow':
+    def run(self,code_undul_phot='internal',code_undul_cdf='internal',code_input_source='internal'):
+        jsn = self.dict
+        print(self.info())
+        os.system("rm -f xshundul.plt xshundul.par xshundul.traj xshundul.info xshundul.sha")
 
 
         # epath
         commands = "epath\n2\n%f \n%f \n%f \n%d \n1.\nxshundul.par\nxshundul.traj\n1\nxshundul.plt\nexit\n"% \
         (jsn["LAMBDAU"],jsn["K"],jsn["E_ENERGY"],jsn["NG_E"])
-        shadow3_commands(commands=commands,input_file="shadow3_epath.inp")
+        self.shadow3_commands(commands=commands,input_file="shadow3_epath.inp")
 
 
         # undul_phot
-        if force_srw_undul_phot:
-            from undul_phot_srw import undul_phot_srw
+        if code_undul_phot == 'internal':
+            undul_phot(jsn)
+        elif code_undul_phot == 'srw':
             undul_phot_srw(jsn)
         else:
-            from undul_phot import undul_phot
-            undul_phot(jsn)
-        shadow3_commands(commands="undul_phot_dump\nexit\n",input_file="shadow3_undul_phot_dump.inp")
+            raise Exception("Not implemented undul_phot code: "+code_undul_phot)
+
+        self.shadow3_commands(commands="undul_phot_dump\nexit\n",input_file="shadow3_undul_phot_dump.inp")
 
         # undul_cdf
-        undul_cdf(file_in="uphot.dat",method='trapz',file_out="xshundul.sha",do_plot=False)
-
+        if code_undul_cdf == 'internal':
+            undul_cdf(file_in="uphot.dat",method='trapz',file_out="xshundul.sha",do_plot=False)
+        elif code_undul_cdf == 'preprocessor':
+            self.shadow3_commands(commands="undul_cdf\n0\n1\nxshundul.sha\nxshundul.info\nexit\n",
+                            input_file="shadow3_undul_cdf.inp")
+        else:
+            raise Exception("Not implemented undul_cdf code: "+code_undul_cdf)
 
         # input source
-        use_shadow3_binary = False
-        if use_shadow3_binary:
-            commands = "input source\n1\n0\n%d \n%d \n0 \n2 \nxshundul.sha\n%g\n%g\n%g\n%d\n%g\n%d\n%d\n%d\n%d\nexit\n"% \
-            (jsn["NRAYS"],jsn["SEED"],jsn["SX"],jsn["SZ"],jsn["EX"],0,jsn["EZ"],0,3,1,1)
-            shadow3_commands(commands=commands,input_file="shadow3_input_source.inp")
-            # run source
-            commands = "source\nsystemfile\nexit\n"
-            shadow3_commands(commands=commands,input_file="shadow3_source.inp")
-        else:
+
+        if code_input_source == 'internal':
             iwrite = 1
             # initialize shadow3 source (oe0) and beam
             oe0 = Shadow.Source()
@@ -153,21 +258,26 @@ def undulator(code='shadow3',force_shadow3_undul_cdf=False,force_srw_undul_phot=
             if iwrite:
                 oe0.write("end.00")
                 beam.write("begin.dat")
+        elif code_input_source == 'preprocessor':
+            commands = "input source\n1\n0\n%d \n%d \n0 \n2 \nxshundul.sha\n%g\n%g\n%g\n%d\n%g\n%d\n%d\n%d\n%d\nexit\n"% \
+            (jsn["NRAYS"],jsn["SEED"],jsn["SX"],jsn["SZ"],jsn["EX"],0,jsn["EZ"],0,3,1,1)
+            self.shadow3_commands(commands=commands,input_file="shadow3_input_source.inp")
+            # run source
+            commands = "source\nsystemfile\nexit\n"
+            self.shadow3_commands(commands=commands,input_file="shadow3_source.inp")
+        else:
+            raise Exception("Not implemented input_source code: "+code_input_source)
 
-        os.system("cp begin.dat begin_minishadow.dat")
-        os.system("cp uphot.dat uphot_minishadow.dat")
-        os.system("cp xshundul.sha xshundul_minishadow.sha")
-
-def shadow3_commands(commands="exit\n",input_file="shadow3_tmp.inp"):
-    f = open(input_file,'w')
-    f.write(commands)
-    f.close()
-    os.system(SHADOW3_BINARY+" < "+input_file)
 
 
 #
-# load files
+# auxiliar functoins
 #
+
+
+
+
+
 def load_uphot_dot_dat(file_in="uphot.dat",do_plot=False):
     #
     # read uphot.dat file (like in SHADOW undul_phot_dump)
@@ -323,102 +433,6 @@ def load_xshundun_dot_sha(file_in="xshundul.sha",do_plot=False):
     return TWO,ONE,ZERO,E,T,P,POL_DEGREE
 
 #
-# undul_cdf
-#
-def undul_cdf(file_in="uphot.dat",file_out=None,method='trapz',do_plot=False):
-    #
-    # read uphot.dat file (like in SHADOW undul_phot_dump)
-    #
-    RN0,POL_DEG,E,T,P = load_uphot_dot_dat(file_in=file_in,do_plot=do_plot)
-
-
-    NG_E,NG_T,NG_P = RN0.shape
-    print("undul_cdf: NG_E,NG_T,NG_P, %d  %d %d \n"%(NG_E,NG_T,NG_P))
-
-
-    # corrdinates are polar: multiply by sin(theta) to allow dS= r^2 sin(Theta) dTheta dPhi
-    YRN0 = numpy.zeros_like(RN0)
-    for e in numpy.arange(NG_E):
-        for t in numpy.arange(NG_T):
-            for p in numpy.arange(NG_P):
-                YRN0[e,t,p] = RN0[e,t,p] * numpy.sin(T[t])
-
-
-    if method == "sum":
-        RN1 = YRN0.sum(axis=2) * (P[1] - P[0])             # RN1(e,t)
-        RN2 = RN1.sum(axis=1)  * (T[1] - T[0])             # RN2(e)
-        ZERO  = numpy.cumsum(RN0,axis=2)   * (P[1] - P[0]) # CDF(e,t,p)
-        ONE   = numpy.cumsum(RN1,axis=1)   * (T[1] - T[0]) # CDF(e,t)
-        TWO   = numpy.cumsum(RN2)          * (E[1] - E[0]) # CDF(e)
-    else:
-        RN1 = numpy.trapz(YRN0,axis=2) * (P[1]-P[0])                            # RN1(e,t)
-        RN2 = numpy.trapz(RN1,axis=1)  * (T[1]-T[0])                            # RN2(e)
-        ZERO  = scipy.integrate.cumtrapz(RN0,initial=0,axis=2)  * (P[1] - P[0]) # CDF(e,t,p)
-        ONE   = scipy.integrate.cumtrapz(RN1,initial=0,axis=1)  * (T[1] - T[0]) # CDF(e,t)
-        TWO   = scipy.integrate.cumtrapz(RN2,initial=0)         * (E[1] - E[0]) # CDF(e)
-
-
-
-    print("undul_cdf: Shadow ZERO,ONE,TWO: ",ZERO.shape,ONE.shape,TWO.shape)
-    print("undul_cdf: Total Power emitted in the specified angles is: %g Watts."%( (RN2*E).sum()*(E[1]-E[0])*codata.e) )
-
-
-    if do_plot:
-        plot(E,TWO,title="NEW TWO",xtitle="E",ytitle="TWO",show=0)
-        plot_image(ONE,numpy.arange(NG_E),numpy.arange(NG_T),title="NEW ONE",xtitle="index Energy",ytitle="index Theta",show=0)
-        plot_image(ZERO[0,:,:],numpy.arange(NG_T),numpy.arange(NG_P),title="NEW ZERO[0]",xtitle="index Theta",ytitle="index Phi",show=0)
-        #plot_image(POL_DEGREE[0,:,:],numpy.arange(NG_T),numpy.arange(NG_P),title="POL_DEGREE[0]",xtitle="index Theta",ytitle="index Phi",show=0)
-
-
-
-    #
-    # create xshundul.sha file (like in SHADOW undul_cdf)
-    #
-    if file_out is not None:
-        f = open(file_out,'w')
-        f.write("%d  %d  %d 1 \n"%(NG_E,NG_T,NG_P))
-
-        for e in E:
-            f.write("%g \n"%(e))
-
-        for e in E:
-            for t in T:
-                f.write("%g \n"%t)
-
-        for e in E:
-            for t in T:
-                for p in P:
-                    f.write("%g \n"%p)
-
-        for e in numpy.arange(NG_E):
-            f.write("%g \n"%(TWO[e]))
-
-        for e in numpy.arange(NG_E):
-            for t in numpy.arange(NG_T):
-                f.write("%g \n"%(ONE[e,t]))
-
-        for e in numpy.arange(NG_E):
-            for t in numpy.arange(NG_T):
-                for p in numpy.arange(NG_P):
-                    f.write("%g \n"%(ZERO[e,t,p]))
-
-        for e in numpy.arange(NG_E):
-            for t in numpy.arange(NG_T):
-                for p in numpy.arange(NG_P):
-                    f.write("%g \n"%(POL_DEG[e,t,p]))
-
-
-        f.close()
-        print("undul_cdf: File written to disk: %s"%file_out)
-
-
-
-
-    return TWO,ONE,ZERO,E,T,P
-
-
-
-#
 # comparisons/tests
 #
 def epath_compare():
@@ -442,53 +456,55 @@ def compare_shadow3_files(file1,file2,do_assert=True):
         begin2.load(file2)
         assert_almost_equal(begin1.rays[:,0:6],begin2.rays[:,0:6],3)
 
-def test_undul_cdf(do_plot=True):
-    #
-    # undul_phot.dat must exist
-    #
-    shadow3_commands(commands="undul_cdf\n0\n1\nxshundul.sha\nxshundul.info\nexit\n",
-                    input_file="shadow3_undul_cdf.inp")
-
-    undul_cdf(file_in="uphot.dat",method='sum',  file_out="xshundul2.sha",do_plot=False)
-    undul_cdf(file_in="uphot.dat",method='trapz',file_out="xshundul3.sha",do_plot=False)
-
-    TWO1,ONE1,ZERO1,E1,T1,P1,POL_DEGREE1 = load_xshundun_dot_sha(file_in="xshundul.sha", do_plot=do_plot)
-    TWO2,ONE2,ZERO2,E2,T2,P2,POL_DEGREE2 = load_xshundun_dot_sha(file_in="xshundul2.sha",do_plot=do_plot)
-    TWO3,ONE3,ZERO3,E3,T3,P3,POL_DEGREE3 = load_xshundun_dot_sha(file_in="xshundul3.sha",do_plot=do_plot)
-
-
-    tmp = numpy.where(ZERO1 > 0.1*ZERO1.max())
-    print("test_undul_cdf: ZERO:   sum/shadow3 %4.2f %%: "%(numpy.average( 100*numpy.abs((ZERO2[tmp]-ZERO1[tmp])/ZERO1[tmp]) )))
-    print("test_undul_cdf: ZERO: trapz/shadow3 %4.2f %%: "%(numpy.average( 100*numpy.abs((ZERO3[tmp]-ZERO1[tmp])/ZERO1[tmp]) )))
-
-    tmp = numpy.where(ONE1 > 0.1*ONE1.max())
-    print(r"test_undul_cdf: ONE:   sum/shadow3 %4.2f %%: "%(numpy.average( 100*numpy.abs((ONE2[tmp]-ONE1[tmp])/ONE1[tmp]) )))
-    print(r"test_undul_cdf: ONE: trapz/shadow3 %4.2f %%: "%(numpy.average( 100*numpy.abs((ONE3[tmp]-ONE1[tmp])/ONE1[tmp]) )))
-
-    tmp = numpy.where(TWO1 > 0.1*TWO1.max())
-    print("test_undul_cdf: TWO:   sum/shadow3 %4.2f %%: "%(numpy.average( 100*numpy.abs((TWO2[tmp]-TWO1[tmp])/TWO1[tmp]) )))
-    print("test_undul_cdf: TWO: trapz/shadow3 %4.2f %%: "%(numpy.average( 100*numpy.abs((TWO3[tmp]-TWO1[tmp])/TWO1[tmp]) )))
-
 
 
 if __name__ == "__main__":
 
-    # test_undul_cdf(do_plot=False)
+
+    u = SourceUndulator()
+
+    u.load_json_shadowvui("xshundul.json")
+    print(u.to_dictionary())
+    print(u.info())
 
 
-    os.system("rm -f begin*.dat uphot*.dat")
-    undulator(code='shadow3')
+    #
+    # run using binary shadow3 (with preprcessors)
+    #
+    u.run_using_preprocessors()
 
-    # TODO: check polarization
-    undulator(code='minishadow',force_shadow3_undul_cdf=False,force_srw_undul_phot=False)
+    os.system("cp begin.dat begin_shadow3.dat")
+    os.system("cp uphot.dat uphot_shadow3.dat")
+    os.system("cp xshundul.sha xshundul_shadow3.sha")
+    # make script
+    oe0 = Shadow.Source()
+    oe0.load("start.00")
+    Shadow.ShadowTools.make_python_script_from_list([oe0],script_file="script_undulator.py")
+
+    #
+    # run using python preprocessors
+    #
+    u.run()
+
+    os.system("cp begin.dat begin_minishadow.dat")
+    os.system("cp uphot.dat uphot_minishadow.dat")
+    os.system("cp xshundul.sha xshundul_minishadow.sha")
 
 
 
-
-    load_uphot_dot_dat("uphot_shadow3.dat",do_plot=True)
-    load_uphot_dot_dat("uphot_minishadow.dat",do_plot=True)
-    # load_uphot_dot_dat("uphot.dat",do_plot=True)
-
+    # os.system("rm -f begin*.dat uphot*.dat")
+    # undulator(code='shadow3')
+    #
+    # # TODO: check polarization
+    # undulator(code='minishadow',force_shadow3_undul_cdf=False,force_srw_undul_phot=False)
+    #
+    #
+    #
+    #
+    # load_uphot_dot_dat("uphot_shadow3.dat",do_plot=True)
+    # load_uphot_dot_dat("uphot_minishadow.dat",do_plot=True)
+    # # load_uphot_dot_dat("uphot.dat",do_plot=True)
+    #
     compare_shadow3_files("begin_shadow3.dat","begin_minishadow.dat",do_assert=True)
 
     # uphot.dat
@@ -517,4 +533,4 @@ if __name__ == "__main__":
 
 
 
-    plot_show()
+    # plot_show()
