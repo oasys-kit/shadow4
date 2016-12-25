@@ -204,35 +204,36 @@ def undul_phot(myinput):
     #
     # create uphot.dat file (like in SHADOW undul_phot)
     #
-    file_out = "uphot.dat"
-    f = open(file_out,'w')
-    f.write("%d  %d  %d \n"%(h["NG_E"],h["NG_T"],h["NG_P"]))
-    for e in range(h["NG_E"]):
-        f.write("%20.10f \n"%(E[e]))
+    # file_out = "uphot.dat"
+    # f = open(file_out,'w')
+    # f.write("%d  %d  %d \n"%(h["NG_E"],h["NG_T"],h["NG_P"]))
+    # for e in range(h["NG_E"]):
+    #     f.write("%20.10f \n"%(E[e]))
+    #
+    # for e in range(h["NG_E"]):
+    #     for t in range(h["NG_T"]):
+    #         f.write("%20.10f \n"%(theta[t]))
+    #
+    # for e in range(h["NG_E"]):
+    #     for t in range(h["NG_T"]):
+    #         for p in range(h["NG_P"]):
+    #             f.write("%20.10f \n"%(phi[p]))
+    #
+    #
+    # for e in range(h["NG_E"]):
+    #     for t in range(h["NG_T"]):
+    #         for p in range(h["NG_P"]):
+    #             f.write("%20.10f \n"%Z2[e,t,p])
+    #
+    # for e in range(h["NG_E"]):
+    #     for t in range(h["NG_T"]):
+    #         for p in range(h["NG_P"]):
+    #             f.write("%20.10f \n"%POL_DEG[e,t,p])
+    #
+    # f.close()
+    # print("File written to disk: %s"%file_out)
 
-    for e in range(h["NG_E"]):
-        for t in range(h["NG_T"]):
-            f.write("%20.10f \n"%(theta[t]))
-
-    for e in range(h["NG_E"]):
-        for t in range(h["NG_T"]):
-            for p in range(h["NG_P"]):
-                f.write("%20.10f \n"%(phi[p]))
-
-
-    for e in range(h["NG_E"]):
-        for t in range(h["NG_T"]):
-            for p in range(h["NG_P"]):
-                f.write("%20.10f \n"%Z2[e,t,p])
-
-    for e in range(h["NG_E"]):
-        for t in range(h["NG_T"]):
-            for p in range(h["NG_P"]):
-                f.write("%20.10f \n"%POL_DEG[e,t,p])
-
-    f.close()
-    print("File written to disk: %s"%file_out)
-
+    return {'radiation':Z2,'polarization':POL_DEG,'photon_energy':E,'theta':theta,'phi':phi}
 
 
 #
@@ -569,49 +570,55 @@ def undul_phot_srw(myinput):
     #
     # create uphot.dat file (like in SHADOW undul_phot)
     #
-    file_out = "uphot.dat"
-    f = open(file_out,'w')
-    f.write("%d  %d  %d \n"%(h["NG_E"],h["NG_T"],h["NG_P"]))
-    for ie in range(h["NG_E"]):
-        f.write("%20.10f \n"%(e[ie]))
+    # file_out = "uphot.dat"
+    # f = open(file_out,'w')
+    # f.write("%d  %d  %d \n"%(h["NG_E"],h["NG_T"],h["NG_P"]))
+    # for ie in range(h["NG_E"]):
+    #     f.write("%20.10f \n"%(e[ie]))
+    #
+    # for ie in range(h["NG_E"]):
+    #     for t in range(h["NG_T"]):
+    #         f.write("%20.10f \n"%(theta[t]))
+    #
+    # for ie in range(h["NG_E"]):
+    #     for t in range(h["NG_T"]):
+    #         for p in range(h["NG_P"]):
+    #             f.write("%20.10f \n"%(phi[p]))
+    #
+    #
+    # for ie in range(h["NG_E"]):
+    #     for t in range(h["NG_T"]):
+    #         for p in range(h["NG_P"]):
+    #             f.write("%20.10f \n"%Z2[ie,t,p])
+    #
+    # for ie in range(h["NG_E"]):
+    #     for t in range(h["NG_T"]):
+    #         for p in range(h["NG_P"]):
+    #             f.write("%20.10f \n"%(POL_DEG[ie,t,p]))
+    #
+    # f.close()
+    # print("File written to disk: %s"%file_out)
 
-    for ie in range(h["NG_E"]):
-        for t in range(h["NG_T"]):
-            f.write("%20.10f \n"%(theta[t]))
-
-    for ie in range(h["NG_E"]):
-        for t in range(h["NG_T"]):
-            for p in range(h["NG_P"]):
-                f.write("%20.10f \n"%(phi[p]))
-
-
-    for ie in range(h["NG_E"]):
-        for t in range(h["NG_T"]):
-            for p in range(h["NG_P"]):
-                f.write("%20.10f \n"%Z2[ie,t,p])
-
-    for ie in range(h["NG_E"]):
-        for t in range(h["NG_T"]):
-            for p in range(h["NG_P"]):
-                f.write("%20.10f \n"%(POL_DEG[ie,t,p]))
-
-    f.close()
-    print("File written to disk: %s"%file_out)
-
-
+    return {'radiation':Z2,'polarization':POL_DEG,'photon_energy':e,'theta':theta,'phi':phi}
 
 
 
 #
 # undul_cdf
 #
-def undul_cdf(file_in="uphot.dat",file_out=None,method='trapz',do_plot=False):
+def undul_cdf(uphot_dot_dat_dict,method='trapz',do_plot=False):
     #
     # read uphot.dat file (like in SHADOW undul_phot_dump)
     #
-    from SourceUndulator import load_uphot_dot_dat
-    RN0,POL_DEG,E,T,P = load_uphot_dot_dat(file_in=file_in,do_plot=do_plot)
+    # from SourceUndulator import load_uphot_dot_dat
+    # uphot_dot_dat_dict = load_uphot_dot_dat(file_in=file_in,do_plot=do_plot)
 
+
+    RN0     = uphot_dot_dat_dict['radiation']
+    POL_DEG = uphot_dot_dat_dict['polarization']
+    E       = uphot_dot_dat_dict['photon_energy']
+    T       = uphot_dot_dat_dict['theta']
+    P       = uphot_dot_dat_dict['phi']
 
     NG_E,NG_T,NG_P = RN0.shape
     print("undul_cdf: NG_E,NG_T,NG_P, %d  %d %d \n"%(NG_E,NG_T,NG_P))
@@ -651,51 +658,8 @@ def undul_cdf(file_in="uphot.dat",file_out=None,method='trapz',do_plot=False):
         #plot_image(POL_DEGREE[0,:,:],numpy.arange(NG_T),numpy.arange(NG_P),title="POL_DEGREE[0]",xtitle="index Theta",ytitle="index Phi",show=0)
 
 
+    return {'cdf_EnergyThetaPhi':TWO,'cdf_EnergyTheta':ONE,'cdf_Energy':ZERO,'energy':E,'theta':T,'phi':P,'polarization':POL_DEG}
 
-    #
-    # create xshundul.sha file (like in SHADOW undul_cdf)
-    #
-    if file_out is not None:
-        f = open(file_out,'w')
-        f.write("%d  %d  %d 1 \n"%(NG_E,NG_T,NG_P))
-
-        for e in E:
-            f.write("%g \n"%(e))
-
-        for e in E:
-            for t in T:
-                f.write("%g \n"%t)
-
-        for e in E:
-            for t in T:
-                for p in P:
-                    f.write("%g \n"%p)
-
-        for e in numpy.arange(NG_E):
-            f.write("%g \n"%(TWO[e]))
-
-        for e in numpy.arange(NG_E):
-            for t in numpy.arange(NG_T):
-                f.write("%g \n"%(ONE[e,t]))
-
-        for e in numpy.arange(NG_E):
-            for t in numpy.arange(NG_T):
-                for p in numpy.arange(NG_P):
-                    f.write("%g \n"%(ZERO[e,t,p]))
-
-        for e in numpy.arange(NG_E):
-            for t in numpy.arange(NG_T):
-                for p in numpy.arange(NG_P):
-                    f.write("%g \n"%(POL_DEG[e,t,p]))
-
-
-        f.close()
-        print("undul_cdf: File written to disk: %s"%file_out)
-
-
-
-
-    return TWO,ONE,ZERO,E,T,P
 
 #
 # Tests
@@ -808,12 +772,20 @@ def test_undul_cdf(do_plot=True):
     #
     # undul_phot.dat must exist
     #
-    from SourceUndulator import shadow3_commands, load_xshundun_dot_sha
+    from SourceUndulator import shadow3_commands, load_uphot_dot_dat, load_xshundun_dot_sha, write_xshundun_dot_sha
+
     shadow3_commands(commands="undul_cdf\n0\n1\nxshundul.sha\nxshundul.info\nexit\n",
                     input_file="shadow3_undul_cdf.inp")
 
-    undul_cdf(file_in="uphot.dat",method='sum',  file_out="xshundul2.sha",do_plot=False)
-    undul_cdf(file_in="uphot.dat",method='trapz',file_out="xshundul3.sha",do_plot=False)
+
+    radiation = load_uphot_dot_dat(file_in="uphot.dat")
+
+    cdf2 = undul_cdf(radiation,method='sum',do_plot=False)
+    write_xshundun_dot_sha(cdf2,file_out="xshundul2.sha")
+
+
+    cdf3 = undul_cdf(radiation,method='trapz',do_plot=False)
+    write_xshundun_dot_sha(cdf3,file_out="xshundul3.sha")
 
     TWO1,ONE1,ZERO1,E1,T1,P1,POL_DEGREE1 = load_xshundun_dot_sha(file_in="xshundul.sha", do_plot=do_plot)
     TWO2,ONE2,ZERO2,E2,T2,P2,POL_DEGREE2 = load_xshundun_dot_sha(file_in="xshundul2.sha",do_plot=do_plot)
