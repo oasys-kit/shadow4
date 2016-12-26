@@ -1,32 +1,19 @@
 
 import numpy
 import scipy.constants as codata
-# import json
-# import os
 
-# from numpy.testing import assert_equal, assert_almost_equal
+from SourceUndulatorInputOutput import load_uphot_dot_dat,write_uphot_dot_dat
+from SourceUndulatorInputOutput import load_xshundul_dot_sha,write_xshundul_dot_sha
+
 
 import scipy.integrate
 
-# import Shadow
-
-# import platform
-# if platform.system() == "Linux":
-#     SHADOW3_BINARY = "/users/srio/OASYS_VE/shadow3/shadow3"
-# else:
-#     SHADOW3_BINARY = "/Users/srio/Oasys/OASYS_VE/shadow3/shadow3"
 
 angstroms_to_eV = codata.h*codata.c/codata.e*1e10
 
-# for undul_phot_srw
-# import json
-# import numpy
 import srwlib as sl
 import array
-# import sys
 from scipy import interpolate
-
-
 
 
 #
@@ -201,37 +188,6 @@ def undul_phot(myinput):
                     POL_DEG[o,t,p] = pol_deg
 
 
-    #
-    # create uphot.dat file (like in SHADOW undul_phot)
-    #
-    # file_out = "uphot.dat"
-    # f = open(file_out,'w')
-    # f.write("%d  %d  %d \n"%(h["NG_E"],h["NG_T"],h["NG_P"]))
-    # for e in range(h["NG_E"]):
-    #     f.write("%20.10f \n"%(E[e]))
-    #
-    # for e in range(h["NG_E"]):
-    #     for t in range(h["NG_T"]):
-    #         f.write("%20.10f \n"%(theta[t]))
-    #
-    # for e in range(h["NG_E"]):
-    #     for t in range(h["NG_T"]):
-    #         for p in range(h["NG_P"]):
-    #             f.write("%20.10f \n"%(phi[p]))
-    #
-    #
-    # for e in range(h["NG_E"]):
-    #     for t in range(h["NG_T"]):
-    #         for p in range(h["NG_P"]):
-    #             f.write("%20.10f \n"%Z2[e,t,p])
-    #
-    # for e in range(h["NG_E"]):
-    #     for t in range(h["NG_T"]):
-    #         for p in range(h["NG_P"]):
-    #             f.write("%20.10f \n"%POL_DEG[e,t,p])
-    #
-    # f.close()
-    # print("File written to disk: %s"%file_out)
 
     return {'radiation':Z2,'polarization':POL_DEG,'photon_energy':E,'theta':theta,'phi':phi}
 
@@ -557,50 +513,17 @@ def undul_phot_srw(myinput):
     # !C i.e.  P = |Ex|/(|Ex|+|Ey|)   instead of   |Ex|^2/(|Ex|^2+|Ey|^2)
     # POL_DEG = numpy.sqrt(POL_DEG2)/(numpy.sqrt(POL_DEG2)+numpy.sqrt(1.0-POL_DEG2))
 
-    #
-    # plot at first energy point
-    #
-    # title = r"K=%4.2f, N=%d, E=%3.2f GeV, $\lambda_u$=%2.0f mm, $E_{ph}$=%7.2f eV, Max photons=%g"%(
-    #         h['K'],h["NPERIODS"],h["E_ENERGY"],1e3*h["LAMBDAU"],e[0],Z2[0].max())
-    # xtitle = "theta [rad]"
-    # ytitle = "phi [rad]"
-    # from lipt import plot_surface
-    # plot_surface(Z2[0]/Z2[0].max(),theta,phi,title=title,xtitle=xtitle,ytitle=ytitle)
-
-    #
-    # create uphot.dat file (like in SHADOW undul_phot)
-    #
-    # file_out = "uphot.dat"
-    # f = open(file_out,'w')
-    # f.write("%d  %d  %d \n"%(h["NG_E"],h["NG_T"],h["NG_P"]))
-    # for ie in range(h["NG_E"]):
-    #     f.write("%20.10f \n"%(e[ie]))
-    #
-    # for ie in range(h["NG_E"]):
-    #     for t in range(h["NG_T"]):
-    #         f.write("%20.10f \n"%(theta[t]))
-    #
-    # for ie in range(h["NG_E"]):
-    #     for t in range(h["NG_T"]):
-    #         for p in range(h["NG_P"]):
-    #             f.write("%20.10f \n"%(phi[p]))
-    #
-    #
-    # for ie in range(h["NG_E"]):
-    #     for t in range(h["NG_T"]):
-    #         for p in range(h["NG_P"]):
-    #             f.write("%20.10f \n"%Z2[ie,t,p])
-    #
-    # for ie in range(h["NG_E"]):
-    #     for t in range(h["NG_T"]):
-    #         for p in range(h["NG_P"]):
-    #             f.write("%20.10f \n"%(POL_DEG[ie,t,p]))
-    #
-    # f.close()
-    # print("File written to disk: %s"%file_out)
-
     return {'radiation':Z2,'polarization':POL_DEG,'photon_energy':e,'theta':theta,'phi':phi}
 
+
+#
+# for test purposes only
+#
+def run_shadow3_using_preprocessors(jsn):
+    from SourceUndulator import SourceUndulator
+    u = SourceUndulator()
+    u.load_json_shadowvui_dictionary(jsn)
+    u.run_using_preprocessors()
 
 
 #
@@ -624,7 +547,7 @@ def undul_cdf(uphot_dot_dat_dict,method='trapz',do_plot=False):
     print("undul_cdf: NG_E,NG_T,NG_P, %d  %d %d \n"%(NG_E,NG_T,NG_P))
 
 
-    # corrdinates are polar: multiply by sin(theta) to allow dS= r^2 sin(Theta) dTheta dPhi
+    # coordinates are polar: multiply by sin(theta) to allow dS= r^2 sin(Theta) dTheta dPhi
     YRN0 = numpy.zeros_like(RN0)
     for e in numpy.arange(NG_E):
         for t in numpy.arange(NG_T):
@@ -664,133 +587,66 @@ def undul_cdf(uphot_dot_dat_dict,method='trapz',do_plot=False):
 #
 # Tests
 #
-def test_undul_phot():
-    tmp = \
-        """
-        {
-        "LAMBDAU":     0.0320000015,
-        "K":      0.250000000,
-        "E_ENERGY":       6.03999996,
-        "E_ENERGY_SPREAD":    0.00100000005,
-        "NPERIODS": 50,
-        "EMIN":       10500.0000,
-        "EMAX":       10550.0000,
-        "INTENSITY":      0.200000003,
-        "MAXANGLE":     0.0149999997,
-        "NG_E": 11,
-        "NG_T": 51,
-        "NG_P": 11,
-        "NG_PLOT(1)":"1",
-        "NG_PLOT(2)":"No",
-        "NG_PLOT(3)":"Yes",
-        "UNDUL_PHOT_FLAG(1)":"4",
-        "UNDUL_PHOT_FLAG(2)":"Shadow code",
-        "UNDUL_PHOT_FLAG(3)":"Urgent code",
-        "UNDUL_PHOT_FLAG(4)":"SRW code",
-        "UNDUL_PHOT_FLAG(5)":"Gaussian Approx",
-        "UNDUL_PHOT_FLAG(6)":"python code by Sophie",
-        "SEED": 36255,
-        "SX":     0.0399999991,
-        "SZ":    0.00100000005,
-        "EX":   4.00000005E-07,
-        "EZ":   3.99999989E-09,
-        "FLAG_EMITTANCE(1)":"1",
-        "FLAG_EMITTANCE(2)":"No",
-        "FLAG_EMITTANCE(3)":"Yes",
-        "NRAYS": 15000,
-        "F_BOUND_SOUR": 0,
-        "FILE_BOUND":"NONESPECIFIED",
-        "SLIT_DISTANCE":       1000.00000,
-        "SLIT_XMIN":      -1.00000000,
-        "SLIT_XMAX":       1.00000000,
-        "SLIT_ZMIN":      -1.00000000,
-        "SLIT_ZMAX":       1.00000000,
-        "NTOTALPOINT": 10000000,
-        "JUNK4JSON":0
-        }
-        """
-    h = json.loads(tmp)
-    undul_phot(h)
-    tmp = np.loadtxt("uphot.dat",skiprows=1)
-    print("Obtained result[700]: %g (comparing to 6.09766e+16)"%tmp[7000])
-    assert( np.abs(tmp[7000] - 6.09766e+16) < 1e13)
+def test_undul_phot(h,do_plot=True):
+    undul_phot_dict = undul_phot(h)
+    write_uphot_dot_dat(undul_phot_dict,file_out="uphot_minishadow.dat")
+
+    undul_phot_srw_dict = undul_phot_srw(h)
+    write_uphot_dot_dat(undul_phot_srw_dict,file_out="uphot_srw.dat")
+
+    #
+    # compare radiation
+    #
+    d0 = load_uphot_dot_dat("uphot.dat",do_plot=do_plot,show=False)
+    d1 = load_uphot_dot_dat("uphot_minishadow.dat",do_plot=do_plot,show=True)
+    d2 = load_uphot_dot_dat("uphot_srw.dat",do_plot=do_plot,show=False)
+
+    rad0 = d0['radiation']
+    rad1 = d1['radiation']
+    rad2 = d2['radiation']
+
+    rad0 /= rad0.max()
+    rad1 /= rad1.max()
+    rad2 /= rad2.max()
 
 
-def test_undul_phot_srw():
-    tmp = \
-        """
-        {
-        "LAMBDAU":     0.0320000015,
-        "K":      0.250000000,
-        "E_ENERGY":       6.03999996,
-        "E_ENERGY_SPREAD":    0.00100000005,
-        "NPERIODS": 50,
-        "EMIN":       10500.0000,
-        "EMAX":       10550.0000,
-        "INTENSITY":      0.200000003,
-        "MAXANGLE":     0.0149999997,
-        "NG_E": 11,
-        "NG_T": 51,
-        "NG_P": 11,
-        "NG_PLOT(1)":"1",
-        "NG_PLOT(2)":"No",
-        "NG_PLOT(3)":"Yes",
-        "UNDUL_PHOT_FLAG(1)":"4",
-        "UNDUL_PHOT_FLAG(2)":"Shadow code",
-        "UNDUL_PHOT_FLAG(3)":"Urgent code",
-        "UNDUL_PHOT_FLAG(4)":"SRW code",
-        "UNDUL_PHOT_FLAG(5)":"Gaussian Approx",
-        "UNDUL_PHOT_FLAG(6)":"python code by Sophie",
-        "SEED": 36255,
-        "SX":     0.0399999991,
-        "SZ":    0.00100000005,
-        "EX":   4.00000005E-07,
-        "EZ":   3.99999989E-09,
-        "FLAG_EMITTANCE(1)":"1",
-        "FLAG_EMITTANCE(2)":"No",
-        "FLAG_EMITTANCE(3)":"Yes",
-        "NRAYS": 15000,
-        "F_BOUND_SOUR": 0,
-        "FILE_BOUND":"NONESPECIFIED",
-        "SLIT_DISTANCE":       1000.00000,
-        "SLIT_XMIN":      -1.00000000,
-        "SLIT_XMAX":       1.00000000,
-        "SLIT_ZMIN":      -1.00000000,
-        "SLIT_ZMAX":       1.00000000,
-        "NTOTALPOINT": 10000000,
-        "JUNK4JSON":0
-        }
-        """
-    h = json.loads(tmp)
-    undul_phot_srw(h)
-    tmp = numpy.loadtxt("uphot.dat",skiprows=1)
-    print("Obtained result[700]: %g (comparing to 6.09766e+16)"%tmp[7000])
-    # assert( np.abs(tmp[7000] - 6.09766e+16) < 1e13)
+    tmp = numpy.where(rad0 > 0.1)
+    print(">>> test_undul_phot: minishadow/shadow3: %4.2f %% "%(numpy.average( 100*numpy.abs((rad1[tmp]-rad0[tmp])/rad0[tmp]) )))
+    print(">>> test_undul_phot:        srw/shadow3: %4.2f %% "%(numpy.average( 100*numpy.abs((rad2[tmp]-rad0[tmp])/rad0[tmp]) )))
+    print(">>> test_undul_phot: minishadow/srw    : %4.2f %% "%(numpy.average( 100*numpy.abs((rad1[tmp]-rad2[tmp])/rad2[tmp]) )))
+
+
 
 
 def test_undul_cdf(do_plot=True):
     #
-    # undul_phot.dat must exist
+    # uphot.dat must exist
     #
-    from SourceUndulator import shadow3_commands, load_uphot_dot_dat, load_xshundun_dot_sha, write_xshundun_dot_sha
-
-    shadow3_commands(commands="undul_cdf\n0\n1\nxshundul.sha\nxshundul.info\nexit\n",
-                    input_file="shadow3_undul_cdf.inp")
-
 
     radiation = load_uphot_dot_dat(file_in="uphot.dat")
 
     cdf2 = undul_cdf(radiation,method='sum',do_plot=False)
-    write_xshundun_dot_sha(cdf2,file_out="xshundul2.sha")
+    write_xshundul_dot_sha(cdf2,file_out="xshundul2.sha")
 
 
     cdf3 = undul_cdf(radiation,method='trapz',do_plot=False)
-    write_xshundun_dot_sha(cdf3,file_out="xshundul3.sha")
+    write_xshundul_dot_sha(cdf3,file_out="xshundul3.sha")
 
-    TWO1,ONE1,ZERO1,E1,T1,P1,POL_DEGREE1 = load_xshundun_dot_sha(file_in="xshundul.sha", do_plot=do_plot)
-    TWO2,ONE2,ZERO2,E2,T2,P2,POL_DEGREE2 = load_xshundun_dot_sha(file_in="xshundul2.sha",do_plot=do_plot)
-    TWO3,ONE3,ZERO3,E3,T3,P3,POL_DEGREE3 = load_xshundun_dot_sha(file_in="xshundul3.sha",do_plot=do_plot)
+    cdf1 = load_xshundul_dot_sha(file_in="xshundul.sha", do_plot=do_plot,show=False)
+    cdf2 = load_xshundul_dot_sha(file_in="xshundul2.sha",do_plot=do_plot,show=False)
+    cdf3 = load_xshundul_dot_sha(file_in="xshundul3.sha",do_plot=do_plot,show=True)
 
+    ZERO1 = cdf1['cdf_Energy']
+    ONE1 = cdf1['cdf_EnergyTheta']
+    TWO1 = cdf1['cdf_EnergyThetaPhi']
+
+    ZERO2 = cdf2['cdf_Energy']
+    ONE2 = cdf2['cdf_EnergyTheta']
+    TWO2 = cdf2['cdf_EnergyThetaPhi']
+
+    ZERO3 = cdf3['cdf_Energy']
+    ONE3 = cdf3['cdf_EnergyTheta']
+    TWO3 = cdf3['cdf_EnergyThetaPhi']
 
     tmp = numpy.where(ZERO1 > 0.1*ZERO1.max())
     print("test_undul_cdf: ZERO:   sum/shadow3 %4.2f %%: "%(numpy.average( 100*numpy.abs((ZERO2[tmp]-ZERO1[tmp])/ZERO1[tmp]) )))
@@ -808,10 +664,54 @@ def test_undul_cdf(do_plot=True):
 
 if __name__ == "__main__":
 
-    # undul_phot("xshundul.json")
-    # test_undul_phot()
+    tmp = \
+        """
+        {
+        "LAMBDAU":     0.0320000015,
+        "K":      0.250000000,
+        "E_ENERGY":       6.03999996,
+        "E_ENERGY_SPREAD":    0.00100000005,
+        "NPERIODS": 50,
+        "EMIN":       10500.0000,
+        "EMAX":       10550.0000,
+        "INTENSITY":      0.200000003,
+        "MAXANGLE":     0.0149999997,
+        "NG_E": 11,
+        "NG_T": 51,
+        "NG_P": 11,
+        "NG_PLOT(1)":"1",
+        "NG_PLOT(2)":"No",
+        "NG_PLOT(3)":"Yes",
+        "UNDUL_PHOT_FLAG(1)":"4",
+        "UNDUL_PHOT_FLAG(2)":"Shadow code",
+        "UNDUL_PHOT_FLAG(3)":"Urgent code",
+        "UNDUL_PHOT_FLAG(4)":"SRW code",
+        "UNDUL_PHOT_FLAG(5)":"Gaussian Approx",
+        "UNDUL_PHOT_FLAG(6)":"python code by Sophie",
+        "SEED": 36255,
+        "SX":     0.0399999991,
+        "SZ":    0.00100000005,
+        "EX":   4.00000005E-07,
+        "EZ":   3.99999989E-09,
+        "FLAG_EMITTANCE(1)":"1",
+        "FLAG_EMITTANCE(2)":"No",
+        "FLAG_EMITTANCE(3)":"Yes",
+        "NRAYS": 15000,
+        "F_BOUND_SOUR": 0,
+        "FILE_BOUND":"NONESPECIFIED",
+        "SLIT_DISTANCE":       1000.00000,
+        "SLIT_XMIN":      -1.00000000,
+        "SLIT_XMAX":       1.00000000,
+        "SLIT_ZMIN":      -1.00000000,
+        "SLIT_ZMAX":       1.00000000,
+        "NTOTALPOINT": 10000000,
+        "JUNK4JSON":0
+        }
+        """
+    h = json.loads(tmp)
 
-    undul_phot_srw("xshundul.json")
-    # test_undul_phot_srw()
+    run_shadow3_using_preprocessors(h)
 
-    # test_undul_cdf(do_plot=False)
+    test_undul_phot(h,do_plot=True)
+
+    test_undul_cdf(do_plot=True)
