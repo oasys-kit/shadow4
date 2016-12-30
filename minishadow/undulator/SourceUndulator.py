@@ -18,47 +18,32 @@ import platform
 
 class SourceUndulator(object):
     def __init__(self):
-        self.dict = {
-            "LAMBDAU":     0.0320000015,
-            "K":      0.250000000,
-            "E_ENERGY":       6.03999996,
-            "E_ENERGY_SPREAD":    0.00100000005,
-            "NPERIODS": 50,
-            "EMIN":       10498.0000,
-            "EMAX":       10499.0000,
-            "INTENSITY":      0.200000003,
-            "MAXANGLE":      0.100000001,
-            "NG_E": 101,
-            "NG_T": 51,
-            "NG_P": 11,
-            "NG_PLOT(1)":"1",
-            "NG_PLOT(2)":"No",
-            "NG_PLOT(3)":"Yes",
-            "UNDUL_PHOT_FLAG(1)":"4",
-            "UNDUL_PHOT_FLAG(2)":"Shadow code",
-            "UNDUL_PHOT_FLAG(3)":"Urgent code",
-            "UNDUL_PHOT_FLAG(4)":"SRW code",
-            "UNDUL_PHOT_FLAG(5)":"Gaussian Approximation",
-            "UNDUL_PHOT_FLAG(6)":"ESRF python code",
-            "SEED": 36255,
-            "SX":     0.0399999991,
-            "SZ":    0.00100000005,
-            "EX":   4.00000005E-07,
-            "EZ":   3.99999989E-09,
-            "FLAG_EMITTANCE(1)":"0",
-            "FLAG_EMITTANCE(2)":"No",
-            "FLAG_EMITTANCE(3)":"Yes",
-            "NRAYS": 15000,
-            "F_BOUND_SOUR": 0,
-            "FILE_BOUND":"NONESPECIFIED",
-            "SLIT_DISTANCE":       1000.00000,
-            "SLIT_XMIN":      -1.00000000,
-            "SLIT_XMAX":       1.00000000,
-            "SLIT_ZMIN":      -1.00000000,
-            "SLIT_ZMAX":       1.00000000,
-            "NTOTALPOINT": 10000000,
-            "JUNK4JSON":0
-            }
+
+        # Machine
+        self.E_ENERGY        = 6.04
+        self.E_ENERGY_SPREAD = 0.001
+        self.INTENSITY       = 0.2
+        self.SX              = 0.0399999991
+        self.SZ              = 0.00100000005
+        self.EX              = 4.00000005E-07
+        self.EZ              = 3.99999989E-09
+        self.FLAG_EMITTANCE  = 1 # Yes
+        # Undulator
+        self.LAMBDAU         = 0.0320000015
+        self.NPERIODS        = 50
+        self.K               = 0.250000000
+        # Photon energy scan
+        self.EMIN            = 10498.0000
+        self.EMAX            = 10499.0000
+        self.NG_E            = 101
+        # Geometry
+        self.MAXANGLE        = 0.1
+        self.NG_T            = 51
+        self.NG_P            = 11
+        # ray tracing
+        self.SEED            = 36255
+        self.NRAYS           = 15000
+
 
         if platform.system() == "Linux":
             self.SHADOW3_BINARY = "/users/srio/OASYS_VE/shadow3/shadow3"
@@ -70,7 +55,28 @@ class SourceUndulator(object):
         returns a python dictionary of the Shadow.Source instance
         :return: a dictionary
         """
-        return(self.dict)
+        h = {}
+        h["E_ENERGY"]        = self.E_ENERGY
+        h["E_ENERGY_SPREAD"] = self.E_ENERGY_SPREAD
+        h["INTENSITY"]       = self.INTENSITY
+        h["SX"]              = self.SX
+        h["SZ"]              = self.SZ
+        h["EX"]              = self.EX
+        h["EZ"]              = self.EZ
+        h["FLAG_EMITTANCE"]  = self.FLAG_EMITTANCE
+        h["LAMBDAU"]         = self.LAMBDAU
+        h["NPERIODS"]        = self.NPERIODS
+        h["K"]               = self.K
+        h["EMIN"]            = self.EMIN
+        h["EMAX"]            = self.EMAX
+        h["NG_E"]            = self.NG_E
+        h["MAXANGLE"]        = self.MAXANGLE
+        h["NG_T"]            = self.NG_T
+        h["NG_P"]            = self.NG_P
+        h["SEED"]            = self.SEED
+        h["NRAYS"]           = self.NRAYS
+
+        return h
 
     def duplicate(self):
         """
@@ -86,7 +92,9 @@ class SourceUndulator(object):
         :param emin: the energy in eV
         :return: self
         """
-        pass
+        self.EMIN = emin
+        self.EMAX = emin
+        self.NG_E = 1
 
     def set_energy_box(self,emin,emax):
         """
@@ -95,7 +103,11 @@ class SourceUndulator(object):
         :param emax: maximum energy in eV
         :return: self
         """
-        pass
+        self.EMIN = emin
+        self.EMAX = emax
+
+    def set_energy_number_of_points(self,npoints):
+        self.NG_E = npoints
 
 
     def sourcinfo(self,title=None):
@@ -116,43 +128,143 @@ class SourceUndulator(object):
             txt += title+'\n'
         txt += TOPLIN
 
+        # TODO improve look
+        txt += self.info()
+
         txt += TOPLIN
         txt += '***************                 E N D                  ***************\n'
         txt += TOPLIN
         return (txt)
 
 
-    def set_from_dictionary(self,myinput):
-        #TODO copy one by one
-        self.dict = myinput
+    def set_from_dictionary(self,h):
+        self.E_ENERGY        = h["E_ENERGY"]
+        self.E_ENERGY_SPREAD = h["E_ENERGY_SPREAD"]
+        self.INTENSITY       = h["INTENSITY"]
+        self.SX              = h["SX"]
+        self.SZ              = h["SZ"]
+        self.EX              = h["EX"]
+        self.EZ              = h["EZ"]
+        self.FLAG_EMITTANCE  = h["FLAG_EMITTANCE"]
+        self.LAMBDAU         = h["LAMBDAU"]
+        self.NPERIODS        = h["NPERIODS"]
+        self.K               = h["K"]
+        self.EMIN            = h["EMIN"]
+        self.EMAX            = h["EMAX"]
+        self.NG_E            = h["NG_E"]
+        self.MAXANGLE        = h["MAXANGLE"]
+        self.NG_T            = h["NG_T"]
+        self.NG_P            = h["NG_P"]
+        self.SEED            = h["SEED"]
+        self.NRAYS           = h["NRAYS"]
 
 
-    def load_json_shadowvui(self,inFileTxt):
+    def load_json_shadowvui_file(self,inFileTxt):
         #
         # read inputs from a file created by ShadowVUI ----------------------------
         #
+
         with open(inFileTxt, mode='r') as f1:
             h = json.load(f1)
-        self.dict = h
+        self.load_json_shadowvui_dictionary(h)
+
 
     def load_json_shadowvui_dictionary(self,h):
-        self.dict = h
+        # self.dict = {
+        #     "LAMBDAU":     0.0320000015,
+        #     "K":      0.250000000,
+        #     "E_ENERGY":       6.03999996,
+        #     "E_ENERGY_SPREAD":    0.00100000005,
+        #     "NPERIODS": 50,
+        #     "EMIN":       10498.0000,
+        #     "EMAX":       10499.0000,
+        #     "INTENSITY":      0.200000003,
+        #     "MAXANGLE":      0.100000001,
+        #     "NG_E": 101,
+        #     "NG_T": 51,
+        #     "NG_P": 11,
+        #     "NG_PLOT(1)":"1",
+        #     "NG_PLOT(2)":"No",
+        #     "NG_PLOT(3)":"Yes",
+        #     "UNDUL_PHOT_FLAG(1)":"4",
+        #     "UNDUL_PHOT_FLAG(2)":"Shadow code",
+        #     "UNDUL_PHOT_FLAG(3)":"Urgent code",
+        #     "UNDUL_PHOT_FLAG(4)":"SRW code",
+        #     "UNDUL_PHOT_FLAG(5)":"Gaussian Approximation",
+        #     "UNDUL_PHOT_FLAG(6)":"ESRF python code",
+        #     "SEED": 36255,
+        #     "SX":     0.0399999991,
+        #     "SZ":    0.00100000005,
+        #     "EX":   4.00000005E-07,
+        #     "EZ":   3.99999989E-09,
+        #     "FLAG_EMITTANCE(1)":"0",
+        #     "FLAG_EMITTANCE(2)":"No",
+        #     "FLAG_EMITTANCE(3)":"Yes",
+        #     "NRAYS": 15000,
+        #     "F_BOUND_SOUR": 0,
+        #     "FILE_BOUND":"NONESPECIFIED",
+        #     "SLIT_DISTANCE":       1000.00000,
+        #     "SLIT_XMIN":      -1.00000000,
+        #     "SLIT_XMAX":       1.00000000,
+        #     "SLIT_ZMIN":      -1.00000000,
+        #     "SLIT_ZMAX":       1.00000000,
+        #     "NTOTALPOINT": 10000000,
+        #     "JUNK4JSON":0
+        #     }
+
+        self.E_ENERGY        = h["E_ENERGY"]
+        self.E_ENERGY_SPREAD = h["E_ENERGY_SPREAD"]
+        self.INTENSITY       = h["INTENSITY"]
+        self.SX              = h["SX"]
+        self.SZ              = h["SZ"]
+        self.EX              = h["EX"]
+        self.EZ              = h["EZ"]
+        self.FLAG_EMITTANCE  = int(h["FLAG_EMITTANCE(1)"])
+        self.LAMBDAU         = h["LAMBDAU"]
+        self.NPERIODS        = h["NPERIODS"]
+        self.K               = h["K"]
+        self.EMIN            = h["EMIN"]
+        self.EMAX            = h["EMAX"]
+        self.NG_E            = h["NG_E"]
+        self.MAXANGLE        = h["MAXANGLE"]
+        self.NG_T            = h["NG_T"]
+        self.NG_P            = h["NG_P"]
+        self.SEED            = h["SEED"]
+        self.NRAYS           = h["NRAYS"]
+
 
     def load(self,inFileTxt):
-        pass
+        with open(inFileTxt, mode='r') as f1:
+            h = json.load(f1)
+        self.set_from_dictionary(h)
 
     def write(self,file_out):
         pass
 
     def info(self):
-
         # list all non-empty keywords
         txt = "-----------------------------------------------------\n"
-        for i,j in self.dict.items():
-            if (j != None):
-                txt += "%s = %s\n" %(i,j)
+        txt += "E_ENERGY        = "+repr(self.E_ENERGY        ) + "\n"
+        txt += "E_ENERGY_SPREAD = "+repr(self.E_ENERGY_SPREAD ) + "\n"
+        txt += "INTENSITY       = "+repr(self.INTENSITY       ) + "\n"
+        txt += "SX              = "+repr(self.SX              ) + "\n"
+        txt += "SZ              = "+repr(self.SZ              ) + "\n"
+        txt += "EX              = "+repr(self.EX              ) + "\n"
+        txt += "EZ              = "+repr(self.EZ              ) + "\n"
+        txt += "FLAG_EMITTANCE  = "+repr(self.FLAG_EMITTANCE  ) + "\n"
+        txt += "LAMBDAU         = "+repr(self.LAMBDAU         ) + "\n"
+        txt += "NPERIODS        = "+repr(self.NPERIODS        ) + "\n"
+        txt += "K               = "+repr(self.K               ) + "\n"
+        txt += "EMIN            = "+repr(self.EMIN            ) + "\n"
+        txt += "EMAX            = "+repr(self.EMAX            ) + "\n"
+        txt += "NG_E            = "+repr(self.NG_E            ) + "\n"
+        txt += "MAXANGLE        = "+repr(self.MAXANGLE        ) + "\n"
+        txt += "NG_T            = "+repr(self.NG_T            ) + "\n"
+        txt += "NG_P            = "+repr(self.NG_P            ) + "\n"
+        txt += "SEED            = "+repr(self.SEED            ) + "\n"
+        txt += "NRAYS           = "+repr(self.NRAYS           ) + "\n"
+
         txt += "-----------------------------------------------------\n"
-        txt += "k: %f \n"%(self.dict['K'])
         return txt
 
     def shadow3_commands(self,commands="exit\n",input_file="shadow3_tmp.inp"):
@@ -162,8 +274,9 @@ class SourceUndulator(object):
         os.system(self.SHADOW3_BINARY+" < "+input_file)
 
     def run_using_preprocessors(self):
-        jsn = self.dict
-        print(self.info())
+        jsn = self.to_dictionary()
+        # jsn = self.dict
+        # print(self.info())
         os.system("rm -f xshundul.plt xshundul.par xshundul.traj xshundul.info xshundul.sha")
 
         # epath
@@ -206,7 +319,7 @@ class SourceUndulator(object):
     def run(self,code_undul_phot='internal',
             dump_uphot_dot_dat=False,dump_start_files=False):
 
-        jsn = self.dict
+        h = self.to_dictionary()
         print(self.info())
         os.system("rm -f xshundul.plt xshundul.par xshundul.traj xshundul.info xshundul.sha")
 
@@ -217,9 +330,17 @@ class SourceUndulator(object):
 
         # undul_phot
         if code_undul_phot == 'internal':
-            undul_phot_dict = undul_phot(jsn)
+            undul_phot_dict = undul_phot(E_ENERGY = h["E_ENERGY"],INTENSITY = h["INTENSITY"],
+                                    LAMBDAU = h["LAMBDAU"],NPERIODS = h["NPERIODS"],K = h["K"],
+                                    EMIN = h["EMIN"],EMAX = h["EMAX"],NG_E = h["NG_E"],
+                                    MAXANGLE = h["MAXANGLE"],NG_T = h["NG_T"],
+                                    NG_P = h["NG_P"])
         elif code_undul_phot == 'srw':
-            undul_phot_dict = undul_phot_srw(jsn)
+            undul_phot_dict = undul_phot_srw(E_ENERGY = h["E_ENERGY"],INTENSITY = h["INTENSITY"],
+                                    LAMBDAU = h["LAMBDAU"],NPERIODS = h["NPERIODS"],K = h["K"],
+                                    EMIN = h["EMIN"],EMAX = h["EMAX"],NG_E = h["NG_E"],
+                                    MAXANGLE = h["MAXANGLE"],NG_T = h["NG_T"],
+                                    NG_P = h["NG_P"])
         else:
             raise Exception("Not implemented undul_phot code: "+code_undul_phot)
 
@@ -244,16 +365,16 @@ class SourceUndulator(object):
         # initialize shadow3 source (oe0) and beam
         oe0 = Shadow.Source()
         beam = Shadow.Beam()
-        oe0.EPSI_X = jsn["EX"]
-        oe0.EPSI_Z = jsn["EZ"]
+        oe0.EPSI_X = h["EX"]
+        oe0.EPSI_Z = h["EZ"]
         oe0.SIGDIX = 0.0
         oe0.SIGDIZ = 0.0
-        oe0.SIGMAX = jsn["SX"]
+        oe0.SIGMAX = h["SX"]
         oe0.SIGMAY = 0.0
-        oe0.SIGMAZ = jsn["SZ"]
+        oe0.SIGMAZ = h["SZ"]
         oe0.FILE_TRAJ = b'xshundul.sha'
-        oe0.ISTAR1 = jsn["SEED"]
-        oe0.NPOINT = jsn["NRAYS"]
+        oe0.ISTAR1 = h["SEED"]
+        oe0.NPOINT = h["NRAYS"]
         oe0.F_WIGGLER = 2
         if dump_start_files: oe0.write("start.00")
         beam.genSource(oe0)
@@ -279,13 +400,11 @@ def compare_shadow3_files(file1,file2,do_assert=True):
 
 if __name__ == "__main__":
 
-
     u = SourceUndulator()
 
-    u.load_json_shadowvui("xshundul.json")
+    u.load_json_shadowvui_file("xshundul.json")
     print(u.to_dictionary())
     print(u.info())
-
 
     #
     # run using binary shadow3 (with preprocessors)
@@ -317,15 +436,15 @@ if __name__ == "__main__":
     #
 
     #
-    load_uphot_dot_dat("uphot_shadow3.dat",do_plot=True)
-    load_uphot_dot_dat("uphot_minishadow.dat",do_plot=True)
+    # load_uphot_dot_dat("uphot_shadow3.dat",do_plot=True)
+    # load_uphot_dot_dat("uphot_minishadow.dat",do_plot=True)
     #
 
     #
     # compare CDF
     #
-    load_xshundul_dot_sha("xshundul_shadow3.sha",do_plot=True)
-    load_xshundul_dot_sha("xshundul_minishadow.sha",do_plot=True)
+    # load_xshundul_dot_sha("xshundul_shadow3.sha",do_plot=True)
+    # load_xshundul_dot_sha("xshundul_minishadow.sha",do_plot=True)
 
     #
     # compare binary files

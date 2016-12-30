@@ -106,42 +106,53 @@ def energy_radiated(omega=2.53465927101*10**17,trajectory=np.zeros((11,10)) , x=
 # END COPY OF SOPHIE'S CODE
 #
 
-def undul_phot(myinput):
+def undul_phot(E_ENERGY,INTENSITY,LAMBDAU,NPERIODS,K,EMIN,EMAX,NG_E,MAXANGLE,NG_T,NG_P):
+
+    # E_ENERGY = h["E_ENERGY"]
+    # LAMBDAU = h["LAMBDAU"]
+    # NPERIODS = h["NPERIODS"]
+    # EMIN = h["EMIN"]
+    # EMAX = h["EMAX"]
+    # NG_E = h["NG_E"]
+    # MAXANGLE = h["MAXANGLE"]
+    # NG_T = h["NG_T"]
+    # NG_P = h["NG_P"]
+    # #
+    # # read inputs from a file created by ShadowVUI ----------------------------
+    # #
+    # if isinstance(myinput,str):
+    #     inFileTxt = myinput # "xshundul.json"
+    #     with open(inFileTxt, mode='r') as f1:
+    #         h = json.load(f1)
     #
-    # read inputs from a file created by ShadowVUI ----------------------------
+    # elif isinstance(myinput,dict):
+    #     h = myinput
+    # else:
+    #     raise Exception("Unknown input")
     #
-    if isinstance(myinput,str):
-        inFileTxt = myinput # "xshundul.json"
-        with open(inFileTxt, mode='r') as f1:
-            h = json.load(f1)
+    #
+    # # list all non-empty keywords
+    # print ("-----------------------------------------------------")
+    # for i,j in h.items():
+    #     if (j != None):
+    #         print ("%s = %s" % (i,j))
+    # print ("-----------------------------------------------------")
+    # print ("k: ",h['K'])
 
-    elif isinstance(myinput,dict):
-        h = myinput
-    else:
-        raise Exception("Unknown input")
-
-
-    # list all non-empty keywords
-    print ("-----------------------------------------------------")
-    for i,j in h.items():
-        if (j != None):
-            print ("%s = %s" % (i,j))
-    print ("-----------------------------------------------------")
-    print ("k: ",h['K'])
 
     #
     # calculate trajectory
     #
-    gamma = h["E_ENERGY"] * 1e9 / 0.511e6
+    gamma = E_ENERGY * 1e9 / 0.511e6
     print("GAMMA:",gamma)
     Beta = np.sqrt(1.0 - (1.0 / gamma ** 2))
-    Beta_et = Beta * (1.0 - (h['K'] / (2.0 * gamma)) ** 2)
-    T = trajectory_undulator_reference(K=h['K'], gamma=gamma, lambda_u=h["LAMBDAU"], Nb_period=h["NPERIODS"],
+    Beta_et = Beta * (1.0 - (K / (2.0 * gamma)) ** 2)
+    T = trajectory_undulator_reference(K=K, gamma=gamma, lambda_u=LAMBDAU, Nb_period=NPERIODS,
                                         Nb_point=20,Beta_et=Beta_et)
 
 
 
-    E = np.linspace(h["EMIN"],h["EMAX"],h["NG_E"],dtype=float)
+    E = np.linspace(EMIN,EMAX,NG_E,dtype=float)
     wavelength_array_in_A = angstroms_to_eV / E
     omega_array = 2*np.pi * codata.c / (wavelength_array_in_A * 1e-10)
 
@@ -152,13 +163,13 @@ def undul_phot(myinput):
 
     if gridding == 0:
         D = None
-        X = np.linspace(0.0,h["MAXANGLE"]*1e-3,h["NG_T"],dtype=float)
-        Y = np.linspace(0.0,h["MAXANGLE"]*1e-3,h["NG_T"],dtype=float)
+        X = np.linspace(0.0,MAXANGLE*1e-3,NG_T,dtype=float)
+        Y = np.linspace(0.0,MAXANGLE*1e-3,NG_T,dtype=float)
 
     else:
         D = 100.0 # placed far away (100 m)
-        theta = np.linspace(0,h["MAXANGLE"]*1e-3,h["NG_T"],dtype=float)
-        phi = np.linspace(0,np.pi/2,h["NG_P"],dtype=float)
+        theta = np.linspace(0,MAXANGLE*1e-3,NG_T,dtype=float)
+        phi = np.linspace(0,np.pi/2,NG_P,dtype=float)
 
     c6= codata.e*1e-10/(8.0*np.pi**2*codata.epsilon_0*codata.c*codata.h)
 
@@ -354,44 +365,44 @@ def myinterpol(x,y,z,x1,y1):
         return z1
 
 
-def undul_phot_srw(myinput):
+def undul_phot_srw(E_ENERGY,INTENSITY,LAMBDAU,NPERIODS,K,EMIN,EMAX,NG_E,MAXANGLE,NG_T,NG_P):
+    # #
+    # # read inputs from a file created by ShadowVUI ----------------------------
+    # #
+    # if isinstance(myinput,str):
+    #     inFileTxt = myinput # "xshundul.json"
+    #     with open(inFileTxt, mode='r') as f1:
+    #         h = json.load(f1)
     #
-    # read inputs from a file created by ShadowVUI ----------------------------
+    # elif isinstance(myinput,dict):
+    #     h = myinput
+    # else:
+    #     raise Exception("Unknown input")
     #
-    if isinstance(myinput,str):
-        inFileTxt = myinput # "xshundul.json"
-        with open(inFileTxt, mode='r') as f1:
-            h = json.load(f1)
-
-    elif isinstance(myinput,dict):
-        h = myinput
-    else:
-        raise Exception("Unknown input")
-
-    print ("-----------------------------------------------------")
-    for i,j in h.items():
-        if (j != None):
-            print ("%s = %s" % (i,j))
-    print ("-----------------------------------------------------")
-    print ("k: ",h['K'])
+    # print ("-----------------------------------------------------")
+    # for i,j in h.items():
+    #     if (j != None):
+    #         print ("%s = %s" % (i,j))
+    # print ("-----------------------------------------------------")
+    # print ("k: ",h['K'])
 
 
-    lambdau = h['LAMBDAU']
-    k = h['K']
-    e_energy = h['E_ENERGY']
-    nperiods = h['NPERIODS']
-    emin = h['EMIN']
-    emax = h['EMAX']
-    intensity = h['INTENSITY']
-    maxangle = h['MAXANGLE']
+    lambdau = LAMBDAU
+    k = K
+    e_energy = E_ENERGY
+    nperiods = NPERIODS
+    emin = EMIN
+    emax = EMAX
+    intensity = INTENSITY
+    maxangle = MAXANGLE
     sx = 0.0 # h['SX']   #  do not use emittance at this stage
     sz = 0.0 # h['SZ']   #  do not use emittance at this stage
     ex = 0.0 # h['EX']   #  do not use emittance at this stage
     ez = 0.0 # h['EZ']   #  do not use emittance at this stage
-    nrays = h['NRAYS']
-    nx = 2*h['NG_T'] - 1
+    # nrays = h['NRAYS']
+    nx = 2*NG_T - 1
     nz = nx
-    ne = h["NG_E"] # int(ne)
+    ne = NG_E # int(ne)
 
     print ("lambdau = ",lambdau)
     print ("k = ",k)
@@ -403,7 +414,7 @@ def undul_phot_srw(myinput):
     print ("sz = ",sz)
     print ("ex = ",ex)
     print ("ez = ",ez)
-    print ("nrays = ",nrays)
+    # print ("nrays = ",nrays)
     print ("emin =%g, emax=%g, ne=%d "%(emin,emax,ne))
 
 
@@ -489,10 +500,10 @@ def undul_phot_srw(myinput):
     #
 
     # polar grid
-    theta = numpy.linspace(0,h["MAXANGLE"]*1e-3,h["NG_T"])
-    phi = numpy.linspace(0,numpy.pi/2,h["NG_P"])
-    Z2 = numpy.zeros((h["NG_E"],h["NG_T"],h["NG_P"]))
-    POL_DEG = numpy.zeros((h["NG_E"],h["NG_T"],h["NG_P"]))
+    theta = numpy.linspace(0,MAXANGLE*1e-3,NG_T)
+    phi = numpy.linspace(0,numpy.pi/2,NG_P)
+    Z2 = numpy.zeros((NG_E,NG_T,NG_P))
+    POL_DEG = numpy.zeros((NG_E,NG_T,NG_P))
 
     # interpolate on polar grid
     radiation,pol_deg,e,x,y = Stokes0ToArrays(stk)
@@ -588,10 +599,20 @@ def undul_cdf(uphot_dot_dat_dict,method='trapz',do_plot=False):
 # Tests
 #
 def test_undul_phot(h,do_plot=True):
-    undul_phot_dict = undul_phot(h)
+    undul_phot_dict = undul_phot(E_ENERGY = h["E_ENERGY"],INTENSITY = h["INTENSITY"],
+                                    LAMBDAU = h["LAMBDAU"],NPERIODS = h["NPERIODS"],K = h["K"],
+                                    EMIN = h["EMIN"],EMAX = h["EMAX"],NG_E = h["NG_E"],
+                                    MAXANGLE = h["MAXANGLE"],NG_T = h["NG_T"],
+                                    NG_P = h["NG_P"])
+
     write_uphot_dot_dat(undul_phot_dict,file_out="uphot_minishadow.dat")
 
-    undul_phot_srw_dict = undul_phot_srw(h)
+    undul_phot_srw_dict = undul_phot_srw(E_ENERGY = h["E_ENERGY"],INTENSITY = h["INTENSITY"],
+                                    LAMBDAU = h["LAMBDAU"],NPERIODS = h["NPERIODS"],K = h["K"],
+                                    EMIN = h["EMIN"],EMAX = h["EMAX"],NG_E = h["NG_E"],
+                                    MAXANGLE = h["MAXANGLE"],NG_T = h["NG_T"],
+                                    NG_P = h["NG_P"])
+
     write_uphot_dot_dat(undul_phot_srw_dict,file_out="uphot_srw.dat")
 
     #
@@ -708,10 +729,10 @@ if __name__ == "__main__":
         "JUNK4JSON":0
         }
         """
-    h = json.loads(tmp)
+    hh = json.loads(tmp)
 
-    run_shadow3_using_preprocessors(h)
+    run_shadow3_using_preprocessors(hh)
 
-    test_undul_phot(h,do_plot=True)
+    test_undul_phot(hh,do_plot=True)
 
-    test_undul_cdf(do_plot=True)
+    # test_undul_cdf(do_plot=True)
