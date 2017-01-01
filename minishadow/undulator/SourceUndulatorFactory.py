@@ -527,6 +527,82 @@ def undul_phot_srw(E_ENERGY,INTENSITY,LAMBDAU,NPERIODS,K,EMIN,EMAX,NG_E,MAXANGLE
     return {'radiation':Z2,'polarization':POL_DEG,'photon_energy':e,'theta':theta,'phi':phi}
 
 
+def undul_phot_pysru(E_ENERGY,INTENSITY,LAMBDAU,NPERIODS,K,EMIN,EMAX,NG_E,MAXANGLE,NG_T,NG_P):
+
+    from pySRU.ElectronBeam import ElectronBeam
+    from pySRU.MagneticStructureUndulatorPlane import MagneticStructureUndulatorPlane as Undulator
+    from pySRU.Simulation import create_simulation
+    from pySRU.TrajectoryFactory import TrajectoryFactory, TRAJECTORY_METHOD_ANALYTIC,TRAJECTORY_METHOD_ODE
+    from pySRU.RadiationFactory import RadiationFactory,RADIATION_METHOD_NEAR_FIELD, \
+                                     RADIATION_METHOD_APPROX_FARFIELD
+    # from pySRU.SourceUndulatorPlane import SourceUndulatorPlane
+    # from pySRU.SourceBendingmagnet import SourceBendingMagnet
+    # from pySRU.MagneticStructureBendingMagnet import MagneticStructureBendingMagnet as BM
+
+
+    beam_ESRF = ElectronBeam(Electron_energy=E_ENERGY, I_current=INTENSITY)
+    ESRF18 = Undulator(K=K, period_length=LAMBDAU, length=LAMBDAU*NPERIODS)
+
+    #
+    # radiation in a defined meah
+    #
+    # print('create radiation a given screen (40mm x 40mm @ 100 m )')
+    # distance = 100.0
+    # X = np.linspace(0.0,MAXANGLE*distance,NG_T)
+    # Y = np.linspace(0.0,MAXANGLE*distance,NG_T)
+
+    # simulation_test = create_simulation(magnetic_structure=ESRF18,electron_beam=beam_ESRF,
+    #                     magnetic_field=None, photon_energy=None,
+    #                     traj_method=TRAJECTORY_METHOD_ANALYTIC,Nb_pts_trajectory=None,
+    #                     rad_method=RADIATION_METHOD_APPROX_FARFIELD, Nb_pts_radiation=101,
+    #                     initial_condition=None, distance=None,XY_are_list=False,X=X,Y=Y)
+    # simulation_test.print_parameters()
+    # simulation_test.trajectory.plot_2D()
+    # simulation_test.radiation.plot(title=" radiation in a defined screen (100 m )")
+    # print("<><>",simulation_test.radiation.X.shape,simulation_test.radiation.Y.shape)
+
+    # X = np.linspace(0.0, 0.0002,1001)
+    # Y = np.linspace(0.0, 0.0002, 1001)
+    X = np.linspace(0.0, MAXANGLE*1e-3, 1001)
+    Y = np.linspace(0.0, MAXANGLE*1e-3, 1001)
+    simulation_test = create_simulation(magnetic_structure=ESRF18,electron_beam=beam_ESRF,
+                                        magnetic_field=None, photon_energy=EMIN,
+                                        X=X,Y=Y,XY_are_list=True)
+    simulation_test.print_parameters()
+
+    simulation_test.trajectory.plot_3D()
+
+    simulation_test.radiation.plot()
+
+
+
+
+    #
+    # up to a maximum X and Y
+    #
+    # print('create simulation for a given maximum X and Y ')
+    # simulation_test = create_simulation(magnetic_structure=ESRF18, electron_beam=beam_ESRF,
+    #                                     traj_method=TRAJECTORY_METHOD_ANALYTIC,
+    #                                     rad_method=RADIATION_METHOD_APPROX_FARFIELD,
+    #                                     distance=100,X=0.01,Y=0.01)
+    #
+    # simulation_test.radiation.plot(title='simulation for a maximum X=0.01 and Y=0.01')
+
+
+    # beam_ESRF = ElectronBeam(Electron_energy=6.0, I_current=0.2)
+    # ESRF18 = Undulator(K=1.68, period_length=0.018, length=2.0)
+    #
+    # X = np.linspace(0.0, 0.0002,1001)
+    # Y = np.linspace(0.0, 0.0002, 1001)
+    # simulation_test = create_simulation(magnetic_structure=ESRF18,electron_beam=beam_ESRF,
+    #                                     X=X,Y=Y,XY_are_list=True)
+    #
+    # simulation_test.print_parameters()
+    #
+    # simulation_test.trajectory.plot_3D()
+    #
+    # simulation_test.radiation.plot()
+
 #
 # for test purposes only
 #
@@ -729,10 +805,50 @@ if __name__ == "__main__":
         "JUNK4JSON":0
         }
         """
-    hh = json.loads(tmp)
-
-    run_shadow3_using_preprocessors(hh)
-
-    test_undul_phot(hh,do_plot=True)
+    h = json.loads(tmp)
+    #
+    # run_shadow3_using_preprocessors(h)
+    #
+    # test_undul_phot(h,do_plot=True)
 
     # test_undul_cdf(do_plot=True)
+
+    # shadow_defaults
+    # ebeam['ElectronBeamSizeH'] = 0.04e-2
+    # ebeam['ElectronBeamSizeV'] = 0.001e-2
+    # ebeam['ElectronBeamDivergenceH'] = 4e-9 / ebeam['ElectronBeamSizeH']
+    # ebeam['ElectronBeamDivergenceV'] = 4e-11 / ebeam['ElectronBeamSizeV']
+    # ebeam['ElectronEnergySpread'] = 0.001
+    # ebeam['ElectronCurrent'] = 0.2
+    # ebeam['ElectronEnergy'] = 6.04
+    # idv['Kv'] = 0.25
+    # idv['NPeriods'] = 50.0
+    # idv['PeriodID'] = 0.032
+    # drift['distance'] = 10.0
+    # slit['gapH'] = 2.0e-3
+    # slit['gapV'] = 2.0e-3
+    # bl = OrderedDict()
+    # bl.update({'name':nameBeamline})
+    # bl.update(ebeam)
+    # bl.update(idv)
+    # bl.update(drift)
+    # bl.update(slit)
+
+    undul_phot_dict = undul_phot(E_ENERGY = h["E_ENERGY"],INTENSITY = h["INTENSITY"],
+                                    LAMBDAU = h["LAMBDAU"],NPERIODS = h["NPERIODS"],K = h["K"],
+                                    EMIN = h["EMIN"],EMAX = h["EMAX"],NG_E = h["NG_E"],
+                                    MAXANGLE = h["MAXANGLE"],NG_T = h["NG_T"],
+                                    NG_P = h["NG_P"])
+    from srxraylib.plot.gol import plot_image
+    plot_image(undul_phot_dict['radiation'][0,:,:],undul_phot_dict['theta']*1e6,undul_phot_dict['phi']*180/numpy.pi,
+               title=" UNDUL_PHOT: RN0[0]",xtitle="Theta [urad]",ytitle="Phi [deg]",aspect='auto',show=True)
+
+
+    undul_phot_pysru_dict = undul_phot_pysru(E_ENERGY = h["E_ENERGY"],INTENSITY = h["INTENSITY"],
+                                    LAMBDAU = h["LAMBDAU"],NPERIODS = h["NPERIODS"],K = h["K"],
+                                    EMIN = h["EMIN"],EMAX = h["EMAX"],NG_E = h["NG_E"],
+                                    MAXANGLE = h["MAXANGLE"],NG_T = h["NG_T"],
+                                    NG_P = h["NG_P"])
+    # from srxraylib.plot.gol import plot_image
+    # plot_image(undul_phot_dict['radiation'][0,:,:],undul_phot_dict['theta']*1e6,undul_phot_dict['phi']*180/numpy.pi,
+    #            title=" UNDUL_PHOT: RN0[0]",xtitle="Theta [urad]",ytitle="Phi [deg]",aspect='auto',show=True)

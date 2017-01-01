@@ -83,8 +83,34 @@ class SourceUndulator(object):
         makes a copy of the source
         :return: new instance of Shadow.Source()
         """
-        pass
+        out = SourceUndulator()
+        out.set_from_dictionary(self.to_dictionary())
+        return out
 
+    def set_from_keywords(self,E_ENERGY=6.04,E_ENERGY_SPREAD=0.001,INTENSITY=0.2,
+                SX=   0.0399999991,SZ=  0.00100000005,EX= 4.00000005E-07,EZ= 3.99999989E-09,FLAG_EMITTANCE=1,
+                LAMBDAU=0.032,NPERIODS=50,K=0.25,
+                EMIN= 10498.0000,EMAX= 10499.0000,NG_E=101,MAXANGLE=0.1,NG_T=51,NG_P=11,
+                SEED=36255,NRAYS=15000,):
+        self.E_ENERGY          = E_ENERGY
+        self.E_ENERGY_SPREAD   = E_ENERGY_SPREAD
+        self.INTENSITY         = INTENSITY
+        self.SX                = SX
+        self.SZ                = SZ
+        self.EX                = EX
+        self.EZ                = EZ
+        self.FLAG_EMITTANCE    = FLAG_EMITTANCE
+        self.LAMBDAU           = LAMBDAU
+        self.NPERIODS          = NPERIODS
+        self.K                 = K
+        self.EMIN              = EMIN
+        self.EMAX              = EMAX
+        self.NG_E              = NG_E
+        self.MAXANGLE          = MAXANGLE
+        self.NG_T              = NG_T
+        self.NG_P              = NG_P
+        self.SEED              = SEED
+        self.NRAYS             = NRAYS
 
     def set_energy_monochromatic(self,emin):
         """
@@ -316,8 +342,7 @@ class SourceUndulator(object):
         beam.load("begin.dat")
         return beam
 
-    def run(self,code_undul_phot='internal',
-            dump_uphot_dot_dat=False,dump_start_files=False):
+    def run(self,code_undul_phot='internal',dump_uphot_dot_dat=False,dump_start_files=False):
 
         h = self.to_dictionary()
         print(self.info())
