@@ -122,20 +122,21 @@ def _pysru_energy_radiated(omega=2.53465927101*10**17,trajectory=np.zeros((11,10
         E[k] = np.trapz(integrand[k], trajectory[0])
     E *= omega * 1j
 
-    terme_bord = np.full((3), 0. + 1j * 0., dtype=np.complex)
-    Alpha_1 = (1.0 / (1.0 - n_chap[0] * trajectory[4][-1]
-                      - n_chap[1] * trajectory[5][-1] - n_chap[2] * trajectory[6][-1]))
-    Alpha_0 = (1.0 / (1.0 - n_chap[0] * trajectory[4][0]
-                      - n_chap[1] * trajectory[5][0] - n_chap[2] * trajectory[6][0]))
+    # terme_bord = np.full((3), 0. + 1j * 0., dtype=np.complex)
+    # Alpha_1 = (1.0 / (1.0 - n_chap[0] * trajectory[4][-1]
+    #                   - n_chap[1] * trajectory[5][-1] - n_chap[2] * trajectory[6][-1]))
+    # Alpha_0 = (1.0 / (1.0 - n_chap[0] * trajectory[4][0]
+    #                   - n_chap[1] * trajectory[5][0] - n_chap[2] * trajectory[6][0]))
+    #
+    # terme_bord += ((n_chap[1] * A3[-1] - n_chap[2] * A2[-1]) * Alpha_1 *
+    #                Alpha2[-1])
+    # terme_bord -= ((n_chap[1] * A3[0] - n_chap[2] * A2[0]) * Alpha_0 *
+    #                Alpha2[0])
+    # E += terme_bord
 
-    terme_bord += ((n_chap[1] * A3[-1] - n_chap[2] * A2[-1]) * Alpha_1 *
-                   Alpha2[-1])
-    terme_bord -= ((n_chap[1] * A3[0] - n_chap[2] * A2[0]) * Alpha_0 *
-                   Alpha2[0])
-    E += terme_bord
-
-    pol_deg = (np.abs(E[0])**2 / (np.abs(E[0])**2 + np.abs(E[1])**2 ) )
-    return (np.abs(E[0]) ** 2 + np.abs(E[1])** 2 + np.abs(E[2])** 2), pol_deg
+    return E
+    # pol_deg = (np.abs(E[0])**2 / (np.abs(E[0])**2 + np.abs(E[1])**2 ) )
+    # return (np.abs(E[0]) ** 2 + np.abs(E[1])** 2 + np.abs(E[2])** 2), pol_deg
 
 
 #
@@ -322,8 +323,19 @@ def undul_phot(E_ENERGY,INTENSITY,LAMBDAU,NPERIODS,K,EMIN,EMAX,NG_E,MAXANGLE,NG_
                 r = R * np.sin(theta[t])
                 X = r * np.cos(phi[p])
                 Y = r * np.sin(phi[p])
-                intensity, pol_deg = _pysru_energy_radiated(omega=omega_array[o],trajectory=T , x=X , y=Y, D=D )
+                ElecField = _pysru_energy_radiated(omega=omega_array[o],trajectory=T , x=X , y=Y, D=D )
+
+                pol_deg = np.abs(ElecField[0])**2 / (np.abs(ElecField[0])**2 + np.abs(ElecField[1])**2)
+                intensity =  (np.abs(ElecField[0]) ** 2 + np.abs(ElecField[1])** 2 + np.abs(ElecField[2])** 2)
+
+
+                # TO DO check this conversion
+                intensity *= (D*1e3)**2 # photons/mm^2 -> photons/rad^2
+                intensity /= 1e-3 * E[o] # photons/o.1%bw -> photons/eV
+
                 Z2[o,t,p] = c6*intensity
+                # from photons/mm^2 to photons/rad^2
+
                 POL_DEG[o,t,p] = pol_deg
 
 
@@ -347,6 +359,7 @@ def undul_phot_pysru(E_ENERGY,INTENSITY,LAMBDAU,NPERIODS,K,EMIN,EMAX,NG_E,MAXANG
     E = np.linspace(EMIN,EMAX,NG_E,dtype=float)
 
     intens = np.zeros((NG_E,NG_T,NG_P))
+    pol_deg = np.zeros_like(intens)
     theta = np.linspace(0,MAXANGLE*1e-3,NG_T,dtype=float)
     phi = np.linspace(0,np.pi/2,NG_P,dtype=float)
 
@@ -367,12 +380,31 @@ def undul_phot_pysru(E_ENERGY,INTENSITY,LAMBDAU,NPERIODS,K,EMIN,EMAX,NG_E,MAXANG
                                             distance=D,
                                             X=X.flatten(),Y=Y.flatten(),XY_are_list=True)
 
+        # TODO: this is not nice: I redo the calculations because I need the electric vectors to get polarization
+        # TODO: this should be evoided after refactoring pySRU to include electric field in simulations!!
+
+
+        electric_field = simulation_test.radiation_fact.calculate_electrical_field(
+            simulation_test.trajectory, simulation_test.source, X.flatten(), Y.flatten(), D)
+
+        # print("<><><><><><><E,X,Y",electric_field._electrical_field.shape,
+        #       electric_field._X.shape,electric_field._Y.shape,
+        #       X.flatten().shape, Y.flatten().shape)
+
+
+        E = electric_field._electrical_field
+        pol_deg1 = (np.abs(E[:,0])**2 / (np.abs(E[:,0])**2 + np.abs(E[:,1])**2)).flatten()
         # simulation_test.print_parameters()
         intens1 = simulation_test.radiation.intensity.copy()
         intens1.shape = (theta.size,phi.size)
+        pol_deg1.shape = (theta.size,phi.size)
+        # TO DO check this conversion
+        intens1 *= (D*1e3)**2 # photons/mm^2 -> photons/rad^2
+        intens1 /= 1e-3 * e # photons/o.1%bw -> photons/eV
         intens[ie] = intens1
+        pol_deg[ie] = pol_deg1
 
-    return {'radiation':intens,'polarization':np.ones_like(intens),'photon_energy':E,'theta':theta,'phi':phi}
+    return {'radiation':intens,'polarization':pol_deg,'photon_energy':E,'theta':theta,'phi':phi}
 
 def undul_phot_srw(E_ENERGY,INTENSITY,LAMBDAU,NPERIODS,K,EMIN,EMAX,NG_E,MAXANGLE,NG_T,NG_P):
 
@@ -505,7 +537,15 @@ def undul_phot_srw(E_ENERGY,INTENSITY,LAMBDAU,NPERIODS,K,EMIN,EMAX,NG_E,MAXANGLE
           X = r * numpy.cos(phi[iphi])
           Y = r * numpy.sin(phi[iphi])
           tmp = tck(X,Y)
+
+          # TO DO check this conversion
+          tmp *= (slit_distance*1e3)**2 # photons/mm^2 -> photons/rad^2
+          tmp /= 1e-3 * e[ie] # photons/o.1%bw -> photons/eV
+
           Z2[ie,itheta,iphi] = tmp
+
+
+
           POL_DEG[ie,itheta,iphi] = tck_pol_deg(X,Y)
 
     # !C SHADOW defines the degree of polarization by |E| instead of |E|^2
@@ -560,7 +600,7 @@ def undul_cdf(uphot_dot_dat_dict,method='trapz',do_plot=False):
 
 
     print("undul_cdf: Shadow ZERO,ONE,TWO: ",ZERO.shape,ONE.shape,TWO.shape)
-    print("undul_cdf: <><><><><><><><><>Total Power emitted in the specified angles is: %g Watts."%( (RN2*E).sum()*(E[1]-E[0])*codata.e) )
+    print("undul_cdf: Total Power emitted in the specified angles is: %g Watts."%( (RN2*E).sum()*(E[1]-E[0])*codata.e) )
 
 
     if do_plot:
@@ -670,10 +710,13 @@ def test_undul_cdf(do_plot=True):
 
 if __name__ == "__main__":
 
-    from srxraylib.plot.gol import plot_image,plot
+    from srxraylib.plot.gol import plot_image,plot, plot_show
 
         # "EMIN":       10500.0000,
         # "EMAX":       10550.0000,
+        # "INTENSITY":      0.200000003,
+        # "EMIN":       10200.0000,
+        # "EMAX":       10650.0000,
 
     tmp = \
         """
@@ -685,7 +728,7 @@ if __name__ == "__main__":
         "NPERIODS": 50,
         "EMIN":       10200.0000,
         "EMAX":       10650.0000,
-        "INTENSITY":      0.200000003,
+        "INTENSITY":      1.0,
         "MAXANGLE":     0.0149999997,
         "NG_E": 11,
         "NG_T": 51,
@@ -725,14 +768,17 @@ if __name__ == "__main__":
     # test_undul_phot(h,do_plot=True)
     # test_undul_cdf(do_plot=True)
 
-
+    do_plot_intensity = 1
+    do_plot_polarization = 1
     #
     run_shadow3_using_preprocessors(h)
     undul_phot_preprocessor_dict = load_uphot_dot_dat("uphot.dat")
 
-    plot_image(undul_phot_preprocessor_dict['radiation'][0,:,:],undul_phot_preprocessor_dict['theta']*1e6,undul_phot_preprocessor_dict['phi']*180/numpy.pi,
-               title=" UNDUL_PHOT_PREPRPCESSOR: RN0[0]",xtitle="Theta [urad]",ytitle="Phi [deg]",aspect='auto',show=True)
+    if do_plot_intensity: plot_image(undul_phot_preprocessor_dict['radiation'][0,:,:],undul_phot_preprocessor_dict['theta']*1e6,undul_phot_preprocessor_dict['phi']*180/numpy.pi,
+               title="INTENS UNDUL_PHOT_PREPROCESSOR: RN0[0]",xtitle="Theta [urad]",ytitle="Phi [deg]",aspect='auto',show=False)
 
+    if do_plot_polarization: plot_image(undul_phot_preprocessor_dict['polarization'][0,:,:],undul_phot_preprocessor_dict['theta']*1e6,undul_phot_preprocessor_dict['phi']*180/numpy.pi,
+               title="POL_DEG UNDUL_PHOT_PREPROCESSOR: RN0[0]",xtitle="Theta [urad]",ytitle="Phi [deg]",aspect='auto',show=False)
 
 
     # internal code
@@ -742,9 +788,10 @@ if __name__ == "__main__":
                                     MAXANGLE = h["MAXANGLE"],NG_T = h["NG_T"],
                                     NG_P = h["NG_P"])
 
-    plot_image(undul_phot_dict['radiation'][0,:,:],undul_phot_dict['theta']*1e6,undul_phot_dict['phi']*180/numpy.pi,
-               title=" UNDUL_PHOT: RN0[0]",xtitle="Theta [urad]",ytitle="Phi [deg]",aspect='auto',show=True)
-
+    if do_plot_intensity: plot_image(undul_phot_dict['radiation'][0,:,:],undul_phot_dict['theta']*1e6,undul_phot_dict['phi']*180/numpy.pi,
+               title="INTENS UNDUL_PHOT: RN0[0]",xtitle="Theta [urad]",ytitle="Phi [deg]",aspect='auto',show=False)
+    if do_plot_polarization: plot_image(undul_phot_dict['polarization'][0,:,:],undul_phot_dict['theta']*1e6,undul_phot_dict['phi']*180/numpy.pi,
+               title="POL_DEG UNDUL_PHOT: RN0[0]",xtitle="Theta [urad]",ytitle="Phi [deg]",aspect='auto',show=False)
 
     # pySRU
     undul_phot_pysru_dict = undul_phot_pysru(E_ENERGY = h["E_ENERGY"],INTENSITY = h["INTENSITY"],
@@ -752,8 +799,10 @@ if __name__ == "__main__":
                                     EMIN = h["EMIN"],EMAX = h["EMAX"],NG_E = h["NG_E"],
                                     MAXANGLE = h["MAXANGLE"],NG_T = h["NG_T"],
                                     NG_P = h["NG_P"])
-    plot_image(undul_phot_pysru_dict['radiation'][0,:,:],undul_phot_pysru_dict['theta']*1e6,undul_phot_pysru_dict['phi']*180/numpy.pi,
-               title=" UNDUL_PHOT_PYSRU: RN0[0]",xtitle="Theta [urad]",ytitle="Phi [deg]",aspect='auto',show=True)
+    if do_plot_intensity: plot_image(undul_phot_pysru_dict['radiation'][0,:,:],undul_phot_pysru_dict['theta']*1e6,undul_phot_pysru_dict['phi']*180/numpy.pi,
+               title="INTENS UNDUL_PHOT_PYSRU: RN0[0]",xtitle="Theta [urad]",ytitle="Phi [deg]",aspect='auto',show=False)
+    if do_plot_polarization: plot_image(undul_phot_pysru_dict['polarization'][0,:,:],undul_phot_pysru_dict['theta']*1e6,undul_phot_pysru_dict['phi']*180/numpy.pi,
+               title="POL_DEG UNDUL_PHOT_PYSRU: RN0[0]",xtitle="Theta [urad]",ytitle="Phi [deg]",aspect='auto',show=False)
 
     # srw
     undul_phot_srw_dict = undul_phot_srw(E_ENERGY = h["E_ENERGY"],INTENSITY = h["INTENSITY"],
@@ -761,8 +810,10 @@ if __name__ == "__main__":
                                     EMIN = h["EMIN"],EMAX = h["EMAX"],NG_E = h["NG_E"],
                                     MAXANGLE = h["MAXANGLE"],NG_T = h["NG_T"],
                                     NG_P = h["NG_P"])
-    plot_image(undul_phot_srw_dict['radiation'][0,:,:],undul_phot_srw_dict['theta']*1e6,undul_phot_srw_dict['phi']*180/numpy.pi,
-               title=" UNDUL_PHOT_SRW: RN0[0]",xtitle="Theta [urad]",ytitle="Phi [deg]",aspect='auto',show=True)
+    if do_plot_intensity: plot_image(undul_phot_srw_dict['radiation'][0,:,:],undul_phot_srw_dict['theta']*1e6,undul_phot_srw_dict['phi']*180/numpy.pi,
+               title="INTENS UNDUL_PHOT_SRW: RN0[0]",xtitle="Theta [urad]",ytitle="Phi [deg]",aspect='auto',show=False)
+    if do_plot_polarization: plot_image(undul_phot_srw_dict['polarization'][0,:,:],undul_phot_srw_dict['theta']*1e6,undul_phot_srw_dict['phi']*180/numpy.pi,
+               title="POL_DEG UNDUL_PHOT_SRW: RN0[0]",xtitle="Theta [urad]",ytitle="Phi [deg]",aspect='auto',show=False)
 
 
     undul_cdf(undul_phot_srw_dict)
@@ -772,5 +823,6 @@ if __name__ == "__main__":
     y1 = (undul_phot_dict["radiation"]).sum(axis=2).sum(axis=1)
     y2 = (undul_phot_pysru_dict["radiation"]).sum(axis=2).sum(axis=1)
     y3 = (undul_phot_srw_dict["radiation"]).sum(axis=2).sum(axis=1)
-    print(x.shape,y1.shape,y2.shape,y3.shape)
-    plot(x,y1,x,y2,x,y3,xtitle="Photon energy [eV]",ytitle="Flux",legend=["internal","pySRU","SRW"])
+    # yrange=[y0.min()*0.9,y3.max()*1.1]
+    if do_plot_intensity: plot(x,y0,x,y1,x,y2,x,y3,xtitle="Photon energy [eV]",ytitle="Flux[photons/s/eV/rad^2]",legend=["preprocessor","internal","pySRU","SRW"])
+    if do_plot_polarization or do_plot_intensity: plot_show()
