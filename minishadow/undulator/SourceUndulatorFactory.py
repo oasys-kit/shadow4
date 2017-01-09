@@ -37,10 +37,10 @@ import srwlib as sl
 import array
 
 
-# input/output
-from SourceUndulatorInputOutput import load_uphot_dot_dat,write_uphot_dot_dat
-from SourceUndulatorInputOutput import load_xshundul_dot_sha,write_xshundul_dot_sha
-import json
+# # input/output
+# from SourceUndulatorInputOutput import load_uphot_dot_dat,write_uphot_dot_dat
+# from SourceUndulatorInputOutput import load_xshundul_dot_sha,write_xshundul_dot_sha
+# import json
 
 angstroms_to_eV = codata.h*codata.c/codata.e*1e10
 
@@ -50,93 +50,98 @@ angstroms_to_eV = codata.h*codata.c/codata.e*1e10
 # private code for internal undul_phot hacked from pySRU
 #
 
-def _pysru_trajectory_undulator_reference(K=1.87 , gamma=2544.03131115, lambda_u=0.020, Nb_period=10, Nb_point=10, Beta_et=0.99993):
+# calculate a theorical trajectory in an undulator
+# adapted from pySRU: analytical_trajectory_plane_undulator():
+def _pysru_analytical_trajectory_plane_undulator(K=1.87 , gamma=2544.03131115, lambda_u=0.020, Nb_period=10, Nb_point=10, Beta_et=0.99993):
 
-    # if Nb_point == None:
-    #     Nb_point = choose_nb_pts_trajectory(K, lambda_u*Nb_period, gamma, omega, alpha=0.01,)
-    #     print("Number of trajectory points (calculated automatically)",Nb_point)
 
     N = Nb_period * Nb_point + 1
-    ku= 2.0*np.pi/lambda_u
-    omega_u = Beta_et*codata.c *ku
-    # trajectory =
-    #   [t........]
-    # 	[ X/c......]
-    # 	[ Y/c ......]
-    #	[ Z/c ......]
-    # 	[ Vx/c .....]
-    # 	[ Vy/c .....]
-    # 	[ Vz/c .....]
-    # 	[ Ax/c .....]
-    # 	[ Ay/c .....]
-    # 	[ Az/c .....]
-    trajectory = np.zeros((10, N))
+    ku = 2.0 * np.pi / lambda_u
+    omega_u = Beta_et * codata.c * ku
+
     # t
-    trajectory[0] = np.linspace(-(lambda_u / (codata.c * Beta_et)) * (Nb_period / 2), (lambda_u / (codata.c * Beta_et)) * (Nb_period / 2), N)
-    #trajectory[0] = np.linspace(0.0,(lambda_u / (c * Beta_et)) * (Nb_period), N)
-    # X et Z en fct de t
-    trajectory[3] = Beta_et*trajectory[0] - ((K/gamma)**2) * (1.0/(8.0*ku*codata.c))* np.sin(2.0*omega_u * trajectory[0])
-    trajectory[1] = (K/(gamma*ku*codata.c))* np.sin(omega_u * trajectory[0])
-    # Vx et Vz en fct de t
-    trajectory[6] = Beta_et - ((K/gamma)**2) * (2.0*omega_u/(8.0*ku*codata.c ))*np.cos(2.0*omega_u * trajectory[0])
-    trajectory[4] = (K/(gamma*ku*codata.c))*omega_u* np.cos(omega_u * trajectory[0])
-    # Ax et Az en fct de t
-    trajectory[9] = ((2.0*omega_u*K/gamma)**2) * (1.0/(8.0*ku*codata.c))*np.sin(2.0*omega_u * trajectory[0])
-    trajectory[7] = -(K/(gamma*ku*codata.c))*(omega_u**2)* np.sin(omega_u * trajectory[0])
-    # trajectory *= codata.c
-    # trajectory[0] *= (1.0/codata.c)
-    return trajectory
+    t = np.linspace(-(lambda_u / (codata.c * Beta_et)) * (Nb_period / 2), (lambda_u / (codata.c * Beta_et)) * (Nb_period / 2), N)
+
+    ## x and z
+    z = Beta_et * t + ((K / gamma) ** 2) * (1.0 / (8.0 * omega_u)) * np.sin( 2.0 * omega_u*t)
+    x = (-(K / (gamma * omega_u)) * np.cos(omega_u*t))
+    # # Vx and Vz
+    v_z = Beta_et + ((K / gamma) ** 2) * (1.0 / 4.0) * np.cos(2.0 *omega_u*t)
+    v_x= (K / (gamma )) * np.sin(omega_u*t)
+    # # Ax and Az
+    a_z=-omega_u *(K / gamma) ** 2 * 0.5 * np.sin( 2.0 * omega_u*t)
+    a_x= (K / (gamma )) * (omega_u ) * np.cos(omega_u*t)
+    # y
+    y=0.0*t
+    v_y=y
+    a_y=y
+    return np.vstack((t,x,y,z,v_x,v_y,v_z,a_x,a_y,a_z))
 
 
+# adapted from pySRU:  energy_radiated_approximation_and_farfield()
+def _pysru_energy_radiated_approximation_and_farfield(omega=2.53465927101*10**17,electron_current=1.0,trajectory=np.zeros((11,10)) , x=0.00 , y=0.0, D=None):
 
-def _pysru_energy_radiated(omega=2.53465927101*10**17,trajectory=np.zeros((11,10)) , x=0.00 , y=0.0, D=None):
+    c6 = codata.e * electron_current * 1e-9 / (8.0 * np.pi ** 2 * codata.epsilon_0 * codata.c * codata.h)
+
+    if D is not None:
+        c6 /= D**2
+
     N = trajectory.shape[1]
-
+    # N = trajectory.nb_points()
     if D == None:
         # in radian :
         n_chap = np.array([x, y, 1.0 - 0.5 * (x ** 2 + y ** 2)])
         X = np.sqrt(x ** 2 + y ** 2 )#TODO a changer
-    else:
-        # in meters :
+    #in meters :
+    else :
         X = np.sqrt(x ** 2 + y ** 2 + D ** 2)
         n_chap = np.array([x, y, D]) / X
 
 
+    trajectory_t   = trajectory[0]
+    trajectory_x   = trajectory[1]
+    trajectory_y   = trajectory[2]
+    trajectory_z   = trajectory[3]
+    trajectory_v_x = trajectory[4]
+    trajectory_v_y = trajectory[5]
+    trajectory_v_z = trajectory[6]
+    # trajectory_a_x = trajectory[7]
+    # trajectory_a_y = trajectory[8]
+    # trajectory_a_z = trajectory[9]
+
     E = np.zeros((3,), dtype=np.complex)
     integrand = np.zeros((3, N), dtype=np.complex)
-
-    A1 = ( n_chap[1] * trajectory[6] - n_chap[2] * trajectory[5])
-    A2 = (-n_chap[0] * trajectory[6] + n_chap[2] * trajectory[4])
-    A3 = ( n_chap[0] * trajectory[5] - n_chap[1] * trajectory[4])
+    A1 = (n_chap[1] * trajectory_v_z - n_chap[2] * trajectory_v_y)
+    A2 = (-n_chap[0] * trajectory_v_z + n_chap[2] * trajectory_v_x)
+    A3 = (n_chap[0] * trajectory_v_y - n_chap[1] * trajectory_v_x)
     Alpha2 = np.exp(
-        0. + 1j * omega * (trajectory[0] + X / codata.c - n_chap[0] * trajectory[1]
-                                           - n_chap[1] * trajectory[2] - n_chap[2] * trajectory[3]))
+        0. + 1j * omega * (trajectory_t + X / codata.c - n_chap[0] * trajectory_x
+                                           - n_chap[1] * trajectory_y - n_chap[2] * trajectory_z))
+
 
     integrand[0] -= ( n_chap[1]*A3 - n_chap[2]*A2) * Alpha2
     integrand[1] -= (- n_chap[0]*A3 + n_chap[2]*A1) * Alpha2
     integrand[2] -= ( n_chap[0]*A2 - n_chap[1]*A1) * Alpha2
 
-
-
     for k in range(3):
-        E[k] = np.trapz(integrand[k], trajectory[0])
+        # E[k] = np.trapz(integrand[k], self.trajectory.t)
+        E[k] = np.trapz(integrand[k], trajectory_t)
     E *= omega * 1j
 
-    # terme_bord = np.full((3), 0. + 1j * 0., dtype=np.complex)
-    # Alpha_1 = (1.0 / (1.0 - n_chap[0] * trajectory[4][-1]
-    #                   - n_chap[1] * trajectory[5][-1] - n_chap[2] * trajectory[6][-1]))
-    # Alpha_0 = (1.0 / (1.0 - n_chap[0] * trajectory[4][0]
-    #                   - n_chap[1] * trajectory[5][0] - n_chap[2] * trajectory[6][0]))
-    #
-    # terme_bord += ((n_chap[1] * A3[-1] - n_chap[2] * A2[-1]) * Alpha_1 *
-    #                Alpha2[-1])
-    # terme_bord -= ((n_chap[1] * A3[0] - n_chap[2] * A2[0]) * Alpha_0 *
-    #                Alpha2[0])
-    # E += terme_bord
+    terme_bord = np.full((3), 0. + 1j * 0., dtype=np.complex)
+    Alpha_1 = (1.0 / (1.0 - n_chap[0] * trajectory_v_x[-1]
+                      - n_chap[1] * trajectory_v_y[-1] - n_chap[2] * trajectory_v_z[-1]))
+    Alpha_0 = (1.0 / (1.0 - n_chap[0] * trajectory_v_x[0]
+                      - n_chap[1] * trajectory_v_y[0] - n_chap[2] * trajectory_v_z[0]))
 
+    terme_bord += ((n_chap[1] * A3[-1] - n_chap[2] * A2[-1]) * Alpha_1 *
+                   Alpha2[-1])
+    terme_bord -= ((n_chap[1] * A3[0] - n_chap[2] * A2[0]) * Alpha_0 *
+                   Alpha2[0])
+    E += terme_bord
+    E *= c6**0.5
     return E
-    # pol_deg = (np.abs(E[0])**2 / (np.abs(E[0])**2 + np.abs(E[1])**2 ) )
-    # return (np.abs(E[0]) ** 2 + np.abs(E[1])** 2 + np.abs(E[2])** 2), pol_deg
+
 
 
 #
@@ -279,7 +284,7 @@ def _srw_interpol(x,y,z,x1,y1):
         return z1
 
 #
-# the different versions of undul_sru
+# now, the different versions of undul_sru
 #
 
 def undul_phot(E_ENERGY,INTENSITY,LAMBDAU,NPERIODS,K,EMIN,EMAX,NG_E,MAXANGLE,NG_T,NG_P):
@@ -288,17 +293,15 @@ def undul_phot(E_ENERGY,INTENSITY,LAMBDAU,NPERIODS,K,EMIN,EMAX,NG_E,MAXANGLE,NG_
     # calculate trajectory
     #
     gamma = E_ENERGY * 1e9 / 0.511e6
-    print("GAMMA:",gamma)
     Beta = np.sqrt(1.0 - (1.0 / gamma ** 2))
     Beta_et = Beta * (1.0 - (K / (2.0 * gamma)) ** 2)
-
 
 
     E = np.linspace(EMIN,EMAX,NG_E,dtype=float)
     wavelength_array_in_A = angstroms_to_eV / E
     omega_array = 2*np.pi * codata.c / (wavelength_array_in_A * 1e-10)
 
-    T = _pysru_trajectory_undulator_reference(K=K, gamma=gamma, lambda_u=LAMBDAU, Nb_period=NPERIODS,
+    T = _pysru_analytical_trajectory_plane_undulator(K=K, gamma=gamma, lambda_u=LAMBDAU, Nb_period=NPERIODS,
                                         Nb_point=20,Beta_et=Beta_et)
 
     #
@@ -307,11 +310,6 @@ def undul_phot(E_ENERGY,INTENSITY,LAMBDAU,NPERIODS,K,EMIN,EMAX,NG_E,MAXANGLE,NG_
     D = 100.0 # placed far away (100 m)
     theta = np.linspace(0,MAXANGLE*1e-3,NG_T,dtype=float)
     phi = np.linspace(0,np.pi/2,NG_P,dtype=float)
-
-    c6 = codata.e * INTENSITY * 1e-9 / (8.0 * np.pi ** 2 * codata.epsilon_0 * codata.c * codata.h)
-
-    if D is not None:
-        c6 /= D**2
 
     Z2 = np.zeros((omega_array.size,theta.size,phi.size))
     POL_DEG = np.zeros_like(Z2)
@@ -323,24 +321,20 @@ def undul_phot(E_ENERGY,INTENSITY,LAMBDAU,NPERIODS,K,EMIN,EMAX,NG_E,MAXANGLE,NG_
                 r = R * np.sin(theta[t])
                 X = r * np.cos(phi[p])
                 Y = r * np.sin(phi[p])
-                ElecField = _pysru_energy_radiated(omega=omega_array[o],trajectory=T , x=X , y=Y, D=D )
+                ElecField = _pysru_energy_radiated_approximation_and_farfield(omega=omega_array[o],electron_current=INTENSITY,trajectory=T , x=X , y=Y, D=D )
 
                 pol_deg = np.abs(ElecField[0])**2 / (np.abs(ElecField[0])**2 + np.abs(ElecField[1])**2)
                 intensity =  (np.abs(ElecField[0]) ** 2 + np.abs(ElecField[1])** 2 + np.abs(ElecField[2])** 2)
 
 
-                # TO DO check this conversion
+                #  Conversion from pySRU units (photons/mm^2/0.1%bw) to SHADOW units (photons/rad^2/eV)
                 intensity *= (D*1e3)**2 # photons/mm^2 -> photons/rad^2
                 intensity /= 1e-3 * E[o] # photons/o.1%bw -> photons/eV
 
-                Z2[o,t,p] = c6*intensity
-                # from photons/mm^2 to photons/rad^2
-
+                Z2[o,t,p] = intensity
                 POL_DEG[o,t,p] = pol_deg
 
-
-
-    return {'radiation':Z2,'polarization':POL_DEG,'photon_energy':E,'theta':theta,'phi':phi}
+    return {'radiation':Z2,'polarization':POL_DEG,'photon_energy':E,'theta':theta,'phi':phi,'trajectory':T}
 
 def undul_phot_pysru(E_ENERGY,INTENSITY,LAMBDAU,NPERIODS,K,EMIN,EMAX,NG_E,MAXANGLE,NG_T,NG_P):
 
@@ -350,13 +344,13 @@ def undul_phot_pysru(E_ENERGY,INTENSITY,LAMBDAU,NPERIODS,K,EMIN,EMAX,NG_E,MAXANG
     from pySRU.TrajectoryFactory import TRAJECTORY_METHOD_ANALYTIC
     from pySRU.RadiationFactory import RADIATION_METHOD_APPROX_FARFIELD
 
-    beam_ESRF = ElectronBeam(Electron_energy=E_ENERGY, I_current=INTENSITY)
-    ESRF18 = Undulator(K=K, period_length=LAMBDAU, length=LAMBDAU*NPERIODS)
+    myelectronbeam = ElectronBeam(Electron_energy=E_ENERGY, I_current=INTENSITY)
+    myundulator = Undulator(K=K, period_length=LAMBDAU, length=LAMBDAU*NPERIODS)
 
     #
     # polar grid matrix
     #
-    E = np.linspace(EMIN,EMAX,NG_E,dtype=float)
+    photon_energy = np.linspace(EMIN,EMAX,NG_E,dtype=float)
 
     intens = np.zeros((NG_E,NG_T,NG_P))
     pol_deg = np.zeros_like(intens)
@@ -371,9 +365,9 @@ def undul_phot_pysru(E_ENERGY,INTENSITY,LAMBDAU,NPERIODS,K,EMIN,EMAX,NG_E,MAXANG
     X = (D / np.cos(THETA)) * np.sin(THETA) * np.cos(PHI)
     Y = (D / np.cos(THETA)) * np.sin(THETA) * np.sin(PHI)
 
-    for ie,e in enumerate(E):
-        print("Calculating energy %g eV (%d of %d)"%(e,ie+1,E.size))
-        simulation_test = create_simulation(magnetic_structure=ESRF18,electron_beam=beam_ESRF,
+    for ie,e in enumerate(photon_energy):
+        print("Calculating energy %g eV (%d of %d)"%(e,ie+1,photon_energy.size))
+        simulation_test = create_simulation(magnetic_structure=myundulator,electron_beam=myelectronbeam,
                                             magnetic_field=None, photon_energy=e,
                                             traj_method=TRAJECTORY_METHOD_ANALYTIC,Nb_pts_trajectory=None,
                                             rad_method=RADIATION_METHOD_APPROX_FARFIELD,initial_condition=None,
@@ -381,30 +375,29 @@ def undul_phot_pysru(E_ENERGY,INTENSITY,LAMBDAU,NPERIODS,K,EMIN,EMAX,NG_E,MAXANG
                                             X=X.flatten(),Y=Y.flatten(),XY_are_list=True)
 
         # TODO: this is not nice: I redo the calculations because I need the electric vectors to get polarization
-        # TODO: this should be evoided after refactoring pySRU to include electric field in simulations!!
-
-
+        #       this should be avoided after refactoring pySRU to include electric field in simulations!!
         electric_field = simulation_test.radiation_fact.calculate_electrical_field(
             simulation_test.trajectory, simulation_test.source, X.flatten(), Y.flatten(), D)
-
-        # print("<><><><><><><E,X,Y",electric_field._electrical_field.shape,
-        #       electric_field._X.shape,electric_field._Y.shape,
-        #       X.flatten().shape, Y.flatten().shape)
 
 
         E = electric_field._electrical_field
         pol_deg1 = (np.abs(E[:,0])**2 / (np.abs(E[:,0])**2 + np.abs(E[:,1])**2)).flatten()
-        # simulation_test.print_parameters()
+
         intens1 = simulation_test.radiation.intensity.copy()
         intens1.shape = (theta.size,phi.size)
         pol_deg1.shape = (theta.size,phi.size)
-        # TO DO check this conversion
+
+        #  Conversion from pySRU units (photons/mm^2/0.1%bw) to SHADOW units (photons/rad^2/eV)
         intens1 *= (D*1e3)**2 # photons/mm^2 -> photons/rad^2
         intens1 /= 1e-3 * e # photons/o.1%bw -> photons/eV
+
         intens[ie] = intens1
         pol_deg[ie] = pol_deg1
 
-    return {'radiation':intens,'polarization':pol_deg,'photon_energy':E,'theta':theta,'phi':phi}
+        T0 = simulation_test.trajectory
+        T = np.vstack((T0.t,T0.x,T0.y,T0.z,T0.v_x,T0.v_y,T0.v_z,T0.a_x,T0.a_y,T0.a_z))
+
+    return {'radiation':intens,'polarization':pol_deg,'photon_energy':photon_energy,'theta':theta,'phi':phi,'trajectory':T}
 
 def undul_phot_srw(E_ENERGY,INTENSITY,LAMBDAU,NPERIODS,K,EMIN,EMAX,NG_E,MAXANGLE,NG_T,NG_P):
 
@@ -513,7 +506,7 @@ def undul_phot_srw(E_ENERGY,INTENSITY,LAMBDAU,NPERIODS,K,EMIN,EMAX,NG_E,MAXANGLE
     #
     # dump file with radiation on cartesian grid
     #
-    _srw_stokes0_to_spec(stk,fname="srw_xshundul.spec")
+    # _srw_stokes0_to_spec(stk,fname="srw_xshundul.spec")
 
     #
     # interpolate for polar grid
@@ -538,14 +531,11 @@ def undul_phot_srw(E_ENERGY,INTENSITY,LAMBDAU,NPERIODS,K,EMIN,EMAX,NG_E,MAXANGLE
           Y = r * numpy.sin(phi[iphi])
           tmp = tck(X,Y)
 
-          # TO DO check this conversion
+          #  Conversion from SRW units (photons/mm^2/0.1%bw) to SHADOW units (photons/rad^2/eV)
           tmp *= (slit_distance*1e3)**2 # photons/mm^2 -> photons/rad^2
           tmp /= 1e-3 * e[ie] # photons/o.1%bw -> photons/eV
 
           Z2[ie,itheta,iphi] = tmp
-
-
-
           POL_DEG[ie,itheta,iphi] = tck_pol_deg(X,Y)
 
     # !C SHADOW defines the degree of polarization by |E| instead of |E|^2
@@ -597,18 +587,13 @@ def undul_cdf(uphot_dot_dat_dict,method='trapz',do_plot=False):
         ONE   = scipy.integrate.cumtrapz(RN1,initial=0,axis=1)  * (T[1] - T[0]) # CDF(e,t)
         TWO   = scipy.integrate.cumtrapz(RN2,initial=0)         * (E[1] - E[0]) # CDF(e)
 
-
-
     print("undul_cdf: Shadow ZERO,ONE,TWO: ",ZERO.shape,ONE.shape,TWO.shape)
     print("undul_cdf: Total Power emitted in the specified angles is: %g Watts."%( (RN2*E).sum()*(E[1]-E[0])*codata.e) )
-
 
     if do_plot:
         plot(E,TWO,title="NEW TWO",xtitle="E",ytitle="TWO",show=0)
         plot_image(ONE,numpy.arange(NG_E),numpy.arange(NG_T),title="NEW ONE",xtitle="index Energy",ytitle="index Theta",show=0)
         plot_image(ZERO[0,:,:],numpy.arange(NG_T),numpy.arange(NG_P),title="NEW ZERO[0]",xtitle="index Theta",ytitle="index Phi",show=0)
-        #plot_image(POL_DEGREE[0,:,:],numpy.arange(NG_T),numpy.arange(NG_P),title="POL_DEGREE[0]",xtitle="index Theta",ytitle="index Phi",show=0)
-
 
     return {'cdf_EnergyThetaPhi':TWO,'cdf_EnergyTheta':ONE,'cdf_Energy':ZERO,'energy':E,'theta':T,'phi':P,'polarization':POL_DEG}
 
@@ -624,43 +609,43 @@ def run_shadow3_using_preprocessors(jsn):
     u.load_json_shadowvui_dictionary(jsn)
     u.run_using_preprocessors()
 
-def test_undul_phot(h,do_plot=True):
-    undul_phot_dict = undul_phot(E_ENERGY = h["E_ENERGY"],INTENSITY = h["INTENSITY"],
-                                    LAMBDAU = h["LAMBDAU"],NPERIODS = h["NPERIODS"],K = h["K"],
-                                    EMIN = h["EMIN"],EMAX = h["EMAX"],NG_E = h["NG_E"],
-                                    MAXANGLE = h["MAXANGLE"],NG_T = h["NG_T"],
-                                    NG_P = h["NG_P"])
-
-    write_uphot_dot_dat(undul_phot_dict,file_out="uphot_minishadow.dat")
-
-    undul_phot_srw_dict = undul_phot_srw(E_ENERGY = h["E_ENERGY"],INTENSITY = h["INTENSITY"],
-                                    LAMBDAU = h["LAMBDAU"],NPERIODS = h["NPERIODS"],K = h["K"],
-                                    EMIN = h["EMIN"],EMAX = h["EMAX"],NG_E = h["NG_E"],
-                                    MAXANGLE = h["MAXANGLE"],NG_T = h["NG_T"],
-                                    NG_P = h["NG_P"])
-
-    write_uphot_dot_dat(undul_phot_srw_dict,file_out="uphot_srw.dat")
-
-    #
-    # compare radiation
-    #
-    d0 = load_uphot_dot_dat("uphot.dat",do_plot=do_plot,show=False)
-    d1 = load_uphot_dot_dat("uphot_minishadow.dat",do_plot=do_plot,show=True)
-    d2 = load_uphot_dot_dat("uphot_srw.dat",do_plot=do_plot,show=False)
-
-    rad0 = d0['radiation']
-    rad1 = d1['radiation']
-    rad2 = d2['radiation']
-
-    rad0 /= rad0.max()
-    rad1 /= rad1.max()
-    rad2 /= rad2.max()
-
-
-    tmp = numpy.where(rad0 > 0.1)
-    print(">>> test_undul_phot: minishadow/shadow3: %4.2f %% "%(numpy.average( 100*numpy.abs((rad1[tmp]-rad0[tmp])/rad0[tmp]) )))
-    print(">>> test_undul_phot:        srw/shadow3: %4.2f %% "%(numpy.average( 100*numpy.abs((rad2[tmp]-rad0[tmp])/rad0[tmp]) )))
-    print(">>> test_undul_phot: minishadow/srw    : %4.2f %% "%(numpy.average( 100*numpy.abs((rad1[tmp]-rad2[tmp])/rad2[tmp]) )))
+# def test_undul_phot(h,do_plot=True):
+#     undul_phot_dict = undul_phot(E_ENERGY = h["E_ENERGY"],INTENSITY = h["INTENSITY"],
+#                                     LAMBDAU = h["LAMBDAU"],NPERIODS = h["NPERIODS"],K = h["K"],
+#                                     EMIN = h["EMIN"],EMAX = h["EMAX"],NG_E = h["NG_E"],
+#                                     MAXANGLE = h["MAXANGLE"],NG_T = h["NG_T"],
+#                                     NG_P = h["NG_P"])
+#
+#     write_uphot_dot_dat(undul_phot_dict,file_out="uphot_minishadow.dat")
+#
+#     undul_phot_srw_dict = undul_phot_srw(E_ENERGY = h["E_ENERGY"],INTENSITY = h["INTENSITY"],
+#                                     LAMBDAU = h["LAMBDAU"],NPERIODS = h["NPERIODS"],K = h["K"],
+#                                     EMIN = h["EMIN"],EMAX = h["EMAX"],NG_E = h["NG_E"],
+#                                     MAXANGLE = h["MAXANGLE"],NG_T = h["NG_T"],
+#                                     NG_P = h["NG_P"])
+#
+#     write_uphot_dot_dat(undul_phot_srw_dict,file_out="uphot_srw.dat")
+#
+#     #
+#     # compare radiation
+#     #
+#     d0 = load_uphot_dot_dat("uphot.dat",do_plot=do_plot,show=False)
+#     d1 = load_uphot_dot_dat("uphot_minishadow.dat",do_plot=do_plot,show=True)
+#     d2 = load_uphot_dot_dat("uphot_srw.dat",do_plot=do_plot,show=False)
+#
+#     rad0 = d0['radiation']
+#     rad1 = d1['radiation']
+#     rad2 = d2['radiation']
+#
+#     rad0 /= rad0.max()
+#     rad1 /= rad1.max()
+#     rad2 /= rad2.max()
+#
+#
+#     tmp = numpy.where(rad0 > 0.1)
+#     print(">>> test_undul_phot: minishadow/shadow3: %4.2f %% "%(numpy.average( 100*numpy.abs((rad1[tmp]-rad0[tmp])/rad0[tmp]) )))
+#     print(">>> test_undul_phot:        srw/shadow3: %4.2f %% "%(numpy.average( 100*numpy.abs((rad2[tmp]-rad0[tmp])/rad0[tmp]) )))
+#     print(">>> test_undul_phot: minishadow/srw    : %4.2f %% "%(numpy.average( 100*numpy.abs((rad1[tmp]-rad2[tmp])/rad2[tmp]) )))
 
 
 
@@ -711,6 +696,12 @@ def test_undul_cdf(do_plot=True):
 if __name__ == "__main__":
 
     from srxraylib.plot.gol import plot_image,plot, plot_show
+
+
+
+    do_plot_intensity = 1
+    do_plot_polarization = 1
+
 
         # "EMIN":       10500.0000,
         # "EMAX":       10550.0000,
@@ -768,9 +759,12 @@ if __name__ == "__main__":
     # test_undul_phot(h,do_plot=True)
     # test_undul_cdf(do_plot=True)
 
-    do_plot_intensity = 1
-    do_plot_polarization = 1
     #
+    # test undul_phot (undulator radiation)
+    #
+
+
+    # SHADOW3 preprocessor
     run_shadow3_using_preprocessors(h)
     undul_phot_preprocessor_dict = load_uphot_dot_dat("uphot.dat")
 
@@ -816,13 +810,37 @@ if __name__ == "__main__":
                title="POL_DEG UNDUL_PHOT_SRW: RN0[0]",xtitle="Theta [urad]",ytitle="Phi [deg]",aspect='auto',show=False)
 
 
-    undul_cdf(undul_phot_srw_dict)
 
-    x = undul_phot_srw_dict["photon_energy"]
+    x = undul_phot_dict["photon_energy"]
     y0 = (undul_phot_preprocessor_dict["radiation"]).sum(axis=2).sum(axis=1)
-    y1 = (undul_phot_dict["radiation"]).sum(axis=2).sum(axis=1)
-    y2 = (undul_phot_pysru_dict["radiation"]).sum(axis=2).sum(axis=1)
-    y3 = (undul_phot_srw_dict["radiation"]).sum(axis=2).sum(axis=1)
-    # yrange=[y0.min()*0.9,y3.max()*1.1]
+    y1 =              (undul_phot_dict["radiation"]).sum(axis=2).sum(axis=1)
+    y2 =        (undul_phot_pysru_dict["radiation"]).sum(axis=2).sum(axis=1)
+    y3 =          (undul_phot_srw_dict["radiation"]).sum(axis=2).sum(axis=1)
+
     if do_plot_intensity: plot(x,y0,x,y1,x,y2,x,y3,xtitle="Photon energy [eV]",ytitle="Flux[photons/s/eV/rad^2]",legend=["preprocessor","internal","pySRU","SRW"])
+
+
+
+    #
+    # trajectory
+    #
+    # t0 = (undul_phot_preprocessor_dict["trajectory"])
+    t1 = (             undul_phot_dict["trajectory"])
+    t2 = (       undul_phot_pysru_dict["trajectory"])
+    plot(t1[3],1e6*t1[1],t2[3],1e6*t2[1],title='Trajectory',xtitle='z [m]',ytitle='x[um]',legend=['internal','pysru'],show=0)
+    # plot(t1[3],1e6*t1[1],t2[3],1e6*t2[1],xtitle='z [m]',ytitle='x[um]',legend=['internal','pysru'],show=0)
+    # t3 = (         undul_phot_srw_dict["trajectory"])
+    print("<><>",t1.shape,t2.shape)
+
+
+
+    #
+    # test undul_cdf
+    #
+
+
+    # undul_cdf(undul_phot_srw_dict)
+
+
     if do_plot_polarization or do_plot_intensity: plot_show()
+
