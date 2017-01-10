@@ -1,3 +1,7 @@
+#
+# load/write files for the undul_phot and undul_cdf shadow3/undulator preprocessors
+#
+
 
 import numpy
 from srxraylib.plot.gol import plot,plot_image,plot_show

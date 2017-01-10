@@ -1,7 +1,17 @@
+#
+# Tests of the python implementation of the shadow3/undulator preprocessors (SourceUndulatorFactory)
+#
+
+
+#
+# switch on/off plots
+#
+DO_PLOT = False
+
+
 import unittest
 import numpy
 import json
-from srxraylib.plot.gol import plot_image,plot, plot_show
 
 # CODE TO TEST
 from SourceUndulatorFactory import undul_phot, undul_cdf
@@ -10,7 +20,12 @@ from SourceUndulatorFactory import undul_phot_pysru,undul_phot_srw
 from SourceUndulatorInputOutput import load_uphot_dot_dat,write_uphot_dot_dat
 from SourceUndulatorInputOutput import load_xshundul_dot_sha,write_xshundul_dot_sha
 
-
+if DO_PLOT:
+    try:
+        from srxraylib.plot.gol import plot_image,plot, plot_show
+    except:
+        print("srxraylib not available (for plots). Plots switched off.")
+        DO_PLOT = False
 #
 # auxiliary functions
 #
@@ -24,31 +39,12 @@ def run_shadow3_using_preprocessors(jsn):
 
 
 
+
 #
 # Tests
 #
 
-
-# class undul_photTest(unittest.TestCase):
-#
-#     #
-#     # Common interface for all 1D methods :
-#     #                                   'fraunhofer':
-#     #                                   'fft': fft -> multiply by kernel in freq -> ifft
-#     #                                   'convolution': scipy.signal.fftconvolve(wave,kernel in space)
-#     # valid apertute_type: square, gaussian
-#
-#     def propagate_1D(self,do_plot=do_plot,method='fft',
-#                                 wavelength=1.24e-10,aperture_type='square',aperture_diameter=40e-6,
-#                                 wavefront_length=100e-6,npoints=500,
-#                                 propagation_distance = 30.0,show=1):
-#
-#
-#         print("\n#                                                            ")
-#         print("# far field 1D (fraunhofer) diffraction from a %s aperture  "%aperture_type)
-#         print("#
-
-class SourceUndulatorFactoryTest(unittest.TestCase):
+class TestSourceUndulatorFactory(unittest.TestCase):
 
     def test_undul_phot(self):
 
@@ -175,7 +171,7 @@ class SourceUndulatorFactoryTest(unittest.TestCase):
         self.assertAlmostEqual(diff4,0.00,delta=1e-4)
 
 
-    def test_comparison_undul_phot(self,do_plot_intensity=True,do_plot_polarization=True,do_plot_trajectory=True):
+    def test_comparison_undul_phot(self,do_plot_intensity=DO_PLOT,do_plot_polarization=DO_PLOT,do_plot_trajectory=DO_PLOT):
 
         print("\n#                                                            ")
         print("# test_comparison_undul_phot  ")
@@ -184,12 +180,6 @@ class SourceUndulatorFactoryTest(unittest.TestCase):
         #
         # test undul_phot (undulator radiation)
         #
-
-        # do_plot_intensity = 1
-        # do_plot_polarization = 1
-
-        # "EMIN":       10500.0000,
-        # "EMAX":       10550.0000,
 
         try:
             import pySRU
@@ -204,6 +194,8 @@ class SourceUndulatorFactoryTest(unittest.TestCase):
             is_available_srw = False
 
 
+        # "EMIN":       10500.0000,
+        # "EMAX":       10550.0000,
 
         tmp = \
             """
@@ -344,7 +336,7 @@ class SourceUndulatorFactoryTest(unittest.TestCase):
 
 
 
-    def test_undul_cdf(self,do_plot=True):
+    def test_undul_cdf(self,do_plot=DO_PLOT):
 
         print("\n#                                                            ")
         print("# test_undul_cdf  ")

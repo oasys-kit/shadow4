@@ -15,10 +15,6 @@
 #     undul_phot_srw()   : like undul_phot of SHADOW but using SRW
 #     undul_cdf          : like undul_cdf in SHADOW written internally in python
 #
-# TODO:
-#    make integral of flux
-#    Calculate degree of polarization (set to one now)
-#
 #
 
 
@@ -314,7 +310,7 @@ def undul_phot(E_ENERGY,INTENSITY,LAMBDAU,NPERIODS,K,EMIN,EMAX,NG_E,MAXANGLE,NG_
     Z2 = np.zeros((omega_array.size,theta.size,phi.size))
     POL_DEG = np.zeros_like(Z2)
     for o in range(omega_array.size):
-        print("Calculating energy %g eV (%d of %d)"%(E[o],o+1,omega_array.size))
+        print("Calculating energy %8.3f eV (%d of %d)"%(E[o],o+1,omega_array.size))
         for t in range(theta.size):
             for p in range(phi.size):
                 R = D / np.cos(theta[t])

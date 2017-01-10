@@ -1,5 +1,3 @@
-
-import numpy
 import json
 import os
 
@@ -9,7 +7,7 @@ from srxraylib.plot.gol import plot,plot_image,plot_show
 
 
 import Shadow
-from SourceUndulatorFactory import undul_cdf, undul_phot, undul_phot_srw
+from SourceUndulatorFactory import undul_cdf, undul_phot, undul_phot_srw,  undul_phot_pysru
 from SourceUndulatorInputOutput import load_uphot_dot_dat,write_uphot_dot_dat
 from SourceUndulatorInputOutput import load_xshundul_dot_sha,write_xshundul_dot_sha
 
@@ -326,9 +324,12 @@ class SourceUndulator(object):
 
 
         # input source
-        commands = "input source\n1\n0\n%d \n%d \n0 \n2 \nxshundul.sha\n%g\n%g\n%g\n%d\n%g\n%d\n%d\n%d\n%d\nexit\n"% \
-        (jsn["NRAYS"],jsn["SEED"],jsn["SX"],jsn["SZ"],jsn["EX"],0,jsn["EZ"],0,3,1,1)
-
+        if self.FLAG_EMITTANCE:
+            commands = "input source\n1\n0\n%d \n%d \n0 \n2 \nxshundul.sha\n%g\n%g\n%g\n%d\n%g\n%d\n%d\n%d\n%d\nexit\n"% \
+            (jsn["NRAYS"],jsn["SEED"],jsn["SX"],jsn["SZ"],jsn["EX"],0,jsn["EZ"],0,3,1,1)
+        else:
+            commands = "input source\n1\n0\n%d \n%d \n0 \n2 \nxshundul.sha\n%g\n%g\n%g\n%d\n%g\n%d\n%d\n%d\n%d\nexit\n"% \
+            (jsn["NRAYS"],jsn["SEED"],0,0,0,0,0,0,3,1,1)
 
         self.shadow3_commands(commands=commands,input_file="shadow3_input_source.inp")
 
@@ -345,8 +346,8 @@ class SourceUndulator(object):
     def run(self,code_undul_phot='internal',dump_uphot_dot_dat=False,dump_start_files=False):
 
         h = self.to_dictionary()
-        print(self.info())
-        os.system("rm -f xshundul.plt xshundul.par xshundul.traj xshundul.info xshundul.sha")
+        # print(self.info())
+        # os.system("rm -f xshundul.plt xshundul.par xshundul.traj xshundul.info xshundul.sha")
 
         if code_undul_phot != "internal" or code_undul_phot != "srw":
             dump_uphot_dot_dat = True
@@ -356,6 +357,12 @@ class SourceUndulator(object):
         # undul_phot
         if code_undul_phot == 'internal':
             undul_phot_dict = undul_phot(E_ENERGY = h["E_ENERGY"],INTENSITY = h["INTENSITY"],
+                                    LAMBDAU = h["LAMBDAU"],NPERIODS = h["NPERIODS"],K = h["K"],
+                                    EMIN = h["EMIN"],EMAX = h["EMAX"],NG_E = h["NG_E"],
+                                    MAXANGLE = h["MAXANGLE"],NG_T = h["NG_T"],
+                                    NG_P = h["NG_P"])
+        elif code_undul_phot == 'pysru':
+            undul_phot_dict = undul_phot_pysru(E_ENERGY = h["E_ENERGY"],INTENSITY = h["INTENSITY"],
                                     LAMBDAU = h["LAMBDAU"],NPERIODS = h["NPERIODS"],K = h["K"],
                                     EMIN = h["EMIN"],EMAX = h["EMAX"],NG_E = h["NG_E"],
                                     MAXANGLE = h["MAXANGLE"],NG_T = h["NG_T"],
@@ -390,17 +397,28 @@ class SourceUndulator(object):
         # initialize shadow3 source (oe0) and beam
         oe0 = Shadow.Source()
         beam = Shadow.Beam()
-        oe0.EPSI_X = h["EX"]
-        oe0.EPSI_Z = h["EZ"]
-        oe0.SIGDIX = 0.0
-        oe0.SIGDIZ = 0.0
-        oe0.SIGMAX = h["SX"]
-        oe0.SIGMAY = 0.0
-        oe0.SIGMAZ = h["SZ"]
+        if self.FLAG_EMITTANCE:
+            oe0.EPSI_X = h["EX"]
+            oe0.EPSI_Z = h["EZ"]
+            oe0.SIGDIX = 0.0
+            oe0.SIGDIZ = 0.0
+            oe0.SIGMAX = h["SX"]
+            oe0.SIGMAY = 0.0
+            oe0.SIGMAZ = h["SZ"]
+        else:
+            oe0.EPSI_X = 0.0
+            oe0.EPSI_Z = 0.0
+            oe0.SIGDIX = 0.0
+            oe0.SIGDIZ = 0.0
+            oe0.SIGMAX = 0.0
+            oe0.SIGMAY = 0.0
+            oe0.SIGMAZ = 0.0
+
         oe0.FILE_TRAJ = b'xshundul.sha'
         oe0.ISTAR1 = h["SEED"]
         oe0.NPOINT = h["NRAYS"]
         oe0.F_WIGGLER = 2
+
         if dump_start_files: oe0.write("start.00")
         beam.genSource(oe0)
         if dump_start_files: oe0.write("end.00")
@@ -409,6 +427,10 @@ class SourceUndulator(object):
         return beam
 
 
+#
+# tests for
+# SourceUndulator
+#
 def compare_shadow3_files(file1,file2,do_assert=True):
 
     Shadow.ShadowTools.plotxy(file1,4,6,nbins=101,nolost=1,title=file1)
@@ -421,9 +443,7 @@ def compare_shadow3_files(file1,file2,do_assert=True):
         begin2.load(file2)
         assert_almost_equal(begin1.rays[:,0:6],begin2.rays[:,0:6],3)
 
-
-
-if __name__ == "__main__":
+def run_from_shadowvui_json_file(method='preprocessor'):
 
     u = SourceUndulator()
 
@@ -431,50 +451,104 @@ if __name__ == "__main__":
     print(u.to_dictionary())
     print(u.info())
 
-    #
-    # run using binary shadow3 (with preprocessors)
-    #
-    u.run_using_preprocessors()
 
-    os.system("mv begin.dat begin_shadow3.dat")
-    os.system("mv uphot.dat uphot_shadow3.dat")
-    os.system("mv xshundul.sha xshundul_shadow3.sha")
+
+    if method == 'preprocessor':
+        #
+        # run using binary shadow3 (with preprocessors)
+        #
+        u.run_using_preprocessors()
+    else:
+        beam = u.run(code_undul_phot=method,dump_uphot_dot_dat=True,dump_start_files=True)
+        beam.write("begin.dat")
+
+
+if __name__ == "__main__":
+
+    #
+    # clean
+    #
+    os.system("rm begin*.dat")
+    os.system("rm uphot*.dat")
+    os.system("rm xshundul*.sha")
+
+
+    #
+    # run
+    #
+    method = 'preprocessor'
+    method = 'internal'
+    method = 'pysru'
+    method = 'srw'
+
+    methods = ['preprocessor','internal']
+
+    for method in methods:
+        run_from_shadowvui_json_file(method=method)
+
+        os.system("cp begin.dat begin_%s.dat"%method)
+        os.system("cp uphot.dat uphot_%s.dat"%method)
+        os.system("cp xshundul.sha xshundul_%s.sha"%method)
+
+
+    compare_shadow3_files("begin_preprocessor.dat","begin_internal.dat",do_assert=True)
+
+
+
     # make script
     # oe0 = Shadow.Source()
     # oe0.load("start.00")
     # Shadow.ShadowTools.make_python_script_from_list([oe0],script_file="script_undulator.py")
 
-    #
-    # run using python
-    #
-    beam = u.run(code_undul_phot='internal',
-            dump_uphot_dot_dat=True,dump_start_files=True)
-
-    beam.write("begin.dat")
-    os.system("mv begin.dat begin_minishadow.dat")
-    os.system("mv uphot.dat uphot_minishadow.dat")
-    os.system("mv xshundul.sha xshundul_minishadow.sha")
 
 
     #
-    # compare radiation
+    # #
+    # # run using python
+    # #
+    # beam = u.run(code_undul_phot='internal',
+    #         dump_uphot_dot_dat=True,dump_start_files=True)
+    #
+    # beam.write("begin.dat")
+    # os.system("mv begin.dat begin_minishadow.dat")
+    # os.system("mv uphot.dat uphot_minishadow.dat")
+    # os.system("mv xshundul.sha xshundul_minishadow.sha")
+    #
     #
 
-    #
-    # load_uphot_dot_dat("uphot_shadow3.dat",do_plot=True)
-    # load_uphot_dot_dat("uphot_minishadow.dat",do_plot=True)
-    #
-
-    #
-    # compare CDF
-    #
-    # load_xshundul_dot_sha("xshundul_shadow3.sha",do_plot=True)
-    # load_xshundul_dot_sha("xshundul_minishadow.sha",do_plot=True)
-
-    #
-    # compare binary files
-    #
-    compare_shadow3_files("begin_shadow3.dat","begin_minishadow.dat",do_assert=True)
 
 
-    plot_show()
+
+    # u = SourceUndulator()
+    #
+    # u.load_json_shadowvui_file("xshundul.json")
+    # print(u.to_dictionary())
+    # print(u.info())
+    #
+    # #
+    # # run using binary shadow3 (with preprocessors)
+    # #
+    # u.run_using_preprocessors()
+
+    # #
+    # # compare radiation
+    # #
+    #
+    # #
+    # # load_uphot_dot_dat("uphot_shadow3.dat",do_plot=True)
+    # # load_uphot_dot_dat("uphot_minishadow.dat",do_plot=True)
+    # #
+    #
+    # #
+    # # compare CDF
+    # #
+    # # load_xshundul_dot_sha("xshundul_shadow3.sha",do_plot=True)
+    # # load_xshundul_dot_sha("xshundul_minishadow.sha",do_plot=True)
+    #
+    # #
+    # # compare binary files
+    # #
+    # compare_shadow3_files("begin_shadow3.dat","begin_minishadow.dat",do_assert=True)
+
+
+    # plot_show()
