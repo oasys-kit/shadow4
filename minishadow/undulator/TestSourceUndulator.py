@@ -9,7 +9,7 @@ import numpy
 
 from numpy.testing import assert_almost_equal
 from SourceUndulator import SourceUndulator
-from SourceUndulatorInputOutput import load_uphot_dot_dat
+from SourceUndulatorInputOutput import load_file_undul_phot
 
 import Shadow
 from srxraylib.plot.gol import plot,plot_image,plot_show
@@ -44,8 +44,8 @@ class TestSourceUndulator(unittest.TestCase):
     def compare_undul_phot_files(self,file1,file2,do_plot=DO_PLOT,do_assert=True):
         print("Comparing undul_phot output files: %s %s"%(file1,file2))
 
-        dict1 = load_uphot_dot_dat(file_in=file1)
-        dict2 = load_uphot_dot_dat(file_in=file2)
+        dict1 = load_file_undul_phot(file_in=file1)
+        dict2 = load_file_undul_phot(file_in=file2)
 
         rad1 = dict1["radiation"]
         # Do not compare polarizartion, I believe the preprocessor one is wrong

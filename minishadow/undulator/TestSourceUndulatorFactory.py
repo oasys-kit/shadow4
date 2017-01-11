@@ -18,8 +18,8 @@ from SourceUndulator import SourceUndulator
 from SourceUndulatorFactory import undul_phot, undul_cdf
 from SourceUndulatorFactory import undul_phot_pysru,undul_phot_srw
 # input/output
-from SourceUndulatorInputOutput import load_uphot_dot_dat,write_uphot_dot_dat
-from SourceUndulatorInputOutput import load_xshundul_dot_sha,write_xshundul_dot_sha
+from SourceUndulatorInputOutput import load_file_undul_phot,write_file_undul_phot
+from SourceUndulatorInputOutput import load_fule_undul_cdf,write_file_undul_sha
 
 if DO_PLOT:
     try:
@@ -311,7 +311,7 @@ class TestSourceUndulatorFactory(unittest.TestCase):
 
 
 
-        undul_phot_preprocessor_dict = load_uphot_dot_dat("uphot.dat")
+        undul_phot_preprocessor_dict = load_file_undul_phot("uphot.dat")
 
         if do_plot_intensity: plot_image(undul_phot_preprocessor_dict['radiation'][0,:,:],undul_phot_preprocessor_dict['theta']*1e6,undul_phot_preprocessor_dict['phi']*180/numpy.pi,
                    title="INTENS UNDUL_PHOT_PREPROCESSOR: RN0[0]",xtitle="Theta [urad]",ytitle="Phi [deg]",aspect='auto',show=False)
@@ -464,18 +464,18 @@ class TestSourceUndulatorFactory(unittest.TestCase):
         #
         #
         #
-        radiation = load_uphot_dot_dat(file_in="uphot.dat")
+        radiation = load_file_undul_phot(file_in="uphot.dat")
 
         cdf2 = undul_cdf(radiation,method='sum',do_plot=False)
-        write_xshundul_dot_sha(cdf2,file_out="xshundul2.sha")
+        write_file_undul_sha(cdf2,file_out="xshundul2.sha")
 
 
         cdf3 = undul_cdf(radiation,method='trapz',do_plot=False)
-        write_xshundul_dot_sha(cdf3,file_out="xshundul3.sha")
+        write_file_undul_sha(cdf3,file_out="xshundul3.sha")
 
-        cdf1 = load_xshundul_dot_sha(file_in="xshundul.sha", do_plot=False,show=False)
-        cdf2 = load_xshundul_dot_sha(file_in="xshundul2.sha",do_plot=False,show=False)
-        cdf3 = load_xshundul_dot_sha(file_in="xshundul3.sha",do_plot=False,show=False)
+        cdf1 = load_fule_undul_cdf(file_in="xshundul.sha", do_plot=False,show=False)
+        cdf2 = load_fule_undul_cdf(file_in="xshundul2.sha",do_plot=False,show=False)
+        cdf3 = load_fule_undul_cdf(file_in="xshundul3.sha",do_plot=False,show=False)
 
 
 
@@ -645,18 +645,18 @@ class TestSourceUndulatorFactory(unittest.TestCase):
         #
         #
         #
-        radiation = load_uphot_dot_dat(file_in="uphot.dat")
+        radiation = load_file_undul_phot(file_in="uphot.dat")
 
         cdf2 = undul_cdf(radiation,method='sum',do_plot=False)
-        write_xshundul_dot_sha(cdf2,file_out="xshundul2.sha")
+        write_file_undul_sha(cdf2,file_out="xshundul2.sha")
 
 
         cdf3 = undul_cdf(radiation,method='trapz',do_plot=False)
-        write_xshundul_dot_sha(cdf3,file_out="xshundul3.sha")
+        write_file_undul_sha(cdf3,file_out="xshundul3.sha")
 
-        cdf1 = load_xshundul_dot_sha(file_in="xshundul.sha", do_plot=False,show=False)
-        cdf2 = load_xshundul_dot_sha(file_in="xshundul2.sha",do_plot=False,show=False)
-        cdf3 = load_xshundul_dot_sha(file_in="xshundul3.sha",do_plot=False,show=False)
+        cdf1 = load_fule_undul_cdf(file_in="xshundul.sha", do_plot=False,show=False)
+        cdf2 = load_fule_undul_cdf(file_in="xshundul2.sha",do_plot=False,show=False)
+        cdf3 = load_fule_undul_cdf(file_in="xshundul3.sha",do_plot=False,show=False)
 
 
         ZERO1 = cdf1['cdf_Energy']

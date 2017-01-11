@@ -6,7 +6,7 @@
 import numpy
 from srxraylib.plot.gol import plot,plot_image,plot_show
 
-def load_uphot_dot_dat(file_in="uphot.dat",do_plot=False,show=False,verbose=False):
+def load_file_undul_phot(file_in="uphot.dat",do_plot=False,show=False,verbose=False):
     """
     read uphot.dat file (like in SHADOW undul_phot_dump)
 
@@ -84,7 +84,7 @@ def load_uphot_dot_dat(file_in="uphot.dat",do_plot=False,show=False,verbose=Fals
 
 
 
-def write_uphot_dot_dat(undul_phot_dict,file_out="uphot.dat"):
+def write_file_undul_phot(undul_phot_dict,file_out="uphot.dat"):
 
     Z2      = undul_phot_dict['radiation']
     POL_DEG = undul_phot_dict['polarization']
@@ -127,7 +127,7 @@ def write_uphot_dot_dat(undul_phot_dict,file_out="uphot.dat"):
 
 
 
-def load_xshundul_dot_sha(file_in="xshundul.sha",do_plot=False,show=False,verbose=True):
+def load_fule_undul_cdf(file_in="xshundul.sha",do_plot=False,show=False,verbose=True):
     #
     # read uphot.dat file (like in SHADOW undul_phot_dump)
     #
@@ -200,7 +200,7 @@ def load_xshundul_dot_sha(file_in="xshundul.sha",do_plot=False,show=False,verbos
 
     return {'cdf_EnergyThetaPhi':TWO,'cdf_EnergyTheta':ONE,'cdf_Energy':ZERO,'energy':E,'theta':T,'phi':P,'polarization':POL_DEGREE}
 
-def write_xshundul_dot_sha(dict,file_out="xshundul.sha"):
+def write_file_undul_sha(dict,file_out="xshundul.sha"):
     #
     # create xshundul.sha file (like in SHADOW undul_cdf)
     #
@@ -254,26 +254,15 @@ def write_xshundul_dot_sha(dict,file_out="xshundul.sha"):
         print("File written to disk: %s"%file_out)
 
 
+
+# def compare_shadow3_files(file1,file2,do_assert=True):
 #
-# comparisons/tests
+#     Shadow.ShadowTools.plotxy(file1,4,6,nbins=101,nolost=1,title=file1)
+#     Shadow.ShadowTools.plotxy(file2,4,6,nbins=101,nolost=1,title=file2)
 #
-# def epath_compare():
-#     a = numpy.loadtxt("xshundul.plt").T
-#     # TTT = ETOFZ(I)/C  # X/c  Y=0
-#     # BBB = 1.0D0 - EBETAZ(I)
-#     # WRITE(33,1010) EXOFZ(I), EBETAX(I), EZ(I), BBB, TTT
-#     # X, BetaX, Z, 1-betaZ, X/c
-#     plot(a[2],a[0],xtitle="Z(along)",ytitle="X(Horizontal)",title="trajectory at the edges??")
-
-
-def compare_shadow3_files(file1,file2,do_assert=True):
-
-    Shadow.ShadowTools.plotxy(file1,4,6,nbins=101,nolost=1,title=file1)
-    Shadow.ShadowTools.plotxy(file2,4,6,nbins=101,nolost=1,title=file2)
-
-    if do_assert:
-        begin1 = Shadow.Beam()
-        begin1.load(file1)
-        begin2 = Shadow.Beam()
-        begin2.load(file2)
-        assert_almost_equal(begin1.rays[:,0:6],begin2.rays[:,0:6],3)
+#     if do_assert:
+#         begin1 = Shadow.Beam()
+#         begin1.load(file1)
+#         begin2 = Shadow.Beam()
+#         begin2.load(file2)
+#         assert_almost_equal(begin1.rays[:,0:6],begin2.rays[:,0:6],3)

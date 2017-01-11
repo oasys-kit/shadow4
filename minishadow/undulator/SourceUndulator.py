@@ -2,16 +2,12 @@ import json
 import os
 import numpy
 
-from numpy.testing import assert_equal, assert_almost_equal
-
-from srxraylib.plot.gol import plot,plot_image,plot_show
-
 import scipy.constants as codata
 
 import Shadow
 from SourceUndulatorFactory import undul_cdf, undul_phot, undul_phot_srw,  undul_phot_pysru
-from SourceUndulatorInputOutput import load_uphot_dot_dat,write_uphot_dot_dat
-from SourceUndulatorInputOutput import load_xshundul_dot_sha,write_xshundul_dot_sha
+from SourceUndulatorInputOutput import load_file_undul_phot,write_file_undul_phot
+from SourceUndulatorInputOutput import load_fule_undul_cdf,write_file_undul_sha
 
 import platform
 
@@ -522,13 +518,13 @@ class SourceUndulator(object):
             raise Exception("Not implemented undul_phot code: "+code_undul_phot)
 
         if dump_uphot_dot_dat:
-            write_uphot_dot_dat(undul_phot_dict,file_out="uphot.dat")
+            write_file_undul_phot(undul_phot_dict,file_out="uphot.dat")
 
 
         # undul_cdf
 
         undul_cdf_dict = undul_cdf(undul_phot_dict,method='trapz',do_plot=False)
-        write_xshundul_dot_sha(undul_cdf_dict,file_out="xshundul.sha",)
+        write_file_undul_sha(undul_cdf_dict,file_out="xshundul.sha",)
 
         # # TODO: remove this cannot be done here as xshundul.traj?? is needed but not existing!!
         # elif code_undul_cdf == 'preprocessor':
