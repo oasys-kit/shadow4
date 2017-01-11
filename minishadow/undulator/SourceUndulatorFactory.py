@@ -1,11 +1,14 @@
 #
-# Working version for Undulator preprocessors in python
+# SHADOW Undulator preprocessors in python
 #
-# this code replaces SHADOW's undul_phot.
+# this code replaces SHADOW's undul_phot and undul_cdf
 #
 # It calculates the undulator radiation as a function of energy, theta and phi. Phi is the polar angle.
 #
-# Inputs: from xshundul.json (written by ShadowVui)
+# It can use three backends:
+#      - the internal code (no dependency) hacked from pySRU
+#      - pySERU
+#      - SRW
 #
 #
 # Available public functions:
@@ -29,17 +32,23 @@ from scipy import interpolate
 import scipy.integrate
 
 # needed by srw
-import srwlib as sl
-import array
+try:
+    import srwlib as sl
+    import array
+except:
+    print("Failed to import SRW")
 
-
-# # input/output
-# from SourceUndulatorInputOutput import load_uphot_dot_dat,write_uphot_dot_dat
-# from SourceUndulatorInputOutput import load_xshundul_dot_sha,write_xshundul_dot_sha
-# import json
+# needed by pySRU
+try:
+    from pySRU.ElectronBeam import ElectronBeam
+    from pySRU.MagneticStructureUndulatorPlane import MagneticStructureUndulatorPlane as Undulator
+    from pySRU.Simulation import create_simulation
+    from pySRU.TrajectoryFactory import TRAJECTORY_METHOD_ANALYTIC
+    from pySRU.RadiationFactory import RADIATION_METHOD_APPROX_FARFIELD
+except:
+    print("Failed to import pySRU")
 
 angstroms_to_eV = codata.h*codata.c/codata.e*1e10
-
 
 
 #
@@ -137,8 +146,6 @@ def _pysru_energy_radiated_approximation_and_farfield(omega=2.53465927101*10**17
     E += terme_bord
     E *= c6**0.5
     return E
-
-
 
 #
 # private code used in undul_phot_srw
@@ -280,10 +287,12 @@ def _srw_interpol(x,y,z,x1,y1):
         return z1
 
 #
-# now, the different versions of undul_sru
+# now, the different versions of undul_phot
 #
 
-def undul_phot(E_ENERGY,INTENSITY,LAMBDAU,NPERIODS,K,EMIN,EMAX,NG_E,MAXANGLE,NG_T,NG_P):
+def undul_phot(E_ENERGY,INTENSITY,LAMBDAU,NPERIODS,K,EMIN,EMAX,NG_E,MAXANGLE,NG_T,NG_P,
+               number_of_trajectory_points=20):
+
 
     #
     # calculate trajectory
@@ -298,7 +307,7 @@ def undul_phot(E_ENERGY,INTENSITY,LAMBDAU,NPERIODS,K,EMIN,EMAX,NG_E,MAXANGLE,NG_
     omega_array = 2*np.pi * codata.c / (wavelength_array_in_A * 1e-10)
 
     T = _pysru_analytical_trajectory_plane_undulator(K=K, gamma=gamma, lambda_u=LAMBDAU, Nb_period=NPERIODS,
-                                        Nb_point=20,Beta_et=Beta_et)
+                                        Nb_point=number_of_trajectory_points,Beta_et=Beta_et)
 
     #
     # polar grid
@@ -334,11 +343,6 @@ def undul_phot(E_ENERGY,INTENSITY,LAMBDAU,NPERIODS,K,EMIN,EMAX,NG_E,MAXANGLE,NG_
 
 def undul_phot_pysru(E_ENERGY,INTENSITY,LAMBDAU,NPERIODS,K,EMIN,EMAX,NG_E,MAXANGLE,NG_T,NG_P):
 
-    from pySRU.ElectronBeam import ElectronBeam
-    from pySRU.MagneticStructureUndulatorPlane import MagneticStructureUndulatorPlane as Undulator
-    from pySRU.Simulation import create_simulation
-    from pySRU.TrajectoryFactory import TRAJECTORY_METHOD_ANALYTIC
-    from pySRU.RadiationFactory import RADIATION_METHOD_APPROX_FARFIELD
 
     myelectronbeam = ElectronBeam(Electron_energy=E_ENERGY, I_current=INTENSITY)
     myundulator = Undulator(K=K, period_length=LAMBDAU, length=LAMBDAU*NPERIODS)
@@ -544,23 +548,19 @@ def undul_phot_srw(E_ENERGY,INTENSITY,LAMBDAU,NPERIODS,K,EMIN,EMAX,NG_E,MAXANGLE
 #
 # undul_cdf
 #
-def undul_cdf(uphot_dot_dat_dict,method='trapz',do_plot=False):
+def undul_cdf(undul_phot_dict,method='trapz'):
     #
-    # read uphot.dat file (like in SHADOW undul_phot_dump)
+    # takes the output of undul_phot and calculate cumulative distribution functions
     #
-    # from SourceUndulator import load_uphot_dot_dat
-    # uphot_dot_dat_dict = load_uphot_dot_dat(file_in=file_in,do_plot=do_plot)
 
-
-    RN0     = uphot_dot_dat_dict['radiation']
-    POL_DEG = uphot_dot_dat_dict['polarization']
-    E       = uphot_dot_dat_dict['photon_energy']
-    T       = uphot_dot_dat_dict['theta']
-    P       = uphot_dot_dat_dict['phi']
+    RN0     = undul_phot_dict['radiation']
+    POL_DEG = undul_phot_dict['polarization']
+    E       = undul_phot_dict['photon_energy']
+    T       = undul_phot_dict['theta']
+    P       = undul_phot_dict['phi']
 
     NG_E,NG_T,NG_P = RN0.shape
     print("undul_cdf: NG_E,NG_T,NG_P, %d  %d %d \n"%(NG_E,NG_T,NG_P))
-
 
     # coordinates are polar: multiply by sin(theta) to allow dS= r^2 sin(Theta) dTheta dPhi
     YRN0 = numpy.zeros_like(RN0)
@@ -597,257 +597,4 @@ def undul_cdf(uphot_dot_dat_dict,method='trapz',do_plot=False):
     else:
         print("undul_cdf: Total Power emitted in the specified angles is: %g Watts."%( (RN2*E)*codata.e) )
 
-    if do_plot:
-        plot(E,TWO,title="NEW TWO",xtitle="E",ytitle="TWO",show=0)
-        plot_image(ONE,numpy.arange(NG_E),numpy.arange(NG_T),title="NEW ONE",xtitle="index Energy",ytitle="index Theta",show=0)
-        plot_image(ZERO[0,:,:],numpy.arange(NG_T),numpy.arange(NG_P),title="NEW ZERO[0]",xtitle="index Theta",ytitle="index Phi",show=0)
-
     return {'cdf_EnergyThetaPhi':TWO,'cdf_EnergyTheta':ONE,'cdf_Energy':ZERO,'energy':E,'theta':T,'phi':P,'polarization':POL_DEG}
-
-
-# #
-# # Tests
-# #
-#
-# # for test purposes only
-# def run_shadow3_using_preprocessors(jsn):
-#     from SourceUndulator import SourceUndulator
-#     u = SourceUndulator()
-#     u.load_json_shadowvui_dictionary(jsn)
-#     u.run_using_preprocessors()
-#
-# # def test_undul_phot(h,do_plot=True):
-# #     undul_phot_dict = undul_phot(E_ENERGY = h["E_ENERGY"],INTENSITY = h["INTENSITY"],
-# #                                     LAMBDAU = h["LAMBDAU"],NPERIODS = h["NPERIODS"],K = h["K"],
-# #                                     EMIN = h["EMIN"],EMAX = h["EMAX"],NG_E = h["NG_E"],
-# #                                     MAXANGLE = h["MAXANGLE"],NG_T = h["NG_T"],
-# #                                     NG_P = h["NG_P"])
-# #
-# #     write_uphot_dot_dat(undul_phot_dict,file_out="uphot_minishadow.dat")
-# #
-# #     undul_phot_srw_dict = undul_phot_srw(E_ENERGY = h["E_ENERGY"],INTENSITY = h["INTENSITY"],
-# #                                     LAMBDAU = h["LAMBDAU"],NPERIODS = h["NPERIODS"],K = h["K"],
-# #                                     EMIN = h["EMIN"],EMAX = h["EMAX"],NG_E = h["NG_E"],
-# #                                     MAXANGLE = h["MAXANGLE"],NG_T = h["NG_T"],
-# #                                     NG_P = h["NG_P"])
-# #
-# #     write_uphot_dot_dat(undul_phot_srw_dict,file_out="uphot_srw.dat")
-# #
-# #     #
-# #     # compare radiation
-# #     #
-# #     d0 = load_uphot_dot_dat("uphot.dat",do_plot=do_plot,show=False)
-# #     d1 = load_uphot_dot_dat("uphot_minishadow.dat",do_plot=do_plot,show=True)
-# #     d2 = load_uphot_dot_dat("uphot_srw.dat",do_plot=do_plot,show=False)
-# #
-# #     rad0 = d0['radiation']
-# #     rad1 = d1['radiation']
-# #     rad2 = d2['radiation']
-# #
-# #     rad0 /= rad0.max()
-# #     rad1 /= rad1.max()
-# #     rad2 /= rad2.max()
-# #
-# #
-# #     tmp = numpy.where(rad0 > 0.1)
-# #     print(">>> test_undul_phot: minishadow/shadow3: %4.2f %% "%(numpy.average( 100*numpy.abs((rad1[tmp]-rad0[tmp])/rad0[tmp]) )))
-# #     print(">>> test_undul_phot:        srw/shadow3: %4.2f %% "%(numpy.average( 100*numpy.abs((rad2[tmp]-rad0[tmp])/rad0[tmp]) )))
-# #     print(">>> test_undul_phot: minishadow/srw    : %4.2f %% "%(numpy.average( 100*numpy.abs((rad1[tmp]-rad2[tmp])/rad2[tmp]) )))
-#
-#
-#
-# def test_undul_cdf(do_plot=True):
-#     #
-#     # uphot.dat must exist
-#     #
-#
-#     radiation = load_uphot_dot_dat(file_in="uphot.dat")
-#
-#     cdf2 = undul_cdf(radiation,method='sum',do_plot=False)
-#     write_xshundul_dot_sha(cdf2,file_out="xshundul2.sha")
-#
-#
-#     cdf3 = undul_cdf(radiation,method='trapz',do_plot=False)
-#     write_xshundul_dot_sha(cdf3,file_out="xshundul3.sha")
-#
-#     cdf1 = load_xshundul_dot_sha(file_in="xshundul.sha", do_plot=do_plot,show=False)
-#     cdf2 = load_xshundul_dot_sha(file_in="xshundul2.sha",do_plot=do_plot,show=False)
-#     cdf3 = load_xshundul_dot_sha(file_in="xshundul3.sha",do_plot=do_plot,show=True)
-#
-#     ZERO1 = cdf1['cdf_Energy']
-#     ONE1 = cdf1['cdf_EnergyTheta']
-#     TWO1 = cdf1['cdf_EnergyThetaPhi']
-#
-#     ZERO2 = cdf2['cdf_Energy']
-#     ONE2 = cdf2['cdf_EnergyTheta']
-#     TWO2 = cdf2['cdf_EnergyThetaPhi']
-#
-#     ZERO3 = cdf3['cdf_Energy']
-#     ONE3 = cdf3['cdf_EnergyTheta']
-#     TWO3 = cdf3['cdf_EnergyThetaPhi']
-#
-#     tmp = numpy.where(ZERO1 > 0.1*ZERO1.max())
-#     print("test_undul_cdf: ZERO:   sum/shadow3 %4.2f %%: "%(numpy.average( 100*numpy.abs((ZERO2[tmp]-ZERO1[tmp])/ZERO1[tmp]) )))
-#     print("test_undul_cdf: ZERO: trapz/shadow3 %4.2f %%: "%(numpy.average( 100*numpy.abs((ZERO3[tmp]-ZERO1[tmp])/ZERO1[tmp]) )))
-#
-#     tmp = numpy.where(ONE1 > 0.1*ONE1.max())
-#     print(r"test_undul_cdf: ONE:   sum/shadow3 %4.2f %%: "%(numpy.average( 100*numpy.abs((ONE2[tmp]-ONE1[tmp])/ONE1[tmp]) )))
-#     print(r"test_undul_cdf: ONE: trapz/shadow3 %4.2f %%: "%(numpy.average( 100*numpy.abs((ONE3[tmp]-ONE1[tmp])/ONE1[tmp]) )))
-#
-#     tmp = numpy.where(TWO1 > 0.1*TWO1.max())
-#     print("test_undul_cdf: TWO:   sum/shadow3 %4.2f %%: "%(numpy.average( 100*numpy.abs((TWO2[tmp]-TWO1[tmp])/TWO1[tmp]) )))
-#     print("test_undul_cdf: TWO: trapz/shadow3 %4.2f %%: "%(numpy.average( 100*numpy.abs((TWO3[tmp]-TWO1[tmp])/TWO1[tmp]) )))
-#
-#
-#
-# if __name__ == "__main__":
-#
-#     from srxraylib.plot.gol import plot_image,plot, plot_show
-#
-#
-#
-#     do_plot_intensity = 1
-#     do_plot_polarization = 1
-#
-#
-#         # "EMIN":       10500.0000,
-#         # "EMAX":       10550.0000,
-#         # "INTENSITY":      0.200000003,
-#         # "EMIN":       10200.0000,
-#         # "EMAX":       10650.0000,
-#
-#     tmp = \
-#         """
-#         {
-#         "LAMBDAU":     0.0320000015,
-#         "K":      0.250000000,
-#         "E_ENERGY":       6.03999996,
-#         "E_ENERGY_SPREAD":    0.00100000005,
-#         "NPERIODS": 50,
-#         "EMIN":       10200.0000,
-#         "EMAX":       10650.0000,
-#         "INTENSITY":      1.0,
-#         "MAXANGLE":     0.0149999997,
-#         "NG_E": 11,
-#         "NG_T": 51,
-#         "NG_P": 11,
-#         "NG_PLOT(1)":"1",
-#         "NG_PLOT(2)":"No",
-#         "NG_PLOT(3)":"Yes",
-#         "UNDUL_PHOT_FLAG(1)":"4",
-#         "UNDUL_PHOT_FLAG(2)":"Shadow code",
-#         "UNDUL_PHOT_FLAG(3)":"Urgent code",
-#         "UNDUL_PHOT_FLAG(4)":"SRW code",
-#         "UNDUL_PHOT_FLAG(5)":"Gaussian Approx",
-#         "UNDUL_PHOT_FLAG(6)":"python code by Sophie",
-#         "SEED": 36255,
-#         "SX":     0.0399999991,
-#         "SZ":    0.00100000005,
-#         "EX":   4.00000005E-07,
-#         "EZ":   3.99999989E-09,
-#         "FLAG_EMITTANCE(1)":"1",
-#         "FLAG_EMITTANCE(2)":"No",
-#         "FLAG_EMITTANCE(3)":"Yes",
-#         "NRAYS": 15000,
-#         "F_BOUND_SOUR": 0,
-#         "FILE_BOUND":"NONESPECIFIED",
-#         "SLIT_DISTANCE":       1000.00000,
-#         "SLIT_XMIN":      -1.00000000,
-#         "SLIT_XMAX":       1.00000000,
-#         "SLIT_ZMIN":      -1.00000000,
-#         "SLIT_ZMAX":       1.00000000,
-#         "NTOTALPOINT": 10000000,
-#         "JUNK4JSON":0
-#         }
-#         """
-#     h = json.loads(tmp)
-#
-#
-#     # test_undul_phot(h,do_plot=True)
-#     # test_undul_cdf(do_plot=True)
-#
-#     #
-#     # test undul_phot (undulator radiation)
-#     #
-#
-#
-#     # SHADOW3 preprocessor
-#     run_shadow3_using_preprocessors(h)
-#     undul_phot_preprocessor_dict = load_uphot_dot_dat("uphot.dat")
-#
-#     if do_plot_intensity: plot_image(undul_phot_preprocessor_dict['radiation'][0,:,:],undul_phot_preprocessor_dict['theta']*1e6,undul_phot_preprocessor_dict['phi']*180/numpy.pi,
-#                title="INTENS UNDUL_PHOT_PREPROCESSOR: RN0[0]",xtitle="Theta [urad]",ytitle="Phi [deg]",aspect='auto',show=False)
-#
-#     if do_plot_polarization: plot_image(undul_phot_preprocessor_dict['polarization'][0,:,:],undul_phot_preprocessor_dict['theta']*1e6,undul_phot_preprocessor_dict['phi']*180/numpy.pi,
-#                title="POL_DEG UNDUL_PHOT_PREPROCESSOR: RN0[0]",xtitle="Theta [urad]",ytitle="Phi [deg]",aspect='auto',show=False)
-#
-#
-#     # internal code
-#     undul_phot_dict = undul_phot(E_ENERGY = h["E_ENERGY"],INTENSITY = h["INTENSITY"],
-#                                     LAMBDAU = h["LAMBDAU"],NPERIODS = h["NPERIODS"],K = h["K"],
-#                                     EMIN = h["EMIN"],EMAX = h["EMAX"],NG_E = h["NG_E"],
-#                                     MAXANGLE = h["MAXANGLE"],NG_T = h["NG_T"],
-#                                     NG_P = h["NG_P"])
-#
-#     if do_plot_intensity: plot_image(undul_phot_dict['radiation'][0,:,:],undul_phot_dict['theta']*1e6,undul_phot_dict['phi']*180/numpy.pi,
-#                title="INTENS UNDUL_PHOT: RN0[0]",xtitle="Theta [urad]",ytitle="Phi [deg]",aspect='auto',show=False)
-#     if do_plot_polarization: plot_image(undul_phot_dict['polarization'][0,:,:],undul_phot_dict['theta']*1e6,undul_phot_dict['phi']*180/numpy.pi,
-#                title="POL_DEG UNDUL_PHOT: RN0[0]",xtitle="Theta [urad]",ytitle="Phi [deg]",aspect='auto',show=False)
-#
-#     # pySRU
-#     undul_phot_pysru_dict = undul_phot_pysru(E_ENERGY = h["E_ENERGY"],INTENSITY = h["INTENSITY"],
-#                                     LAMBDAU = h["LAMBDAU"],NPERIODS = h["NPERIODS"],K = h["K"],
-#                                     EMIN = h["EMIN"],EMAX = h["EMAX"],NG_E = h["NG_E"],
-#                                     MAXANGLE = h["MAXANGLE"],NG_T = h["NG_T"],
-#                                     NG_P = h["NG_P"])
-#     if do_plot_intensity: plot_image(undul_phot_pysru_dict['radiation'][0,:,:],undul_phot_pysru_dict['theta']*1e6,undul_phot_pysru_dict['phi']*180/numpy.pi,
-#                title="INTENS UNDUL_PHOT_PYSRU: RN0[0]",xtitle="Theta [urad]",ytitle="Phi [deg]",aspect='auto',show=False)
-#     if do_plot_polarization: plot_image(undul_phot_pysru_dict['polarization'][0,:,:],undul_phot_pysru_dict['theta']*1e6,undul_phot_pysru_dict['phi']*180/numpy.pi,
-#                title="POL_DEG UNDUL_PHOT_PYSRU: RN0[0]",xtitle="Theta [urad]",ytitle="Phi [deg]",aspect='auto',show=False)
-#
-#     # srw
-#     undul_phot_srw_dict = undul_phot_srw(E_ENERGY = h["E_ENERGY"],INTENSITY = h["INTENSITY"],
-#                                     LAMBDAU = h["LAMBDAU"],NPERIODS = h["NPERIODS"],K = h["K"],
-#                                     EMIN = h["EMIN"],EMAX = h["EMAX"],NG_E = h["NG_E"],
-#                                     MAXANGLE = h["MAXANGLE"],NG_T = h["NG_T"],
-#                                     NG_P = h["NG_P"])
-#     if do_plot_intensity: plot_image(undul_phot_srw_dict['radiation'][0,:,:],undul_phot_srw_dict['theta']*1e6,undul_phot_srw_dict['phi']*180/numpy.pi,
-#                title="INTENS UNDUL_PHOT_SRW: RN0[0]",xtitle="Theta [urad]",ytitle="Phi [deg]",aspect='auto',show=False)
-#     if do_plot_polarization: plot_image(undul_phot_srw_dict['polarization'][0,:,:],undul_phot_srw_dict['theta']*1e6,undul_phot_srw_dict['phi']*180/numpy.pi,
-#                title="POL_DEG UNDUL_PHOT_SRW: RN0[0]",xtitle="Theta [urad]",ytitle="Phi [deg]",aspect='auto',show=False)
-#
-#
-#
-#     x = undul_phot_dict["photon_energy"]
-#     y0 = (undul_phot_preprocessor_dict["radiation"]).sum(axis=2).sum(axis=1)
-#     y1 =              (undul_phot_dict["radiation"]).sum(axis=2).sum(axis=1)
-#     y2 =        (undul_phot_pysru_dict["radiation"]).sum(axis=2).sum(axis=1)
-#     y3 =          (undul_phot_srw_dict["radiation"]).sum(axis=2).sum(axis=1)
-#
-#     if do_plot_intensity: plot(x,y0,x,y1,x,y2,x,y3,xtitle="Photon energy [eV]",ytitle="Flux[photons/s/eV/rad^2]",legend=["preprocessor","internal","pySRU","SRW"])
-#
-#
-#
-#     #
-#     # trajectory
-#     #
-#     # t0 = (undul_phot_preprocessor_dict["trajectory"])
-#     t1 = (             undul_phot_dict["trajectory"])
-#     t2 = (       undul_phot_pysru_dict["trajectory"])
-#     plot(t1[3],1e6*t1[1],t2[3],1e6*t2[1],title='Trajectory',xtitle='z [m]',ytitle='x[um]',legend=['internal','pysru'],show=0)
-#     # plot(t1[3],1e6*t1[1],t2[3],1e6*t2[1],xtitle='z [m]',ytitle='x[um]',legend=['internal','pysru'],show=0)
-#     # t3 = (         undul_phot_srw_dict["trajectory"])
-#     print("<><>",t1.shape,t2.shape)
-#
-#
-#
-#     #
-#     # test undul_cdf
-#     #
-#
-#
-#     # undul_cdf(undul_phot_srw_dict)
-#
-#
-#     if do_plot_polarization or do_plot_intensity: plot_show()
-

@@ -6,7 +6,7 @@
 #
 # switch on/off plots
 #
-DO_PLOT = False
+DO_PLOT = True
 
 
 import unittest
@@ -19,7 +19,8 @@ from SourceUndulatorFactory import undul_phot, undul_cdf
 from SourceUndulatorFactory import undul_phot_pysru,undul_phot_srw
 # input/output
 from SourceUndulatorInputOutput import load_file_undul_phot,write_file_undul_phot
-from SourceUndulatorInputOutput import load_fule_undul_cdf,write_file_undul_sha
+from SourceUndulatorInputOutput import load_file_undul_cdf,write_file_undul_sha
+from SourceUndulatorInputOutput import plot_undul_cdf,plot_undul_phot
 
 if DO_PLOT:
     try:
@@ -307,17 +308,21 @@ class TestSourceUndulatorFactory(unittest.TestCase):
 
         u = SourceUndulator()
         u.load_json_shadowvui_dictionary(h)
-        u.run_using_preprocessors()
+        u.calculate_beam_using_preprocessors()
 
 
 
         undul_phot_preprocessor_dict = load_file_undul_phot("uphot.dat")
 
-        if do_plot_intensity: plot_image(undul_phot_preprocessor_dict['radiation'][0,:,:],undul_phot_preprocessor_dict['theta']*1e6,undul_phot_preprocessor_dict['phi']*180/numpy.pi,
-                   title="INTENS UNDUL_PHOT_PREPROCESSOR: RN0[0]",xtitle="Theta [urad]",ytitle="Phi [deg]",aspect='auto',show=False)
+        # if do_plot_intensity: plot_image(undul_phot_preprocessor_dict['radiation'][0,:,:],undul_phot_preprocessor_dict['theta']*1e6,undul_phot_preprocessor_dict['phi']*180/numpy.pi,
+        #            title="INTENS UNDUL_PHOT_PREPROCESSOR: RN0[0]",xtitle="Theta [urad]",ytitle="Phi [deg]",aspect='auto',show=False)
+        #
+        # if do_plot_polarization: plot_image(undul_phot_preprocessor_dict['polarization'][0,:,:],undul_phot_preprocessor_dict['theta']*1e6,undul_phot_preprocessor_dict['phi']*180/numpy.pi,
+        #            title="POL_DEG UNDUL_PHOT_PREPROCESSOR: RN0[0]",xtitle="Theta [urad]",ytitle="Phi [deg]",aspect='auto',show=False)
 
-        if do_plot_polarization: plot_image(undul_phot_preprocessor_dict['polarization'][0,:,:],undul_phot_preprocessor_dict['theta']*1e6,undul_phot_preprocessor_dict['phi']*180/numpy.pi,
-                   title="POL_DEG UNDUL_PHOT_PREPROCESSOR: RN0[0]",xtitle="Theta [urad]",ytitle="Phi [deg]",aspect='auto',show=False)
+
+        plot_undul_phot(undul_phot_preprocessor_dict,title="UNDUL_PHOT_PREPROCESSOR",
+                        do_plot_intensity=do_plot_intensity,do_plot_polarization=do_plot_polarization,do_show=False)
 
 
         # internal code
@@ -327,10 +332,13 @@ class TestSourceUndulatorFactory(unittest.TestCase):
                                         MAXANGLE = h["MAXANGLE"],NG_T = h["NG_T"],
                                         NG_P = h["NG_P"])
 
-        if do_plot_intensity: plot_image(undul_phot_dict['radiation'][0,:,:],undul_phot_dict['theta']*1e6,undul_phot_dict['phi']*180/numpy.pi,
-                   title="INTENS UNDUL_PHOT: RN0[0]",xtitle="Theta [urad]",ytitle="Phi [deg]",aspect='auto',show=False)
-        if do_plot_polarization: plot_image(undul_phot_dict['polarization'][0,:,:],undul_phot_dict['theta']*1e6,undul_phot_dict['phi']*180/numpy.pi,
-                   title="POL_DEG UNDUL_PHOT: RN0[0]",xtitle="Theta [urad]",ytitle="Phi [deg]",aspect='auto',show=False)
+        # if do_plot_intensity: plot_image(undul_phot_dict['radiation'][0,:,:],undul_phot_dict['theta']*1e6,undul_phot_dict['phi']*180/numpy.pi,
+        #            title="INTENS UNDUL_PHOT: RN0[0]",xtitle="Theta [urad]",ytitle="Phi [deg]",aspect='auto',show=False)
+        # if do_plot_polarization: plot_image(undul_phot_dict['polarization'][0,:,:],undul_phot_dict['theta']*1e6,undul_phot_dict['phi']*180/numpy.pi,
+        #            title="POL_DEG UNDUL_PHOT: RN0[0]",xtitle="Theta [urad]",ytitle="Phi [deg]",aspect='auto',show=False)
+
+        plot_undul_phot(undul_phot_dict,title="UNDUL_PHOT",
+                        do_plot_intensity=do_plot_intensity,do_plot_polarization=do_plot_polarization,do_show=False)
 
         # pySRU
         if is_available_pysru:
@@ -339,10 +347,13 @@ class TestSourceUndulatorFactory(unittest.TestCase):
                                             EMIN = h["EMIN"],EMAX = h["EMAX"],NG_E = h["NG_E"],
                                             MAXANGLE = h["MAXANGLE"],NG_T = h["NG_T"],
                                             NG_P = h["NG_P"])
-            if do_plot_intensity: plot_image(undul_phot_pysru_dict['radiation'][0,:,:],undul_phot_pysru_dict['theta']*1e6,undul_phot_pysru_dict['phi']*180/numpy.pi,
-                       title="INTENS UNDUL_PHOT_PYSRU: RN0[0]",xtitle="Theta [urad]",ytitle="Phi [deg]",aspect='auto',show=False)
-            if do_plot_polarization: plot_image(undul_phot_pysru_dict['polarization'][0,:,:],undul_phot_pysru_dict['theta']*1e6,undul_phot_pysru_dict['phi']*180/numpy.pi,
-                       title="POL_DEG UNDUL_PHOT_PYSRU: RN0[0]",xtitle="Theta [urad]",ytitle="Phi [deg]",aspect='auto',show=False)
+            # if do_plot_intensity: plot_image(undul_phot_pysru_dict['radiation'][0,:,:],undul_phot_pysru_dict['theta']*1e6,undul_phot_pysru_dict['phi']*180/numpy.pi,
+            #            title="INTENS UNDUL_PHOT_PYSRU: RN0[0]",xtitle="Theta [urad]",ytitle="Phi [deg]",aspect='auto',show=False)
+            # if do_plot_polarization: plot_image(undul_phot_pysru_dict['polarization'][0,:,:],undul_phot_pysru_dict['theta']*1e6,undul_phot_pysru_dict['phi']*180/numpy.pi,
+            #            title="POL_DEG UNDUL_PHOT_PYSRU: RN0[0]",xtitle="Theta [urad]",ytitle="Phi [deg]",aspect='auto',show=False)
+
+            plot_undul_phot(undul_phot_pysru_dict,title="UNDUL_PHOT_PYSRU",
+                                    do_plot_intensity=do_plot_intensity,do_plot_polarization=do_plot_polarization,do_show=False)
 
         # srw
         if is_available_srw:
@@ -351,11 +362,13 @@ class TestSourceUndulatorFactory(unittest.TestCase):
                                             EMIN = h["EMIN"],EMAX = h["EMAX"],NG_E = h["NG_E"],
                                             MAXANGLE = h["MAXANGLE"],NG_T = h["NG_T"],
                                             NG_P = h["NG_P"])
-            if do_plot_intensity: plot_image(undul_phot_srw_dict['radiation'][0,:,:],undul_phot_srw_dict['theta']*1e6,undul_phot_srw_dict['phi']*180/numpy.pi,
-                       title="INTENS UNDUL_PHOT_SRW: RN0[0]",xtitle="Theta [urad]",ytitle="Phi [deg]",aspect='auto',show=False)
-            if do_plot_polarization: plot_image(undul_phot_srw_dict['polarization'][0,:,:],undul_phot_srw_dict['theta']*1e6,undul_phot_srw_dict['phi']*180/numpy.pi,
-                       title="POL_DEG UNDUL_PHOT_SRW: RN0[0]",xtitle="Theta [urad]",ytitle="Phi [deg]",aspect='auto',show=False)
+            # if do_plot_intensity: plot_image(undul_phot_srw_dict['radiation'][0,:,:],undul_phot_srw_dict['theta']*1e6,undul_phot_srw_dict['phi']*180/numpy.pi,
+            #            title="INTENS UNDUL_PHOT_SRW: RN0[0]",xtitle="Theta [urad]",ytitle="Phi [deg]",aspect='auto',show=False)
+            # if do_plot_polarization: plot_image(undul_phot_srw_dict['polarization'][0,:,:],undul_phot_srw_dict['theta']*1e6,undul_phot_srw_dict['phi']*180/numpy.pi,
+            #            title="POL_DEG UNDUL_PHOT_SRW: RN0[0]",xtitle="Theta [urad]",ytitle="Phi [deg]",aspect='auto',show=False)
 
+            plot_undul_phot(undul_phot_srw_dict,title="UNDUL_PHOT_SRW",
+                                    do_plot_intensity=do_plot_intensity,do_plot_polarization=do_plot_polarization,do_show=False)
 
         x = undul_phot_dict["photon_energy"]
         y0 = (undul_phot_preprocessor_dict["radiation"]).sum(axis=2).sum(axis=1)
@@ -459,23 +472,23 @@ class TestSourceUndulatorFactory(unittest.TestCase):
 
         u = SourceUndulator()
         u.load_json_shadowvui_dictionary(h)
-        u.run_using_preprocessors()
+        u.calculate_beam_using_preprocessors()
 
         #
         #
         #
         radiation = load_file_undul_phot(file_in="uphot.dat")
 
-        cdf2 = undul_cdf(radiation,method='sum',do_plot=False)
+        cdf2 = undul_cdf(radiation,method='sum')
         write_file_undul_sha(cdf2,file_out="xshundul2.sha")
 
 
-        cdf3 = undul_cdf(radiation,method='trapz',do_plot=False)
+        cdf3 = undul_cdf(radiation,method='trapz')
         write_file_undul_sha(cdf3,file_out="xshundul3.sha")
 
-        cdf1 = load_fule_undul_cdf(file_in="xshundul.sha", do_plot=False,show=False)
-        cdf2 = load_fule_undul_cdf(file_in="xshundul2.sha",do_plot=False,show=False)
-        cdf3 = load_fule_undul_cdf(file_in="xshundul3.sha",do_plot=False,show=False)
+        cdf1 = load_file_undul_cdf(file_in="xshundul.sha")
+        cdf2 = load_file_undul_cdf(file_in="xshundul2.sha")
+        cdf3 = load_file_undul_cdf(file_in="xshundul3.sha")
 
 
 
@@ -583,13 +596,12 @@ class TestSourceUndulatorFactory(unittest.TestCase):
 
             u = SourceUndulator()
             u.load_json_shadowvui_dictionary(h)
-            u.run_using_preprocessors()
+            u.calculate_beam_using_preprocessors()
 
         elif case == 1:
 
             # some inputs
             E_ENERGY=6.04
-            E_ENERGY_SPREAD=0.001
             INTENSITY=0.2
             SX=0.04
             SZ=0.001
@@ -605,6 +617,7 @@ class TestSourceUndulatorFactory(unittest.TestCase):
             MAXANGLE=0.1
             NG_T=51
             NG_P=11
+            N_J=20
             SEED=36255
             NRAYS=15000
 
@@ -612,7 +625,6 @@ class TestSourceUndulatorFactory(unittest.TestCase):
 
             u.set_from_keywords(
                 E_ENERGY = E_ENERGY,
-                E_ENERGY_SPREAD = E_ENERGY_SPREAD,
                 INTENSITY = INTENSITY,
                 SX = SX,
                 SZ = SZ,
@@ -628,6 +640,7 @@ class TestSourceUndulatorFactory(unittest.TestCase):
                 MAXANGLE = MAXANGLE,
                 NG_T = NG_T,
                 NG_P = NG_P,
+                N_J = N_J,
                 SEED = SEED,
                 NRAYS = NRAYS,
                 )
@@ -637,7 +650,7 @@ class TestSourceUndulatorFactory(unittest.TestCase):
 
             u = SourceUndulator()
             u.load_json_shadowvui_file("xshundul.json")
-            u.run_using_preprocessors()
+            u.calculate_beam_using_preprocessors()
 
         else:
             raise Exception("Undefined")
@@ -647,16 +660,16 @@ class TestSourceUndulatorFactory(unittest.TestCase):
         #
         radiation = load_file_undul_phot(file_in="uphot.dat")
 
-        cdf2 = undul_cdf(radiation,method='sum',do_plot=False)
+        cdf2 = undul_cdf(radiation,method='sum')
         write_file_undul_sha(cdf2,file_out="xshundul2.sha")
 
 
-        cdf3 = undul_cdf(radiation,method='trapz',do_plot=False)
+        cdf3 = undul_cdf(radiation,method='trapz')
         write_file_undul_sha(cdf3,file_out="xshundul3.sha")
 
-        cdf1 = load_fule_undul_cdf(file_in="xshundul.sha", do_plot=False,show=False)
-        cdf2 = load_fule_undul_cdf(file_in="xshundul2.sha",do_plot=False,show=False)
-        cdf3 = load_fule_undul_cdf(file_in="xshundul3.sha",do_plot=False,show=False)
+        cdf1 = load_file_undul_cdf(file_in="xshundul.sha",)
+        cdf2 = load_file_undul_cdf(file_in="xshundul2.sha")
+        cdf3 = load_file_undul_cdf(file_in="xshundul3.sha")
 
 
         ZERO1 = cdf1['cdf_Energy']

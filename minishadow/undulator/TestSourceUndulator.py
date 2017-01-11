@@ -17,7 +17,7 @@ from srxraylib.plot.gol import plot,plot_image,plot_show
 #
 # switch on/off plots
 #
-DO_PLOT = False
+DO_PLOT = True
 
 #
 # Tests
@@ -170,9 +170,9 @@ class TestSourceUndulator(unittest.TestCase):
 
             if method == 'preprocessor':
                 # run using binary shadow3 (with preprocessors)
-                u.run_using_preprocessors()
+                u.calculate_beam_using_preprocessors()
             else:
-                beam = u.run(code_undul_phot=method,dump_uphot_dot_dat=True,dump_start_files=True)
+                beam = u.calculate_beam(code_undul_phot=method, dump_undul_phot_file=True,dump_start_files=True)
                 beam.write("begin.dat")
 
             os.system("cp begin.dat begin_%s.dat"%method)
@@ -193,7 +193,6 @@ class TestSourceUndulator(unittest.TestCase):
 
         # some inputs
         E_ENERGY=6.04
-        E_ENERGY_SPREAD=0.001
         INTENSITY=0.2
         SX=0.04
         SZ=0.001
@@ -209,6 +208,7 @@ class TestSourceUndulator(unittest.TestCase):
         MAXANGLE=0.1
         NG_T=51
         NG_P=11
+        N_J=20
         SEED=36255
         NRAYS=15000
 
@@ -218,7 +218,6 @@ class TestSourceUndulator(unittest.TestCase):
 
         u.set_from_keywords(
             E_ENERGY = E_ENERGY,
-            E_ENERGY_SPREAD = E_ENERGY_SPREAD,
             INTENSITY = INTENSITY,
             SX = SX,
             SZ = SZ,
@@ -234,12 +233,12 @@ class TestSourceUndulator(unittest.TestCase):
             MAXANGLE = MAXANGLE,
             NG_T = NG_T,
             NG_P = NG_P,
+            N_J = N_J,
             SEED = SEED,
             NRAYS = NRAYS,
             )
 
         self.assertEqual( u.E_ENERGY, E_ENERGY)
-        self.assertEqual( u.E_ENERGY_SPREAD, E_ENERGY_SPREAD)
         self.assertEqual( u.INTENSITY, INTENSITY)
         self.assertEqual( u.SX, SX)
         self.assertEqual( u.SZ, SZ)
@@ -255,12 +254,12 @@ class TestSourceUndulator(unittest.TestCase):
         self.assertEqual( u.MAXANGLE, MAXANGLE)
         self.assertEqual( u.NG_T, NG_T)
         self.assertEqual( u.NG_P, NG_P)
+        self.assertEqual( u.N_J, N_J)
         self.assertEqual( u.SEED, SEED)
         self.assertEqual( u.NRAYS, NRAYS)
 
         tmp = u.to_dictionary()
         self.assertEqual(tmp["E_ENERGY"] , E_ENERGY)
-        self.assertEqual(tmp["E_ENERGY_SPREAD"] , E_ENERGY_SPREAD)
         self.assertEqual(tmp["INTENSITY"] , INTENSITY)
         self.assertEqual(tmp["SX"] , SX)
         self.assertEqual(tmp["SZ"] , SZ)
@@ -276,6 +275,7 @@ class TestSourceUndulator(unittest.TestCase):
         self.assertEqual(tmp["MAXANGLE"] , MAXANGLE)
         self.assertEqual(tmp["NG_T"] , NG_T)
         self.assertEqual(tmp["NG_P"] , NG_P)
+        self.assertEqual(tmp["N_J"] , N_J)
         self.assertEqual(tmp["SEED"] , SEED)
         self.assertEqual(tmp["NRAYS"] , NRAYS)
 
@@ -291,7 +291,6 @@ class TestSourceUndulator(unittest.TestCase):
 
         tmp_new = u.to_dictionary()
         self.assertEqual(tmp_new["E_ENERGY"] , E_ENERGY * 5)
-        self.assertEqual(tmp_new["E_ENERGY_SPREAD"] , E_ENERGY_SPREAD * 5)
         self.assertEqual(tmp_new["INTENSITY"] , INTENSITY * 5)
         self.assertEqual(tmp_new["SX"] , SX * 5)
         self.assertEqual(tmp_new["SZ"] , SZ * 5)
@@ -307,6 +306,7 @@ class TestSourceUndulator(unittest.TestCase):
         self.assertEqual(tmp_new["MAXANGLE"] , MAXANGLE * 5)
         self.assertEqual(tmp_new["NG_T"] , NG_T * 5)
         self.assertEqual(tmp_new["NG_P"] , NG_P * 5)
+        self.assertEqual(tmp_new["N_J"] , N_J * 5)
         self.assertEqual(tmp_new["SEED"] , SEED * 5)
         self.assertEqual(tmp_new["NRAYS"] , NRAYS * 5)
 
@@ -315,7 +315,6 @@ class TestSourceUndulator(unittest.TestCase):
 
         # some inputs
         E_ENERGY=6.04
-        E_ENERGY_SPREAD=0.001
         INTENSITY=0.2
         SX=0.04
         SZ=0.001
@@ -331,6 +330,7 @@ class TestSourceUndulator(unittest.TestCase):
         MAXANGLE=0.1
         NG_T=51
         NG_P=11
+        N_J=20
         SEED=36255
         NRAYS=15000
 
@@ -339,7 +339,6 @@ class TestSourceUndulator(unittest.TestCase):
 
         u.set_from_keywords(
             E_ENERGY = E_ENERGY,
-            E_ENERGY_SPREAD = E_ENERGY_SPREAD,
             INTENSITY = INTENSITY,
             SX = SX,
             SZ = SZ,
@@ -355,6 +354,7 @@ class TestSourceUndulator(unittest.TestCase):
             MAXANGLE = MAXANGLE,
             NG_T = NG_T,
             NG_P = NG_P,
+            N_J = N_J,
             SEED = SEED,
             NRAYS = NRAYS,
             )
@@ -379,7 +379,6 @@ class TestSourceUndulator(unittest.TestCase):
         u.load('tmp.json')
 
         self.assertEqual( u.E_ENERGY , data["E_ENERGY"])
-        self.assertEqual( u.E_ENERGY_SPREAD , data["E_ENERGY_SPREAD"])
         self.assertEqual( u.INTENSITY , data["INTENSITY"])
         self.assertEqual( u.SX , data["SX"])
         self.assertEqual( u.SZ , data["SZ"])
@@ -395,6 +394,7 @@ class TestSourceUndulator(unittest.TestCase):
         self.assertEqual( u.MAXANGLE , data["MAXANGLE"])
         self.assertEqual( u.NG_T , data["NG_T"])
         self.assertEqual( u.NG_P , data["NG_P"])
+        self.assertEqual( u.N_J ,  data["N_J"])
         self.assertEqual( u.SEED , data["SEED"])
         self.assertEqual( u.NRAYS , data["NRAYS"])
 
@@ -402,7 +402,6 @@ class TestSourceUndulator(unittest.TestCase):
 
         # some inputs
         E_ENERGY=6.04
-        E_ENERGY_SPREAD=0.001
         INTENSITY=0.2
         SX=0.04
         SZ=0.001
@@ -418,6 +417,7 @@ class TestSourceUndulator(unittest.TestCase):
         MAXANGLE=0.1
         NG_T=51
         NG_P=11
+        N_J=20
         SEED=36255
         NRAYS=15000
 
@@ -426,7 +426,6 @@ class TestSourceUndulator(unittest.TestCase):
 
         u.set_from_keywords(
             E_ENERGY = E_ENERGY,
-            E_ENERGY_SPREAD = E_ENERGY_SPREAD,
             INTENSITY = INTENSITY,
             SX = SX,
             SZ = SZ,
@@ -442,6 +441,7 @@ class TestSourceUndulator(unittest.TestCase):
             MAXANGLE = MAXANGLE,
             NG_T = NG_T,
             NG_P = NG_P,
+            N_J = N_J,
             SEED = SEED,
             NRAYS = NRAYS,
             )

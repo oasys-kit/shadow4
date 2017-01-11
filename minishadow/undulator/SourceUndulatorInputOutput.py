@@ -4,15 +4,13 @@
 
 
 import numpy
-from srxraylib.plot.gol import plot,plot_image,plot_show
 
-def load_file_undul_phot(file_in="uphot.dat",do_plot=False,show=False,verbose=False):
+
+def load_file_undul_phot(file_in="uphot.dat"):
     """
     read uphot.dat file (like in SHADOW undul_phot_dump)
 
     :param file_in: name of the file to be read
-    :param do_plot: flag to plot
-    :param verbose: flag to print some info
     :return: a dictionary {'radiation':RN0, 'polarization':POL_DEG, 'photon_energy':E, 'theta':TT, 'phi':PP}
     """
 
@@ -21,9 +19,7 @@ def load_file_undul_phot(file_in="uphot.dat",do_plot=False,show=False,verbose=Fa
     f.close()
 
     NG_E,NG_T,NG_P = numpy.fromstring(firstline,dtype=int,sep=" ")
-    if verbose:
-        print("\nload_uphot_dot_dat: file is %s"%(file_in))
-        print("load_uphot_dot_dat: NG_E,NG_T,NG_P  %d  %d  %d"%(NG_E,NG_T,NG_P ))
+
 
     tmp = numpy.loadtxt(file_in,skiprows=1)
 
@@ -68,23 +64,18 @@ def load_file_undul_phot(file_in="uphot.dat",do_plot=False,show=False,verbose=Fa
 
     TT = T.flatten()[0:NG_T].copy()
     PP = P.flatten()[0:NG_P].copy()
-    if verbose:
-        if NG_E > 1: print("load_uphot_dot_dat: Step in E: %f, Interval in E: %f"%( (E[1]-E[0]), (E[-1]-E[0]) ))
-        print("load_uphot_dot_dat: Step in P: %f, Interval in P: %f"%( (PP[1]-PP[0]), (PP[-1]-PP[0]) ))
-        print("load_uphot_dot_dat: Step in T: %f, Interval in T: %f"%( (TT[1]-TT[0]), (TT[-1]-TT[0]) ))
 
-        print("load_uphot_dot_dat: RN0 max: %f min: %f"%(RN0.max(),RN0.min()) )
-        print("load_uphot_dot_dat: POL_DEG max: %f min: %f"%(POL_DEG.max(),POL_DEG.min()) )
-
-    if do_plot:
-        plot_image(RN0[0,:,:],TT*1e6,PP*180/numpy.pi,title=file_in+" RN0[0]",xtitle="Theta [urad]",ytitle="Phi [deg]",aspect='auto',show=False)
-        plot_image(POL_DEG[0,:,:],TT*1e6,PP*180/numpy.pi,title=file_in+" POL_DEG[0]",xtitle="Theta [urad]",ytitle="Phi [deg]",aspect='auto',show=False)
-        if show: plot_show()
     return {'radiation':RN0, 'polarization':POL_DEG, 'photon_energy':E, 'theta':TT, 'phi':PP}
 
 
 
 def write_file_undul_phot(undul_phot_dict,file_out="uphot.dat"):
+    """
+    write uphot.dat file from a dictionary with the output of undul_phot
+    :param undul_phot_dict: a dictionary {'radiation':RN0, 'polarization':POL_DEG, 'photon_energy':E, 'theta':TT, 'phi':PP}
+    :param file_out: name of the output file (Default: uphot.dat)
+    :return:
+    """
 
     Z2      = undul_phot_dict['radiation']
     POL_DEG = undul_phot_dict['polarization']
@@ -126,17 +117,21 @@ def write_file_undul_phot(undul_phot_dict,file_out="uphot.dat"):
 
 
 
+def load_file_undul_cdf(file_in="xshundul.sha"):
+    """
+    Loads a file containing the output of undul_cdf into a dictionary
 
-def load_fule_undul_cdf(file_in="xshundul.sha",do_plot=False,show=False,verbose=True):
-    #
-    # read uphot.dat file (like in SHADOW undul_phot_dump)
-    #
+    :param file_in: Name of the input file (Default: xshundul.sha)
+    :return: a dictionary {'cdf_EnergyThetaPhi':TWO,'cdf_EnergyTheta':ONE,'cdf_Energy':ZERO,
+            'energy':E,'theta':T,'phi':P,'polarization':POL_DEGREE}
+    """
+
     f = open(file_in,'r')
     firstline = f.readline()
     f.close()
 
     NG_E,NG_T,NG_P, IANGLE = numpy.fromstring(firstline,dtype=int,sep=" ")
-    if verbose: print("NG_E,NG_T,NG_P, IANGLE  %d  %d  %d %d \n"%(NG_E,NG_T,NG_P,IANGLE ))
+
 
     tmp = numpy.loadtxt(file_in,skiprows=1)
 
@@ -191,18 +186,18 @@ def load_fule_undul_cdf(file_in="xshundul.sha",do_plot=False,show=False,verbose=
                 POL_DEGREE[e,t,p] = tmp[itmp]
                 itmp += 1
 
-    if do_plot:
-        plot(E,TWO,title="TWO %s"%file_in,xtitle="E",ytitle="TWO",show=False)
-        plot_image(ONE,numpy.arange(NG_E),numpy.arange(NG_T),title="ONE %s "%file_in,xtitle="index Energy",ytitle="index Theta",aspect='auto',show=False)
-        plot_image(ZERO[0,:,:],numpy.arange(NG_T),numpy.arange(NG_P),title="ZERO[0] %s"%file_in,xtitle="index Theta",ytitle="index Phi",aspect='auto',show=False)
-        # plot_image(POL_DEGREE[0,:,:],numpy.arange(NG_T),numpy.arange(NG_P),title="POL_DEGREE[0]",xtitle="index Theta",ytitle="index Phi",show=0)
-        if show: plot_show()
-
     return {'cdf_EnergyThetaPhi':TWO,'cdf_EnergyTheta':ONE,'cdf_Energy':ZERO,'energy':E,'theta':T,'phi':P,'polarization':POL_DEGREE}
 
 def write_file_undul_sha(dict,file_out="xshundul.sha"):
+    """
+    Create a file (xshundul.sha) with output of undul_cdf
+
+    :param dict: a dictionary as output from undul_cdf
+    :param file_out: output file name
+    :return:
+    """
     #
-    # create xshundul.sha file (like in SHADOW undul_cdf)
+    #
     #
     TWO =     dict['cdf_EnergyThetaPhi']
     ONE =     dict['cdf_EnergyTheta']
@@ -253,16 +248,62 @@ def write_file_undul_sha(dict,file_out="xshundul.sha"):
         f.close()
         print("File written to disk: %s"%file_out)
 
+# TODO do these plot directly with matplotlib to avoid dependencies
+def plot_undul_cdf(undul_cdf_input,do_show=True):
+    #
+    # plots output of undul_cdf
+    #
+    try:
+        from srxraylib.plot.gol import plot,plot_image,plot_show
+    except:
+        print("srxraylib not available: No plot")
+
+    if isinstance(undul_cdf_input,str):
+        undul_cdf_dict = load_file_undul_cdf(undul_cdf_input)
+    else:
+        undul_cdf_dict = undul_cdf_input
+
+    TWO = undul_cdf_dict['cdf_EnergyThetaPhi']
+    ONE = undul_cdf_dict['cdf_EnergyTheta']
+    ZERO = undul_cdf_dict['cdf_Energy']
+    # E = undul_cdf_dict['energy']
+    # T = undul_cdf_dict['theta']
+    # P = undul_cdf_dict['phi']
 
 
-# def compare_shadow3_files(file1,file2,do_assert=True):
-#
-#     Shadow.ShadowTools.plotxy(file1,4,6,nbins=101,nolost=1,title=file1)
-#     Shadow.ShadowTools.plotxy(file2,4,6,nbins=101,nolost=1,title=file2)
-#
-#     if do_assert:
-#         begin1 = Shadow.Beam()
-#         begin1.load(file1)
-#         begin2 = Shadow.Beam()
-#         begin2.load(file2)
-#         assert_almost_equal(begin1.rays[:,0:6],begin2.rays[:,0:6],3)
+    NG_E,NG_T,NG_P = ZERO.shape
+
+    plot(numpy.arange(NG_E),TWO,title="cdf(energy) TWO",xtitle="index Energy",ytitle="cdf(E) TWO",show=0)
+    plot_image(ONE,numpy.arange(NG_E),numpy.arange(NG_T),aspect='auto',
+               title="cdf(energy,theta) ONE",xtitle="index Energy",ytitle="index Theta",show=0)
+    plot_image(ZERO[0,:,:],numpy.arange(NG_T),numpy.arange(NG_P),aspect='auto',
+               title="cdf (theta,phi) ZERO[0]",xtitle="index Theta",ytitle="index Phi",show=0)
+
+    if do_show: plot_show()
+
+
+def plot_undul_phot(undul_phot_input,do_plot_intensity=True,do_plot_polarization=True,do_show=True,title=""):
+    #
+    # plots the output of undul_phot
+    #
+    try:
+        from srxraylib.plot.gol import plot,plot_image,plot_show
+    except:
+        print("srxraylib not available: No plot")
+
+    if isinstance(undul_phot_input,str):
+        undul_phot_dict = load_file_undul_phot(undul_phot_input)
+        title += undul_phot_input
+    else:
+        undul_phot_dict = undul_phot_input
+
+
+    if do_plot_intensity: plot_image(undul_phot_dict['radiation'][0,:,:],undul_phot_dict['theta']*1e6,undul_phot_dict['phi']*180/numpy.pi,
+               title="INTENS RN0[0] "+title,xtitle="Theta [urad]",ytitle="Phi [deg]",aspect='auto',show=False)
+
+    if do_plot_polarization: plot_image(undul_phot_dict['polarization'][0,:,:],undul_phot_dict['theta']*1e6,undul_phot_dict['phi']*180/numpy.pi,
+               title="POL_DEG RN0[0] "+title,xtitle="Theta [urad]",ytitle="Phi [deg]",aspect='auto',show=False)
+
+
+    if do_show: plot_show()
+
