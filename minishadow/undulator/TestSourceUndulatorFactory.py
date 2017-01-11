@@ -14,6 +14,7 @@ import numpy
 import json
 
 # CODE TO TEST
+from SourceUndulator import SourceUndulator
 from SourceUndulatorFactory import undul_phot, undul_cdf
 from SourceUndulatorFactory import undul_phot_pysru,undul_phot_srw
 # input/output
@@ -31,11 +32,11 @@ if DO_PLOT:
 #
 
 # for test purposes only
-def run_shadow3_using_preprocessors(jsn):
-    from SourceUndulator import SourceUndulator
-    u = SourceUndulator()
-    u.load_json_shadowvui_dictionary(jsn)
-    u.run_using_preprocessors()
+# def run_shadow3_using_preprocessors(jsn):
+#     from SourceUndulator import SourceUndulator
+#     u = SourceUndulator()
+#     u.load_json_shadowvui_dictionary(jsn)
+#     u.run_using_preprocessors()
 
 
 
@@ -98,6 +99,64 @@ class TestSourceUndulatorFactory(unittest.TestCase):
         print("Relative difference    radiation[1,5,7]", diff2)
         print("Relative difference polarization[1,1,2]", diff3)
         print("Relative difference polarization[1,5,7]", diff4)
+
+        self.assertAlmostEqual(diff1,0.00,delta=1e-4)
+        self.assertAlmostEqual(diff2,0.00,delta=1e-4)
+        self.assertAlmostEqual(diff3,0.00,delta=1e-4)
+        self.assertAlmostEqual(diff4,0.00,delta=1e-4)
+
+    def test_undul_phot_NG_E_one(self):
+
+        print("\n#                                                            ")
+        print("# test_undul_phot  ")
+        print("#                                                              ")
+
+        h = {}
+        h["E_ENERGY"] = 6.04
+        h["INTENSITY"] = 0.2
+        h["LAMBDAU"] = 0.032
+        h["NPERIODS"] = 50
+        h["K"] = 0.25
+        h["EMIN"] = 10200.0
+        h["EMAX"] = 10650.0
+        h["NG_E"] = 1
+        h["MAXANGLE"] = 0.015
+        h["NG_T"] = 51
+        h["NG_P"] = 11
+
+        # internal code
+        udict = undul_phot(E_ENERGY = h["E_ENERGY"],INTENSITY = h["INTENSITY"],
+                                        LAMBDAU = h["LAMBDAU"],NPERIODS = h["NPERIODS"],K = h["K"],
+                                        EMIN = h["EMIN"],EMAX = h["EMAX"],NG_E = h["NG_E"],
+                                        MAXANGLE = h["MAXANGLE"],NG_T = h["NG_T"],
+                                        NG_P = h["NG_P"])
+
+
+        photon_energy = numpy.linspace(h["EMIN"],h["EMAX"],h["NG_E"],dtype=float)
+        theta = numpy.linspace(0,h["MAXANGLE"]*1e-3,h["NG_T"],dtype=float)
+        phi = numpy.linspace(0,numpy.pi/2,h["NG_P"],dtype=float)
+
+        numpy.testing.assert_almost_equal(udict["photon_energy"],photon_energy)
+        numpy.testing.assert_almost_equal(udict["theta"],theta)
+        numpy.testing.assert_almost_equal(udict["phi"],phi)
+
+        rad = udict["radiation"]
+        pol = udict["polarization"]
+
+        print("   radiation[0,1,2]", rad[0,1,2] )
+        print("   radiation[0,5,7]", rad[0,5,7] )
+        print("polarization[0,1,2]", pol[0,1,2] )
+        print("polarization[0,5,7]", pol[0,5,7] )
+
+        diff1 = (rad[0,1,2] - 8.26623377929e+20) / 8.26623377929e+20
+        diff2 = (rad[0,5,7] - 8.22039896005e+20) / 8.22039896005e+20
+        diff3 = (pol[0,1,2] - 0.999999688687) / 0.999999688687
+        diff4 = (pol[0,5,7] - 0.999997183752) / 0.999997183752
+
+        print("Relative difference    radiation[0,1,2]", diff1)
+        print("Relative difference    radiation[0,5,7]", diff2)
+        print("Relative difference polarization[0,1,2]", diff3)
+        print("Relative difference polarization[0,5,7]", diff4)
 
         self.assertAlmostEqual(diff1,0.00,delta=1e-4)
         self.assertAlmostEqual(diff2,0.00,delta=1e-4)
@@ -244,7 +303,14 @@ class TestSourceUndulatorFactory(unittest.TestCase):
         h = json.loads(tmp)
 
         # SHADOW3 preprocessor
-        run_shadow3_using_preprocessors(h)
+        # run_shadow3_using_preprocessors(h)
+
+        u = SourceUndulator()
+        u.load_json_shadowvui_dictionary(h)
+        u.run_using_preprocessors()
+
+
+
         undul_phot_preprocessor_dict = load_uphot_dot_dat("uphot.dat")
 
         if do_plot_intensity: plot_image(undul_phot_preprocessor_dict['radiation'][0,:,:],undul_phot_preprocessor_dict['theta']*1e6,undul_phot_preprocessor_dict['phi']*180/numpy.pi,
@@ -386,10 +452,14 @@ class TestSourceUndulatorFactory(unittest.TestCase):
             }
             """
 
+
         h = json.loads(tmp)
         #
-        run_shadow3_using_preprocessors(h) # uphot.dat must exist
+        # run_shadow3_using_preprocessors(h) # uphot.dat must exist
 
+        u = SourceUndulator()
+        u.load_json_shadowvui_dictionary(h)
+        u.run_using_preprocessors()
 
         #
         #
@@ -406,6 +476,8 @@ class TestSourceUndulatorFactory(unittest.TestCase):
         cdf1 = load_xshundul_dot_sha(file_in="xshundul.sha", do_plot=False,show=False)
         cdf2 = load_xshundul_dot_sha(file_in="xshundul2.sha",do_plot=False,show=False)
         cdf3 = load_xshundul_dot_sha(file_in="xshundul3.sha",do_plot=False,show=False)
+
+
 
 
         ZERO1 = cdf1['cdf_Energy']
@@ -442,16 +514,198 @@ class TestSourceUndulatorFactory(unittest.TestCase):
 
             plot_image(cdf1['cdf_Energy'][0,:,:],1e6*radiation['theta'],radiation['phi'],title="PREPROCESSORS cdf_Energy[0]",
                        xtitle="Theta [urad]",ytitle="Phi",aspect='auto',show=False)
-            # plot_image(cdf2['cdf_Energy'][0,:,:],1e6*radiation['theta'],radiation['phi'],title="internal-sumation cdf_Energy[0]",
-            #            xtitle="Theta [urad]",ytitle="Phi",aspect='auto',show=False)
             plot_image(cdf3['cdf_Energy'][0,:,:],1e6*radiation['theta'],radiation['phi'],title="internal-trapezoidal cdf_Energy[0]",
                        xtitle="Theta [urad]",ytitle="Phi",aspect='auto',show=False)
 
             plot_image(cdf1['cdf_EnergyTheta'],1e6*radiation['theta'],radiation['phi'],title="PREPROCESSORS cdf_EnergyTheta",
                        xtitle="Theta [urad]",ytitle="Phi",aspect='auto',show=False)
-            # plot_image(cdf2['cdf_EnergyTheta'],1e6*radiation['theta'],radiation['phi'],title="internal-sumation cdf_EnergyTheta",
-            #            xtitle="Theta [urad]",ytitle="Phi",aspect='auto',show=False)
             plot_image(cdf3['cdf_EnergyTheta'],1e6*radiation['theta'],radiation['phi'],title="internal-trapezoidal cdf_EnergyTheta",
                        xtitle="Theta [urad]",ytitle="Phi",aspect='auto',show=False)
             plot_show()
 
+    def test_undul_cdf_NG_E_one(self,do_plot=DO_PLOT):
+
+        print("\n#                                                            ")
+        print("# test_undul_cdf_NG_E_one  ")
+        print("#                                                              ")
+
+        case = 0 # 2 = vui file
+
+        if case == 0:
+
+            tmp = \
+                """
+                {
+                "LAMBDAU":     0.0320000015,
+                "K":      0.250000000,
+                "E_ENERGY":       6.03999996,
+                "E_ENERGY_SPREAD":    0.00100000005,
+                "NPERIODS": 50,
+                "EMIN":       10498.0000,
+                "EMAX":       10499.0000,
+                "INTENSITY":      0.200000003,
+                "MAXANGLE":      0.100000001,
+                "NG_E": 1,
+                "NG_T": 51,
+                "NG_P": 11,
+                "NG_PLOT(1)":"0",
+                "NG_PLOT(2)":"No",
+                "NG_PLOT(3)":"Yes",
+                "UNDUL_PHOT_FLAG(1)":"0",
+                "UNDUL_PHOT_FLAG(2)":"Shadow code",
+                "UNDUL_PHOT_FLAG(3)":"Urgent code",
+                "UNDUL_PHOT_FLAG(4)":"SRW code",
+                "UNDUL_PHOT_FLAG(5)":"Gaussian Approximation",
+                "UNDUL_PHOT_FLAG(6)":"ESRF python code",
+                "SEED": 36255,
+                "SX":     0.0399999991,
+                "SZ":    0.00100000005,
+                "EX":   4.00000005E-07,
+                "EZ":   3.99999989E-09,
+                "FLAG_EMITTANCE(1)":"0",
+                "FLAG_EMITTANCE(2)":"No",
+                "FLAG_EMITTANCE(3)":"Yes",
+                "NRAYS": 15000,
+                "F_BOUND_SOUR": 0,
+                "FILE_BOUND":"NONESPECIFIED",
+                "SLIT_DISTANCE":       1000.00000,
+                "SLIT_XMIN":      -1.00000000,
+                "SLIT_XMAX":       1.00000000,
+                "SLIT_ZMIN":      -1.00000000,
+                "SLIT_ZMAX":       1.00000000,
+                "NTOTALPOINT": 10000000,
+                "JUNK4JSON":0
+                }
+                """
+
+
+            h = json.loads(tmp)
+
+            u = SourceUndulator()
+            u.load_json_shadowvui_dictionary(h)
+            u.run_using_preprocessors()
+
+        elif case == 1:
+
+            # some inputs
+            E_ENERGY=6.04
+            E_ENERGY_SPREAD=0.001
+            INTENSITY=0.2
+            SX=0.04
+            SZ=0.001
+            SXP=10e-6
+            SZP=4e-6
+            FLAG_EMITTANCE=1
+            LAMBDAU=0.032
+            NPERIODS=50
+            K=0.25
+            EMIN= 10498.0000
+            EMAX= 10499.0000
+            NG_E=101
+            MAXANGLE=0.1
+            NG_T=51
+            NG_P=11
+            SEED=36255
+            NRAYS=15000
+
+            u = SourceUndulator()
+
+            u.set_from_keywords(
+                E_ENERGY = E_ENERGY,
+                E_ENERGY_SPREAD = E_ENERGY_SPREAD,
+                INTENSITY = INTENSITY,
+                SX = SX,
+                SZ = SZ,
+                SXP = SXP,
+                SZP = SZP,
+                FLAG_EMITTANCE = FLAG_EMITTANCE,
+                LAMBDAU = LAMBDAU,
+                NPERIODS = NPERIODS,
+                K = K,
+                EMIN = EMIN,
+                EMAX = EMAX,
+                NG_E = NG_E,
+                MAXANGLE = MAXANGLE,
+                NG_T = NG_T,
+                NG_P = NG_P,
+                SEED = SEED,
+                NRAYS = NRAYS,
+                )
+
+            u.set_energy_monochromatic_at_resonance(harmonic_number=1)
+        elif case == 2:
+
+            u = SourceUndulator()
+            u.load_json_shadowvui_file("xshundul.json")
+            u.run_using_preprocessors()
+
+        else:
+            raise Exception("Undefined")
+
+        #
+        #
+        #
+        radiation = load_uphot_dot_dat(file_in="uphot.dat")
+
+        cdf2 = undul_cdf(radiation,method='sum',do_plot=False)
+        write_xshundul_dot_sha(cdf2,file_out="xshundul2.sha")
+
+
+        cdf3 = undul_cdf(radiation,method='trapz',do_plot=False)
+        write_xshundul_dot_sha(cdf3,file_out="xshundul3.sha")
+
+        cdf1 = load_xshundul_dot_sha(file_in="xshundul.sha", do_plot=False,show=False)
+        cdf2 = load_xshundul_dot_sha(file_in="xshundul2.sha",do_plot=False,show=False)
+        cdf3 = load_xshundul_dot_sha(file_in="xshundul3.sha",do_plot=False,show=False)
+
+
+        ZERO1 = cdf1['cdf_Energy']
+        ONE1 = cdf1['cdf_EnergyTheta']
+        TWO1 = cdf1['cdf_EnergyThetaPhi']
+
+        ZERO2 = cdf2['cdf_Energy']
+        ONE2 = cdf2['cdf_EnergyTheta']
+        TWO2 = cdf2['cdf_EnergyThetaPhi']
+
+        ZERO3 = cdf3['cdf_Energy']
+        ONE3 = cdf3['cdf_EnergyTheta']
+        TWO3 = cdf3['cdf_EnergyThetaPhi']
+
+        #
+        #
+        NG_E = (radiation["photon_energy"]).size
+        NG_T = (radiation["theta"]).size
+        NG_P = (radiation["phi"]).size
+        #
+        print("-----> shape comparison",NG_E,NG_T,NG_P,ZERO1.shape,ZERO2.shape,ZERO3.shape)
+        print("-----> shape comparison",NG_E,NG_T,NG_P,ONE1.shape,ONE2.shape,ONE3.shape)
+        print("-----> shape comparison",NG_E,NG_T,NG_P,TWO1.shape,TWO2.shape,TWO3.shape)
+        for ie in range(NG_E):
+            for it in range(NG_T):
+                for ip in range(NG_P):
+                    # print(">>>>",TWO1[ie],TWO2[ie],TWO3[ie])
+                    print(">>>>[%d %d %d]>>"%(ie,it,ip),ONE1[ie,it],ONE2[ie,it],ONE3[ie,it])
+                    # print(">>>>[%d %d %d]>>"%(ie,it,ip),ZERO1[ie,it,ip],ZERO2[ie,it,ip],ZERO3[ie,it,ip])
+
+        tmp = numpy.where(ZERO1 > 0.1*ZERO1.max())
+        print("test_undul_cdf: ZERO:   sum/shadow3 %4.2f %%: "%(numpy.average( 100*numpy.abs((ZERO2[tmp]-ZERO1[tmp])/ZERO1[tmp]) )))
+        print("test_undul_cdf: ZERO: trapz/shadow3 %4.2f %%: "%(numpy.average( 100*numpy.abs((ZERO3[tmp]-ZERO1[tmp])/ZERO1[tmp]) )))
+
+        tmp = numpy.where(ONE1 > 0.1*ONE1.max())
+        print(r"test_undul_cdf: ONE:   sum/shadow3 %4.2f %%: "%(numpy.average( 100*numpy.abs((ONE2[tmp]-ONE1[tmp])/ONE1[tmp]) )))
+        print(r"test_undul_cdf: ONE: trapz/shadow3 %4.2f %%: "%(numpy.average( 100*numpy.abs((ONE3[tmp]-ONE1[tmp])/ONE1[tmp]) )))
+
+
+        if do_plot:
+
+
+            plot_image(cdf1['cdf_Energy'][0,:,:],1e6*radiation['theta'],radiation['phi'],title="PREPROCESSORS cdf_Energy[0]",
+                       xtitle="Theta [urad]",ytitle="Phi",aspect='auto',show=False)
+            plot_image(cdf3['cdf_Energy'][0,:,:],1e6*radiation['theta'],radiation['phi'],title="internal-trapezoidal cdf_Energy[0]",
+                       xtitle="Theta [urad]",ytitle="Phi",aspect='auto',show=False)
+
+            plot_image(cdf1['cdf_EnergyTheta'],1e6*radiation['theta'],radiation['phi'],title="PREPROCESSORS cdf_EnergyTheta",
+                       xtitle="Theta [urad]",ytitle="Phi",aspect='auto',show=False)
+            plot_image(cdf3['cdf_EnergyTheta'],1e6*radiation['theta'],radiation['phi'],title="internal-trapezoidal cdf_EnergyTheta",
+                       xtitle="Theta [urad]",ytitle="Phi",aspect='auto',show=False)
+            plot_show()

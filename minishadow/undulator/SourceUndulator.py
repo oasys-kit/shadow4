@@ -1,10 +1,12 @@
 import json
 import os
+import numpy
 
 from numpy.testing import assert_equal, assert_almost_equal
 
 from srxraylib.plot.gol import plot,plot_image,plot_show
 
+import scipy.constants as codata
 
 import Shadow
 from SourceUndulatorFactory import undul_cdf, undul_phot, undul_phot_srw,  undul_phot_pysru
@@ -18,29 +20,59 @@ class SourceUndulator(object):
     def __init__(self):
 
         # Machine
-        self.E_ENERGY        = 6.04
-        self.E_ENERGY_SPREAD = 0.001
-        self.INTENSITY       = 0.2
-        self.SX              = 0.0399999991
-        self.SZ              = 0.00100000005
-        self.EX              = 4.00000005E-07
-        self.EZ              = 3.99999989E-09
+        self.E_ENERGY        = 1.0
+        self.E_ENERGY_SPREAD = 0.0
+        self.INTENSITY       = 1.0
+        self.SX              = 1e-6
+        self.SZ              = 1e-6
+        self.SXP             = 1e-6
+        self.SZP             = 1e-6
+        # self.EX              = 4.00000005E-07
+        # self.EZ              = 3.99999989E-09
         self.FLAG_EMITTANCE  = 1 # Yes
         # Undulator
-        self.LAMBDAU         = 0.0320000015
-        self.NPERIODS        = 50
-        self.K               = 0.250000000
+        self.LAMBDAU         = 0.01
+        self.NPERIODS        = 100
+        self.K               = 0.8
         # Photon energy scan
-        self.EMIN            = 10498.0000
-        self.EMAX            = 10499.0000
-        self.NG_E            = 101
+        self.EMIN            = 10000.0
+        self.EMAX            = 11000.0
+        self.NG_E            = 11
         # Geometry
-        self.MAXANGLE        = 0.1
-        self.NG_T            = 51
-        self.NG_P            = 11
+        self.MAXANGLE        = 0.5
+        self.NG_T            = 31
+        self.NG_P            = 21
         # ray tracing
-        self.SEED            = 36255
-        self.NRAYS           = 15000
+        self.SEED            = 36255655452
+        self.NRAYS           = 5000
+
+
+        # # Machine
+        # self.E_ENERGY        = 6.04
+        # self.E_ENERGY_SPREAD = 0.001
+        # self.INTENSITY       = 0.2
+        # self.SX              = 0.0399999991
+        # self.SZ              = 0.00100000005
+        # self.SXP             = 4.00000005E-07 / 0.0399999991
+        # self.SZP             = 3.99999989E-09 / 0.00100000005
+        # # self.EX              = 4.00000005E-07
+        # # self.EZ              = 3.99999989E-09
+        # self.FLAG_EMITTANCE  = 1 # Yes
+        # # Undulator
+        # self.LAMBDAU         = 0.0320000015
+        # self.NPERIODS        = 50
+        # self.K               = 0.250000000
+        # # Photon energy scan
+        # self.EMIN            = 10498.0000
+        # self.EMAX            = 10499.0000
+        # self.NG_E            = 101
+        # # Geometry
+        # self.MAXANGLE        = 0.1
+        # self.NG_T            = 51
+        # self.NG_P            = 11
+        # # ray tracing
+        # self.SEED            = 36255
+        # self.NRAYS           = 15000
 
 
         if platform.system() == "Linux":
@@ -59,8 +91,8 @@ class SourceUndulator(object):
         h["INTENSITY"]       = self.INTENSITY
         h["SX"]              = self.SX
         h["SZ"]              = self.SZ
-        h["EX"]              = self.EX
-        h["EZ"]              = self.EZ
+        h["SXP"]             = self.SXP
+        h["SZP"]             = self.SZP
         h["FLAG_EMITTANCE"]  = self.FLAG_EMITTANCE
         h["LAMBDAU"]         = self.LAMBDAU
         h["NPERIODS"]        = self.NPERIODS
@@ -86,7 +118,7 @@ class SourceUndulator(object):
         return out
 
     def set_from_keywords(self,E_ENERGY=6.04,E_ENERGY_SPREAD=0.001,INTENSITY=0.2,
-                SX=   0.0399999991,SZ=  0.00100000005,EX= 4.00000005E-07,EZ= 3.99999989E-09,FLAG_EMITTANCE=1,
+                SX=0.04,SZ=0.001,SXP=10e-6,SZP=4e-6,FLAG_EMITTANCE=1,
                 LAMBDAU=0.032,NPERIODS=50,K=0.25,
                 EMIN= 10498.0000,EMAX= 10499.0000,NG_E=101,MAXANGLE=0.1,NG_T=51,NG_P=11,
                 SEED=36255,NRAYS=15000,):
@@ -95,8 +127,8 @@ class SourceUndulator(object):
         self.INTENSITY         = INTENSITY
         self.SX                = SX
         self.SZ                = SZ
-        self.EX                = EX
-        self.EZ                = EZ
+        self.SXP               = SXP
+        self.SZP               = SZP
         self.FLAG_EMITTANCE    = FLAG_EMITTANCE
         self.LAMBDAU           = LAMBDAU
         self.NPERIODS          = NPERIODS
@@ -120,6 +152,12 @@ class SourceUndulator(object):
         self.EMAX = emin
         self.NG_E = 1
 
+    def set_energy_monochromatic_at_resonance(self,harmonic_number):
+
+        self.EMIN = self.get_resonance_energy(harmonic_number=harmonic_number)
+        self.EMAX = self.EMIN
+        self.NG_E = 1
+
     def set_energy_box(self,emin,emax):
         """
         Sets a box energy distribution for the source (monochromatic)
@@ -133,6 +171,41 @@ class SourceUndulator(object):
     def set_energy_number_of_points(self,npoints):
         self.NG_E = npoints
 
+    #
+    # useful getters
+    #
+    def get_lorentz_factor(self):
+        return ( self.E_ENERGY * 1e9) / (codata.m_e *  codata.c**2 / codata.e)
+
+    def get_resonance_wavelength(self, harmonic_number=1, theta_x=0.0, theta_z=0.0):
+        gamma = self.get_lorentz_factor()
+        wavelength = self.LAMBDAU / (2.0*gamma **2) * (1 + self.K**2 / 2.0 + gamma**2 * (theta_x**2 + theta_z ** 2))
+        return wavelength / harmonic_number
+
+    def get_resonance_frequency(self, harmonic_number=1, theta_x=0, theta_z=0):
+        return codata.c / self.get_resonance_wavelength(harmonic_number,theta_x,theta_z)
+
+    def get_resonance_energy(self, harmonic_number=1, theta_x=0, theta_z=0):
+        return codata.h*codata.c/codata.e*1e10 / (1e10*self.get_resonance_wavelength(harmonic_number, theta_x, theta_z))
+
+    def get_resonance_central_cone(self,harmonic_number=1):
+        return 1.0/self.get_lorentz_factor()*numpy.sqrt( (1+0.5*self.K**2)/(2*self.NPERIODS*harmonic_number) )
+
+    def get_resonance_ring(self,harmonic_number=1, ring_order=1):
+        return 1.0/self.get_lorentz_factor()*numpy.sqrt( ring_order / harmonic_number * (1+0.5*self.K**2) )
+
+    #     codata = scipy.constants.codata.physical_constants
+    #     codata_c = codata["speed of light in vacuum"][0]
+    #
+    #     frequency = codata_c / self.resonanceWavelength(gamma, theta_x, theta_z)
+    #     return frequency
+    #
+    #
+    #
+    # def resonanceEnergy(self, gamma, theta_x, theta_y, harmonic=1):
+    #     codata = scipy.constants.codata.physical_constants
+    #     energy_in_ev = codata["Planck constant"][0] * self.resonanceFrequency(gamma, theta_x, theta_y) / codata["elementary charge"][0]
+    #     return energy_in_ev*harmonic
 
     def sourcinfo(self,title=None):
         '''
@@ -167,8 +240,8 @@ class SourceUndulator(object):
         self.INTENSITY       = h["INTENSITY"]
         self.SX              = h["SX"]
         self.SZ              = h["SZ"]
-        self.EX              = h["EX"]
-        self.EZ              = h["EZ"]
+        self.SXP             = h["SXP"]
+        self.SZP             = h["SZP"]
         self.FLAG_EMITTANCE  = h["FLAG_EMITTANCE"]
         self.LAMBDAU         = h["LAMBDAU"]
         self.NPERIODS        = h["NPERIODS"]
@@ -241,8 +314,8 @@ class SourceUndulator(object):
         self.INTENSITY       = h["INTENSITY"]
         self.SX              = h["SX"]
         self.SZ              = h["SZ"]
-        self.EX              = h["EX"]
-        self.EZ              = h["EZ"]
+        self.SXP             = h["EX"] / h["SX"]
+        self.SZP             = h["EZ"] / h["SZ"]
         self.FLAG_EMITTANCE  = int(h["FLAG_EMITTANCE(1)"])
         self.LAMBDAU         = h["LAMBDAU"]
         self.NPERIODS        = h["NPERIODS"]
@@ -262,33 +335,100 @@ class SourceUndulator(object):
             h = json.load(f1)
         self.set_from_dictionary(h)
 
-    def write(self,file_out):
-        pass
+    def write(self,file_out='startj.00'):
+        data = self.to_dictionary()
+        with open(file_out, 'w') as outfile:
+            json.dump(data, outfile, indent=4, sort_keys=True, separators=(',', ':'))
 
-    def info(self):
+
+    def info(self,debug=False):
         # list all non-empty keywords
-        txt = "-----------------------------------------------------\n"
-        txt += "E_ENERGY        = "+repr(self.E_ENERGY        ) + "\n"
-        txt += "E_ENERGY_SPREAD = "+repr(self.E_ENERGY_SPREAD ) + "\n"
-        txt += "INTENSITY       = "+repr(self.INTENSITY       ) + "\n"
-        txt += "SX              = "+repr(self.SX              ) + "\n"
-        txt += "SZ              = "+repr(self.SZ              ) + "\n"
-        txt += "EX              = "+repr(self.EX              ) + "\n"
-        txt += "EZ              = "+repr(self.EZ              ) + "\n"
-        txt += "FLAG_EMITTANCE  = "+repr(self.FLAG_EMITTANCE  ) + "\n"
-        txt += "LAMBDAU         = "+repr(self.LAMBDAU         ) + "\n"
-        txt += "NPERIODS        = "+repr(self.NPERIODS        ) + "\n"
-        txt += "K               = "+repr(self.K               ) + "\n"
-        txt += "EMIN            = "+repr(self.EMIN            ) + "\n"
-        txt += "EMAX            = "+repr(self.EMAX            ) + "\n"
-        txt += "NG_E            = "+repr(self.NG_E            ) + "\n"
-        txt += "MAXANGLE        = "+repr(self.MAXANGLE        ) + "\n"
-        txt += "NG_T            = "+repr(self.NG_T            ) + "\n"
-        txt += "NG_P            = "+repr(self.NG_P            ) + "\n"
-        txt += "SEED            = "+repr(self.SEED            ) + "\n"
-        txt += "NRAYS           = "+repr(self.NRAYS           ) + "\n"
+        txt = ""
+
 
         txt += "-----------------------------------------------------\n"
+
+        txt += "Input Electron parameters: \n"
+        txt += "        Electron energy: %f geV\n"%self.E_ENERGY
+        txt += "        Electron current: %f A\n"%self.INTENSITY
+        if self.FLAG_EMITTANCE:
+            txt += "        Electron sigmaX: %g [user units]\n"%self.SX
+            txt += "        Electron sigmaZ: %g [user units]\n"%self.SZ
+            txt += "        Electron sigmaX': %f urad\n"%(1e6*self.SXP)
+            txt += "        Electron sigmaZ': %f urad\n"%(1e6*self.SZP)
+        txt += "Input Undulator parameters: \n"
+        txt += "        period: %f m\n"%self.LAMBDAU
+        txt += "        number of periods: %d\n"%self.NPERIODS
+        txt += "        K-value: %f\n"%self.K
+
+        txt += "-----------------------------------------------------\n"
+
+        txt += "Lorentz factor (gamma): %f\n"%self.get_lorentz_factor()
+        txt += "Electron velocity: %.12f c units\n"%(numpy.sqrt(1.0 - 1.0 / self.get_lorentz_factor() ** 2))
+        txt += "Undulator length: %f m\n"%(self.LAMBDAU*self.NPERIODS)
+        K_to_B = (2.0 * numpy.pi / self.LAMBDAU) * codata.m_e * codata.c / codata.e
+
+        txt += "Undulator peak magnetic field: %f T\n"%(K_to_B*self.K)
+        txt += "Resonances: \n"
+        txt += "        harmonic number [n]                   %10d %10d %10d \n"%(1,3,5)
+        txt += "        wavelength [A]:                       %10.6f %10.6f %10.6f   \n"%(\
+                                                                1e10*self.get_resonance_wavelength(1),
+                                                                1e10*self.get_resonance_wavelength(3),
+                                                                1e10*self.get_resonance_wavelength(5))
+        txt += "        energy [eV]   :                       %10.3f %10.3f %10.3f   \n"%(\
+                                                                self.get_resonance_energy(1),
+                                                                self.get_resonance_energy(3),
+                                                                self.get_resonance_energy(5))
+        txt += "        frequency [Hz]:                       %10.3g %10.3g %10.3g   \n"%(\
+                                                                self.get_resonance_frequency(1),
+                                                                self.get_resonance_frequency(3),
+                                                                self.get_resonance_frequency(5))
+        txt += "        central cone half width [mrad]:       %10.6f %10.6f %10.6f   \n"%(\
+                                                                1e3*self.get_resonance_central_cone(1),
+                                                                1e3*self.get_resonance_central_cone(3),
+                                                                1e3*self.get_resonance_central_cone(5))
+        txt += "        first ring at [mrad]:                 %10.6f %10.6f %10.6f   \n"%(\
+                                                                1e3*self.get_resonance_ring(1,1),
+                                                                1e3*self.get_resonance_ring(3,1),
+                                                                1e3*self.get_resonance_ring(5,1))
+
+        txt += "-----------------------------------------------------\n"
+        txt += "Sampling: \n"
+        if self.NG_E == 1:
+            txt += "        photon energy %f eV\n"%(self.EMIN)
+        else:
+            txt += "        photon energy from %10.3f eV to %10.3f eV\n"%(self.EMIN,self.EMAX)
+        txt += "        number of energy points %d\n"%(self.NG_E)
+        txt += "        number of angular elevation points %d\n"%(self.NG_T)
+        txt += "        number of angular azimuthal points %d\n"%(self.NG_P)
+        txt += "        number of rays %d\n"%(self.NRAYS)
+        txt += "        random seed %d\n"%(self.SEED)
+
+        txt += "-----------------------------------------------------\n"
+        if debug:
+            txt += "E_ENERGY        = "+repr(self.E_ENERGY        ) + "\n"
+            txt += "E_ENERGY_SPREAD = "+repr(self.E_ENERGY_SPREAD ) + "\n"
+            txt += "INTENSITY       = "+repr(self.INTENSITY       ) + "\n"
+            txt += "SX              = "+repr(self.SX              ) + "\n"
+            txt += "SZ              = "+repr(self.SZ              ) + "\n"
+            txt += "SXP             = "+repr(self.SXP             ) + "\n"
+            txt += "SZP             = "+repr(self.SZP             ) + "\n"
+            txt += "  SX*SXP        = "+repr(self.SX * self.SXP   ) + "\n"
+            txt += "  SZ*SZP        = "+repr(self.SZ * self.SZP   ) + "\n"
+            txt += "FLAG_EMITTANCE  = "+repr(self.FLAG_EMITTANCE  ) + "\n"
+            txt += "LAMBDAU         = "+repr(self.LAMBDAU         ) + "\n"
+            txt += "NPERIODS        = "+repr(self.NPERIODS        ) + "\n"
+            txt += "K               = "+repr(self.K               ) + "\n"
+            txt += "EMIN            = "+repr(self.EMIN            ) + "\n"
+            txt += "EMAX            = "+repr(self.EMAX            ) + "\n"
+            txt += "NG_E            = "+repr(self.NG_E            ) + "\n"
+            txt += "MAXANGLE        = "+repr(self.MAXANGLE        ) + "\n"
+            txt += "NG_T            = "+repr(self.NG_T            ) + "\n"
+            txt += "NG_P            = "+repr(self.NG_P            ) + "\n"
+            txt += "SEED            = "+repr(self.SEED            ) + "\n"
+            txt += "NRAYS           = "+repr(self.NRAYS           ) + "\n"
+            txt += "-----------------------------------------------------\n"
+
         return txt
 
     def shadow3_commands(self,commands="exit\n",input_file="shadow3_tmp.inp"):
@@ -301,16 +441,21 @@ class SourceUndulator(object):
         jsn = self.to_dictionary()
         # jsn = self.dict
         # print(self.info())
-        os.system("rm -f xshundul.plt xshundul.par xshundul.traj xshundul.info xshundul.sha")
+        os.system("rm -f start.00 systemfile.dat begin.dat xshundul.plt xshundul.par xshundul.traj xshundul.info xshundul.sha")
 
         # epath
         commands = "epath\n2\n%f \n%f \n%f \n%d \n1.\nxshundul.par\nxshundul.traj\n1\nxshundul.plt\nexit\n"% \
-        (jsn["LAMBDAU"],jsn["K"],jsn["E_ENERGY"],jsn["NG_E"])
+        (jsn["LAMBDAU"],jsn["K"],jsn["E_ENERGY"],101)
         self.shadow3_commands(commands=commands,input_file="shadow3_epath.inp")
 
         # undul_set
+        NG_E = jsn["NG_E"]
+        # TODO: is seems a bug in shadow3: undul_set must be NG_E>1 (otherwise nosense)
+        # but if emin=emaxthe  resulting uphot.nml has NG_E=1
+        if NG_E == 1: NG_E = 2
+
         commands = "undul_set\n0\n0\n%d \n%d \n%d \nxshundul.traj\n%d\n%f\n%f\n%f\n%f\n0\n1000\nexit\n"% \
-            (jsn["NG_E"],jsn["NG_T"],jsn["NG_P"],
+            (NG_E,jsn["NG_T"],jsn["NG_P"],
              jsn["NPERIODS"],jsn["EMIN"],jsn["EMAX"],jsn["INTENSITY"],jsn["MAXANGLE"])
         self.shadow3_commands(commands=commands,input_file="shadow3_undul_set.inp")
 
@@ -325,10 +470,10 @@ class SourceUndulator(object):
 
         # input source
         if self.FLAG_EMITTANCE:
-            commands = "input source\n1\n0\n%d \n%d \n0 \n2 \nxshundul.sha\n%g\n%g\n%g\n%d\n%g\n%d\n%d\n%d\n%d\nexit\n"% \
-            (jsn["NRAYS"],jsn["SEED"],jsn["SX"],jsn["SZ"],jsn["EX"],0,jsn["EZ"],0,3,1,1)
+            commands = "input_source\n1\n0\n%d \n%d \n0 \n2 \nxshundul.sha\n%g\n%g\n%g\n%d\n%g\n%d\n%d\n%d\n%d\nexit\n"% \
+            (jsn["NRAYS"],jsn["SEED"],jsn["SX"],jsn["SZ"],jsn["SX"]*jsn["SXP"],0,jsn["SZ"]*jsn["SZP"],0,3,1,1)
         else:
-            commands = "input source\n1\n0\n%d \n%d \n0 \n2 \nxshundul.sha\n%g\n%g\n%g\n%d\n%g\n%d\n%d\n%d\n%d\nexit\n"% \
+            commands = "input_source\n1\n0\n%d \n%d \n0 \n2 \nxshundul.sha\n%g\n%g\n%g\n%d\n%g\n%d\n%d\n%d\n%d\nexit\n"% \
             (jsn["NRAYS"],jsn["SEED"],0,0,0,0,0,0,3,1,1)
 
         self.shadow3_commands(commands=commands,input_file="shadow3_input_source.inp")
@@ -398,8 +543,8 @@ class SourceUndulator(object):
         oe0 = Shadow.Source()
         beam = Shadow.Beam()
         if self.FLAG_EMITTANCE:
-            oe0.EPSI_X = h["EX"]
-            oe0.EPSI_Z = h["EZ"]
+            oe0.EPSI_X = h["SX"] * h["SXP"]
+            oe0.EPSI_Z = h["SZ"] * h["SZP"]
             oe0.SIGDIX = 0.0
             oe0.SIGDIZ = 0.0
             oe0.SIGMAX = h["SX"]
@@ -427,128 +572,3 @@ class SourceUndulator(object):
         return beam
 
 
-#
-# tests for
-# SourceUndulator
-#
-def compare_shadow3_files(file1,file2,do_assert=True):
-
-    Shadow.ShadowTools.plotxy(file1,4,6,nbins=101,nolost=1,title=file1)
-    Shadow.ShadowTools.plotxy(file2,4,6,nbins=101,nolost=1,title=file2)
-
-    if do_assert:
-        begin1 = Shadow.Beam()
-        begin1.load(file1)
-        begin2     = Shadow.Beam()
-        begin2.load(file2)
-        assert_almost_equal(begin1.rays[:,0:6],begin2.rays[:,0:6],3)
-
-def run_from_shadowvui_json_file(method='preprocessor'):
-
-    u = SourceUndulator()
-
-    u.load_json_shadowvui_file("xshundul.json")
-    print(u.to_dictionary())
-    print(u.info())
-
-
-
-    if method == 'preprocessor':
-        #
-        # run using binary shadow3 (with preprocessors)
-        #
-        u.run_using_preprocessors()
-    else:
-        beam = u.run(code_undul_phot=method,dump_uphot_dot_dat=True,dump_start_files=True)
-        beam.write("begin.dat")
-
-
-if __name__ == "__main__":
-
-    #
-    # clean
-    #
-    os.system("rm begin*.dat")
-    os.system("rm uphot*.dat")
-    os.system("rm xshundul*.sha")
-
-
-    #
-    # run
-    #
-    method = 'preprocessor'
-    method = 'internal'
-    method = 'pysru'
-    method = 'srw'
-
-    methods = ['preprocessor','internal']
-
-    for method in methods:
-        run_from_shadowvui_json_file(method=method)
-
-        os.system("cp begin.dat begin_%s.dat"%method)
-        os.system("cp uphot.dat uphot_%s.dat"%method)
-        os.system("cp xshundul.sha xshundul_%s.sha"%method)
-
-
-    compare_shadow3_files("begin_preprocessor.dat","begin_internal.dat",do_assert=True)
-
-
-
-    # make script
-    # oe0 = Shadow.Source()
-    # oe0.load("start.00")
-    # Shadow.ShadowTools.make_python_script_from_list([oe0],script_file="script_undulator.py")
-
-
-
-    #
-    # #
-    # # run using python
-    # #
-    # beam = u.run(code_undul_phot='internal',
-    #         dump_uphot_dot_dat=True,dump_start_files=True)
-    #
-    # beam.write("begin.dat")
-    # os.system("mv begin.dat begin_minishadow.dat")
-    # os.system("mv uphot.dat uphot_minishadow.dat")
-    # os.system("mv xshundul.sha xshundul_minishadow.sha")
-    #
-    #
-
-
-
-
-    # u = SourceUndulator()
-    #
-    # u.load_json_shadowvui_file("xshundul.json")
-    # print(u.to_dictionary())
-    # print(u.info())
-    #
-    # #
-    # # run using binary shadow3 (with preprocessors)
-    # #
-    # u.run_using_preprocessors()
-
-    # #
-    # # compare radiation
-    # #
-    #
-    # #
-    # # load_uphot_dot_dat("uphot_shadow3.dat",do_plot=True)
-    # # load_uphot_dot_dat("uphot_minishadow.dat",do_plot=True)
-    # #
-    #
-    # #
-    # # compare CDF
-    # #
-    # # load_xshundul_dot_sha("xshundul_shadow3.sha",do_plot=True)
-    # # load_xshundul_dot_sha("xshundul_minishadow.sha",do_plot=True)
-    #
-    # #
-    # # compare binary files
-    # #
-    # compare_shadow3_files("begin_shadow3.dat","begin_minishadow.dat",do_assert=True)
-
-
-    # plot_show()

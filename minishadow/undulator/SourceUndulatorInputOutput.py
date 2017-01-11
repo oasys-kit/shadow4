@@ -6,7 +6,7 @@
 import numpy
 from srxraylib.plot.gol import plot,plot_image,plot_show
 
-def load_uphot_dot_dat(file_in="uphot.dat",do_plot=False,show=False,verbose=True):
+def load_uphot_dot_dat(file_in="uphot.dat",do_plot=False,show=False,verbose=False):
     """
     read uphot.dat file (like in SHADOW undul_phot_dump)
 
@@ -69,7 +69,7 @@ def load_uphot_dot_dat(file_in="uphot.dat",do_plot=False,show=False,verbose=True
     TT = T.flatten()[0:NG_T].copy()
     PP = P.flatten()[0:NG_P].copy()
     if verbose:
-        print("load_uphot_dot_dat: Step in E: %f, Interval in E: %f"%( (E[1]-E[0]), (E[-1]-E[0]) ))
+        if NG_E > 1: print("load_uphot_dot_dat: Step in E: %f, Interval in E: %f"%( (E[1]-E[0]), (E[-1]-E[0]) ))
         print("load_uphot_dot_dat: Step in P: %f, Interval in P: %f"%( (PP[1]-PP[0]), (PP[-1]-PP[0]) ))
         print("load_uphot_dot_dat: Step in T: %f, Interval in T: %f"%( (TT[1]-TT[0]), (TT[-1]-TT[0]) ))
 
@@ -221,33 +221,33 @@ def write_xshundul_dot_sha(dict,file_out="xshundul.sha"):
         f.write("%d  %d  %d 1 \n"%(NG_E,NG_T,NG_P))
 
         for e in E:
-            f.write("%g \n"%(e))
+            f.write("%20.10f \n"%(e))
 
         for e in E:
             for t in T:
-                f.write("%g \n"%t)
+                f.write("%20.10f \n"%t)
 
         for e in E:
             for t in T:
                 for p in P:
-                    f.write("%g \n"%p)
+                    f.write("%20.10f \n"%p)
 
         for e in numpy.arange(NG_E):
-            f.write("%g \n"%(TWO[e]))
-
-        for e in numpy.arange(NG_E):
-            for t in numpy.arange(NG_T):
-                f.write("%g \n"%(ONE[e,t]))
+            f.write("%20.10f \n"%(TWO[e]))
 
         for e in numpy.arange(NG_E):
             for t in numpy.arange(NG_T):
-                for p in numpy.arange(NG_P):
-                    f.write("%g \n"%(ZERO[e,t,p]))
+                f.write("%20.10f \n"%(ONE[e,t]))
 
         for e in numpy.arange(NG_E):
             for t in numpy.arange(NG_T):
                 for p in numpy.arange(NG_P):
-                    f.write("%g \n"%(POL_DEG[e,t,p]))
+                    f.write("%20.10f \n"%(ZERO[e,t,p]))
+
+        for e in numpy.arange(NG_E):
+            for t in numpy.arange(NG_T):
+                for p in numpy.arange(NG_P):
+                    f.write("%20.10f \n"%(POL_DEG[e,t,p]))
 
 
         f.close()
