@@ -1,3 +1,7 @@
+__authors__ = ["M Sanchez del Rio - ESRF ISDD Advanced Analysis and Modelling"]
+__license__ = "MIT"
+__date__ = "12/01/2017"
+
 #
 # tests for SourceUndulator
 #

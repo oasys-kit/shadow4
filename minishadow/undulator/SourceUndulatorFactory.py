@@ -1,5 +1,9 @@
+__authors__ = ["M Sanchez del Rio - ESRF ISDD Advanced Analysis and Modelling"]
+__license__ = "MIT"
+__date__ = "12/01/2017"
+
 #
-# SHADOW Undulator preprocessors in python
+# SHADOW Undulator preprocessors implemented in python
 #
 # this code replaces SHADOW's undul_phot and undul_cdf
 #
@@ -7,7 +11,7 @@
 #
 # It can use three backends:
 #      - the internal code (no dependency) hacked from pySRU
-#      - pySERU
+#      - pySRU
 #      - SRW
 #
 #

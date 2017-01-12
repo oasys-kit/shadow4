@@ -1,3 +1,7 @@
+__authors__ = ["M Sanchez del Rio - ESRF ISDD Advanced Analysis and Modelling"]
+__license__ = "MIT"
+__date__ = "12/01/2017"
+
 import json
 import os
 import numpy
@@ -34,7 +38,7 @@ class SourceUndulator(object):
         self.EMAX            = 11000.0   # Photon energy scan to energy (in eV)
         self.NG_E            = 11        # Photon energy scan number of points
         # Geometry
-        self.MAXANGLE        = 0.5      # Maximum radiation semiaperture in mrad
+        self.MAXANGLE        = 0.5      # Maximum radiation semiaperture in mrad # TODO: define it in rad, for consistency
         self.NG_T            = 31       # Number of points in angle theta
         self.NG_P            = 21       # Number of points in angle phi
         self.NG_J            = 20       # Number of points in electron trajectory (per period)
@@ -113,11 +117,35 @@ class SourceUndulator(object):
         out.set_from_dictionary(self.to_dictionary())
         return out
 
-    def set_from_keywords(self,E_ENERGY=6.04,N_J=10,INTENSITY=0.2,
+    def set_from_keywords(self,E_ENERGY=6.04,INTENSITY=0.2,
                 SX=0.04,SZ=0.001,SXP=10e-6,SZP=4e-6,FLAG_EMITTANCE=1,
                 LAMBDAU=0.032,NPERIODS=50,K=0.25,
-                EMIN= 10498.0000,EMAX= 10499.0000,NG_E=101,MAXANGLE=0.1,NG_T=51,NG_P=11,
+                EMIN= 10498.0000,EMAX= 10499.0000,NG_E=101,MAXANGLE=0.1,NG_T=51,NG_P=11,N_J=10,
                 SEED=36255,NRAYS=15000,):
+        """
+        Sets the undulator parameters using keywords:
+
+        :param E_ENERGY: Electron energy in GeV
+        :param INTENSITY: Electron current in A
+        :param SX: Electron sigma X
+        :param SZ: Electron sigma Z
+        :param SXP: Electron sigma X'
+        :param SZP: Electron sigma Z'
+        :param FLAG_EMITTANCE: 0=No emittance (S* ignored), 1=Use emittance
+        :param LAMBDAU: Undulator period in m
+        :param NPERIODS: Undulator number of periodas
+        :param K: Undulator K-value
+        :param EMIN: Photon energy scan from energy (in eV)
+        :param EMAX: Photon energy scan to energy (in eV)
+        :param NG_E: Photon energy scan number of points
+        :param MAXANGLE: Maximum radiation semiaperture in mrad # TODO: define it in rad, for consistency
+        :param NG_T: Number of points in angle theta
+        :param NG_P: Number of points in angle phi
+        :param N_J: Number of points in electron trajectory (per period)
+        :param SEED: Random seed
+        :param NRAYS: Number of rays
+        :return:
+        """
         self.E_ENERGY          = E_ENERGY
         self.INTENSITY         = INTENSITY
         self.SX                = SX
@@ -142,7 +170,7 @@ class SourceUndulator(object):
         """
         Sets a single energy line for the source (monochromatic)
         :param emin: the energy in eV
-        :return: self
+        :return:
         """
         self.EMIN = emin
         self.EMAX = emin
@@ -150,59 +178,83 @@ class SourceUndulator(object):
 
     def set_energy_monochromatic_at_resonance(self,harmonic_number):
 
-        self.EMIN = self.get_resonance_energy(harmonic_number=harmonic_number)
-        self.EMAX = self.EMIN
-        self.NG_E = 1
-        self.MAXANGLE = 2 * 1e3 * self.get_resonance_central_cone(harmonic_number)
+        self.set_energy_monochromatic(self.get_resonance_energy(harmonic_number=harmonic_number))
+        # take 3*sigma - MAXANGLE is in mrad!!
+        self.MAXANGLE = 3 * 0.69 * 1e3 * self.get_resonance_central_cone(harmonic_number)
 
-    def set_energy_box(self,emin,emax):
+    def set_energy_box(self,emin,emax,npoints=None):
         """
         Sets a box energy distribution for the source (monochromatic)
-        :param emin: minimum energy in eV
-        :param emax: maximum energy in eV
-        :return: self
+        :param emin:  Photon energy scan from energy (in eV)
+        :param emax:  Photon energy scan to energy (in eV)
+        :param npoints:  Photon energy scan number of points (optinal, if not set no changes)
+        :return:
         """
+
         self.EMIN = emin
         self.EMAX = emax
+        if npoints != None:
+            self.NG_E = npoints
 
-    def set_energy_number_of_points(self,npoints):
-        self.NG_E = npoints
 
     #
     # useful getters
     #
     def get_lorentz_factor(self):
+        """
+        Calculates the Lorentz factor (gamma) from electron energy
+        :return:
+        """
         return ( self.E_ENERGY * 1e9) / (codata.m_e *  codata.c**2 / codata.e)
 
     def get_resonance_wavelength(self, harmonic_number=1, theta_x=0.0, theta_z=0.0):
+        """
+        sets photon energy to monochromatic line at resonance
+        :param harmonic_number:
+        :param theta_x:
+        :param theta_z:
+        :return:
+        """
         gamma = self.get_lorentz_factor()
         wavelength = self.LAMBDAU / (2.0*gamma **2) * (1 + self.K**2 / 2.0 + gamma**2 * (theta_x**2 + theta_z ** 2))
         return wavelength / harmonic_number
 
     def get_resonance_frequency(self, harmonic_number=1, theta_x=0, theta_z=0):
+        """
+        gets the resonance wavelength (in m)
+        :param harmonic_number:
+        :param theta_x:
+        :param theta_z:
+        :return:
+        """
         return codata.c / self.get_resonance_wavelength(harmonic_number,theta_x,theta_z)
 
     def get_resonance_energy(self, harmonic_number=1, theta_x=0, theta_z=0):
+        """
+        gets the resonance photon energy (in eV)
+        :param harmonic_number:
+        :param theta_x:
+        :param theta_z:
+        :return:
+        """
         return codata.h*codata.c/codata.e*1e10 / (1e10*self.get_resonance_wavelength(harmonic_number, theta_x, theta_z))
 
     def get_resonance_central_cone(self,harmonic_number=1):
+        """
+        gets the angular aperture of the central cone (in rad).
+        It is calculated as:
+            CC = (1/gamma) * sqrt(  (1+0.5*K^2) / ( 2 N n) )
+            with N = number of periods, n = harmonic number
+
+            Note that the standard deviation is ~ 0.68*CC and the FWHM is 2.35*0.68*CC
+
+        :param harmonic_number:
+        :return:
+        """
         return 1.0/self.get_lorentz_factor()*numpy.sqrt( (1+0.5*self.K**2)/(2*self.NPERIODS*harmonic_number) )
 
     def get_resonance_ring(self,harmonic_number=1, ring_order=1):
         return 1.0/self.get_lorentz_factor()*numpy.sqrt( ring_order / harmonic_number * (1+0.5*self.K**2) )
-
-    #     codata = scipy.constants.codata.physical_constants
-    #     codata_c = codata["speed of light in vacuum"][0]
-    #
-    #     frequency = codata_c / self.resonanceWavelength(gamma, theta_x, theta_z)
-    #     return frequency
-    #
-    #
-    #
-    # def resonanceEnergy(self, gamma, theta_x, theta_y, harmonic=1):
-    #     codata = scipy.constants.codata.physical_constants
-    #     energy_in_ev = codata["Planck constant"][0] * self.resonanceFrequency(gamma, theta_x, theta_y) / codata["elementary charge"][0]
-    #     return energy_in_ev*harmonic
 
     def sourcinfo(self,title=None):
         '''
@@ -232,6 +284,31 @@ class SourceUndulator(object):
 
 
     def set_from_dictionary(self,h):
+        """
+        set undulator variables from a dictionary. The following keys must be present:
+          E_ENERGY
+          INTENSITY
+          SX
+          SZ
+          SXP
+          SZP
+          FLAG_EMITTANCE
+          LAMBDAU
+          NPERIODS
+          K
+          EMIN
+          EMAX
+          NG_E
+          MAXANGLE
+          NG_T
+          NG_P
+          N_J
+          SEED
+          NRAYS
+
+        :param h:
+        :return:
+        """
         self.E_ENERGY        = h["E_ENERGY"]
         self.INTENSITY       = h["INTENSITY"]
         self.SX              = h["SX"]
@@ -254,6 +331,13 @@ class SourceUndulator(object):
 
 
     def load_json_shadowvui_file(self,inFileTxt):
+        """
+        sets undulator parameters from a json file from shadowVUI and
+
+        :param inFileTxt:
+        :return:
+        """
+        #TODO: remove this routine in the future
         #
         # read inputs from a file created by ShadowVUI ----------------------------
         #
@@ -264,6 +348,11 @@ class SourceUndulator(object):
 
 
     def load_json_shadowvui_dictionary(self,h):
+        """
+        sets undulator parameters from a dictionary loaded from a shadowVUI json file
+        :param h:
+        :return:
+        """
         # self.dict = {
         #     "LAMBDAU":     0.0320000015,
         #     "K":      0.250000000,
@@ -328,17 +417,33 @@ class SourceUndulator(object):
 
 
     def load(self,inFileTxt):
+        """
+        load undulator parameters from a json file (type startj.00)
+        :param inFileTxt:
+        :return:
+        """
         with open(inFileTxt, mode='r') as f1:
             h = json.load(f1)
         self.set_from_dictionary(h)
 
     def write(self,file_out='startj.00'):
+        """
+        write undulator parameters to a json file (type startj.00)
+        :param file_out:
+        :return:
+        """
         data = self.to_dictionary()
         with open(file_out, 'w') as outfile:
             json.dump(data, outfile, indent=4, sort_keys=True, separators=(',', ':'))
 
 
     def info(self,debug=False):
+        """
+        gets text info
+
+        :param debug: if True, list the undulator variables (Default: debug=True)
+        :return:
+        """
         # list all non-empty keywords
         txt = ""
 
@@ -380,7 +485,7 @@ class SourceUndulator(object):
                                                                 self.get_resonance_frequency(1),
                                                                 self.get_resonance_frequency(3),
                                                                 self.get_resonance_frequency(5))
-        txt += "        central cone half width [mrad]:       %10.6f %10.6f %10.6f   \n"%(\
+        txt += "        central cone 'half' width [mrad]:     %10.6f %10.6f %10.6f   \n"%(\
                                                                 1e3*self.get_resonance_central_cone(1),
                                                                 1e3*self.get_resonance_central_cone(3),
                                                                 1e3*self.get_resonance_central_cone(5))
@@ -430,13 +535,20 @@ class SourceUndulator(object):
 
         return txt
 
-    def shadow3_commands(self,commands="exit\n",input_file="shadow3_tmp.inp"):
+    def _shadow3_commands(self,commands="exit\n",input_file="shadow3_tmp.inp"):
+        # for internal use
         f = open(input_file,'w')
         f.write(commands)
         f.close()
         os.system(self.SHADOW3_BINARY+" < "+input_file)
 
     def calculate_beam_using_preprocessors(self):
+        """
+        Calculates rays (source) using preprocessors in binary shadow3 (for
+            comparison purposes, from python use calculate_beam() instead)
+
+        :return:  a Shadow.Beam object
+        """
         jsn = self.to_dictionary()
         # jsn = self.dict
         # print(self.info())
@@ -445,7 +557,7 @@ class SourceUndulator(object):
         # epath
         commands = "epath\n2\n%f \n%f \n%f \n%d \n1.\nxshundul.par\nxshundul.traj\n1\nxshundul.plt\nexit\n"% \
         (jsn["LAMBDAU"],jsn["K"],jsn["E_ENERGY"],101)
-        self.shadow3_commands(commands=commands,input_file="shadow3_epath.inp")
+        self._shadow3_commands(commands=commands,input_file="shadow3_epath.inp")
 
         # undul_set
         NG_E = jsn["NG_E"]
@@ -456,14 +568,14 @@ class SourceUndulator(object):
         commands = "undul_set\n0\n0\n%d \n%d \n%d \nxshundul.traj\n%d\n%f\n%f\n%f\n%f\n0\n1000\nexit\n"% \
             (NG_E,jsn["NG_T"],jsn["NG_P"],
              jsn["NPERIODS"],jsn["EMIN"],jsn["EMAX"],jsn["INTENSITY"],jsn["MAXANGLE"])
-        self.shadow3_commands(commands=commands,input_file="shadow3_undul_set.inp")
+        self._shadow3_commands(commands=commands,input_file="shadow3_undul_set.inp")
 
         # undul_phot
-        self.shadow3_commands(commands="undul_phot\nexit\n",input_file="shadow3_undul_phot.inp")
-        self.shadow3_commands(commands="undul_phot_dump\nexit\n",input_file="shadow3_undul_phot_dump.inp")
+        self._shadow3_commands(commands="undul_phot\nexit\n",input_file="shadow3_undul_phot.inp")
+        self._shadow3_commands(commands="undul_phot_dump\nexit\n",input_file="shadow3_undul_phot_dump.inp")
 
         # undul_cdf
-        self.shadow3_commands(commands="undul_cdf\n0\n1\nxshundul.sha\nxshundul.info\nexit\n",
+        self._shadow3_commands(commands="undul_cdf\n0\n1\nxshundul.sha\nxshundul.info\nexit\n",
                         input_file="shadow3_undul_cdf.inp")
 
 
@@ -475,11 +587,11 @@ class SourceUndulator(object):
             commands = "input_source\n1\n0\n%d \n%d \n0 \n2 \nxshundul.sha\n%g\n%g\n%g\n%d\n%g\n%d\n%d\n%d\n%d\nexit\n"% \
             (jsn["NRAYS"],jsn["SEED"],0,0,0,0,0,0,3,1,1)
 
-        self.shadow3_commands(commands=commands,input_file="shadow3_input_source.inp")
+        self._shadow3_commands(commands=commands,input_file="shadow3_input_source.inp")
 
         # run source
         commands = "source\nsystemfile\nexit\n"
-        self.shadow3_commands(commands=commands,input_file="shadow3_source.inp")
+        self._shadow3_commands(commands=commands,input_file="shadow3_source.inp")
 
 
         # return shadow3 beam
@@ -488,6 +600,16 @@ class SourceUndulator(object):
         return beam
 
     def calculate_radiation(self,code_undul_phot='internal'):
+        """
+        Calculates the radiation (emission) as a function pf theta (elevation angle) and phi (azimuthal angle)
+        This radiation will be sampled to create the source
+
+        It calls undul_phot* in SourceUndulatorFactory
+
+        :param code_undul_phot: 'internal' (calls undul_phot), 'pysru' (calls undul_phot_pysru) or
+                'srw' (calls undul_phot_srw)
+        :return: a dictionary (the output from undul_phot*)
+        """
 
         h = self.to_dictionary()
         # print(self.info())
@@ -525,14 +647,41 @@ class SourceUndulator(object):
         return undul_phot_dict
 
 
+    def calculate_cdf(self,code_undul_phot='internal',use_existing_undul_phot_output=None,
+                       dump_undul_phot_file=False):
+        """
+        calculates cdf (cumulative distribution functions)
 
-    def calculate_beam(self,code_undul_phot='internal',dump_undul_phot_file=False,dump_start_files=False):
+        it first computes the radiation (calculate_radiation) and the integrate using
+        SourceUndulatorFactory.undul_cdf
+
+        :param code_undul_phot: code_undul_phot: 'internal' (calls undul_phot), 'pysru'
+                (calls undul_phot_pysru) or 'srw' (calls undul_phot_srw)
+        :param use_existing_undul_phot_output: set to a file name or dictionary to use this
+            particular output from undul_phot
+        :param dump_undul_phot_file: if True writes the undul_phot output in uphot.dat file
+        :return: a dictionary with the undul_cdf output. It also dumps this output to a file
+            called xshundul.sha file.
+        """
 
         #
         # undul_phot
         #
 
-        undul_phot_dict = self.calculate_radiation(code_undul_phot=code_undul_phot)
+        # undul_phot_dict = self.calculate_radiation(code_undul_phot=code_undul_phot)
+
+        if use_existing_undul_phot_output is None:
+            undul_phot_dict = self.calculate_radiation(code_undul_phot=code_undul_phot)
+        else:
+            if isinstance(use_existing_undul_phot_output,str):
+                undul_phot_dict = load_file_undul_phot(use_existing_undul_phot_output)
+            elif isinstance(use_existing_undul_phot_output,dict):
+                undul_phot_dict = use_existing_undul_phot_output
+                #TODO: import parameters from external file E_MIN, E_MAX, MAXANGLE, N_*
+            else:
+                raise Exception("Bad undul_phot data.")
+
+
 
         if dump_undul_phot_file:
             write_file_undul_phot(undul_phot_dict,file_out="uphot.dat")
@@ -543,7 +692,30 @@ class SourceUndulator(object):
 
         undul_cdf_dict = undul_cdf(undul_phot_dict,method='trapz')
         write_file_undul_sha(undul_cdf_dict,file_out="xshundul.sha",)
-        # run source
+
+        return undul_cdf_dict
+
+
+
+    def calculate_beam(self,code_undul_phot='internal',use_existing_undul_phot_output=None,
+                       dump_undul_phot_file=False,dump_start_files=False):
+        """
+        Calculates rays (source)
+
+        :param code_undul_phot: 'internal' (calls undul_phot), 'pysru' (calls undul_phot_pysru) or
+                'srw' (calls undul_phot_srw)
+        :param use_existing_undul_phot_output: set to a file name or dictionary to use this
+            particular output from undul_phot
+        :param dump_undul_phot_file: if True writes uphot.dat with output from undul_phot
+        :param dump_start_files: if Truie writes start.00 and end.00
+        :return: a Shadow.Beam object
+        """
+
+        # create preprocessor file xshundul.sha
+        tmp = self.calculate_cdf(code_undul_phot=code_undul_phot,
+                                 use_existing_undul_phot_output=use_existing_undul_phot_output,
+                                 dump_undul_phot_file=dump_undul_phot_file)
+
 
         # initialize shadow3 source (oe0) and beam
         h = self.to_dictionary()
@@ -575,91 +747,7 @@ class SourceUndulator(object):
         if dump_start_files: oe0.write("start.00")
         beam.genSource(oe0)
         if dump_start_files: oe0.write("end.00")
-        # if dump_begin_dot_dat: beam.write("begin.dat")
 
         return beam
 
 
-    # def calculate_beam(self,code_undul_phot='internal',dump_uphot_dot_dat=False,dump_start_files=False):
-    #
-    #     h = self.to_dictionary()
-    #     # print(self.info())
-    #     # os.system("rm -f xshundul.plt xshundul.par xshundul.traj xshundul.info xshundul.sha")
-    #
-    #     if code_undul_phot != "internal" or code_undul_phot != "srw":
-    #         dump_uphot_dot_dat = True
-    #
-    #
-    #
-    #     # undul_phot
-    #     if code_undul_phot == 'internal':
-    #         undul_phot_dict = undul_phot(E_ENERGY = h["E_ENERGY"],INTENSITY = h["INTENSITY"],
-    #                                 LAMBDAU = h["LAMBDAU"],NPERIODS = h["NPERIODS"],K = h["K"],
-    #                                 EMIN = h["EMIN"],EMAX = h["EMAX"],NG_E = h["NG_E"],
-    #                                 MAXANGLE = h["MAXANGLE"],NG_T = h["NG_T"],
-    #                                 NG_P = h["NG_P"],
-    #                                 number_of_trajectory_points=h["N_J"])
-    #     elif code_undul_phot == 'pysru':
-    #         undul_phot_dict = undul_phot_pysru(E_ENERGY = h["E_ENERGY"],INTENSITY = h["INTENSITY"],
-    #                                 LAMBDAU = h["LAMBDAU"],NPERIODS = h["NPERIODS"],K = h["K"],
-    #                                 EMIN = h["EMIN"],EMAX = h["EMAX"],NG_E = h["NG_E"],
-    #                                 MAXANGLE = h["MAXANGLE"],NG_T = h["NG_T"],
-    #                                 NG_P = h["NG_P"])
-    #     elif code_undul_phot == 'srw':
-    #         undul_phot_dict = undul_phot_srw(E_ENERGY = h["E_ENERGY"],INTENSITY = h["INTENSITY"],
-    #                                 LAMBDAU = h["LAMBDAU"],NPERIODS = h["NPERIODS"],K = h["K"],
-    #                                 EMIN = h["EMIN"],EMAX = h["EMAX"],NG_E = h["NG_E"],
-    #                                 MAXANGLE = h["MAXANGLE"],NG_T = h["NG_T"],
-    #                                 NG_P = h["NG_P"])
-    #     else:
-    #         raise Exception("Not implemented undul_phot code: "+code_undul_phot)
-    #
-    #     if dump_uphot_dot_dat:
-    #         write_file_undul_phot(undul_phot_dict,file_out="uphot.dat")
-    #
-    #
-    #     # undul_cdf
-    #
-    #     undul_cdf_dict = undul_cdf(undul_phot_dict,method='trapz',do_plot=False)
-    #     write_file_undul_sha(undul_cdf_dict,file_out="xshundul.sha",)
-    #
-    #     # # TODO: remove this cannot be done here as xshundul.traj?? is needed but not existing!!
-    #     # elif code_undul_cdf == 'preprocessor':
-    #     #     self.shadow3_commands(commands="undul_cdf\n0\n1\nxshundul.sha\nxshundul.info\nexit\n",
-    #     #                     input_file="shadow3_undul_cdf.inp")
-    #     # else:
-    #     #     raise Exception("Not implemented undul_cdf code: "+code_undul_cdf)
-    #
-    #     # run source
-    #
-    #     # initialize shadow3 source (oe0) and beam
-    #     oe0 = Shadow.Source()
-    #     beam = Shadow.Beam()
-    #     if self.FLAG_EMITTANCE:
-    #         oe0.EPSI_X = h["SX"] * h["SXP"]
-    #         oe0.EPSI_Z = h["SZ"] * h["SZP"]
-    #         oe0.SIGDIX = 0.0
-    #         oe0.SIGDIZ = 0.0
-    #         oe0.SIGMAX = h["SX"]
-    #         oe0.SIGMAY = 0.0
-    #         oe0.SIGMAZ = h["SZ"]
-    #     else:
-    #         oe0.EPSI_X = 0.0
-    #         oe0.EPSI_Z = 0.0
-    #         oe0.SIGDIX = 0.0
-    #         oe0.SIGDIZ = 0.0
-    #         oe0.SIGMAX = 0.0
-    #         oe0.SIGMAY = 0.0
-    #         oe0.SIGMAZ = 0.0
-    #
-    #     oe0.FILE_TRAJ = b'xshundul.sha'
-    #     oe0.ISTAR1 = h["SEED"]
-    #     oe0.NPOINT = h["NRAYS"]
-    #     oe0.F_WIGGLER = 2
-    #
-    #     if dump_start_files: oe0.write("start.00")
-    #     beam.genSource(oe0)
-    #     if dump_start_files: oe0.write("end.00")
-    #     # if dump_begin_dot_dat: beam.write("begin.dat")
-    #
-    #     return beam

@@ -1,5 +1,9 @@
+__authors__ = ["M Sanchez del Rio - ESRF ISDD Advanced Analysis and Modelling"]
+__license__ = "MIT"
+__date__ = "12/01/2017"
+
 #
-# load/write files for the undul_phot and undul_cdf shadow3/undulator preprocessors
+# load/write files and plot facilities for the undul_phot and undul_cdf shadow3/undulator preprocessors
 #
 
 
@@ -257,6 +261,7 @@ def plot_undul_cdf(undul_cdf_input,do_show=True):
         from srxraylib.plot.gol import plot,plot_image,plot_show
     except:
         print("srxraylib not available: No plot")
+        return
 
     if isinstance(undul_cdf_input,str):
         undul_cdf_dict = load_file_undul_cdf(undul_cdf_input)
@@ -290,6 +295,7 @@ def plot_undul_phot(undul_phot_input,do_plot_intensity=True,do_plot_polarization
         from srxraylib.plot.gol import plot,plot_image,plot_show
     except:
         print("srxraylib not available: No plot")
+        return
 
     if isinstance(undul_phot_input,str):
         undul_phot_dict = load_file_undul_phot(undul_phot_input)
