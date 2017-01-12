@@ -256,6 +256,44 @@ class SourceUndulator(object):
     def get_resonance_ring(self,harmonic_number=1, ring_order=1):
         return 1.0/self.get_lorentz_factor()*numpy.sqrt( ring_order / harmonic_number * (1+0.5*self.K**2) )
 
+    def get_shadow3_source_object(self):
+        """
+
+        creates a Shadow.Source object with the undulator parameters inside (proprocessor file: xshundul.sha)
+
+        :return:
+        """
+        # initialize shadow3 source (oe0) and beam
+        h = self.to_dictionary()
+
+        oe0 = Shadow.Source()
+
+        if self.FLAG_EMITTANCE:
+            oe0.EPSI_X = h["SX"] * h["SXP"]
+            oe0.EPSI_Z = h["SZ"] * h["SZP"]
+            oe0.SIGDIX = 0.0
+            oe0.SIGDIZ = 0.0
+            oe0.SIGMAX = h["SX"]
+            oe0.SIGMAY = 0.0
+            oe0.SIGMAZ = h["SZ"]
+        else:
+            oe0.EPSI_X = 0.0
+            oe0.EPSI_Z = 0.0
+            oe0.SIGDIX = 0.0
+            oe0.SIGDIZ = 0.0
+            oe0.SIGMAX = 0.0
+            oe0.SIGMAY = 0.0
+            oe0.SIGMAZ = 0.0
+
+        oe0.FILE_TRAJ = b'xshundul.sha'
+        oe0.ISTAR1 = h["SEED"]
+        oe0.NPOINT = h["NRAYS"]
+        oe0.F_WIGGLER = 2
+
+        return oe0
+
+
+
     def sourcinfo(self,title=None):
         '''
         mimics SHADOW sourcinfo postprocessor. Returns a text array.
@@ -716,35 +754,11 @@ class SourceUndulator(object):
                                  use_existing_undul_phot_output=use_existing_undul_phot_output,
                                  dump_undul_phot_file=dump_undul_phot_file)
 
-
         # initialize shadow3 source (oe0) and beam
-        h = self.to_dictionary()
-
-        oe0 = Shadow.Source()
-        beam = Shadow.Beam()
-        if self.FLAG_EMITTANCE:
-            oe0.EPSI_X = h["SX"] * h["SXP"]
-            oe0.EPSI_Z = h["SZ"] * h["SZP"]
-            oe0.SIGDIX = 0.0
-            oe0.SIGDIZ = 0.0
-            oe0.SIGMAX = h["SX"]
-            oe0.SIGMAY = 0.0
-            oe0.SIGMAZ = h["SZ"]
-        else:
-            oe0.EPSI_X = 0.0
-            oe0.EPSI_Z = 0.0
-            oe0.SIGDIX = 0.0
-            oe0.SIGDIZ = 0.0
-            oe0.SIGMAX = 0.0
-            oe0.SIGMAY = 0.0
-            oe0.SIGMAZ = 0.0
-
-        oe0.FILE_TRAJ = b'xshundul.sha'
-        oe0.ISTAR1 = h["SEED"]
-        oe0.NPOINT = h["NRAYS"]
-        oe0.F_WIGGLER = 2
+        oe0 = self.get_shadow3_source_object()
 
         if dump_start_files: oe0.write("start.00")
+        beam = Shadow.Beam()
         beam.genSource(oe0)
         if dump_start_files: oe0.write("end.00")
 
