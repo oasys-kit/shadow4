@@ -1,15 +1,17 @@
 
 import numpy
 
-class SourceGridCartesian(object):
+class SourceGaussian(object):
 
     def __init__(self,
-                 real_space,
-                 direction_space,
-                 real_space_points,
-                 direction_space_points,
+                 number_of_rays,
+                 sigmaX,
+                 sigmaY,
+                 sigmaZ,
+                 sigmaXprime,
+                 sigmaZprime,
                  real_space_center,
-                 direction_space_center,
+                 direction_space_center
                  ):
         """
         This defines a grid source, so points starting in a cube-like volume in real space
@@ -23,40 +25,75 @@ class SourceGridCartesian(object):
         :param direction_space_center:  Center in diraction space [Cx',Cz'] (note that (Cx')^2+(Cz')^2 < 1)
         :return:
         """
-        self._real_space = real_space
-        self._direction_space = direction_space
-        self._real_space_points = real_space_points
-        self._direction_space_points = direction_space_points
+        self._number_of_rays = number_of_rays
+        self._sigmaX = sigmaX
+        self._sigmaY = sigmaY
+        self._sigmaZ = sigmaZ
+        self._sigmaXprime = sigmaXprime
+        self._sigmaZprime = sigmaZprime
         self._real_space_center = real_space_center
         self._direction_space_center = direction_space_center
 
 
+    @classmethod
+    def initialize_from_keywords(cls,
+                 number_of_rays=10000,
+                 sigmaX=1.0,
+                 sigmaY=1.0,
+                 sigmaZ=0.0,
+                 sigmaXprime=1e-6,
+                 sigmaZprime=1e-6,
+                 real_space_center=[0.0,0.0,0.0],
+                 direction_space_center=[0.0,0.0]
+                                 ):
+        return SourceGaussian(
+                 number_of_rays,
+                 sigmaX,
+                 sigmaY,
+                 sigmaZ,
+                 sigmaXprime,
+                 sigmaZprime,
+                 real_space_center,
+                 direction_space_center)
 
     @classmethod
     def initialize_point_source(cls,
-                 direction_space=[1e-6,1e-6],
-                 direction_space_points=[100,100],
-                 direction_space_center=[0.0,0.0] ):
-        """
-        Initializes a point source
-
-        :param direction_space: Default: [1e-6,1e-6],
-        :param direction_space_points: Default: [100,100],
-        :param direction_space_center: Default: [0.0,0.0] ):
-        :return:
-        """
-        return SourceGridCartesian(real_space=[0,0,0],
-                 direction_space=direction_space,
-                 real_space_points=[1,1,1],
-                 direction_space_points=direction_space_points,
+                 number_of_rays=10000,
+                 sigmaXprime=1e-6,
+                 sigmaZprime=1e-6,
                  real_space_center=[0.0,0.0,0.0],
-                 direction_space_center=direction_space_center,)
+                 direction_space_center=[0.0,0.0] ):
+
+        return SourceGaussian(
+                 number_of_rays,
+                 sigmaX,
+                 sigmaY,
+                 sigmaZ,
+                 sigmaXprime,
+                 sigmaZprime,
+                 real_space_center,
+                 direction_space_center)        
+
+        return SourceGaussian(
+                 number_of_rays,
+                 sigmaX,
+                 sigmaY,
+                 sigmaZ,
+                 sigmaXprime,
+                 sigmaZprime,
+                 real_space_center,
+                 direction_space_center)
 
     @classmethod
     def initialize_collimated_source(cls,
-                 real_space=[1e-6,0.0,1e-6],
-                 real_space_points=[100,1,100],
-                 real_space_center=[0.0,0.0,0.0] ):
+                 number_of_rays=10000,
+                 sigmaX=1.0,
+                 sigmaY=1.0,
+                 sigmaZ=0.0,
+                 sigmaXprime=1e-6,
+                 sigmaZprime=1e-6,
+                 real_space_center=[0.0,0.0,0.0],
+                 direction_space_center=[0.0,0.0] ):
         """
 
         :param real_space: Default: [1e-6,0,1e-6]

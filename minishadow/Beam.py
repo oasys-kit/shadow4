@@ -1,6 +1,4 @@
 import numpy
-from numpy.testing import assert_equal, assert_almost_equal
-
 import scipy.constants as codata
 
 # IMPORTANT: Column 11 (index 10) is wavenumber (cm^-1) as internally in Shadow
@@ -244,7 +242,8 @@ class Beam(object):
         txt += "Number of good rays: %d \n"%(self.get_number_of_rays(nolost=1))
         txt += "Number of lost rays: %d \n"%(self.get_number_of_rays(nolost=2))
         txt += "Mean energy: %f eV\n"%(self.get_photon_energy_eV().mean() )
-        txt += "Mean wavelength: %f A\n"%(1e10 * self.get_photon_wavelength().mean() )
+        if self.get_photon_energy_eV().mean() != 0.0:
+            txt += "Mean wavelength: %f A\n"%(1e10 * self.get_photon_wavelength().mean() )
         txt += "Intensity: %f \n"%( self.get_intensity(nolost=1) )
         return txt
 
@@ -348,90 +347,3 @@ class Beam(object):
     #
     # TODO: histo1, histo2
 
-def tests():
-    #
-    # initializers
-    #
-    a = Beam(N=100)
-    print(a.info())
-
-    a = Beam(array=numpy.zeros( (18,1000) ))
-    print(a.info())
-
-    a = Beam.initialize_from_array(numpy.zeros( (18,1000) ))
-    print(a.info())
-
-    a = Beam.initialize_as_pencil(200)
-    print(a.info())
-
-    #
-    # setters and getters
-    #
-    b= a.duplicate()
-    assert_equal (a.get_number_of_rays() - b.get_number_of_rays(), 0)
-    assert_equal (a.get_column(1).mean() - b.get_column(1).mean(), 0)
-
-    a.set_photon_energy_eV(1.0)
-    assert_equal(a.get_photon_energy_eV(),1.0)
-
-    a.set_photon_wavelength(1.51e-10)
-    assert_equal(a.get_photon_wavelength(),1.51e-10)
-
-    for i in range(18):
-        a.set_column(i,numpy.pi)
-        assert_equal (a.get_column(i).mean(),numpy.pi)
-
-    a = Beam.initialize_as_pencil(200)
-    assert_equal (a.get_intensity(nolost=1),200)
-    assert_equal (a.get_intensity(nolost=2),0)
-    flag = a.get_column(10)
-    flag[50:100] = -1 # remember flag[100] is NOT changed!!
-    a.set_column(10,flag)
-    assert_equal (a.get_intensity(nolost=1),150)
-
-
-    #
-    # rotations and translations
-    #
-    a = Beam.initialize_as_pencil(200)
-    a.translation([10,100.0,20])
-    assert_equal (a.get_column(1).mean(),10)
-    assert_equal (a.get_column(2).mean(),100)
-    assert_equal (a.get_column(3).mean(),20)
-
-    a = Beam.initialize_as_pencil(200)
-    a.rotate(-45.*numpy.pi/180,axis=1)
-    assert_equal(a.get_column(4).mean(),0)
-    assert_almost_equal(a.get_column(5).mean(),numpy.sqrt(2)/2)
-    assert_almost_equal(a.get_column(6).mean(),numpy.sqrt(2)/2)
-
-    a = Beam.initialize_as_pencil(200)
-    a.rotate(-45.*numpy.pi/180,axis=2)
-    assert_equal(a.get_column(4).mean(),0.0)
-    assert_equal(a.get_column(5).mean(),1.0)
-    assert_equal(a.get_column(6).mean(),0.0)
-
-    a = Beam.initialize_as_pencil(200)
-    a.rotate(45.*numpy.pi/180,axis=3)
-    # print(a.get_column(4).mean(),a.get_column(5).mean(),a.get_column(6).mean(),)
-    assert_almost_equal(a.get_column(4).mean(),numpy.sqrt(2)/2)
-    assert_almost_equal(a.get_column(5).mean(),numpy.sqrt(2)/2)
-    assert_equal(a.get_column(6).mean(),0)
-
-    a = Beam.initialize_as_pencil(200)
-    a.rotate(-45.*numpy.pi/180,axis=1)
-    a.retrace(5.0)
-    assert_equal(a.get_column(1).mean(),0)
-    assert_almost_equal(a.get_column(2).mean(),5.0)
-    assert_almost_equal(a.get_column(3).mean(),5.0)
-    #
-    a = Beam.initialize_as_pencil(200)
-    a.rotate(-45.*numpy.pi/180,axis=1)
-    a.retrace(15.0,resetY=True)
-    assert_equal(a.get_column(1).mean(),0)
-    assert_almost_equal(a.get_column(2).mean(),0.0)
-    assert_almost_equal(a.get_column(3).mean(),15.0)
-
-
-if __name__ == "__main__":
-    tests()
