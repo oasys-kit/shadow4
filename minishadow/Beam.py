@@ -332,15 +332,37 @@ class Beam(object):
     # file i/o
     #
 
-
-    def dump_shadow3_file(self,file):
+    def get_shadow3_beam(self):
         #TODO this dump uses now shadow3. To be removed after checking or write using fully python
         import Shadow
         beam_shadow3 = Shadow.Beam(N=self.get_number_of_rays())
         beam_shadow3.rays = self.get_rays().T.copy()
-        beam_shadow3.write(file)
+        return beam_shadow3
+
+        # beam_shadow3.write(file)
+        # print("File %s written to disk. "%file)
+
+    def dump_shadow3_file(self,file):
+        #TODO this dump uses now shadow3. To be removed after checking or write using fully python
+        beam3 = self.get_shadow3_beam()
+        beam3.write(file)
         print("File %s written to disk. "%file)
 
+
+    #
+    #  interfaces like in shadow3
+    #
+
+    def genSource(self,source_object):
+        tmp = source_object.get_beam()
+        self.rays = tmp.get_rays()
+        return tmp
+
+    def traceOE(self,oe_object,n,overwrite=True):
+        beam_result = oe_object.trace_beam(self)
+        if overwrite:
+            self.rays = beam_result.rays
+        return beam_result
 
     #
     # histograms
