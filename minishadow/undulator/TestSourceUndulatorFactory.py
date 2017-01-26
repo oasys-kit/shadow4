@@ -311,7 +311,7 @@ class TestSourceUndulatorFactory(unittest.TestCase):
 
         u = SourceUndulator()
         u.load_json_shadowvui_dictionary(h)
-        u.calculate_beam_using_preprocessors()
+        u.calculate_shadow3_beam_using_preprocessors()
 
 
 
@@ -475,7 +475,7 @@ class TestSourceUndulatorFactory(unittest.TestCase):
 
         u = SourceUndulator()
         u.load_json_shadowvui_dictionary(h)
-        u.calculate_beam_using_preprocessors()
+        u.calculate_shadow3_beam_using_preprocessors()
 
         #
         #
@@ -599,7 +599,7 @@ class TestSourceUndulatorFactory(unittest.TestCase):
 
             u = SourceUndulator()
             u.load_json_shadowvui_dictionary(h)
-            u.calculate_beam_using_preprocessors()
+            u.calculate_shadow3_beam_using_preprocessors()
 
         elif case == 1:
 
@@ -653,7 +653,7 @@ class TestSourceUndulatorFactory(unittest.TestCase):
 
             u = SourceUndulator()
             u.load_json_shadowvui_file("xshundul.json")
-            u.calculate_beam_using_preprocessors()
+            u.calculate_shadow3_beam_using_preprocessors()
 
         else:
             raise Exception("Undefined")

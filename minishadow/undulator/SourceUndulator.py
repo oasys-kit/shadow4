@@ -197,6 +197,53 @@ class SourceUndulator(object):
             self.NG_E = npoints
 
 
+    def set_from_dictionary(self,h):
+        """
+        set undulator variables from a dictionary. The following keys must be present:
+          E_ENERGY
+          INTENSITY
+          SX
+          SZ
+          SXP
+          SZP
+          FLAG_EMITTANCE
+          LAMBDAU
+          NPERIODS
+          K
+          EMIN
+          EMAX
+          NG_E
+          MAXANGLE
+          NG_T
+          NG_P
+          N_J
+          SEED
+          NRAYS
+
+        :param h:
+        :return:
+        """
+        self.E_ENERGY        = h["E_ENERGY"]
+        self.INTENSITY       = h["INTENSITY"]
+        self.SX              = h["SX"]
+        self.SZ              = h["SZ"]
+        self.SXP             = h["SXP"]
+        self.SZP             = h["SZP"]
+        self.FLAG_EMITTANCE  = h["FLAG_EMITTANCE"]
+        self.LAMBDAU         = h["LAMBDAU"]
+        self.NPERIODS        = h["NPERIODS"]
+        self.K               = h["K"]
+        self.EMIN            = h["EMIN"]
+        self.EMAX            = h["EMAX"]
+        self.NG_E            = h["NG_E"]
+        self.MAXANGLE        = h["MAXANGLE"]
+        self.NG_T            = h["NG_T"]
+        self.NG_P            = h["NG_P"]
+        self.N_J             = h["N_J"]
+        self.SEED            = h["SEED"]
+        self.NRAYS           = h["NRAYS"]
+
+
     #
     # useful getters
     #
@@ -256,6 +303,7 @@ class SourceUndulator(object):
     def get_resonance_ring(self,harmonic_number=1, ring_order=1):
         return 1.0/self.get_lorentz_factor()*numpy.sqrt( ring_order / harmonic_number * (1+0.5*self.K**2) )
 
+    # TODO: remove in far future
     def get_shadow3_source_object(self):
         """
 
@@ -291,34 +339,6 @@ class SourceUndulator(object):
         oe0.F_WIGGLER = 2
 
         return oe0
-
-
-
-    def sourcinfo(self,title=None):
-        '''
-        mimics SHADOW sourcinfo postprocessor. Returns a text array.
-        :return: a text string
-        '''
-
-        txt = ''
-        TOPLIN = '+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++\n'
-
-
-        txt += TOPLIN
-        txt += '**************  S O U R C E       D E S C R I P T I O N  **************\n'
-        if title == None:
-            txt += '\n\n'
-        else:
-            txt += title+'\n'
-        txt += TOPLIN
-
-        # TODO improve look
-        txt += self.info()
-
-        txt += TOPLIN
-        txt += '***************                 E N D                  ***************\n'
-        txt += TOPLIN
-        return (txt)
 
 
     def set_from_dictionary(self,h):
@@ -367,7 +387,9 @@ class SourceUndulator(object):
         self.SEED            = h["SEED"]
         self.NRAYS           = h["NRAYS"]
 
-
+    #
+    # load/writers
+    #
     def load_json_shadowvui_file(self,inFileTxt):
         """
         sets undulator parameters from a json file from shadowVUI and
@@ -473,6 +495,36 @@ class SourceUndulator(object):
         data = self.to_dictionary()
         with open(file_out, 'w') as outfile:
             json.dump(data, outfile, indent=4, sort_keys=True, separators=(',', ':'))
+
+    #
+    # util
+    #
+
+    def sourcinfo(self,title=None):
+        '''
+        mimics SHADOW sourcinfo postprocessor. Returns a text array.
+        :return: a text string
+        '''
+
+        txt = ''
+        TOPLIN = '+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++\n'
+
+
+        txt += TOPLIN
+        txt += '**************  S O U R C E       D E S C R I P T I O N  **************\n'
+        if title == None:
+            txt += '\n\n'
+        else:
+            txt += title+'\n'
+        txt += TOPLIN
+
+        # TODO improve look
+        txt += self.info()
+
+        txt += TOPLIN
+        txt += '***************                 E N D                  ***************\n'
+        txt += TOPLIN
+        return (txt)
 
 
     def info(self,debug=False):
@@ -580,7 +632,10 @@ class SourceUndulator(object):
         f.close()
         os.system(self.SHADOW3_BINARY+" < "+input_file)
 
-    def calculate_beam_using_preprocessors(self):
+    #
+    # call calculators
+    #
+    def calculate_shadow3_beam_using_preprocessors(self):
         """
         Calculates rays (source) using preprocessors in binary shadow3 (for
             comparison purposes, from python use calculate_beam() instead)
@@ -735,7 +790,7 @@ class SourceUndulator(object):
 
 
 
-    def calculate_beam(self,code_undul_phot='internal',use_existing_undul_phot_output=None,
+    def calculate_shadow3_beam(self,code_undul_phot='internal',use_existing_undul_phot_output=None,
                        dump_undul_phot_file=False,dump_start_files=False):
         """
         Calculates rays (source)

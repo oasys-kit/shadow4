@@ -38,13 +38,13 @@ if __name__ == "__main__":
     method = 0 # 0=direct, 1=get intermediate radiation
     if method == 0:
         # direct calculation
-        beam = u.calculate_beam(code_undul_phot='internal',dump_undul_phot_file=True,dump_start_files=True)
+        beam = u.calculate_shadow3_beam(code_undul_phot='internal',dump_undul_phot_file=True,dump_start_files=True)
         plot_undul_phot("uphot.dat",do_plot_intensity=True,do_plot_polarization=False)
     else:
         # via intermediate radiation (without writing uphot.dat)
         dict_radiation = u.calculate_radiation(code_undul_phot='internal')
         plot_undul_phot(dict_radiation,do_plot_intensity=True,do_plot_polarization=False)
-        beam = u.calculate_beam(use_existing_undul_phot_output=dict_radiation,dump_undul_phot_file=False,dump_start_files=True)
+        beam = u.calculate_shadow3_beam(use_existing_undul_phot_output=dict_radiation,dump_undul_phot_file=False,dump_start_files=True)
 
     beam.write("begin.dat")
 

@@ -174,9 +174,9 @@ class TestSourceUndulator(unittest.TestCase):
 
             if method == 'preprocessor':
                 # run using binary shadow3 (with preprocessors)
-                u.calculate_beam_using_preprocessors()
+                u.calculate_shadow3_beam_using_preprocessors()
             else:
-                beam = u.calculate_beam(code_undul_phot=method, dump_undul_phot_file=True,dump_start_files=True)
+                beam = u.calculate_shadow3_beam(code_undul_phot=method, dump_undul_phot_file=True,dump_start_files=True)
                 beam.write("begin.dat")
 
             os.system("cp begin.dat begin_%s.dat"%method)

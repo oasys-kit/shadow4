@@ -98,16 +98,31 @@ if __name__ == "__main__":
 
     os.system("rm begin.dat start.00 uphot.dat")
 
-    method = 0 # 0=direct, 1=get intermediate radiation
+    method = 1 # 0=direct, 1=get intermediate radiation
     if method == 0:
         # direct calculation
-        beam = u.calculate_beam(code_undul_phot='internal',dump_undul_phot_file=True,dump_start_files=True)
+        beam = u.calculate_shadow3_beam(code_undul_phot='internal',dump_undul_phot_file=True,dump_start_files=True)
         plot_undul_phot("uphot.dat",do_plot_intensity=True,do_plot_polarization=False)
     else:
         # via intermediate radiation (without writing uphot.dat)
+
         dict_radiation = u.calculate_radiation(code_undul_phot='internal')
-        plot_undul_phot(dict_radiation,do_plot_intensity=True,do_plot_polarization=False)
-        beam = u.calculate_beam(use_existing_undul_phot_output=dict_radiation,dump_undul_phot_file=False,dump_start_files=True)
+        # plot_undul_phot(dict_radiation,do_plot_intensity=True,do_plot_polarization=False)
+
+        tmp = u.calculate_cdf(code_undul_phot='intrernal',
+                                 use_existing_undul_phot_output=dict_radiation,
+                                 dump_undul_phot_file=False)
+
+        # initialize shadow3 source (oe0) and beam
+        oe0 = u.get_shadow3_source_object()
+
+        oe0.write("start.00")
+
+        beam = Shadow.Beam()
+        beam.genSource(oe0)
+
+        oe0.write("end.00")
+
 
     beam.write("begin.dat")
 
