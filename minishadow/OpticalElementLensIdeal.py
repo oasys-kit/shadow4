@@ -46,6 +46,70 @@ class OpticalElemenLensIdeal(object):
 
         return beam
 
+class OpticalElemenLensSuperIdeal(object):
+
+    def __init__(self, name="LensIdeal", focal_p_x=0.0, focal_p_z=0.0,
+                                        focal_q_x=0.0, focal_q_z=0.0,
+                                        p=0.0, q=0.0):
+        self._focal_p_x = focal_p_x
+        self._focal_p_z = focal_p_z
+        self._focal_q_x = focal_q_x
+        self._focal_q_z = focal_q_z
+        self._name = name
+        self._p = p
+        self._q = q
+
+    # def get_focalX(self):
+    #     return self._focal_x
+    #
+    # def get_focalZ(self):
+    #     return self._focal_z
+    #
+    # def to_dictionary(self):
+    #     #returns a dictionary with the variable names as keys, and a tuple with value, unit and doc string
+    #     mytuple = [ ("focal_x"   ,( self._focal_x ,"m",  "Ideal lens focal length (horizontal)" ) ),
+    #                 ("focal_y"   ,( self._focal_y ,"m",  "Ideal lens focal length (vertical)"  ) )]
+    #     return(OrderedDict(mytuple))
+
+    def trace_beam(self,beam1):
+        beam = beam1.duplicate()
+
+
+        if self._p != 0.0:
+            beam.retrace(self._p,resetY=True)
+
+        # rotate around Z; watch out the minus!!
+        if self._focal_p_x != 0.0:
+            tan_theta_p = - beam.get_column(1) / self._focal_p_x
+        else:
+            tan_theta_p = 0.0
+
+        if self._focal_q_x != 0.0:
+            tan_theta_q = - beam.get_column(1) / self._focal_q_x
+        else:
+            tan_theta_q = 0.0
+
+        two_theta = numpy.arctan(tan_theta_p) + numpy.arctan(tan_theta_q)
+        beam.rotate(two_theta,axis=3,rad=True)
+
+        # rotate around X
+        if self._focal_p_z != 0.0:
+            tan_theta_p = beam.get_column(3) / self._focal_p_z
+        else:
+            tan_theta_p = 0.0
+
+        if self._focal_q_z != 0.0:
+            tan_theta_q = beam.get_column(3) / self._focal_q_z
+        else:
+            tan_theta_q = 0.0
+
+        two_theta = numpy.arctan(tan_theta_p) + numpy.arctan(tan_theta_q)
+        beam.rotate(two_theta,axis=1,rad=True)
+
+        if self._q != 0.0:
+            beam.retrace(self._q,resetY=True)
+
+        return beam
 
 def test_with_collimated_beam():
 
@@ -87,27 +151,42 @@ def test_with_collimated_beam():
     print("Demagnification: %g %g"%(SX/FX,SX/FZ))
 
 
-def test_with_divergent_beam(p=30.0,q=5.0):
+def test_with_divergent_beam():
 
     from SourceGaussian import SourceGaussian
     from Beam import Beam
     from Shadow.ShadowTools import plotxy
 
-    src = SourceGaussian.initialize_from_keywords(number_of_rays=10000,sigmaX=20e-6,sigmaZ=10e-6,
-                                                  sigmaXprime=50e-6,sigmaZprime=10e-6)
+    src = SourceGaussian.initialize_from_keywords(number_of_rays=100000,
+                                                  sigmaX=     20e-6/2.35,sigmaZ=     10e-6/2.35,
+                                                  sigmaXprime=50e-6/2.35,sigmaZprime=10e-6/2.35)
 
     beam = Beam()
 
     beam.genSource(src)
 
+    # point source
+    beam.set_column(1,0.0)
+    beam.set_column(3,0.0)
+
     print(beam.info())
     SX, SZ = (1e6*beam.get_standard_deviation(1),1e6*beam.get_standard_deviation(3))
 
-    # plotxy(beam.get_shadow3_beam(),1,3,nbins=100,title="SOURCE")
-    plotxy(beam.get_shadow3_beam(),1,4,nbins=100,title="SOURCE PHASE SPACE")
+    plotxy(beam.get_shadow3_beam(),1,3,nbins=100,title="SOURCE")
+    # plotxy(beam.get_shadow3_beam(),1,4,nbins=100,title="SOURCE PHASE SPACE")
 
+    # p = 30
+    # q = 5.0
+    p = 180.0
+    q = 0.01
     F = 1.0 / (1/p + 1/q)
-    lens1 = OpticalElemenLensIdeal("test",focal_x=F,focal_z=F,p=p,q=q)
+    # lens1 = OpticalElemenLensIdeal("test1",focal_x=F,focal_z=F,p=p,q=q)
+    lens1 = OpticalElemenLensSuperIdeal("test1",focal_p_x=p,focal_p_z=p,focal_q_x=q,focal_q_z=q,p=p,q=q)
+
+    # p = 5.0
+    # q = 30
+    # F = 1.0 / (1/p + 1/q)
+    # lens2 = OpticalElemenLensIdeal("test2",focal_x=F,focal_z=F,p=p,q=q)
 
     method = 2 # 0:direct, 1:interface with overwrite, 2: no overwrite
     if method == 0:
@@ -117,13 +196,14 @@ def test_with_divergent_beam(p=30.0,q=5.0):
         beam2 = beam
     elif method == 2:
         beam2 = beam.traceOE(lens1,1,overwrite=True)
+        # beam2 = beam.traceOE(lens2,2,overwrite=True)
     else:
         raise Exception("Undefined method")
 
     #
 
-    # plotxy(beam2.get_shadow3_beam(),1,3,nbins=100,title="FOCAL PLANE")
-    plotxy(beam2.get_shadow3_beam(),1,4,nbins=100,title="FOCAL PLANE PHASE SPACE")
+    plotxy(beam2.get_shadow3_beam(),1,3,nbins=100,xrange=[-100e-9,100e-9],yrange=[-100e-9,100e-9],title="FOCAL PLANE")
+    # plotxy(beam2.get_shadow3_beam(),1,4,nbins=100,title="FOCAL PLANE PHASE SPACE")
 
     FX, FZ = (1e6*beam2.get_standard_deviation(1),1e6*beam2.get_standard_deviation(3))
     print("Source dimensions (rms): %f %f um"%(SX,SZ))
@@ -176,28 +256,36 @@ def test_id16ni():
     print("Gaussian source dimensions (rms) x z x' z'",1e6*Sx,1e6*Sz,1e6*Sxp,1e6*Szp)
     print("Gaussian source dimensions (FWHM) x z x' z'",f2dot35*1e6*Sx,f2dot35*1e6*Sz,f2dot35*1e6*Sxp,f2dot35*1e6*Szp)
 
-    src = SourceGaussian.initialize_from_keywords(number_of_rays=10000,sigmaX=Sx,sigmaZ=Sz,
+    src = SourceGaussian.initialize_from_keywords(number_of_rays=100000,
+                                                  sigmaX=Sx,sigmaZ=Sz,
                                                   sigmaXprime=Sxp,sigmaZprime=Szp)
 
+    # src = SourceGaussian.initialize_from_keywords(number_of_rays=10000,
+    #                                               sigmaX=     1000e-6/2.35,sigmaZ=   10e-6/2.35,
+    #                                               sigmaXprime=30e-6/2.35,sigmaZprime=15e-6/2.35)
     beam = Beam()
 
     beam.genSource(src)
 
+    # beam.set_column(1,0.0)
+    # beam.set_column(3,0.0)
+
     print(beam.info())
     SX, SZ = (1e6*beam.get_standard_deviation(1),1e6*beam.get_standard_deviation(3))
 
-    plotxy(beam.get_shadow3_beam(),1,4,nbins=100,title="SOURCE H phase space")
+    # plotxy(beam.get_shadow3_beam(),1,4,nbins=100,title="SOURCE H phase space")
     # plotxy(beam.get_shadow3_beam(),1,3,nbins=100)
 
     # multilayer
     p = 28.3
     q = 11.70
     F = 1/(1/p+1/q)
-    lens1 = OpticalElemenLensIdeal("ML",focal_x=F,focal_z=0,p=p,q=q)
+    # lens1 = OpticalElemenLensIdeal("ML",focal_x=F,focal_z=0,p=p,q=q)
+    lens1 = OpticalElemenLensSuperIdeal("ML",focal_p_x=p,focal_q_x=q,focal_p_z=0,focal_q_z=0,p=p,q=q)
     beam.traceOE(lens1,1,overwrite=True)
 
-    # TODO: problem with divergences
-    plotxy(beam.get_shadow3_beam(),1,4,nbins=100,title="H phase space")
+    # plotxy(beam.get_shadow3_beam(),1,4,nbins=100,title="H phase space")
+    # plotxy(beam.get_shadow3_beam(),3,6,nbins=100,title="V phase space")
 
 
     FX, FZ = (1e6*beam.get_standard_deviation(1),1e6*beam.get_standard_deviation(3))
@@ -212,24 +300,31 @@ def test_id16ni():
     p = 144.90
     q = 0.025
     F = 1.0/(1/184.90+1/0.10)
-    lens2 = OpticalElemenLensIdeal("KBV",focal_x=0,focal_z=F,p=p,q=q)
+    # lens2 = OpticalElemenLensIdeal("KBV",focal_x=0,focal_z=F,p=p,q=q)
+    lens2 = OpticalElemenLensSuperIdeal("KBV",focal_p_x=0,focal_q_x=0,focal_p_z=184.90,focal_q_z=0.10,p=p,q=q)
     beam.traceOE(lens2,1,overwrite=True)
 
     # second KB mirror
     p = 0.025
     q = 0.05
     F = 1.0/(1/144.95+1/0.05)
-    lens3 = OpticalElemenLensIdeal("KBH",focal_x=F,focal_z=0,p=p,q=q)
+    # lens3 = OpticalElemenLensIdeal("KBH",focal_x=F,focal_z=0,p=p,q=q)
+    lens3 = OpticalElemenLensSuperIdeal("KBH",focal_p_x=144.95,focal_q_x=0.05,focal_p_z=0,focal_q_z=0,p=p,q=q)
     beam.traceOE(lens3,1,overwrite=True)
+
 
     #
 
-    # plotxy(beam2.get_shadow3_beam(),1,3,nbins=100)
+    tkt = plotxy(beam.get_shadow3_beam(),1,3,nbins=100,xrange=[-0.0000005,0.0000005],yrange=[-0.0000005,0.0000005],title="FOCAL PLANE")
+
+    print(tkt['fwhm_h'],tkt['fwhm_v'])
+
     FX, FZ = (1e6*beam.get_standard_deviation(1),1e6*beam.get_standard_deviation(3))
     print("----------------- Focal position ---------------------")
     print("Source dimensions (rms): %f %f um"%(SX,SZ))
     print("Focal dimensions (rms): %f %f um"%(FX,FZ))
-    print("Focal dimensions (FWHM): %f %f um"%(f2dot35*FX,f2dot35*FZ))
+    print("Focal dimensions (2.35*ST DEV): %f %f um"%(f2dot35*FX,f2dot35*FZ))
+    print("Focal dimensions (FWHM HISTO): %f %f nm"%(1e9*tkt['fwhm_h'],1e9*tkt['fwhm_v']))
     print("Demagnification: H:%g V:%g (theoretical: %g) "%(SX/FX,SZ/FZ,p/q))
 
 
