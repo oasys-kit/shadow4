@@ -1,5 +1,7 @@
 
 import numpy
+from minishadow.Beam import Beam
+
 
 class SourceGaussian(object):
 
@@ -220,7 +222,7 @@ class SourceGaussian(object):
         :param wavelength: the photon wavelength in m
         :return:
         """
-        from Beam import Beam
+
         rays = numpy.zeros((18,self.get_number_of_points()))
         rays[0:6] = self.get_volume()
         rays[6] = 1.0 # Es

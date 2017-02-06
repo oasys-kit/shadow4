@@ -637,20 +637,3 @@ class SurfaceConic(object):
 
         return txt
 
-
-
-def tests():
-    #
-    # initializers
-    #
-    a = SurfaceConic()
-    print(a.info())
-
-    a = SurfaceConic.initialize_from_coefficients([1,1,1,1,1,1,1,1,1,1])
-    print(a.info())
-
-    a = SurfaceConic.initialize_as_plane()
-    print(a.info())
-
-if __name__ == "__main__":
-    tests()

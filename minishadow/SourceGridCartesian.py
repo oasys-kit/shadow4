@@ -1,5 +1,6 @@
 
 import numpy
+from minishadow.Beam import Beam
 
 class SourceGridCartesian(object):
 
@@ -119,18 +120,29 @@ class SourceGridCartesian(object):
         if self._direction_space_points[0] <= 1:
             x = numpy.array([self._direction_space_center[0]])
         else:
-            x = numpy.linspace(-0.5*self._direction_space[0],
-                                0.5*self._direction_space[0],
-                               self._direction_space_points[0]) + self._direction_space_center[0]
+            hdiv1 = 0.5*self._direction_space[0]
+            hdiv2 = -0.5*self._direction_space[0]
+            xmax1 = numpy.tan(hdiv1)
+            xmax2 = numpy.tan(hdiv2)
+
+            # x = numpy.linspace(hdiv1,hdiv2,self._direction_space_points[0]) + self._direction_space_center[0]
+            x = numpy.linspace(0,1,self._direction_space_points[0])
+            x = x * (xmax1 - xmax2) + xmax2 + self._direction_space_center[0]
 
         if self._direction_space_points[1] <= 1:
             y = numpy.array([self._direction_space_center[1]])
         else:
-            y = numpy.linspace(-0.5*self._direction_space[1],
-                                0.5*self._direction_space[1],
-                               self._direction_space_points[1]) + self._direction_space_center[1]
+            vdiv1 =  0.5*self._direction_space[1]
+            vdiv2 = -0.5*self._direction_space[1]
+            ymax1 = numpy.tan(vdiv1)
+            ymax2 = numpy.tan(vdiv2)
+
+            #y = numpy.linspace(vdiv1,vdiv2,self._direction_space_points[1]) + self._direction_space_center[1]
+            y = numpy.linspace(0,1,self._direction_space_points[1])
+            y = y * (ymax1 - ymax2) + ymax2 + self._direction_space_center[1]
 
         return x,y
+
 
     def get_mesh_divergences(self):
         """
@@ -138,8 +150,16 @@ class SourceGridCartesian(object):
         :return: Xp,Zp
         """
         xp,zp = self.get_arrays_direction_space()
-        return numpy.array(numpy.outer(xp,numpy.ones_like(zp))), \
-               numpy.array(numpy.outer(numpy.ones_like(xp),zp))
+
+        XP = numpy.array(numpy.outer(xp,numpy.ones_like(zp)))
+        YP = numpy.array(numpy.outer(numpy.ones_like(xp),zp))
+
+        thetar = numpy.arctan(numpy.sqrt(XP*XP + YP*YP))
+        phir = numpy.arctan2(YP,XP)
+
+
+        return numpy.cos(phir) * numpy.sin(thetar), numpy.sin(phir) * numpy.sin(thetar)
+
 
     def get_mesh_real_space(self):
         """
@@ -264,7 +284,7 @@ class SourceGridCartesian(object):
         :param wavelength: the photon wavelength in m
         :return:
         """
-        from Beam import Beam
+
         rays = numpy.zeros((18,self.get_number_of_points()))
         rays[0:6] = self.get_volume()
         rays[6] = 1.0 # Es

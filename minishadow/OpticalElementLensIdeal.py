@@ -154,12 +154,18 @@ def test_with_collimated_beam():
 def test_with_divergent_beam():
 
     from SourceGaussian import SourceGaussian
+    from SourceGridCartesian import SourceGridCartesian
     from Beam import Beam
     from Shadow.ShadowTools import plotxy
 
     src = SourceGaussian.initialize_from_keywords(number_of_rays=100000,
                                                   sigmaX=     20e-6/2.35,sigmaZ=     10e-6/2.35,
                                                   sigmaXprime=50e-6/2.35,sigmaZprime=10e-6/2.35)
+
+    # src = SourceGridCartesian.initialize_point_source(
+    #             direction_space        = [2*numpy.arccos(numpy.pi/4),2*numpy.arccos(numpy.pi/4)],
+    #             direction_space_points = [20,  20],
+    #             direction_space_center = [0.0, 0.0] )
 
     beam = Beam()
 
@@ -172,13 +178,17 @@ def test_with_divergent_beam():
     print(beam.info())
     SX, SZ = (1e6*beam.get_standard_deviation(1),1e6*beam.get_standard_deviation(3))
 
-    plotxy(beam.get_shadow3_beam(),1,3,nbins=100,title="SOURCE")
+    plotxy(beam.get_shadow3_beam(),4,6,nbins=100,title="SOURCE DIVERGENCES")
+
+    beam_tmp = beam.duplicate()
+    beam_tmp.retrace(100.0)
+    plotxy(beam_tmp.get_shadow3_beam(),1,3,nbins=100,title="SOURCE AFTER 10m")
     # plotxy(beam.get_shadow3_beam(),1,4,nbins=100,title="SOURCE PHASE SPACE")
 
     # p = 30
     # q = 5.0
-    p = 180.0
-    q = 0.01
+    p = 10.0
+    q = 10.0
     F = 1.0 / (1/p + 1/q)
     # lens1 = OpticalElemenLensIdeal("test1",focal_x=F,focal_z=F,p=p,q=q)
     lens1 = OpticalElemenLensSuperIdeal("test1",focal_p_x=p,focal_p_z=p,focal_q_x=q,focal_q_z=q,p=p,q=q)
@@ -202,7 +212,15 @@ def test_with_divergent_beam():
 
     #
 
-    plotxy(beam2.get_shadow3_beam(),1,3,nbins=100,xrange=[-100e-9,100e-9],yrange=[-100e-9,100e-9],title="FOCAL PLANE")
+    X = beam2.get_column(1)
+    Y = beam2.get_column(3)
+    print("X: ",X.min(),X.max(),X.std())
+    print("Y: ",Y.min(),Y.max(),Y.std())
+    # from srxraylib.plot.gol import plot_scatter
+    # plot_scatter(X,Y)
+
+
+    plotxy(beam2.get_shadow3_beam(),1,3,nbins=100,title="FOCAL PLANE",xrange=[-5e-9,5e-9],yrange=[-5e-9,5e-9])
     # plotxy(beam2.get_shadow3_beam(),1,4,nbins=100,title="FOCAL PLANE PHASE SPACE")
 
     FX, FZ = (1e6*beam2.get_standard_deviation(1),1e6*beam2.get_standard_deviation(3))
@@ -256,7 +274,7 @@ def test_id16ni():
     print("Gaussian source dimensions (rms) x z x' z'",1e6*Sx,1e6*Sz,1e6*Sxp,1e6*Szp)
     print("Gaussian source dimensions (FWHM) x z x' z'",f2dot35*1e6*Sx,f2dot35*1e6*Sz,f2dot35*1e6*Sxp,f2dot35*1e6*Szp)
 
-    src = SourceGaussian.initialize_from_keywords(number_of_rays=100000,
+    src = SourceGaussian.initialize_from_keywords(number_of_rays=500000,
                                                   sigmaX=Sx,sigmaZ=Sz,
                                                   sigmaXprime=Sxp,sigmaZprime=Szp)
 
@@ -267,21 +285,25 @@ def test_id16ni():
 
     beam.genSource(src)
 
+    # point source
     # beam.set_column(1,0.0)
     # beam.set_column(3,0.0)
+    # beam.set_column(4,0.0)
+    # beam.set_column(5,1.0)
+    # beam.set_column(6,0.0)
 
     print(beam.info())
     SX, SZ = (1e6*beam.get_standard_deviation(1),1e6*beam.get_standard_deviation(3))
 
     # plotxy(beam.get_shadow3_beam(),1,4,nbins=100,title="SOURCE H phase space")
-    # plotxy(beam.get_shadow3_beam(),1,3,nbins=100)
+    plotxy(beam.get_shadow3_beam(),1,3,nbins=100)
 
     # multilayer
     p = 28.3
     q = 11.70
     F = 1/(1/p+1/q)
-    # lens1 = OpticalElemenLensIdeal("ML",focal_x=F,focal_z=0,p=p,q=q)
-    lens1 = OpticalElemenLensSuperIdeal("ML",focal_p_x=p,focal_q_x=q,focal_p_z=0,focal_q_z=0,p=p,q=q)
+    lens1 = OpticalElemenLensIdeal("ML",focal_x=F,focal_z=0,p=p,q=q)
+    # lens1 = OpticalElemenLensSuperIdeal("ML",focal_p_x=p,focal_q_x=q,focal_p_z=0,focal_q_z=0,p=p,q=q)
     beam.traceOE(lens1,1,overwrite=True)
 
     # plotxy(beam.get_shadow3_beam(),1,4,nbins=100,title="H phase space")
@@ -292,7 +314,7 @@ def test_id16ni():
     print("----------------- Secondary source---------------------")
     print("Source dimensions (rms): %f %f um"%(SX,SZ))
     print("Focal dimensions (rms): %f %f um"%(FX,FZ))
-    print("Focal dimensions (FWHM): %f %f um"%(f2dot35*FX,f2dot35*FZ))
+    print("Focal dimensions (2.35*rms): %f %f um"%(f2dot35*FX,f2dot35*FZ))
     print("Demagnification: H:%g V:%g (theoretical: %g) "%(SX/FX,SZ/FZ,p/q))
 
 
@@ -300,36 +322,37 @@ def test_id16ni():
     p = 144.90
     q = 0.025
     F = 1.0/(1/184.90+1/0.10)
-    # lens2 = OpticalElemenLensIdeal("KBV",focal_x=0,focal_z=F,p=p,q=q)
-    lens2 = OpticalElemenLensSuperIdeal("KBV",focal_p_x=0,focal_q_x=0,focal_p_z=184.90,focal_q_z=0.10,p=p,q=q)
+    lens2 = OpticalElemenLensIdeal("KBV",focal_x=0,focal_z=F,p=p,q=q)
+    # lens2 = OpticalElemenLensSuperIdeal("KBV",focal_p_x=0,focal_q_x=0,focal_p_z=184.90,focal_q_z=0.10,p=p,q=q)
     beam.traceOE(lens2,1,overwrite=True)
 
     # second KB mirror
     p = 0.025
     q = 0.05
     F = 1.0/(1/144.95+1/0.05)
-    # lens3 = OpticalElemenLensIdeal("KBH",focal_x=F,focal_z=0,p=p,q=q)
-    lens3 = OpticalElemenLensSuperIdeal("KBH",focal_p_x=144.95,focal_q_x=0.05,focal_p_z=0,focal_q_z=0,p=p,q=q)
+    lens3 = OpticalElemenLensIdeal("KBH",focal_x=F,focal_z=0,p=p,q=q)
+    # lens3 = OpticalElemenLensSuperIdeal("KBH",focal_p_x=144.95,focal_q_x=0.05,focal_p_z=0,focal_q_z=0,p=p,q=q)
     beam.traceOE(lens3,1,overwrite=True)
 
 
     #
 
-    tkt = plotxy(beam.get_shadow3_beam(),1,3,nbins=100,xrange=[-0.0000005,0.0000005],yrange=[-0.0000005,0.0000005],title="FOCAL PLANE")
+    tkt = plotxy(beam.get_shadow3_beam(),1,3,nbins=300,xrange=[-0.0000005,0.0000005],yrange=[-0.0000005,0.0000005],title="FOCAL PLANE")
 
     print(tkt['fwhm_h'],tkt['fwhm_v'])
 
     FX, FZ = (1e6*beam.get_standard_deviation(1),1e6*beam.get_standard_deviation(3))
     print("----------------- Focal position ---------------------")
     print("Source dimensions (rms): %f %f um"%(SX,SZ))
+    print("Source dimensions (2.35*rms): %f %f um"%(f2dot35*SX,f2dot35*SZ))
     print("Focal dimensions (rms): %f %f um"%(FX,FZ))
-    print("Focal dimensions (2.35*ST DEV): %f %f um"%(f2dot35*FX,f2dot35*FZ))
+    print("Focal dimensions (2.35*rms): %f %f um"%(f2dot35*FX,f2dot35*FZ))
     print("Focal dimensions (FWHM HISTO): %f %f nm"%(1e9*tkt['fwhm_h'],1e9*tkt['fwhm_v']))
-    print("Demagnification: H:%g V:%g (theoretical: %g) "%(SX/FX,SZ/FZ,p/q))
-
+    print("Demagnification (StDev) H:%g V:%g (theoretical: %g,%g) "%(SX/FX,SZ/FZ,demagX[0]*demagX[1],demagZ))
+    print("Demagnification:(HISTO) H:%g V:%g (theoretical: %g,%g) "%(f2dot35*SX/(f2dot35*1e6*tkt['fwhm_h']),SZ/(1e6*tkt['fwhm_v']),demagX[0]*demagX[1],demagZ))
 
 if __name__ == "__main__":
     # test_with_collimated_beam()
     # todo check with two elements
-    test_with_divergent_beam()
-    # test_id16ni()
+    # test_with_divergent_beam()
+    test_id16ni()

@@ -11,8 +11,8 @@ import Shadow
 #
 # minishadow
 #
-from Beam import Beam
-from SurfaceConic import SurfaceConic
+from minishadow.Beam import Beam
+from minishadow.SurfaceConic import SurfaceConic
 
 
 
