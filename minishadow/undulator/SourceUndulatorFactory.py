@@ -601,4 +601,10 @@ def undul_cdf(undul_phot_dict,method='trapz'):
     else:
         print("undul_cdf: Total Power emitted in the specified angles is: %g Watts."%( (RN2*E)*codata.e) )
 
-    return {'cdf_EnergyThetaPhi':TWO,'cdf_EnergyTheta':ONE,'cdf_Energy':ZERO,'energy':E,'theta':T,'phi':P,'polarization':POL_DEG}
+    return {'cdf_EnergyThetaPhi':TWO,
+            'cdf_EnergyTheta':ONE,
+            'cdf_Energy':ZERO,
+            'energy':E,
+            'theta':T,
+            'phi':P,
+            'polarization':POL_DEG}

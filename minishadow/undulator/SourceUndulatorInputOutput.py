@@ -8,7 +8,8 @@ __date__ = "12/01/2017"
 
 
 import numpy
-
+import h5py
+import time
 
 def load_file_undul_phot(file_in="uphot.dat"):
     """
@@ -120,6 +121,48 @@ def write_file_undul_phot(undul_phot_dict,file_out="uphot.dat"):
     print("File written to disk: %s"%file_out)
 
 
+def write_file_undul_phot_h5(undul_phot_dict,file_out="uphot.h5",mode="w",entry_name="radiation"):
+
+    Z2      = undul_phot_dict['radiation']
+    POL_DEG = undul_phot_dict['polarization']
+    e       = undul_phot_dict['photon_energy']
+    theta   = undul_phot_dict['theta']
+    phi     = undul_phot_dict['phi']
+
+    f = h5py.File(file_out,mode)
+
+    if mode == 'w':
+        # point to the default data to be plotted
+        f.attrs['default']          = 'radiation'
+        # give the HDF5 root some more attributes
+        f.attrs['file_name']        = file_out
+        f.attrs['file_time']        = time.time()
+        f.attrs['creator']          = ""
+        f.attrs['HDF5_Version']     = h5py.version.hdf5_version
+        f.attrs['h5py_version']     = h5py.version.version
+
+    f1 = f.create_group(entry_name)
+
+    f1.attrs['NX_class'] = 'NXdata'
+    f1.attrs['signal'] = "first_image"
+    f1.attrs['axes'] = [b"phi_deg", b"theta_urad"]
+    #
+    f1["first_image"] = Z2[0,:,:].T
+    f1["theta_urad"] = 1e6*theta
+    f1["phi_deg"] = phi*180.0/numpy.pi
+
+    f1["photon_energy"] = e
+    f1["theta"] = theta
+    f1["phi"] = phi
+    f1["radiation"] = Z2
+    f1["polarization"] = POL_DEG
+    f1["code_undul_phot"] = undul_phot_dict["code_undul_phot"]
+    f1["info"] = undul_phot_dict["info"]
+
+
+    f.close()
+    print("File written to disk: %s"%file_out)
+
 
 def load_file_undul_cdf(file_in="xshundul.sha"):
     """
@@ -192,7 +235,7 @@ def load_file_undul_cdf(file_in="xshundul.sha"):
 
     return {'cdf_EnergyThetaPhi':TWO,'cdf_EnergyTheta':ONE,'cdf_Energy':ZERO,'energy':E,'theta':T,'phi':P,'polarization':POL_DEGREE}
 
-def write_file_undul_sha(dict,file_out="xshundul.sha"):
+def write_file_undul_cdf(dict,file_out="xshundul.sha"):
     """
     Create a file (xshundul.sha) with output of undul_cdf
 
@@ -252,6 +295,92 @@ def write_file_undul_sha(dict,file_out="xshundul.sha"):
         f.close()
         print("File written to disk: %s"%file_out)
 
+
+def write_file_undul_cdf_h5(dict,file_out="cdf.h5",mode="w",entry_name="cdf"):
+    """
+    Create a file (xshundul.sha) with output of undul_cdf
+
+    :param dict: a dictionary as output from undul_cdf
+    :param file_out: output file name
+    :return:
+    """
+    #
+    #
+    #
+
+    f = h5py.File(file_out,mode)
+
+    if mode == 'w':
+        # point to the default data to be plotted
+        f.attrs['default']          = 'cdf'
+        # give the HDF5 root some more attributes
+        f.attrs['file_name']        = file_out
+        f.attrs['file_time']        = time.time()
+        f.attrs['creator']          = ""
+        f.attrs['HDF5_Version']     = h5py.version.hdf5_version
+        f.attrs['h5py_version']     = h5py.version.version
+
+    f1 = f.create_group(entry_name)
+
+    f1.attrs['NX_class'] = 'NXdata'
+    f1.attrs['signal'] = "first_image"
+    f1.attrs['axes'] = [b"phi_deg", b"theta_urad"]
+    #
+    TWO =     dict['cdf_EnergyThetaPhi']
+    T =       dict['theta']
+    P =       dict['phi']
+
+    print(TWO.shape)
+    f1["first_image"] = dict["cdf_Energy"][0,:,:].T
+    f1["theta_urad"] = 1e6*T
+    f1["phi_deg"] = P*180.0/numpy.pi
+
+    #
+    f1['cdf_EnergyThetaPhi'] = dict['cdf_EnergyThetaPhi']
+    f1['cdf_EnergyTheta'] = dict['cdf_EnergyTheta']
+    f1['cdf_Energy'] = dict['cdf_Energy']
+    f1['energy'] = dict['energy']
+    f1['theta'] = dict['theta']
+    f1['phi'] = dict['phi']
+    f1['polarization'] = dict['polarization']
+
+
+    # f1["code_undul_phot"] = undul_phot_dict["code_undul_phot"]
+    # f1["info"] = undul_phot_dict["info"]
+
+
+    f.close()
+    print("File written to disk: %s"%file_out)
+
+
+
+
+def plot_undul_phot(undul_phot_input,do_plot_intensity=True,do_plot_polarization=True,do_show=True,title=""):
+    #
+    # plots the output of undul_phot
+    #
+    try:
+        from srxraylib.plot.gol import plot,plot_image,plot_show
+    except:
+        print("srxraylib not available: No plot")
+        return
+
+    if isinstance(undul_phot_input,str):
+        undul_phot_dict = load_file_undul_phot(undul_phot_input)
+        title += undul_phot_input
+    else:
+        undul_phot_dict = undul_phot_input
+
+
+    if do_plot_intensity: plot_image(undul_phot_dict['radiation'][0,:,:],undul_phot_dict['theta']*1e6,undul_phot_dict['phi']*180/numpy.pi,
+               title="INTENS RN0[0] "+title,xtitle="Theta [urad]",ytitle="Phi [deg]",aspect='auto',show=False)
+
+    if do_plot_polarization: plot_image(undul_phot_dict['polarization'][0,:,:],undul_phot_dict['theta']*1e6,undul_phot_dict['phi']*180/numpy.pi,
+               title="POL_DEG RN0[0] "+title,xtitle="Theta [urad]",ytitle="Phi [deg]",aspect='auto',show=False)
+
+
+    if do_show: plot_show()
+
 # TODO do these plot directly with matplotlib to avoid dependencies
 def plot_undul_cdf(undul_cdf_input,do_show=True):
     #
@@ -285,31 +414,3 @@ def plot_undul_cdf(undul_cdf_input,do_show=True):
                title="cdf (theta,phi) ZERO[0]",xtitle="index Theta",ytitle="index Phi",show=0)
 
     if do_show: plot_show()
-
-
-def plot_undul_phot(undul_phot_input,do_plot_intensity=True,do_plot_polarization=True,do_show=True,title=""):
-    #
-    # plots the output of undul_phot
-    #
-    try:
-        from srxraylib.plot.gol import plot,plot_image,plot_show
-    except:
-        print("srxraylib not available: No plot")
-        return
-
-    if isinstance(undul_phot_input,str):
-        undul_phot_dict = load_file_undul_phot(undul_phot_input)
-        title += undul_phot_input
-    else:
-        undul_phot_dict = undul_phot_input
-
-
-    if do_plot_intensity: plot_image(undul_phot_dict['radiation'][0,:,:],undul_phot_dict['theta']*1e6,undul_phot_dict['phi']*180/numpy.pi,
-               title="INTENS RN0[0] "+title,xtitle="Theta [urad]",ytitle="Phi [deg]",aspect='auto',show=False)
-
-    if do_plot_polarization: plot_image(undul_phot_dict['polarization'][0,:,:],undul_phot_dict['theta']*1e6,undul_phot_dict['phi']*180/numpy.pi,
-               title="POL_DEG RN0[0] "+title,xtitle="Theta [urad]",ytitle="Phi [deg]",aspect='auto',show=False)
-
-
-    if do_show: plot_show()
-

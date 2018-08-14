@@ -76,9 +76,9 @@ class SourceUndulator(object):
 
 
         if platform.system() == "Linux":
-            self.SHADOW3_BINARY = "/users/srio/OASYS_VE/shadow3/shadow3"
+            self.SHADOW3_BINARY = "/users/srio/OASYS1.1/shadow3/shadow3"
         else:
-            self.SHADOW3_BINARY = "/Users/srio/Oasys/OASYS_VE/shadow3/shadow3"
+            self.SHADOW3_BINARY = "/Users/srio/Oasys/OASYS1.1/shadow3/shadow3"
 
     def to_dictionary(self):
         """
