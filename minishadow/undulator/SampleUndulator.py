@@ -10,19 +10,22 @@ import scipy.constants as codata
 from SourceUndulatorFactory import undul_cdf, undul_phot, undul_phot_srw,  undul_phot_pysru
 
 from SourceUndulatorInputOutput import write_file_undul_cdf, load_file_undul_cdf
-from SourceUndulatorInputOutput import write_file_undul_phot_h5, write_file_undul_cdf_h5
+# from SourceUndulatorInputOutput import write_file_undul_phot_h5, write_file_undul_cdf_h5
 # from SourceUndulatorInputOutput import load_file_undul_phot,write_file_undul_phot
 # from SourceUndulatorInputOutput import load_file_undul_cdf,write_file_undul_sha
 
 from syned.storage_ring.magnetic_structures.undulator import Undulator
 from syned.storage_ring.electron_beam import ElectronBeam
 
+import Shadow
+from inverse_method_sampler import Sampler2D, Sampler3D
 
 class SampleUndulator(object):
     def __init__(self,name="",
                  syned_electron_beam=ElectronBeam(),
                  syned_undulator=Undulator(),
-                 FLAG_EMITTANCE=0,EMIN=10000.0,EMAX=11000.0,NG_E=11,MAXANGLE=0.5,NG__T=31,NG_P=21,NG_J=20,SEED=36255655452,NRAYS=5000,
+                 FLAG_EMITTANCE=0,FLAG_SIZE=0,
+                 EMIN=10000.0,EMAX=11000.0,NG_E=11,MAXANGLE=0.5,NG__T=31,NG_P=21,NG_J=20,SEED=36255655452,NRAYS=5000,
                  code_undul_phot="internal", # internal, pysru, srw
                  ):
 
@@ -32,7 +35,9 @@ class SampleUndulator(object):
         # # Undulator
         self.syned_undulator = syned_undulator
 
-        self.FLAG_EMITTANCE  =  FLAG_EMITTANCE# Yes  # Use emittance (0=No, 1=Yes)
+        self.FLAG_EMITTANCE  =  FLAG_EMITTANCE # Yes  # Use emittance (0=No, 1=Yes)
+        self.FLAG_SIZE  =  FLAG_SIZE # 0=point,1=Gaussian,2=FT(Divergences)
+
         # Photon energy scan
         self.EMIN            = EMIN   # Photon energy scan from energy (in eV)
         self.EMAX            = EMAX   # Photon energy scan to energy (in eV)
@@ -125,7 +130,7 @@ class SampleUndulator(object):
         txt += "-----------------------------------------------------\n"
 
         if self.result_radiation is None:
-            txt += "        radiation: NOT CALCULATED\n"
+            txt += "        radiation: NOT YET CALCULATED\n"
         else:
             txt += "        radiation: CALCULATED\n"
 
@@ -244,111 +249,7 @@ class SampleUndulator(object):
         return undul_phot_dict
 
 
-    # def calculate_cdf(self): # not used, internally done by Sample2D and Sample3D
-    #
-    #     """
-    #     calculates cdf (cumulative distribution functions)
-    #
-    #     it first computes the radiation (calculate_radiation) and the integrate using
-    #     SourceUndulatorFactory.undul_cdf
-    #
-    #     :param code_undul_phot: code_undul_phot: 'internal' (calls undul_phot), 'pysru'
-    #             (calls undul_phot_pysru) or 'srw' (calls undul_phot_srw)
-    #     :param use_existing_undul_phot_output: set to a file name or dictionary to use this
-    #         particular output from undul_phot
-    #     :param dump_undul_phot_file: if True writes the undul_phot output in uphot.dat file
-    #     :return: a dictionary with the undul_cdf output. It also dumps this output to a file
-    #         called xshundul.sha file.
-    #     """
-    #
-    #     #
-    #     # undul_phot
-    #     #
-    #
-    #     # undul_phot_dict = self.calculate_radiation(code_undul_phot=code_undul_phot)
-    #
-    #     # if use_existing_undul_phot_output is None:
-    #     #     undul_phot_dict = self.calculate_radiation(code_undul_phot=code_undul_phot)
-    #     # else:
-    #     #     if isinstance(use_existing_undul_phot_output,str):
-    #     #         undul_phot_dict = load_file_undul_phot(use_existing_undul_phot_output)
-    #     #     elif isinstance(use_existing_undul_phot_output,dict):
-    #     #         undul_phot_dict = use_existing_undul_phot_output
-    #     #         #TODO: import parameters from external file E_MIN, E_MAX, MAXANGLE, N_*
-    #     #     else:
-    #     #         raise Exception("Bad undul_phot data.")
-    #     #
-    #     #
-    #     #
-    #     # if dump_undul_phot_file:
-    #     #     write_file_undul_phot(undul_phot_dict,file_out="uphot.dat")
-    #
-    #
-    #
-    #
-    #     self.result_cdf = undul_cdf(self.result_radiation,method='trapz')
-    #     # write_file_undul_sha(undul_cdf_dict,file_out="xshundul.sha",)
-    #
-    #
-    #
-    # def load_from_file_cdf(self,file_in="xshundul.sha"):
-    #     self.result_radiation = None
-    #     self.result_cdf = None
-    #     self.result_cdf = load_file_undul_cdf(file_in)
-
-    def write_file_h5(self,file_out):
-        try:
-            write_file_undul_phot_h5(self.result_radiation,file_out=file_out,mode='w',entry_name="radiation")
-        except:
-            raise Exception("Failed to write file: %s"%file_out)
-        try:
-            write_file_undul_cdf_h5(self.result_cdf,file_out=file_out,mode='a',entry_name="cdf")
-        except:
-            pass
-
-
-
-    # # TODO: remove in far future
-    # def get_shadow3_source_object(self,m_to_user_unit=1e2):
-    #     """
-    #
-    #     creates a Shadow.Source object with the undulator parameters inside (proprocessor file: xshundul.sha)
-    #
-    #     :return:
-    #     """
-    #     # initialize shadow3 source (oe0) and beam
-    #
-    #     import Shadow
-    #
-    #     oe0 = Shadow.Source()
-    #
-    #     if self.FLAG_EMITTANCE:
-    #         sigmas = self.syned_electron_beam.get_sigmas_all()
-    #         oe0.EPSI_X = m_to_user_unit*sigmas[0]*sigmas[2]
-    #         oe0.EPSI_Z = m_to_user_unit*sigmas[1]*sigmas[3]
-    #         oe0.SIGDIX = 0.0
-    #         oe0.SIGDIZ = 0.0
-    #         oe0.SIGMAX = m_to_user_unit*sigmas[0]
-    #         oe0.SIGMAY = 0.0
-    #         oe0.SIGMAZ = m_to_user_unit*sigmas[1]
-    #     else:
-    #         oe0.EPSI_X = 0.0
-    #         oe0.EPSI_Z = 0.0
-    #         oe0.SIGDIX = 0.0
-    #         oe0.SIGDIZ = 0.0
-    #         oe0.SIGMAX = 0.0
-    #         oe0.SIGMAY = 0.0
-    #         oe0.SIGMAZ = 0.0
-    #
-    #     oe0.FILE_TRAJ = b'xshundul.sha'
-    #     oe0.ISTAR1 = self.SEED
-    #     oe0.NPOINT = self.NRAYS
-    #     oe0.F_WIGGLER = 2
-    #
-    #     return oe0
-
-
-    def calculate_shadow3_beam(self,dump_start_files=False):
+    def calculate_shadow3_beam(self,user_unit_to_m=1.0):
 
         self.calculate_radiation()
 
@@ -361,13 +262,11 @@ class SampleUndulator(object):
 
     def _sample_shadow3_beam(self,sampled_photon_energy,sampled_theta,sampled_phi):
 
-        import Shadow
-
-
-
-
-
         beam = Shadow.Beam(N=self.NRAYS)
+
+
+
+
 
 
         sigmas = self.syned_electron_beam.get_sigmas_all()
@@ -376,20 +275,45 @@ class SampleUndulator(object):
         # sample sizes
         #
         if self.FLAG_EMITTANCE:
-            beam.rays[:,0] = numpy.random.normal(loc=0.0,scale=sigmas[0],size=self.NRAYS)
-            beam.rays[:,1] = 0.0
-            beam.rays[:,2] = numpy.random.normal(loc=0.0,scale=sigmas[2],size=self.NRAYS)
+            x_electron = numpy.random.normal(loc=0.0,scale=sigmas[0],size=self.NRAYS)
+            y_electron = 0.0
+            z_electron = numpy.random.normal(loc=0.0,scale=sigmas[2],size=self.NRAYS)
         else:
-            beam.rays[:,0] = 0.0
-            beam.rays[:,1] = 0.0
-            beam.rays[:,2] = 0.0
+            x_electron = 0.0
+            y_electron = 0.0
+            z_electron = 0.0
 
+        if self.FLAG_SIZE == 0:
+            x_photon = 0.0
+            y_photon = 0.0
+            z_photon = 0.0
+        elif self.FLAG_SIZE == 1:
+            undulator_length = self.syned_undulator.length()
+            lambda1 = codata.h*codata.c/codata.e / sampled_photon_energy.mean()
+
+            # calculate sizes of the photon undulator beam
+            # see formulas 25 & 30 in Elleaume (Onaki & Elleaume)
+            # sp_phot = 0.69*numpy.sqrt(lambda1/undulator_length)
+            s_phot = 2.740/(4e0*numpy.pi)*numpy.sqrt(undulator_length*lambda1)
+
+            cov = [[s_phot**2, 0], [0, s_phot**2]]
+            mean = [0.0,0.0]
+
+            tmp = numpy.random.multivariate_normal(mean, cov, self.NRAYS)
+            x_photon = tmp[:,0]
+            y_photon = 0.0
+            z_photon = tmp[:,1]
+        elif self.FLAG_SIZE == 2:
+            raise Exception("To be implemented")
+
+
+        beam.rays[:,0] = x_photon + x_electron
+        beam.rays[:,1] = y_photon + y_electron
+        beam.rays[:,2] = z_photon + z_electron
 
 
         # flag
         beam.rays[:,9] = 1.0
-
-
 
         #
         # divergences: the Shadow way
@@ -447,9 +371,6 @@ class SampleUndulator(object):
 
     def _sample_photon_beam(self):
 
-        from inverse_method_sampler import Sampler2D, Sampler3D
-
-
         #
         # sample divergences
         #
@@ -458,11 +379,13 @@ class SampleUndulator(object):
         phi = self.result_radiation["phi"]
         photon_energy = self.result_radiation["photon_energy"]
 
-
         photon_energy_spectrum = 'polychromatic' # 'monochromatic' #
-        #
-        # monochromatic case
-        #
+        if self.EMIN == self.EMAX:
+            photon_energy_spectrum = 'monochromatic'
+        if self.NG_E == 1:
+            photon_energy_spectrum = 'monochromatic'
+
+
         if photon_energy_spectrum == 'monochromatic':
 
             #2D case
@@ -491,168 +414,12 @@ class SampleUndulator(object):
             tmp_theta += 1e-6 # to avoid zeros
             for i in range(tmp.shape[0]):
                 tmp[i,:,:] *= tmp_theta
-            # plot_image(tmp_theta,theta,phi,aspect='auto')
 
             s3d = Sampler3D(tmp,photon_energy,theta,phi)
 
             sampled_photon_energy,sampled_theta,sampled_phi = s3d.get_n_sampled_points(self.NRAYS)
-            # print(sampled_photon_energy)
 
 
         return sampled_photon_energy,sampled_theta,sampled_phi
-
-
-    # def sample(self):
-    #
-    #     import Shadow
-    #     from inverse_method_sampler import Sampler2D, Sampler3D
-    #     from srxraylib.plot.gol import plot_scatter, plot_image, plot
-    #
-    #     beam = Shadow.Beam(N=self.NRAYS)
-    #
-    #     #
-    #     # sample sizes
-    #     #
-    #     sigmas = self.syned_electron_beam.get_sigmas_all()
-    #
-    #     beam.rays[:,9] = 1.0
-    #
-    #
-    #
-    #     #
-    #     # sample divergences
-    #     #
-    #
-    #
-    #
-    #     theta = self.result_radiation["theta"]
-    #     phi = self.result_radiation["phi"]
-    #     photon_energy = self.result_radiation["photon_energy"]
-    #
-    #
-    #     photon_energy_spectrum = 'polychromatic' # 'monochromatic' #
-    #     #
-    #     # monochromatic case
-    #     #
-    #     if photon_energy_spectrum == 'monochromatic':
-    #
-    #         #2D case
-    #         tmp = self.result_radiation["radiation"][0,:,:].copy()
-    #         tmp /= tmp.max()
-    #
-    #         # correct radiation for DxDz / DthetaDphi
-    #         tmp_theta = numpy.outer(theta,numpy.ones_like(phi))
-    #         tmp_theta /= tmp_theta.max()
-    #         tmp_theta += 1e-6 # to avoid zeros
-    #         tmp *= tmp_theta
-    #         # plot_image(tmp_theta,theta,phi,aspect='auto')
-    #
-    #         s2d = Sampler2D(tmp,theta,phi)
-    #         sampled_theta,sampled_phi = s2d.get_n_sampled_points(self.NRAYS)
-    #
-    #         sampled_photon_energy = self.EMIN
-    #
-    #     elif photon_energy_spectrum == "polychromatic":
-    #         #3D case
-    #         tmp = self.result_radiation["radiation"].copy()
-    #         tmp /= tmp.max()
-    #         # correct radiation for DxDz / DthetaDphi
-    #         tmp_theta = numpy.outer(theta,numpy.ones_like(phi))
-    #         tmp_theta /= tmp_theta.max()
-    #         tmp_theta += 1e-6 # to avoid zeros
-    #         for i in range(tmp.shape[0]):
-    #             tmp[i,:,:] *= tmp_theta
-    #         # plot_image(tmp_theta,theta,phi,aspect='auto')
-    #
-    #         s3d = Sampler3D(tmp,photon_energy,theta,phi)
-    #
-    #         sampled_photon_energy,sampled_theta,sampled_phi = s3d.get_n_sampled_points(self.NRAYS)
-    #         # print(sampled_photon_energy)
-    #
-    #
-    #     #
-    #     # the Shadow way
-    #     #
-    #     THETABM = sampled_theta
-    #     PHI = sampled_phi
-    #     A_Z = numpy.arcsin(numpy.sin(THETABM)*numpy.sin(PHI))
-    #     A_X = numpy.arccos(numpy.cos(THETABM)/numpy.cos(A_Z))
-    #     THETABM = A_Z
-    #     PHI  = A_X
-    #     # ! C Decide in which quadrant THETA and PHI are.
-    #     myrand = numpy.random.random(self.NRAYS)
-    #     THETABM[numpy.where(myrand < 0.5)] *= -1.0
-    #     myrand = numpy.random.random(self.NRAYS)
-    #     PHI[numpy.where(myrand < 0.5)] *= -1.0
-    #
-    #     if self.FLAG_EMITTANCE:
-    #         EBEAM1 = numpy.random.normal(loc=0.0,scale=sigmas[1],size=self.NRAYS)
-    #         EBEAM3 = numpy.random.normal(loc=0.0,scale=sigmas[3],size=self.NRAYS)
-    #         ANGLEX = EBEAM1 + PHI
-    #         ANGLEV = EBEAM3 + THETABM
-    #     else:
-    #         ANGLEX = PHI # E_BEAM(1) + PHI
-    #         ANGLEV =THETABM #  E_BEAM(3) + THETABM
-    #
-    #     VX = numpy.tan(ANGLEX)
-    #     VY = 1.0
-    #     VZ = numpy.tan(ANGLEV)/numpy.cos(ANGLEX)
-    #     VN = numpy.sqrt( VX*VX + VY*VY + VZ*VZ)
-    #     VX /= VN
-    #     VY /= VN
-    #     VZ /= VN
-    #
-    #     beam.rays[:,3] = VX
-    #     beam.rays[:,4] = VY
-    #     beam.rays[:,5] = VZ
-    #
-    #
-    #     #
-    #     # photon energy
-    #     #
-    #
-    #     # xx = self.result_radiation["photon_energy"]
-    #     # yy = self.result_radiation["radiation"].sum(axis=2).sum(axis=1)
-    #     #
-    #     #
-    #     # print(xx.shape,yy.shape)
-    #     # s3d._cdf_calculate()
-    #     # plot(xx,yy,title="energy",show=0)
-    #     # plot(xx,s3d._cdf1,title="energy cdf")
-    #     # plot_image(s3d._cdf2)
-    #
-    #     A2EV = 2.0*numpy.pi/(codata.h*codata.c/codata.e*1e2)
-    #     beam.rays[:,10] =  sampled_photon_energy * A2EV
-    #
-    #
-    #     #
-    #     # electric vectors
-    #     #
-    #
-    #     beam.rays[:,6] =  1.0
-    #
-    #
-    #
-    #     #
-    #     # # plot_image(s2d.pdf(),cmap='binary',title="pdf")
-    #     #
-    #     # cdf2,cdf1 = s2d.cdf()
-    #     # plot_image(cdf2,cmap='binary',title="cdf")
-    #     # # plot(s2d.abscissas()[0],s2d.cdf()[0][:,-1])
-    #     # plot(s2d.abscissas()[0],cdf1)
-    #     #
-    #     # x0s,x1s = s2d.get_n_sampled_points(100000)
-    #     # plot_scatter(x0s,x1s)
-    #
-    #
-    #     #
-    #     # write output
-    #     #
-    #
-    #     beam.write("begin.dat")
-    #
-    #
-    #
-    #     return beam
 
 
