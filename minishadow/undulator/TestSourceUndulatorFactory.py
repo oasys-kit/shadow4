@@ -20,7 +20,8 @@ import os
 # CODE TO TEST
 # from SourceUndulator import SourceUndulator
 from SourceUndulatorFactory import undul_phot, undul_cdf
-from SourceUndulatorFactory import undul_phot_pysru,undul_phot_srw
+from SourceUndulatorFactoryPysru import undul_phot_pysru
+from SourceUndulatorFactorySrw import undul_phot_srw
 # input/output
 from SourceUndulatorInputOutput import load_file_undul_phot,write_file_undul_phot
 from SourceUndulatorInputOutput import load_file_undul_cdf,write_file_undul_cdf
