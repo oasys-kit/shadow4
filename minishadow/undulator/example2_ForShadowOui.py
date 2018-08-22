@@ -32,22 +32,44 @@ if __name__ == "__main__":
                     code_undul_phot="internal")
 
 
-
-
     # sampleundulator.set_energy_monochromatic_at_resonance(0.98)
 
     print(sampleundulator.info())
 
+    # #
+    # # plot
+    # #
+    # from srxraylib.plot.gol import plot_image, plot_scatter
+    #
+    # radiation,theta,phi = sampleundulator.get_radiation_polar()
+    # print("???????",radiation.shape,theta.shape,phi.shape)
+    # plot_image(radiation[0],1e6*theta,phi,aspect='auto',xtitle="theta [urad]",ytitle="phi [rad]")
+    #
+    # radiation_interpolated,vx,vz = sampleundulator.get_radiation_interpolated_cartesian()
+    # print("??????????",radiation_interpolated.shape,vx.shape,vz.shape)
+    # plot_image(radiation_interpolated[0],vx,vz,aspect='auto',xtitle="vx",ytitle="vy")
+
 
     beam = sampleundulator.calculate_shadow3_beam()
 
-    # print(sampleundulator.info())
+    print(sampleundulator.info())
 
 
     os.system("rm -f begin.dat start.00 end.00")
     beam.write("begin.dat")
     print("File written to disk: begin.dat")
 
+    for k in sampleundulator.result_radiation.keys():
+        print(k)
 
 
+
+    #
+    # plot
+    #
+    from srxraylib.plot.gol import plot_image, plot_scatter
+
+    radiation,theta,phi = sampleundulator.get_radiation_polar()
+    print("???????",radiation.shape,theta.shape,phi.shape,sampleundulator.result_radiation["polarization"].shape)
+    plot_image(sampleundulator.result_radiation["polarization"][0],1e6*theta,phi,aspect='auto',xtitle="theta [urad]",ytitle="phi [rad]")
 

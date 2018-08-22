@@ -178,6 +178,36 @@ class SampleUndulator(object):
         if npoints != None:
             self.NG_E = npoints
 
+    def get_radiation_polar(self):
+        if self.result_radiation is None:
+            self.calculate_radiation()
+        return self.result_radiation["radiation"],self.result_radiation["theta"],self.result_radiation["phi"]
+
+    def get_radiation_interpolated_cartesian(self,npointsx=100,npointsz=100,thetamax=None):
+        from scipy import interpolate
+        radiation,thetabm,phi = self.get_radiation_polar()
+
+        if thetamax is None:
+            thetamax = thetabm.max()
+
+        vx = numpy.linspace(-1.1*thetamax,1.1*thetamax,npointsx)
+        vz = numpy.linspace(-1.1*thetamax,1.1*thetamax,npointsz)
+        VX = numpy.outer(vx,numpy.ones_like(vz))
+        VZ = numpy.outer(numpy.ones_like(vx),vz)
+        VY = numpy.sqrt(1 - VX**2 - VZ**2)
+
+        THETA = numpy.arctan( numpy.sqrt(VX**2+VZ**2)/VY)
+        PHI = numpy.arctan(VZ/VX)
+
+        radiation_interpolated = numpy.zeros((radiation.shape[0],npointsx,npointsz))
+
+        for i in range(radiation.shape[0]):
+            interpolator_value = interpolate.RectBivariateSpline(thetabm, phi, radiation[i])
+            radiation_interpolated[i] = interpolator_value.ev(THETA, PHI)
+
+        return radiation_interpolated,vx,vz
+
+
     def calculate_radiation(self):
 
         """
@@ -248,12 +278,13 @@ class SampleUndulator(object):
         undul_phot_dict["info"] = self.info()
 
         self.result_radiation = undul_phot_dict
-        return undul_phot_dict
+        # return undul_phot_dict
 
 
     def calculate_shadow3_beam(self,user_unit_to_m=1.0):
 
-        self.calculate_radiation()
+        if self.result_radiation is None:
+            self.calculate_radiation()
 
         sampled_photon_energy,sampled_theta,sampled_phi = self._sample_photon_beam()
 
