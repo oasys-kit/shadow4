@@ -12,11 +12,14 @@ import unittest
 import numpy
 
 from numpy.testing import assert_almost_equal
-from SourceUndulator import SourceUndulator
+# from SourceUndulator import SourceUndulator
+from SampleUndulator import SampleUndulator
 from SourceUndulatorInputOutput import load_file_undul_phot
 
 import Shadow
 from srxraylib.plot.gol import plot,plot_image,plot_show
+
+from TestSourceUndulatorFactory import _calculate_shadow3_beam_using_preprocessors, _shadow3_commands, SHADOW3_BINARY
 
 #
 # switch on/off plots
@@ -43,7 +46,10 @@ class TestSourceUndulator(unittest.TestCase):
             begin1.load(file1)
             begin2     = Shadow.Beam()
             begin2.load(file2)
-            assert_almost_equal(begin1.rays[:,0:6],begin2.rays[:,0:6],3)
+            for i in [1,3,4,6]:
+                print("asserting column: ",i)
+                assert_almost_equal(begin1.rays[:,i-1].std(),begin2.rays[:,i-1].std(),3)
+
 
     def compare_undul_phot_files(self,file1,file2,do_plot=DO_PLOT,do_assert=True):
         print("Comparing undul_phot output files: %s %s"%(file1,file2))
@@ -100,6 +106,7 @@ class TestSourceUndulator(unittest.TestCase):
                             self.assertLess( mydiff, 15. )
 
 
+
     def test_compare_preprocessor_and_internal_from_shadowvui_json_file(self,shadowvui_json_file=None):
 
         if shadowvui_json_file == None:
@@ -132,7 +139,7 @@ class TestSourceUndulator(unittest.TestCase):
             "SZ":    0.00100000005,
             "EX":   4.00000005E-07,
             "EZ":   3.99999989E-09,
-            "FLAG_EMITTANCE(1)":"0",
+            "FLAG_EMITTANCE(1)":"1",
             "FLAG_EMITTANCE(2)":"No",
             "FLAG_EMITTANCE(3)":"Yes",
             "NRAYS": 15000,
@@ -148,13 +155,8 @@ class TestSourceUndulator(unittest.TestCase):
             }
 
             """
-            shadowvui_json_file = "tmp.json"
-            f = open(shadowvui_json_file,'w')
-            f.write(tmp)
-            f.close()
-            print("File %s written to disk."%shadowvui_json_file)
 
-
+            h = json.loads(tmp)
 
         #
         # clean
@@ -168,296 +170,52 @@ class TestSourceUndulator(unittest.TestCase):
         methods = ['preprocessor','internal']
 
         for method in methods:
-            u = SourceUndulator()
-            u.load_json_shadowvui_file(shadowvui_json_file)
-            print(u.info())
+
 
             if method == 'preprocessor':
                 # run using binary shadow3 (with preprocessors)
-                u.calculate_shadow3_beam_using_preprocessors()
+                _calculate_shadow3_beam_using_preprocessors(h)
             else:
-                beam = u.calculate_shadow3_beam(code_undul_phot=method, dump_undul_phot_file=True,dump_start_files=True)
+                from syned.storage_ring.electron_beam import ElectronBeam
+                from syned.storage_ring.magnetic_structures.undulator import Undulator
+
+
+                #
+                # syned
+                #
+
+                su = Undulator.initialize_as_vertical_undulator(K=h["K"],period_length=h["LAMBDAU"],periods_number=h["NPERIODS"])
+
+                ebeam = ElectronBeam(energy_in_GeV = h["E_ENERGY"],
+                             energy_spread         = h["E_ENERGY_SPREAD"],
+                             current               = h["INTENSITY"],
+                             number_of_bunches     = 1,
+                             moment_xx             = (1e-2*h["SX"])**2,
+                             moment_xxp            = 0.0,
+                             moment_xpxp           = (h["EX"]/h["SX"])**2,
+                             moment_yy             = (1e-2*h["SZ"])**2,
+                             moment_yyp            = 0.0,
+                             moment_ypyp           = (h["EZ"]/h["SZ"])**2,
+                                     )
+
+                u = SampleUndulator(name="test",syned_electron_beam=ebeam,syned_undulator=su,
+                                FLAG_EMITTANCE=int(h["FLAG_EMITTANCE(1)"]),FLAG_SIZE=0,
+                                EMIN=h["EMIN"],EMAX=h["EMAX"],NG_E=h["NG_E"],
+                                MAXANGLE=h["MAXANGLE"],NG_T=h["NG_T"],NG_P=h["NG_P"],
+                                SEED=36255,NRAYS=h["NRAYS"],
+                                code_undul_phot="internal")
+
+                print(u.info())
+                beam = u.calculate_shadow3_beam(user_unit_to_m=1e-2)
                 beam.write("begin.dat")
 
             os.system("cp begin.dat begin_%s.dat"%method)
             os.system("cp uphot.dat uphot_%s.dat"%method)
-            os.system("cp xshundul.sha xshundul_%s.sha"%method)
-
-            # make script
-            # oe0 = Shadow.Source()
-            # oe0.load("start.00")
-            # Shadow.ShadowTools.make_python_script_from_list([oe0],script_file="script_undulator.py")
 
 
         self.compare_undul_phot_files("uphot_%s.dat"%(methods[0]),"uphot_%s.dat"%(methods[1]),do_plot=DO_PLOT,do_assert=True)
         self.compare_shadow3_files("begin_%s.dat"%(methods[0]),"begin_%s.dat"%(methods[1]),do_plot=DO_PLOT,do_assert=True)
 
 
-    def test_setters_and_getters(self):
 
-        # some inputs
-        E_ENERGY=6.04
-        INTENSITY=0.2
-        SX=0.04
-        SZ=0.001
-        SXP=10e-6
-        SZP=4e-6
-        FLAG_EMITTANCE=1
-        LAMBDAU=0.032
-        NPERIODS=50
-        K=0.25
-        EMIN= 10498.0000
-        EMAX= 10499.0000
-        NG_E=101
-        MAXANGLE=0.1
-        NG_T=51
-        NG_P=11
-        N_J=20
-        SEED=36255
-        NRAYS=15000
-
-
-        u = SourceUndulator()
-
-
-        u.set_from_keywords(
-            E_ENERGY = E_ENERGY,
-            INTENSITY = INTENSITY,
-            SX = SX,
-            SZ = SZ,
-            SXP = SXP,
-            SZP = SZP,
-            FLAG_EMITTANCE = FLAG_EMITTANCE,
-            LAMBDAU = LAMBDAU,
-            NPERIODS = NPERIODS,
-            K = K,
-            EMIN = EMIN,
-            EMAX = EMAX,
-            NG_E = NG_E,
-            MAXANGLE = MAXANGLE,
-            NG_T = NG_T,
-            NG_P = NG_P,
-            N_J = N_J,
-            SEED = SEED,
-            NRAYS = NRAYS,
-            )
-
-        self.assertEqual( u.E_ENERGY, E_ENERGY)
-        self.assertEqual( u.INTENSITY, INTENSITY)
-        self.assertEqual( u.SX, SX)
-        self.assertEqual( u.SZ, SZ)
-        self.assertEqual( u.SXP, SXP)
-        self.assertEqual( u.SZP, SZP)
-        self.assertEqual( u.FLAG_EMITTANCE, FLAG_EMITTANCE)
-        self.assertEqual( u.LAMBDAU, LAMBDAU)
-        self.assertEqual( u.NPERIODS, NPERIODS)
-        self.assertEqual( u.K, K)
-        self.assertEqual( u.EMIN, EMIN)
-        self.assertEqual( u.EMAX, EMAX)
-        self.assertEqual( u.NG_E, NG_E)
-        self.assertEqual( u.MAXANGLE, MAXANGLE)
-        self.assertEqual( u.NG_T, NG_T)
-        self.assertEqual( u.NG_P, NG_P)
-        self.assertEqual( u.N_J, N_J)
-        self.assertEqual( u.SEED, SEED)
-        self.assertEqual( u.NRAYS, NRAYS)
-
-        tmp = u.to_dictionary()
-        self.assertEqual(tmp["E_ENERGY"] , E_ENERGY)
-        self.assertEqual(tmp["INTENSITY"] , INTENSITY)
-        self.assertEqual(tmp["SX"] , SX)
-        self.assertEqual(tmp["SZ"] , SZ)
-        self.assertEqual(tmp["SXP"] , SXP)
-        self.assertEqual(tmp["SZP"] , SZP)
-        self.assertEqual(tmp["FLAG_EMITTANCE"] , FLAG_EMITTANCE)
-        self.assertEqual(tmp["LAMBDAU"] , LAMBDAU)
-        self.assertEqual(tmp["NPERIODS"] , NPERIODS)
-        self.assertEqual(tmp["K"] , K)
-        self.assertEqual(tmp["EMIN"] , EMIN)
-        self.assertEqual(tmp["EMAX"] , EMAX)
-        self.assertEqual(tmp["NG_E"] , NG_E)
-        self.assertEqual(tmp["MAXANGLE"] , MAXANGLE)
-        self.assertEqual(tmp["NG_T"] , NG_T)
-        self.assertEqual(tmp["NG_P"] , NG_P)
-        self.assertEqual(tmp["N_J"] , N_J)
-        self.assertEqual(tmp["SEED"] , SEED)
-        self.assertEqual(tmp["NRAYS"] , NRAYS)
-
-        for key in tmp:
-            tmp_old = tmp[key]
-            tmp_new = tmp_old * 5
-            tmp[key] = tmp_new
-            #print("<><> %s changed from %f to %f"%(key,tmp_old,tmp[key]))
-
-
-        u.set_from_dictionary(tmp)
-        u.info()
-
-        tmp_new = u.to_dictionary()
-        self.assertEqual(tmp_new["E_ENERGY"] , E_ENERGY * 5)
-        self.assertEqual(tmp_new["INTENSITY"] , INTENSITY * 5)
-        self.assertEqual(tmp_new["SX"] , SX * 5)
-        self.assertEqual(tmp_new["SZ"] , SZ * 5)
-        self.assertEqual(tmp_new["SXP"] , SXP * 5)
-        self.assertEqual(tmp_new["SZP"] , SZP * 5)
-        self.assertEqual(tmp_new["FLAG_EMITTANCE"] , FLAG_EMITTANCE * 5)
-        self.assertEqual(tmp_new["LAMBDAU"] , LAMBDAU * 5)
-        self.assertEqual(tmp_new["NPERIODS"] , NPERIODS * 5)
-        self.assertEqual(tmp_new["K"] , K * 5)
-        self.assertEqual(tmp_new["EMIN"] , EMIN * 5)
-        self.assertEqual(tmp_new["EMAX"] , EMAX * 5)
-        self.assertEqual(tmp_new["NG_E"] , NG_E * 5)
-        self.assertEqual(tmp_new["MAXANGLE"] , MAXANGLE * 5)
-        self.assertEqual(tmp_new["NG_T"] , NG_T * 5)
-        self.assertEqual(tmp_new["NG_P"] , NG_P * 5)
-        self.assertEqual(tmp_new["N_J"] , N_J * 5)
-        self.assertEqual(tmp_new["SEED"] , SEED * 5)
-        self.assertEqual(tmp_new["NRAYS"] , NRAYS * 5)
-
-
-    def test_file_dump(self):
-
-        # some inputs
-        E_ENERGY=6.04
-        INTENSITY=0.2
-        SX=0.04
-        SZ=0.001
-        SXP=10e-6
-        SZP=4e-6
-        FLAG_EMITTANCE=1
-        LAMBDAU=0.032
-        NPERIODS=50
-        K=0.25
-        EMIN= 10498.0000
-        EMAX= 10499.0000
-        NG_E=101
-        MAXANGLE=0.1
-        NG_T=51
-        NG_P=11
-        N_J=20
-        SEED=36255
-        NRAYS=15000
-
-
-        u = SourceUndulator()
-
-        u.set_from_keywords(
-            E_ENERGY = E_ENERGY,
-            INTENSITY = INTENSITY,
-            SX = SX,
-            SZ = SZ,
-            SXP = SXP,
-            SZP = SZP,
-            FLAG_EMITTANCE = FLAG_EMITTANCE,
-            LAMBDAU = LAMBDAU,
-            NPERIODS = NPERIODS,
-            K = K,
-            EMIN = EMIN,
-            EMAX = EMAX,
-            NG_E = NG_E,
-            MAXANGLE = MAXANGLE,
-            NG_T = NG_T,
-            NG_P = NG_P,
-            N_J = N_J,
-            SEED = SEED,
-            NRAYS = NRAYS,
-            )
-
-        # dump file
-        u.write(file_out='startj.00')
-
-        uDict = u.to_dictionary()
-
-        with open('startj.00') as data_file:
-            data = json.load(data_file)
-
-        for key in data:
-            self.assertEqual(data[key],uDict[key])
-            data[key] *= 5
-
-        # read file
-
-        with open('tmp.json', 'w') as outfile:
-            json.dump(data, outfile, indent=4, sort_keys=True, separators=(',', ':'))
-
-        u.load('tmp.json')
-
-        self.assertEqual( u.E_ENERGY , data["E_ENERGY"])
-        self.assertEqual( u.INTENSITY , data["INTENSITY"])
-        self.assertEqual( u.SX , data["SX"])
-        self.assertEqual( u.SZ , data["SZ"])
-        self.assertEqual( u.SXP , data["SXP"])
-        self.assertEqual( u.SZP , data["SZP"])
-        self.assertEqual( u.FLAG_EMITTANCE , data["FLAG_EMITTANCE"])
-        self.assertEqual( u.LAMBDAU , data["LAMBDAU"])
-        self.assertEqual( u.NPERIODS , data["NPERIODS"])
-        self.assertEqual( u.K , data["K"])
-        self.assertEqual( u.EMIN , data["EMIN"])
-        self.assertEqual( u.EMAX , data["EMAX"])
-        self.assertEqual( u.NG_E , data["NG_E"])
-        self.assertEqual( u.MAXANGLE , data["MAXANGLE"])
-        self.assertEqual( u.NG_T , data["NG_T"])
-        self.assertEqual( u.NG_P , data["NG_P"])
-        self.assertEqual( u.N_J ,  data["N_J"])
-        self.assertEqual( u.SEED , data["SEED"])
-        self.assertEqual( u.NRAYS , data["NRAYS"])
-
-    def do_info(self):
-
-        # some inputs
-        E_ENERGY=6.04
-        INTENSITY=0.2
-        SX=0.04
-        SZ=0.001
-        SXP=10e-6
-        SZP=4e-6
-        FLAG_EMITTANCE=0
-        LAMBDAU=0.032
-        NPERIODS=50
-        K=0.25
-        EMIN= 10498.0000
-        EMAX= 10499.0000
-        NG_E=11
-        MAXANGLE=0.1
-        NG_T=51
-        NG_P=11
-        N_J=20
-        SEED=36255
-        NRAYS=15000
-
-
-        u = SourceUndulator()
-
-        u.set_from_keywords(
-            E_ENERGY = E_ENERGY,
-            INTENSITY = INTENSITY,
-            SX = SX,
-            SZ = SZ,
-            SXP = SXP,
-            SZP = SZP,
-            FLAG_EMITTANCE = FLAG_EMITTANCE,
-            LAMBDAU = LAMBDAU,
-            NPERIODS = NPERIODS,
-            K = K,
-            EMIN = EMIN,
-            EMAX = EMAX,
-            NG_E = NG_E,
-            MAXANGLE = MAXANGLE,
-            NG_T = NG_T,
-            NG_P = NG_P,
-            N_J = N_J,
-            SEED = SEED,
-            NRAYS = NRAYS,
-            )
-
-        # print(u.info(debug=True))
-
-        # u.set_energy_monochromatic_at_resonance(harmonic_number=1)
-        # # print(u.info)
-        # # u.EMAX = u.EMIN  + 0.01
-        # # u.NG_E = 1
-        #
-        # print(u.info(debug=True))
-        # beam = u.run(code_undul_phot='internal',dump_uphot_dot_dat=True,dump_start_files=True)
-        # beam.write("begin.dat")
 

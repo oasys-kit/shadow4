@@ -7,7 +7,9 @@ import numpy
 import scipy.constants as codata
 
 # import Shadow
-from SourceUndulatorFactory import undul_cdf, undul_phot, undul_phot_srw,  undul_phot_pysru
+from SourceUndulatorFactory import undul_cdf, undul_phot
+from SourceUndulatorFactorySrw import undul_phot_srw
+from SourceUndulatorFactoryPysru import undul_phot_pysru
 
 from SourceUndulatorInputOutput import write_file_undul_cdf, load_file_undul_cdf
 # from SourceUndulatorInputOutput import write_file_undul_phot_h5, write_file_undul_cdf_h5
@@ -25,8 +27,8 @@ class SampleUndulator(object):
                  syned_electron_beam=ElectronBeam(),
                  syned_undulator=Undulator(),
                  FLAG_EMITTANCE=0,FLAG_SIZE=0,
-                 EMIN=10000.0,EMAX=11000.0,NG_E=11,MAXANGLE=0.5,NG__T=31,NG_P=21,NG_J=20,SEED=36255655452,NRAYS=5000,
-                 code_undul_phot="internal", # internal, pysru, srw
+                 EMIN=10000.0,EMAX=11000.0,NG_E=11,MAXANGLE=0.5,NG_T=31,NG_P=21,NG_J=20,SEED=36255655452,NRAYS=5000,
+                 code_undul_phot="srw", # internal, pysru, srw
                  ):
 
         # # Machine
@@ -44,7 +46,7 @@ class SampleUndulator(object):
         self.NG_E            = NG_E        # Photon energy scan number of points
         # Geometry
         self.MAXANGLE        = MAXANGLE      # Maximum radiation semiaperture in mrad # TODO: define it in rad, for consistency
-        self.NG_T            = NG__T       # Number of points in angle theta
+        self.NG_T            = NG_T       # Number of points in angle theta
         self.NG_P            = NG_P       # Number of points in angle phi
         self.NG_J            = NG_J       # Number of points in electron trajectory (per period)
         # ray tracing
@@ -256,6 +258,11 @@ class SampleUndulator(object):
         sampled_photon_energy,sampled_theta,sampled_phi = self._sample_photon_beam()
 
         beam = self._sample_shadow3_beam(sampled_photon_energy,sampled_theta,sampled_phi)
+
+        if user_unit_to_m != 1.0:
+            beam.rays[:,0] /= user_unit_to_m
+            beam.rays[:,1] /= user_unit_to_m
+            beam.rays[:,2] /= user_unit_to_m
 
         return beam
 

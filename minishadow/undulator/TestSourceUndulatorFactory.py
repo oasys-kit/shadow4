@@ -9,21 +9,24 @@ __date__ = "12/01/2017"
 #
 # switch on/off plots
 #
-DO_PLOT = True
+DO_PLOT = False
 
 
 import unittest
 import numpy
 import json
+import os
 
 # CODE TO TEST
-from SourceUndulator import SourceUndulator
+# from SourceUndulator import SourceUndulator
 from SourceUndulatorFactory import undul_phot, undul_cdf
 from SourceUndulatorFactory import undul_phot_pysru,undul_phot_srw
 # input/output
 from SourceUndulatorInputOutput import load_file_undul_phot,write_file_undul_phot
-from SourceUndulatorInputOutput import load_file_undul_cdf,write_file_undul_sha
+from SourceUndulatorInputOutput import load_file_undul_cdf,write_file_undul_cdf
 from SourceUndulatorInputOutput import plot_undul_cdf,plot_undul_phot
+
+import Shadow
 
 if DO_PLOT:
     try:
@@ -31,17 +34,69 @@ if DO_PLOT:
     except:
         print("srxraylib not available (for plots). Plots switched off.")
         DO_PLOT = False
+
 #
-# auxiliary functions
+# Auxiliary functions
 #
 
-# for test purposes only
-# def run_shadow3_using_preprocessors(jsn):
-#     from SourceUndulator import SourceUndulator
-#     u = SourceUndulator()
-#     u.load_json_shadowvui_dictionary(jsn)
-#     u.run_using_preprocessors()
+SHADOW3_BINARY = "/users/srio/OASYS1.1/shadow3/shadow3"
 
+def _shadow3_commands(commands="exit\n",input_file="shadow3_tmp.inp"):
+    # for internal use
+    f = open(input_file,'w')
+    f.write(commands)
+    f.close()
+    os.system(SHADOW3_BINARY+" < "+input_file)
+
+
+def _calculate_shadow3_beam_using_preprocessors(jsn):
+
+    os.system("rm -f start.00 systemfile.dat begin.dat xshundul.plt xshundul.par xshundul.traj xshundul.info xshundul.sha")
+
+    # epath
+    commands = "epath\n2\n%f \n%f \n%f \n%d \n1.\nxshundul.par\nxshundul.traj\n1\nxshundul.plt\nexit\n"% \
+    (jsn["LAMBDAU"],jsn["K"],jsn["E_ENERGY"],101)
+    _shadow3_commands(commands=commands,input_file="shadow3_epath.inp")
+
+    # undul_set
+    NG_E = jsn["NG_E"]
+    # TODO: is seems a bug in shadow3: undul_set must be NG_E>1 (otherwise nosense)
+    # but if emin=emaxthe  resulting uphot.nml has NG_E=1
+    if NG_E == 1: NG_E = 2
+
+    commands = "undul_set\n0\n0\n%d \n%d \n%d \nxshundul.traj\n%d\n%f\n%f\n%f\n%f\n0\n1000\nexit\n"% \
+        (NG_E,jsn["NG_T"],jsn["NG_P"],
+         jsn["NPERIODS"],jsn["EMIN"],jsn["EMAX"],jsn["INTENSITY"],jsn["MAXANGLE"])
+    _shadow3_commands(commands=commands,input_file="shadow3_undul_set.inp")
+
+    # undul_phot
+    _shadow3_commands(commands="undul_phot\nexit\n",input_file="shadow3_undul_phot.inp")
+    _shadow3_commands(commands="undul_phot_dump\nexit\n",input_file="shadow3_undul_phot_dump.inp")
+
+    # undul_cdf
+    _shadow3_commands(commands="undul_cdf\n0\n1\nxshundul.sha\nxshundul.info\nexit\n",
+                    input_file="shadow3_undul_cdf.inp")
+
+
+    # input source
+    if int(jsn["FLAG_EMITTANCE(1)"]):
+        commands = "input_source\n1\n0\n%d \n%d \n0 \n2 \nxshundul.sha\n%g\n%g\n%g\n%d\n%g\n%d\n%d\n%d\n%d\nexit\n"% \
+        (jsn["NRAYS"],jsn["SEED"],jsn["SX"],jsn["SZ"],jsn["EX"],0,jsn["EZ"],0,3,1,1)
+    else:
+        commands = "input_source\n1\n0\n%d \n%d \n0 \n2 \nxshundul.sha\n%g\n%g\n%g\n%d\n%g\n%d\n%d\n%d\n%d\nexit\n"% \
+        (jsn["NRAYS"],jsn["SEED"],0,0,0,0,0,0,3,1,1)
+
+    _shadow3_commands(commands=commands,input_file="shadow3_input_source.inp")
+
+    # run source
+    commands = "source\nsystemfile\nexit\n"
+    _shadow3_commands(commands=commands,input_file="shadow3_source.inp")
+
+
+    # return shadow3 beam
+    beam = Shadow.Beam()
+    beam.load("begin.dat")
+    return beam
 
 
 
@@ -309,9 +364,9 @@ class TestSourceUndulatorFactory(unittest.TestCase):
         # SHADOW3 preprocessor
         # run_shadow3_using_preprocessors(h)
 
-        u = SourceUndulator()
-        u.load_json_shadowvui_dictionary(h)
-        u.calculate_shadow3_beam_using_preprocessors()
+        # u = SourceUndulator()
+        # u.load_json_shadowvui_dictionary(h)
+        _calculate_shadow3_beam_using_preprocessors(h)
 
 
 
@@ -473,9 +528,9 @@ class TestSourceUndulatorFactory(unittest.TestCase):
         #
         # run_shadow3_using_preprocessors(h) # uphot.dat must exist
 
-        u = SourceUndulator()
-        u.load_json_shadowvui_dictionary(h)
-        u.calculate_shadow3_beam_using_preprocessors()
+        # u = SourceUndulator()
+        # u.load_json_shadowvui_dictionary(h)
+        _calculate_shadow3_beam_using_preprocessors(h)
 
         #
         #
@@ -483,11 +538,11 @@ class TestSourceUndulatorFactory(unittest.TestCase):
         radiation = load_file_undul_phot(file_in="uphot.dat")
 
         cdf2 = undul_cdf(radiation,method='sum')
-        write_file_undul_sha(cdf2,file_out="xshundul2.sha")
+        write_file_undul_cdf(cdf2,file_out="xshundul2.sha")
 
 
         cdf3 = undul_cdf(radiation,method='trapz')
-        write_file_undul_sha(cdf3,file_out="xshundul3.sha")
+        write_file_undul_cdf(cdf3,file_out="xshundul3.sha")
 
         cdf1 = load_file_undul_cdf(file_in="xshundul.sha")
         cdf2 = load_file_undul_cdf(file_in="xshundul2.sha")
@@ -597,9 +652,9 @@ class TestSourceUndulatorFactory(unittest.TestCase):
 
             h = json.loads(tmp)
 
-            u = SourceUndulator()
-            u.load_json_shadowvui_dictionary(h)
-            u.calculate_shadow3_beam_using_preprocessors()
+            # u = SourceUndulator()
+            # u.load_json_shadowvui_dictionary(h)
+            _calculate_shadow3_beam_using_preprocessors(h)
 
         elif case == 1:
 
@@ -651,10 +706,11 @@ class TestSourceUndulatorFactory(unittest.TestCase):
             u.set_energy_monochromatic_at_resonance(harmonic_number=1)
         elif case == 2:
 
-            u = SourceUndulator()
-            u.load_json_shadowvui_file("xshundul.json")
-            u.calculate_shadow3_beam_using_preprocessors()
+            # u = SourceUndulator()
+            # u.load_json_shadowvui_file("xshundul.json")
+            # calculate_shadow3_beam_using_preprocessors(json.loads(tmp))
 
+            pass
         else:
             raise Exception("Undefined")
 
@@ -664,11 +720,11 @@ class TestSourceUndulatorFactory(unittest.TestCase):
         radiation = load_file_undul_phot(file_in="uphot.dat")
 
         cdf2 = undul_cdf(radiation,method='sum')
-        write_file_undul_sha(cdf2,file_out="xshundul2.sha")
+        write_file_undul_cdf(cdf2,file_out="xshundul2.sha")
 
 
         cdf3 = undul_cdf(radiation,method='trapz')
-        write_file_undul_sha(cdf3,file_out="xshundul3.sha")
+        write_file_undul_cdf(cdf3,file_out="xshundul3.sha")
 
         cdf1 = load_file_undul_cdf(file_in="xshundul.sha",)
         cdf2 = load_file_undul_cdf(file_in="xshundul2.sha")

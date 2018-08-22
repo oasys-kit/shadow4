@@ -27,7 +27,7 @@ if __name__ == "__main__":
     sampleundulator = SampleUndulator(name="test",syned_electron_beam=ebeam,syned_undulator=su,
                     FLAG_EMITTANCE=0,FLAG_SIZE=0,
                     EMIN=10490.0,EMAX=10510.0,NG_E=13,
-                    MAXANGLE=0.015,NG__T=51,NG_P=11,NG_J=20,
+                    MAXANGLE=0.015,NG_T=51,NG_P=11,NG_J=20,
                     SEED=36255,NRAYS=15000,
                     code_undul_phot="internal")
 
