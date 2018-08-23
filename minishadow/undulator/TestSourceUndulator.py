@@ -13,8 +13,8 @@ import numpy
 
 from numpy.testing import assert_almost_equal
 # from SourceUndulator import SourceUndulator
-from SampleUndulator import SampleUndulator
-from SourceUndulatorInputOutput import load_file_undul_phot
+from SourceUndulator import SourceUndulator
+from SourceUndulatorInputOutput import SourceUndulatorInputOutput
 
 import Shadow
 from srxraylib.plot.gol import plot,plot_image,plot_show
@@ -54,8 +54,8 @@ class TestSourceUndulator(unittest.TestCase):
     def compare_undul_phot_files(self,file1,file2,do_plot=DO_PLOT,do_assert=True):
         print("Comparing undul_phot output files: %s %s"%(file1,file2))
 
-        dict1 = load_file_undul_phot(file_in=file1)
-        dict2 = load_file_undul_phot(file_in=file2)
+        dict1 = SourceUndulatorInputOutput.load_file_undul_phot(file_in=file1)
+        dict2 = SourceUndulatorInputOutput.load_file_undul_phot(file_in=file2)
 
         rad1 = dict1["radiation"]
         # Do not compare polarizartion, I believe the preprocessor one is wrong
@@ -198,7 +198,7 @@ class TestSourceUndulator(unittest.TestCase):
                              moment_ypyp           = (h["EZ"]/h["SZ"])**2,
                                      )
 
-                u = SampleUndulator(name="test",syned_electron_beam=ebeam,syned_undulator=su,
+                u = SourceUndulator(name="test",syned_electron_beam=ebeam,syned_undulator=su,
                                 FLAG_EMITTANCE=int(h["FLAG_EMITTANCE(1)"]),FLAG_SIZE=0,
                                 EMIN=h["EMIN"],EMAX=h["EMAX"],NG_E=h["NG_E"],
                                 MAXANGLE=h["MAXANGLE"],NG_T=h["NG_T"],NG_P=h["NG_P"],

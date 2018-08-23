@@ -5,7 +5,7 @@
 import os
 from syned.storage_ring.electron_beam import ElectronBeam
 from syned.storage_ring.magnetic_structures.undulator import Undulator
-from SampleUndulator import SampleUndulator
+from SourceUndulator import SourceUndulator
 if __name__ == "__main__":
 
     #
@@ -24,52 +24,62 @@ if __name__ == "__main__":
                  moment_yyp=0.0,
                  moment_ypyp=(4e-6)**2 )
 
-    sampleundulator = SampleUndulator(name="test",syned_electron_beam=ebeam,syned_undulator=su,
+    sourceundulator = SourceUndulator(name="test",syned_electron_beam=ebeam,syned_undulator=su,
                     FLAG_EMITTANCE=0,FLAG_SIZE=0,
                     EMIN=10490.0,EMAX=10510.0,NG_E=13,
                     MAXANGLE=0.015,NG_T=51,NG_P=11,NG_J=20,
                     SEED=36255,NRAYS=15000,
-                    code_undul_phot="internal")
+                    code_undul_phot="pysru")
 
 
-    # sampleundulator.set_energy_monochromatic_at_resonance(0.98)
+    # sourceundulator.set_energy_monochromatic_at_resonance(0.98)
 
-    print(sampleundulator.info())
+    print(sourceundulator.info())
 
-    # #
-    # # plot
-    # #
+    #
+    # plot
+    #
     # from srxraylib.plot.gol import plot_image, plot_scatter
     #
-    # radiation,theta,phi = sampleundulator.get_radiation_polar()
+    # radiation,theta,phi = sourceundulator.get_radiation_polar()
     # print("???????",radiation.shape,theta.shape,phi.shape)
-    # plot_image(radiation[0],1e6*theta,phi,aspect='auto',xtitle="theta [urad]",ytitle="phi [rad]")
+    # plot_image(radiation[0],1e6*theta,phi,aspect='auto',title="intensity",xtitle="theta [urad]",ytitle="phi [rad]")
     #
-    # radiation_interpolated,vx,vz = sampleundulator.get_radiation_interpolated_cartesian()
+    # radiation_interpolated,vx,vz = sourceundulator.get_radiation_interpolated_cartesian()
     # print("??????????",radiation_interpolated.shape,vx.shape,vz.shape)
     # plot_image(radiation_interpolated[0],vx,vz,aspect='auto',xtitle="vx",ytitle="vy")
 
+    # polarization = sourceundulator.result_radiation["polarization"]
+    # print("???????",polarization.shape,theta.shape,phi.shape)
+    # plot_image(polarization[0],1e6*theta,phi,aspect='auto',title="polarization",xtitle="theta [urad]",ytitle="phi [rad]")
 
-    beam = sampleundulator.calculate_shadow3_beam()
 
-    print(sampleundulator.info())
+    beam = sourceundulator.calculate_shadow3_beam(user_unit_to_m=1.0)
+
+    print(sourceundulator.info())
 
 
     os.system("rm -f begin.dat start.00 end.00")
     beam.write("begin.dat")
     print("File written to disk: begin.dat")
 
-    for k in sampleundulator.result_radiation.keys():
+    for k in sourceundulator.result_radiation.keys():
         print(k)
 
+    print("Beam intensity: ",beam.getshcol(23).sum())
+    print("Beam intensity s-pol: ",beam.getshcol(24).sum())
+    print("Beam intensity: p-pol",beam.getshcol(25).sum())
+    #
+    # for i in range(50):
+    #     print(beam.rays[i,6],beam.rays[i,7],beam.rays[i,8],"  ",beam.rays[i,15],beam.rays[i,16],beam.rays[i,17],)
 
 
     #
     # plot
     #
-    from srxraylib.plot.gol import plot_image, plot_scatter
-
-    radiation,theta,phi = sampleundulator.get_radiation_polar()
-    print("???????",radiation.shape,theta.shape,phi.shape,sampleundulator.result_radiation["polarization"].shape)
-    plot_image(sampleundulator.result_radiation["polarization"][0],1e6*theta,phi,aspect='auto',xtitle="theta [urad]",ytitle="phi [rad]")
+    # from srxraylib.plot.gol import plot_image, plot_scatter
+    #
+    # radiation,theta,phi = sourceundulator.get_radiation_polar()
+    # print("???????",radiation.shape,theta.shape,phi.shape,sourceundulator.result_radiation["polarization"].shape)
+    # plot_image(sourceundulator.result_radiation["polarization"][0],1e6*theta,phi,aspect='auto',xtitle="theta [urad]",ytitle="phi [rad]")
 

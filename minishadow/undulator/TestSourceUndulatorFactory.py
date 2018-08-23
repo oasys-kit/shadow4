@@ -19,13 +19,14 @@ import os
 
 # CODE TO TEST
 # from SourceUndulator import SourceUndulator
-from SourceUndulatorFactory import undul_phot, undul_cdf
-from SourceUndulatorFactoryPysru import undul_phot_pysru
-from SourceUndulatorFactorySrw import undul_phot_srw
+from SourceUndulatorFactory import SourceUndulatorFactory
+from SourceUndulatorFactoryPysru import SourceUndulatorFactoryPysru
+from SourceUndulatorFactorySrw import SourceUndulatorFactorySrw
 # input/output
-from SourceUndulatorInputOutput import load_file_undul_phot,write_file_undul_phot
-from SourceUndulatorInputOutput import load_file_undul_cdf,write_file_undul_cdf
-from SourceUndulatorInputOutput import plot_undul_cdf,plot_undul_phot
+from SourceUndulatorInputOutput import SourceUndulatorInputOutput
+#load_file_undul_phot,write_file_undul_phot
+#load_file_undul_cdf,write_file_undul_cdf
+#plot_undul_cdf,plot_undul_phot
 
 import Shadow
 
@@ -127,7 +128,7 @@ class TestSourceUndulatorFactory(unittest.TestCase):
         h["NG_P"] = 11
 
         # internal code
-        udict = undul_phot(E_ENERGY = h["E_ENERGY"],INTENSITY = h["INTENSITY"],
+        udict = SourceUndulatorFactory.undul_phot(E_ENERGY = h["E_ENERGY"],INTENSITY = h["INTENSITY"],
                                         LAMBDAU = h["LAMBDAU"],NPERIODS = h["NPERIODS"],K = h["K"],
                                         EMIN = h["EMIN"],EMAX = h["EMAX"],NG_E = h["NG_E"],
                                         MAXANGLE = h["MAXANGLE"],NG_T = h["NG_T"],
@@ -185,7 +186,7 @@ class TestSourceUndulatorFactory(unittest.TestCase):
         h["NG_P"] = 11
 
         # internal code
-        udict = undul_phot(E_ENERGY = h["E_ENERGY"],INTENSITY = h["INTENSITY"],
+        udict = SourceUndulatorFactory.undul_phot(E_ENERGY = h["E_ENERGY"],INTENSITY = h["INTENSITY"],
                                         LAMBDAU = h["LAMBDAU"],NPERIODS = h["NPERIODS"],K = h["K"],
                                         EMIN = h["EMIN"],EMAX = h["EMAX"],NG_E = h["NG_E"],
                                         MAXANGLE = h["MAXANGLE"],NG_T = h["NG_T"],
@@ -251,7 +252,7 @@ class TestSourceUndulatorFactory(unittest.TestCase):
         hh["NG_P"] = 11
 
         # internal code
-        udict = undul_phot_pysru(E_ENERGY = hh["E_ENERGY"],INTENSITY = hh["INTENSITY"],
+        udict = SourceUndulatorFactoryPysru.undul_phot(E_ENERGY = hh["E_ENERGY"],INTENSITY = hh["INTENSITY"],
                                         LAMBDAU = hh["LAMBDAU"],NPERIODS = hh["NPERIODS"],K = hh["K"],
                                         EMIN = hh["EMIN"],EMAX = hh["EMAX"],NG_E = hh["NG_E"],
                                         MAXANGLE = hh["MAXANGLE"],NG_T = hh["NG_T"],
@@ -312,10 +313,6 @@ class TestSourceUndulatorFactory(unittest.TestCase):
         except:
             is_available_srw = False
 
-
-        # "EMIN":       10500.0000,
-        # "EMAX":       10550.0000,
-
         tmp = \
             """
             {
@@ -371,7 +368,7 @@ class TestSourceUndulatorFactory(unittest.TestCase):
 
 
 
-        undul_phot_preprocessor_dict = load_file_undul_phot("uphot.dat")
+        undul_phot_preprocessor_dict = SourceUndulatorInputOutput.load_file_undul_phot("uphot.dat")
 
         # if do_plot_intensity: plot_image(undul_phot_preprocessor_dict['radiation'][0,:,:],undul_phot_preprocessor_dict['theta']*1e6,undul_phot_preprocessor_dict['phi']*180/numpy.pi,
         #            title="INTENS UNDUL_PHOT_PREPROCESSOR: RN0[0]",xtitle="Theta [urad]",ytitle="Phi [deg]",aspect='auto',show=False)
@@ -385,7 +382,7 @@ class TestSourceUndulatorFactory(unittest.TestCase):
 
 
         # internal code
-        undul_phot_dict = undul_phot(E_ENERGY = h["E_ENERGY"],INTENSITY = h["INTENSITY"],
+        undul_phot_dict = SourceUndulatorFactory.undul_phot(E_ENERGY = h["E_ENERGY"],INTENSITY = h["INTENSITY"],
                                         LAMBDAU = h["LAMBDAU"],NPERIODS = h["NPERIODS"],K = h["K"],
                                         EMIN = h["EMIN"],EMAX = h["EMAX"],NG_E = h["NG_E"],
                                         MAXANGLE = h["MAXANGLE"],NG_T = h["NG_T"],
@@ -401,7 +398,7 @@ class TestSourceUndulatorFactory(unittest.TestCase):
 
         # pySRU
         if is_available_pysru:
-            undul_phot_pysru_dict = undul_phot_pysru(E_ENERGY = h["E_ENERGY"],INTENSITY = h["INTENSITY"],
+            undul_phot_pysru_dict = SourceUndulatorFactoryPysru.undul_phot(E_ENERGY = h["E_ENERGY"],INTENSITY = h["INTENSITY"],
                                             LAMBDAU = h["LAMBDAU"],NPERIODS = h["NPERIODS"],K = h["K"],
                                             EMIN = h["EMIN"],EMAX = h["EMAX"],NG_E = h["NG_E"],
                                             MAXANGLE = h["MAXANGLE"],NG_T = h["NG_T"],
@@ -416,7 +413,7 @@ class TestSourceUndulatorFactory(unittest.TestCase):
 
         # srw
         if is_available_srw:
-            undul_phot_srw_dict = undul_phot_srw(E_ENERGY = h["E_ENERGY"],INTENSITY = h["INTENSITY"],
+            undul_phot_srw_dict = SourceUndulatorFactorySrw.undul_phot(E_ENERGY = h["E_ENERGY"],INTENSITY = h["INTENSITY"],
                                             LAMBDAU = h["LAMBDAU"],NPERIODS = h["NPERIODS"],K = h["K"],
                                             EMIN = h["EMIN"],EMAX = h["EMAX"],NG_E = h["NG_E"],
                                             MAXANGLE = h["MAXANGLE"],NG_T = h["NG_T"],
@@ -536,18 +533,18 @@ class TestSourceUndulatorFactory(unittest.TestCase):
         #
         #
         #
-        radiation = load_file_undul_phot(file_in="uphot.dat")
+        radiation = SourceUndulatorInputOutput.load_file_undul_phot(file_in="uphot.dat")
 
-        cdf2 = undul_cdf(radiation,method='sum')
-        write_file_undul_cdf(cdf2,file_out="xshundul2.sha")
+        cdf2 = SourceUndulatorFactory.undul_cdf(radiation,method='sum')
+        SourceUndulatorInputOutput.write_file_undul_cdf(cdf2,file_out="xshundul2.sha")
 
 
-        cdf3 = undul_cdf(radiation,method='trapz')
-        write_file_undul_cdf(cdf3,file_out="xshundul3.sha")
+        cdf3 = SourceUndulatorFactory.undul_cdf(radiation,method='trapz')
+        SourceUndulatorInputOutput.write_file_undul_cdf(cdf3,file_out="xshundul3.sha")
 
-        cdf1 = load_file_undul_cdf(file_in="xshundul.sha")
-        cdf2 = load_file_undul_cdf(file_in="xshundul2.sha")
-        cdf3 = load_file_undul_cdf(file_in="xshundul3.sha")
+        cdf1 = SourceUndulatorInputOutput.load_file_undul_cdf(file_in="xshundul.sha")
+        cdf2 = SourceUndulatorInputOutput.load_file_undul_cdf(file_in="xshundul2.sha")
+        cdf3 = SourceUndulatorInputOutput.load_file_undul_cdf(file_in="xshundul3.sha")
 
 
 
@@ -718,18 +715,18 @@ class TestSourceUndulatorFactory(unittest.TestCase):
         #
         #
         #
-        radiation = load_file_undul_phot(file_in="uphot.dat")
+        radiation = SourceUndulatorInputOutput.load_file_undul_phot(file_in="uphot.dat")
 
-        cdf2 = undul_cdf(radiation,method='sum')
-        write_file_undul_cdf(cdf2,file_out="xshundul2.sha")
+        cdf2 = SourceUndulatorFactory.undul_cdf(radiation,method='sum')
+        SourceUndulatorInputOutput.write_file_undul_cdf(cdf2,file_out="xshundul2.sha")
 
 
-        cdf3 = undul_cdf(radiation,method='trapz')
-        write_file_undul_cdf(cdf3,file_out="xshundul3.sha")
+        cdf3 = SourceUndulatorFactory.undul_cdf(radiation,method='trapz')
+        SourceUndulatorInputOutput.write_file_undul_cdf(cdf3,file_out="xshundul3.sha")
 
-        cdf1 = load_file_undul_cdf(file_in="xshundul.sha",)
-        cdf2 = load_file_undul_cdf(file_in="xshundul2.sha")
-        cdf3 = load_file_undul_cdf(file_in="xshundul3.sha")
+        cdf1 = SourceUndulatorInputOutput.load_file_undul_cdf(file_in="xshundul.sha",)
+        cdf2 = SourceUndulatorInputOutput.load_file_undul_cdf(file_in="xshundul2.sha")
+        cdf3 = SourceUndulatorInputOutput.load_file_undul_cdf(file_in="xshundul3.sha")
 
 
         ZERO1 = cdf1['cdf_Energy']
