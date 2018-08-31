@@ -22,22 +22,22 @@ __date__ = "12/01/2017"
 import numpy as np
 
 # needed by pySRU
-try:
-    from pySRU.ElectronBeam import ElectronBeam
-    from pySRU.MagneticStructureUndulatorPlane import MagneticStructureUndulatorPlane as Undulator
-    from pySRU.Simulation import create_simulation
-    from pySRU.TrajectoryFactory import TRAJECTORY_METHOD_ANALYTIC
-    from pySRU.RadiationFactory import RADIATION_METHOD_APPROX_FARFIELD
-except:
-    print("Failed to import pySRU")
+# try:
+from pySRU.ElectronBeam import ElectronBeam as PysruElectronBeam
+from pySRU.MagneticStructureUndulatorPlane import MagneticStructureUndulatorPlane as PysruUndulator
+from pySRU.Simulation import create_simulation
+from pySRU.TrajectoryFactory import TRAJECTORY_METHOD_ANALYTIC
+from pySRU.RadiationFactory import RADIATION_METHOD_APPROX_FARFIELD
+# except:
+#     print("Failed to import pySRU")
 
 class SourceUndulatorFactoryPysru(object):
 
     @staticmethod
     def undul_phot(E_ENERGY,INTENSITY,LAMBDAU,NPERIODS,K,EMIN,EMAX,NG_E,MAXANGLE,NG_T,NG_P):
 
-        myelectronbeam = ElectronBeam(Electron_energy=E_ENERGY, I_current=INTENSITY)
-        myundulator = Undulator(K=K, period_length=LAMBDAU, length=LAMBDAU*NPERIODS)
+        myelectronbeam = PysruElectronBeam(Electron_energy=E_ENERGY, I_current=INTENSITY)
+        myundulator = PysruUndulator(K=K, period_length=LAMBDAU, length=LAMBDAU*NPERIODS)
 
         #
         # polar grid matrix
@@ -46,7 +46,7 @@ class SourceUndulatorFactoryPysru(object):
 
         intens = np.zeros((NG_E,NG_T,NG_P))
         pol_deg = np.zeros_like(intens)
-        theta = np.linspace(0,MAXANGLE*1e-3,NG_T,dtype=float)
+        theta = np.linspace(0,MAXANGLE,NG_T,dtype=float)
         phi = np.linspace(0,np.pi/2,NG_P,dtype=float)
 
         D = 100.0 # placed far away (100 m)
@@ -73,7 +73,8 @@ class SourceUndulatorFactoryPysru(object):
 
 
             E = electric_field._electrical_field
-            pol_deg1 = (np.abs(E[:,0])**2 / (np.abs(E[:,0])**2 + np.abs(E[:,1])**2)).flatten()
+            # pol_deg1 = (np.abs(E[:,0])**2 / (np.abs(E[:,0])**2 + np.abs(E[:,1])**2)).flatten()
+            pol_deg1 = (np.abs(E[:,0]) / (np.abs(E[:,0]) + np.abs(E[:,1]))).flatten() # SHADOW definition!!
 
             intens1 = simulation_test.radiation.intensity.copy()
             intens1.shape = (theta.size,phi.size)

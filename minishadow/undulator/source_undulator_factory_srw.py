@@ -143,9 +143,9 @@ class SourceUndulatorFactorySrw(object):
           for ix in range(x.size):
               for iy in range(y.size):
                 Z2[ie,ix,iy] = data0[iy,ix,ie]
+                # this is shadow definition, that uses POL_DEG = |Ex|/(|Ex|+|Ey|)
                 Ex = numpy.sqrt(numpy.abs(0.5*(data0[iy,ix,ie]+data1[iy,ix,ie])))
                 Ey = numpy.sqrt(numpy.abs(0.5*(data0[iy,ix,ie]-data1[iy,ix,ie])))
-                # POL_DEG[ie,ix,iy] =  0.5*(data0[iy,ix,ie]+data1[iy,ix,ie]) / data0[iy,ix,ie]
                 POL_DEG[ie,ix,iy] =  Ex / (Ex + Ey)
       return Z2,POL_DEG,e,x,y
 
@@ -223,7 +223,7 @@ class SourceUndulatorFactorySrw(object):
         print ("e_energy = ",e_energy)
         print ("nperiods = ",nperiods)
         print ("intensity = ",intensity)
-        print ("maxangle=%d mrad, (%d x %d points) "%(maxangle,nx,nz))
+        print ("maxangle=%d rad, (%d x %d points) "%(maxangle,nx,nz))
         print ("sx = ",sx)
         print ("sz = ",sz)
         print ("ex = ",ex)
@@ -271,10 +271,10 @@ class SourceUndulatorFactorySrw(object):
         if nx==1 and nz==1: paramME[4] = 1
         params = paramSE if method=="SE" else paramME
 
-        slit_xmin = -maxangle*1.0e-3*slit_distance
-        slit_xmax =  maxangle*1.0e-3*slit_distance
-        slit_zmin = -maxangle*1.0e-3*slit_distance
-        slit_zmax =  maxangle*1.0e-3*slit_distance
+        slit_xmin = -maxangle*slit_distance
+        slit_xmax =  maxangle*slit_distance
+        slit_zmin = -maxangle*slit_distance
+        slit_zmax =  maxangle*slit_distance
 
         #
         # calculations
@@ -313,7 +313,7 @@ class SourceUndulatorFactorySrw(object):
         #
 
         # polar grid
-        theta = numpy.linspace(0,MAXANGLE*1e-3,NG_T)
+        theta = numpy.linspace(0,MAXANGLE,NG_T)
         phi = numpy.linspace(0,numpy.pi/2,NG_P)
         Z2 = numpy.zeros((NG_E,NG_T,NG_P))
         POL_DEG = numpy.zeros((NG_E,NG_T,NG_P))
@@ -341,6 +341,8 @@ class SourceUndulatorFactorySrw(object):
         # !C SHADOW defines the degree of polarization by |E| instead of |E|^2
         # !C i.e.  P = |Ex|/(|Ex|+|Ey|)   instead of   |Ex|^2/(|Ex|^2+|Ey|^2)
         # POL_DEG = numpy.sqrt(POL_DEG2)/(numpy.sqrt(POL_DEG2)+numpy.sqrt(1.0-POL_DEG2))
+
+        # we use, however, POL_DEG = |Ex|^2/(|Ex|^2+|Ey|^2)
 
         return {'radiation':Z2,'polarization':POL_DEG,'photon_energy':e,'theta':theta,'phi':phi}
 

@@ -12,19 +12,18 @@ import unittest
 import numpy
 
 from numpy.testing import assert_almost_equal
-# from SourceUndulator import SourceUndulator
-from SourceUndulator import SourceUndulator
-from SourceUndulatorInputOutput import SourceUndulatorInputOutput
+from orangecontrib.shadow.util.undulator.source_undulator import SourceUndulator
+from orangecontrib.shadow.util.undulator.source_undulator_input_output import SourceUndulatorInputOutput
 
 import Shadow
 from srxraylib.plot.gol import plot,plot_image,plot_show
 
-from TestSourceUndulatorFactory import _calculate_shadow3_beam_using_preprocessors, _shadow3_commands, SHADOW3_BINARY
+from orangecontrib.shadow.util.undulator.test_source_undulator_factory import _calculate_shadow3_beam_using_preprocessors, _shadow3_commands, SHADOW3_BINARY
 
 #
 # switch on/off plots
 #
-DO_PLOT = True
+DO_PLOT = False
 
 #
 # Tests
@@ -118,13 +117,13 @@ class TestSourceUndulator(unittest.TestCase):
             "E_ENERGY":       6.03999996,
             "E_ENERGY_SPREAD":    0.00100000005,
             "NPERIODS": 50,
-            "EMIN":       10498.0000,
-            "EMAX":       10499.0000,
+            "_EMIN":       10498.0000,
+            "_EMAX":       10499.0000,
             "INTENSITY":      0.200000003,
-            "MAXANGLE":      0.100000001,
-            "NG_E": 101,
-            "NG_T": 51,
-            "NG_P": 11,
+            "_MAXANGLE":      0.000100,
+            "_NG_E": 101,
+            "_NG_T": 51,
+            "_NG_P": 11,
             "NG_PLOT(1)":"0",
             "NG_PLOT(2)":"No",
             "NG_PLOT(3)":"Yes",
@@ -139,9 +138,9 @@ class TestSourceUndulator(unittest.TestCase):
             "SZ":    0.00100000005,
             "EX":   4.00000005E-07,
             "EZ":   3.99999989E-09,
-            "FLAG_EMITTANCE(1)":"1",
-            "FLAG_EMITTANCE(2)":"No",
-            "FLAG_EMITTANCE(3)":"Yes",
+            "_FLAG_EMITTANCE(1)":"1",
+            "_FLAG_EMITTANCE(2)":"No",
+            "_FLAG_EMITTANCE(3)":"Yes",
             "NRAYS": 15000,
             "F_BOUND_SOUR": 0,
             "FILE_BOUND":"NONESPECIFIED",
@@ -199,15 +198,19 @@ class TestSourceUndulator(unittest.TestCase):
                                      )
 
                 u = SourceUndulator(name="test",syned_electron_beam=ebeam,syned_undulator=su,
-                                FLAG_EMITTANCE=int(h["FLAG_EMITTANCE(1)"]),FLAG_SIZE=0,
-                                EMIN=h["EMIN"],EMAX=h["EMAX"],NG_E=h["NG_E"],
-                                MAXANGLE=h["MAXANGLE"],NG_T=h["NG_T"],NG_P=h["NG_P"],
-                                SEED=36255,NRAYS=h["NRAYS"],
+                                flag_emittance=int(h["_FLAG_EMITTANCE(1)"]),flag_size=0,
+                                emin=h["_EMIN"],emax=h["_EMAX"],ng_e=h["_NG_E"],
+                                maxangle=h["_MAXANGLE"],ng_t=h["_NG_T"],ng_p=h["_NG_P"],
                                 code_undul_phot="internal")
 
                 print(u.info())
-                beam = u.calculate_shadow3_beam(user_unit_to_m=1e-2)
+                # beam = u.calculate_shadow3_beam(user_unit_to_m=1e-2,SEED=36255,NRAYS=h["NRAYS"],)
+
+                rays = u.calculate_rays(user_unit_to_m=1e-2,SEED=36255,NRAYS=h["NRAYS"])
+                beam = Shadow.Beam(N=rays.shape[0])
+                beam.rays = rays
                 beam.write("begin.dat")
+
 
             os.system("cp begin.dat begin_%s.dat"%method)
             os.system("cp uphot.dat uphot_%s.dat"%method)
