@@ -49,21 +49,22 @@ class MLayer(object):
 
         for i in range(np):
             index_pointer += 1
-            mylist = lines[index_pointer].strip().split(" ")
+            mylist = lines[index_pointer].strip().split("    ")
+            print("///",mylist)
             delta_s[i] = float(mylist[0])
-            beta_s[i] = float(mylist[0])
+            beta_s[i] = float(mylist[1])
 
         for i in range(np):
             index_pointer += 1
-            mylist = lines[index_pointer].strip().split(" ")
+            mylist = lines[index_pointer].strip().split("    ")
             delta_e[i] = float(mylist[0])
-            beta_e[i] = float(mylist[0])
+            beta_e[i] = float(mylist[1])
 
         for i in range(np):
             index_pointer += 1
-            mylist = lines[index_pointer].strip().split(" ")
+            mylist = lines[index_pointer].strip().split("    ")
             delta_o[i] = float(mylist[0])
-            beta_o[i] = float(mylist[0])
+            beta_o[i] = float(mylist[1])
 
 
         out_dict["delta_s"] = delta_s
@@ -398,7 +399,7 @@ class MLayer(object):
         # FILE_REFL  = RSTRING("File Name (from pre_mlayer): ")
         # !file_refl = "morawe.dat"
         #
-        energyN = 100 # irint(' Number of energy points (1 for angle-scan): ')
+        energyN = 51 # irint(' Number of energy points (1 for angle-scan): ')
         thetaN = 1    # irint(' Number of anglular points (1 for energy-scan): ')
         # !energyN = 1
         # !thetaN = 5000
@@ -476,7 +477,6 @@ class MLayer(object):
                 wnum = 2 * numpy.pi * energy / tocm
 
                 COS_POLE = 1.0
-                print("     calling reflec with e=%g, q=%g"%(energy,wnum))
                 R_P,R_S,PHASEP,PHASES,ABSOR = self.reflec(wnum,sin_ref,COS_POLE,k_what)
 
             #     CALL REFLEC (PIN,WNUM,SIN_REF,COS_POLE,R_P,R_S,PHASEP,PHASES,ABSOR,K_WHAT)
@@ -880,7 +880,7 @@ class MLayer(object):
 
         index1 = int(index1)
 
-        DELS  = DELTA_S[index1] #+ (DELTA_S[index1+1] - DELTA_S[index1]) *(PHOT_ENER - ENER[index1])/(ENER[index1+1] - ENER[index1])
+        DELS  = DELTA_S[index1] + (DELTA_S[index1+1] - DELTA_S[index1]) *(PHOT_ENER - ENER[index1])/(ENER[index1+1] - ENER[index1])
         BETS  =  BETA_S[index1] + ( BETA_S[index1+1] -  BETA_S[index1]) *(PHOT_ENER - ENER[index1])/(ENER[index1+1] - ENER[index1])
         DELE  = DELTA_E[index1] + (DELTA_E[index1+1] - DELTA_E[index1]) *(PHOT_ENER - ENER[index1])/(ENER[index1+1] - ENER[index1])
         BETE  =  BETA_E[index1] + ( BETA_E[index1+1] -  BETA_E[index1]) *(PHOT_ENER - ENER[index1])/(ENER[index1+1] - ENER[index1])
@@ -926,7 +926,8 @@ class MLayer(object):
         #         END IF
         #
         #
-
+        print(">>>>>>>>>>>>>>> calling fresnel with:",TFACT,GFACT,NPAIR,SIN_REF,COS_POLE,XLAM,)
+        print("              ",DELO,DELE,DELS,BETO,BETE,BETS,)
 
         R_S,R_P,PHASES,PHASEP = self.fresnel(TFACT,GFACT,NPAIR,SIN_REF,COS_POLE,XLAM,
                                              DELO,DELE,DELS,BETO,BETE,BETS,t_o,t_e,mlroughness1,mlroughness2)
@@ -1235,7 +1236,7 @@ class MLayer(object):
         #
         # ! loop over the bilayers
         # ! remember thet "even" is the bottom sublayer
-        print(">>>>>NPAIR",NPAIR)
+
         for j in range(NPAIR): #   =1,n   ! n is the number of bilayers
             # ! C
             # ! C compute the thickness for the odd and even material :
@@ -1250,6 +1251,8 @@ class MLayer(object):
             ao = numpy.exp(ao)
             ae = numpy.exp(ae)
 
+
+
             if j != 0:
                 sigma_e2 = mlroughness1[j]**2.0 #!roughn. even layer
                 arg_e = fo * fe * sigma_e2 / (numpy.sqrt(ro2) * numpy.sqrt(re2))
@@ -1263,12 +1266,15 @@ class MLayer(object):
                 r = (ae**4.0) * (r + ffs * fnevot_s) / (r * ffs * fnevot_s + 1.0)
                 rp = (ae**4.0) * (rp + ffsp * fnevot_s) / (rp * ffsp * fnevot_s + 1.0)
 
+
             # ! odd layer (top sublayer)
             sigma_o2 = mlroughness2[j]**2.0 #!roughn. odd layer
             arg_o = fo * fe * sigma_o2 / (numpy.sqrt(ro2) * numpy.sqrt(re2))
             fnevot_o = numpy.exp(-prefact * arg_o)
             r = (ao**4.0) * (r + ffo * fnevot_o) / (r * ffo * fnevot_o + 1.0)
             rp = (ao**4.0) * (rp + ffop * fnevot_o) / (rp * ffop * fnevot_o + 1.0)
+
+
 
 
 
@@ -1291,8 +1297,6 @@ class MLayer(object):
         fnevot_v = numpy.exp(-prefact * arg_v)
         r = (r + ffv * fnevot_v) / (r * ffv * fnevot_v + 1.0)
         rp = (rp + ffvp * fnevot_v) / (rp * ffvp * fnevot_v + 1.0)
-
-        print(">>>>>>>>>>>>>> shapes r rp",r.shape,rp.shape)
 
 
         #
@@ -1328,8 +1332,8 @@ class MLayer(object):
         #
         # End Subroutine fresnel
 
-
-        return r,rp,PHASES,PHASEP
+        print("                       ",ans,anp,PHASES,PHASEP,pp,qq)
+        return ans,anp,PHASES,PHASEP
 
 if __name__ == "__main__":
 
