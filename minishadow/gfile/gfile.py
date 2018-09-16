@@ -7,8 +7,8 @@ class GFile(object):
 
     def __init__(self):
 
-        self.start00 = None
-        self.oe = []
+        self.source = None
+        self.oe_list = []
 
 
     @classmethod
@@ -36,29 +36,71 @@ class GFile(object):
 
         return out_dictionary
 
-    def load_start00(self,filename="start.00"):
+    def load_source(self,filename="start.00"):
 
-        self.start00 = self.load_gfile(filename)
+        self.source = self.load_gfile(filename)
 
-    def load_start01(self,filename="start.01"):
-        self.oe.append( self.load_gfile(filename) )
+    def load_oe(self,filename="start.01",append=True):
+        if append:
+            self.oe_list.append( self.load_gfile(filename) )
+        else:
+            self.oe_list = [self.load_gfile(filename)]
 
+
+    @classmethod
+    def _dictionary2object(cls,dict1):
+
+        class K(object):
+            pass
+
+        k = K()
+        for key in dict1.keys():
+            setattr(k, key, dict1[key])
+        return k
+
+    def get_source_as_dictionary(self):
+        return self.source
+
+    def get_oe_as_dictionary(self,oe_index=0):
+        return self.oe_list[oe_index]
+
+    def get_source_as_object(self):
+        return self._dictionary2object(self.get_source_as_dictionary())
+
+    def get_oe_as_object(self,oe_index=0):
+        return self._dictionary2object(self.get_oe_as_dictionary(oe_index))
+
+    def get_source_as_json(self):
+        return json.dumps(self.get_source_as_dictionary(), sort_keys=True, indent=4)
+
+    def get_oe_as_json(self,oe_index=0):
+        return json.dumps(self.get_oe_as_dictionary(oe_index), sort_keys=True, indent=4)
 
 if __name__ == "__main__":
 
     g = GFile()
 
-    g.load_start00(filename="start.00")
+    g.load_source(filename="start.00")
 
-    g.load_start01(filename="start.01")
+    print("\nDICT: \n",g.get_source_as_dictionary())
 
-    print(g.oe[0])
+    print("\nOBJECT: \n",dir(g.get_source_as_object()))
 
-    # for k in g.oe[0].keys():
-    #     print(k," = ",g.oe[0][k])
+    print("\nJSON: \n",g.get_source_as_json())
+
+
+    # g.load_oe(filename="start.01")
+
+    # print(g.oe_list[0])
     #
-    # print(json.dumps(g.start00, sort_keys=True, indent=4))
-
-    print(json.dumps(g.oe[0], sort_keys=True, indent=4))
-
+    # # for k in g.oe[0].keys():
+    # #     print(k," = ",g.oe[0][k])
+    # #
+    # # print(json.dumps(g.source, sort_keys=True, indent=4))
+    #
+    # print(json.dumps(g.oe_list[0], sort_keys=True, indent=4))
+    #
+    #
+    # a = g.get_source_as_object()
+    # # print(dir(a))
 
