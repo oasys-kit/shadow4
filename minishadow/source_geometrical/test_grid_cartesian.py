@@ -1,5 +1,5 @@
 
-from minishadow.SourceGridCartesian import SourceGridCartesian
+from grid_cartesian import SourceGridCartesian
 import unittest
 
 DO_PLOT = True

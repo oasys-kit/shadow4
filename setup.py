@@ -57,6 +57,6 @@ setup(name='minishadow',
                         'numpy',
                         'scipy'
                        ],
-      test_suite='tests'
+      # test_suite='tests',
      )
 

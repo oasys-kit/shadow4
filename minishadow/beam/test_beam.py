@@ -6,7 +6,7 @@ __date__ = "17/01/2017"
 import numpy
 import unittest
 from numpy.testing import assert_equal, assert_almost_equal
-from minishadow.Beam import Beam
+from beam import Beam
 
 class TestBeam(unittest.TestCase):
 

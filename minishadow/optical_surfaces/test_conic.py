@@ -5,7 +5,7 @@
 #      ccc[6]*X   + ccc[7]*Y   + ccc[8]*Z + ccc[9] = 0
 
 
-from minishadow.SurfaceConic import SurfaceConic
+from conic import Conic
 
 import numpy
 import unittest
@@ -19,14 +19,14 @@ class TestSurfaceConic(unittest.TestCase):
         #
         # initializers
         #
-        a = SurfaceConic()
+        a = Conic()
         print(a.info())
 
-        a = SurfaceConic.initialize_from_coefficients([1.0,1,1,1,1,1,1,1,1,1])
+        a = Conic.initialize_from_coefficients([1.0,1,1,1,1,1,1,1,1,1])
         assert_equal(a.get_coefficients(),numpy.array([1.0,1,1,1,1,1,1,1,1,1]))
         print(a.info())
 
-        a = SurfaceConic.initialize_as_plane()
+        a = Conic.initialize_as_plane()
         assert_equal(a.get_coefficients(),numpy.array([0,0,0,0,0,0,0,0,-1.,0]))
         print(a.info())
 

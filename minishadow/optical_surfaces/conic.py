@@ -9,7 +9,7 @@ from numpy.testing import assert_equal, assert_almost_equal
 #      ccc[6]*X   + ccc[7]*Y   + ccc[8]*Z + ccc[9] = 0
 
 
-class SurfaceConic(object):
+class Conic(object):
 
     def __init__(self, ccc=numpy.zeros(10)):
 
@@ -22,11 +22,11 @@ class SurfaceConic(object):
     def initialize_from_coefficients(cls, ccc):
         if numpy.array(ccc).size != 10:
             raise Exception("Invalid coefficients (dimension must be 10)")
-        return SurfaceConic(ccc=ccc)
+        return Conic(ccc=ccc)
 
     @classmethod
     def initialize_as_plane(cls):
-        return SurfaceConic(numpy.array([0,0,0,0,0,0,0,0,-1.,0]))
+        return Conic(numpy.array([0,0,0,0,0,0,0,0,-1.,0]))
 
     #
     # initializers from focal distances
