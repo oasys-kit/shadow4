@@ -27,9 +27,9 @@
 # Memorandum: 
 #
 # Install from sources: 
-#     git clone https://github.com/SophieTh/und_Sophie_2016.git pySRU
-#     cd pySRU
-#     python setup.py install
+#     git clone https://github.com/srio/minishadow
+#     cd minishadow
+#     /Applications/Oasys1.1.app/Contents/MacOS/PythonApp -m pip install -e . --no-deps --no-binary :all:
 #
 # Upload to pypi (when uploading, increment the version number):
 #     python setup.py register (only once, not longer needed)
@@ -37,7 +37,7 @@
 #     python setup.py upload
 #          
 # Install from pypi:
-#     pip install pySRU
+#     pip install <name>
 #
 
 __authors__ = ["M Sanchez del Rio - ESRF ISDD Advanced Analysis and Modelling"]
@@ -46,13 +46,25 @@ __date__ = "25/11/2016"
 
 from setuptools import setup
 
+PACKAGES = [
+    "minishadow",
+    "minishadow.beam",
+    "minishadow.io",
+    "minishadow.source_geometrical",
+    "minishadow.undulator",
+    "minishadow.optical_elements",
+    "minishadow.optical_surfaces",
+    "minishadow.prerefl",
+    "minishadow.mlayer",
+]
+
 setup(name='minishadow',
       version='0.0.1',
       description='implementation in python of some basic ray-tracing that mimic shadow',
       author='Manuel Sanchez del Rio',
       author_email='srio@esrf.eu',
       url='https://github.com/srio/minishadow/',
-      packages=['minishadow'],
+      packages=PACKAGES,
       install_requires=[
                         'numpy',
                         'scipy'

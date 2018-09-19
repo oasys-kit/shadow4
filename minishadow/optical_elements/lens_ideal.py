@@ -2,7 +2,7 @@
 import numpy
 from collections import OrderedDict
 
-class OpticalElemenLensIdeal(object):
+class LensIdeal(object):
 
     def __init__(self, name="LensIdeal", focal_x=0.0, focal_z=0.0, p=0.0, q=0.0):
         self._focal_x = focal_x
@@ -46,7 +46,7 @@ class OpticalElemenLensIdeal(object):
 
         return beam
 
-class OpticalElemenLensSuperIdeal(object):
+class LensSuperIdeal(object):
 
     def __init__(self, name="LensIdeal", focal_p_x=0.0, focal_p_z=0.0,
                                         focal_q_x=0.0, focal_q_z=0.0,
@@ -129,7 +129,7 @@ def test_with_collimated_beam():
 
     plotxy(beam.get_shadow3_beam(),1,3,nbins=100,title="SOURCE")
 
-    lens1 = OpticalElemenLensIdeal("test",focal_x=10.0,focal_z=10.0,p=100.0,q=10.0)
+    lens1 = LensIdeal("test",focal_x=10.0,focal_z=10.0,p=100.0,q=10.0)
 
     method = 2 # 0:direct, 1:interface with overwrite, 2: no overwrite
     if method == 0:
@@ -190,13 +190,13 @@ def test_with_divergent_beam():
     p = 10.0
     q = 10.0
     F = 1.0 / (1/p + 1/q)
-    # lens1 = OpticalElemenLensIdeal("test1",focal_x=F,focal_z=F,p=p,q=q)
-    lens1 = OpticalElemenLensSuperIdeal("test1",focal_p_x=p,focal_p_z=p,focal_q_x=q,focal_q_z=q,p=p,q=q)
+    # lens1 = LensIdeal("test1",focal_x=F,focal_z=F,p=p,q=q)
+    lens1 = LensSuperIdeal("test1",focal_p_x=p,focal_p_z=p,focal_q_x=q,focal_q_z=q,p=p,q=q)
 
     # p = 5.0
     # q = 30
     # F = 1.0 / (1/p + 1/q)
-    # lens2 = OpticalElemenLensIdeal("test2",focal_x=F,focal_z=F,p=p,q=q)
+    # lens2 = LensIdeal("test2",focal_x=F,focal_z=F,p=p,q=q)
 
     method = 2 # 0:direct, 1:interface with overwrite, 2: no overwrite
     if method == 0:
@@ -238,8 +238,8 @@ def get_sigmas_radiation(photon_energy,undulator_length):
 
 def test_id16ni():
 
-    from SourceGaussian import SourceGaussian
-    from Beam import Beam
+    from minishadow.source_geometrical.gaussian import SourceGaussian
+    from minishadow.beam.beam import Beam
     from Shadow.ShadowTools import plotxy
 
 
@@ -302,8 +302,8 @@ def test_id16ni():
     p = 28.3
     q = 11.70
     F = 1/(1/p+1/q)
-    lens1 = OpticalElemenLensIdeal("ML",focal_x=F,focal_z=0,p=p,q=q)
-    # lens1 = OpticalElemenLensSuperIdeal("ML",focal_p_x=p,focal_q_x=q,focal_p_z=0,focal_q_z=0,p=p,q=q)
+    lens1 = LensIdeal("ML",focal_x=F,focal_z=0,p=p,q=q)
+    # lens1 = LensSuperIdeal("ML",focal_p_x=p,focal_q_x=q,focal_p_z=0,focal_q_z=0,p=p,q=q)
     beam.traceOE(lens1,1,overwrite=True)
 
     # plotxy(beam.get_shadow3_beam(),1,4,nbins=100,title="H phase space")
@@ -322,16 +322,16 @@ def test_id16ni():
     p = 144.90
     q = 0.025
     F = 1.0/(1/184.90+1/0.10)
-    lens2 = OpticalElemenLensIdeal("KBV",focal_x=0,focal_z=F,p=p,q=q)
-    # lens2 = OpticalElemenLensSuperIdeal("KBV",focal_p_x=0,focal_q_x=0,focal_p_z=184.90,focal_q_z=0.10,p=p,q=q)
+    lens2 = LensIdeal("KBV",focal_x=0,focal_z=F,p=p,q=q)
+    # lens2 = LensSuperIdeal("KBV",focal_p_x=0,focal_q_x=0,focal_p_z=184.90,focal_q_z=0.10,p=p,q=q)
     beam.traceOE(lens2,1,overwrite=True)
 
     # second KB mirror
     p = 0.025
     q = 0.05
     F = 1.0/(1/144.95+1/0.05)
-    lens3 = OpticalElemenLensIdeal("KBH",focal_x=F,focal_z=0,p=p,q=q)
-    # lens3 = OpticalElemenLensSuperIdeal("KBH",focal_p_x=144.95,focal_q_x=0.05,focal_p_z=0,focal_q_z=0,p=p,q=q)
+    lens3 = LensIdeal("KBH",focal_x=F,focal_z=0,p=p,q=q)
+    # lens3 = LensSuperIdeal("KBH",focal_p_x=144.95,focal_q_x=0.05,focal_p_z=0,focal_q_z=0,p=p,q=q)
     beam.traceOE(lens3,1,overwrite=True)
 
 

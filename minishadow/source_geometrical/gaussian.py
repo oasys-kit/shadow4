@@ -1,6 +1,6 @@
 
 import numpy
-from minishadow.Beam import Beam
+from minishadow.beam.beam import Beam
 
 
 class SourceGaussian(object):

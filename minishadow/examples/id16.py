@@ -1,9 +1,9 @@
 import numpy
 from collections import OrderedDict
 
-from minishadow.SourceGaussian import SourceGaussian
-from minishadow.Beam import Beam
-from minishadow.OpticalElementLensIdeal import OpticalElemenLensIdeal, OpticalElemenLensSuperIdeal
+from minishadow.source_geometrical.gaussian import SourceGaussian
+from minishadow.beam.beam import Beam
+from minishadow.optical_elements. import OpticalElemenLensIdeal, OpticalElemenLensSuperIdeal
 
 try:
     import Shadow
