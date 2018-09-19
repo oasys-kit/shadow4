@@ -1,20 +1,15 @@
-__author__ = 'srio'
-
-import json
 from gfile import GFile
-
 
 class Source(object):
 
     def __init__(self):
-
-        self.FDISTR = 1
+        self.FDISTR = 2
         self.FGRID = 0
-        self.FSOUR = 0
+        self.FSOUR = 3
         self.FSOURCE_DEPTH = 1
         self.F_COHER = 0
         self.F_COLOR = 1
-        self.F_PHOT = 0
+        self.F_PHOT = 1
         self.F_POL = 3
         self.F_POLAR = 1
         self.F_OPD = 1
@@ -27,11 +22,11 @@ class Source(object):
         self.N_CIRCLE = 0
         self.N_COLOR = 2
         self.N_CONE = 0
-        self.IDO_VX = 0
-        self.IDO_VZ = 0
-        self.IDO_X_S = 0
-        self.IDO_Y_S = 0
-        self.IDO_Z_S = 0
+        self.IDO_VX = 1
+        self.IDO_VZ = 1
+        self.IDO_X_S = 1
+        self.IDO_Y_S = 1
+        self.IDO_Z_S = 1
         self.IDO_XL = 0
         self.IDO_XN = 0
         self.IDO_ZL = 0
@@ -65,7 +60,7 @@ class Source(object):
         self.EPSI_Z = 0.00000000000000
         self.HDIV1 = 0.500000000000000E-06
         self.HDIV2 = 0.500000000000000E-06
-        self.PH1 = 1000.00000000000
+        self.PH1 = 10.0000000000000
         self.PH2 = 1010.00000000000
         self.PH3 = 0.00000000000000
         self.PH4 = 0.00000000000000
@@ -116,12 +111,13 @@ class Source(object):
 
     def load_start00(self,filename="start.00"):
         a = GFile()
-        a.load_source((filename))
-        dict1 = a.get_source_as_dictionary()
+        a.load_gfile((filename))
+        dict1 = a.get_as_dictionary()
 
         for key in dict1.keys():
-            print("assigning: ",key,dict1[key])
-            setattr(self, key, dict1[key])
+            # print("assigning: ",key,dict1[key])
+            if hasattr(self,key):
+                setattr(self, key, dict1[key])
 
 
 if __name__ == "__main__":
@@ -132,7 +128,8 @@ if __name__ == "__main__":
 
     print(dir(oe0))
 
-    assert(oe0.FDISTR,3)
+    assert(oe0.FDISTR == 3)
+
 
 
 

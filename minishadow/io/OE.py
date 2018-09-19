@@ -381,13 +381,21 @@ class OE(object):
 
     def load_start01(self,filename="start.01"):
         a = GFile()
-        a.load_oe((filename))
-        dict1 = a.get_oe_as_dictionary()
+        a.load_gfile((filename))
+        dict1 = a.get_as_dictionary()
 
         for key in dict1.keys():
-            print("assigning: ",key,dict1[key])
-            setattr(self, key, dict1[key])
-
+            if hasattr(self,key):
+                # print("assigning: ",key,dict1[key])
+                setattr(self, key, dict1[key])
+            else: # this is for arrays...
+                try:
+                    command = "self.%s = %s"%(key,repr(dict1[key]))
+                    # print("command: ",command)
+                    exec(command)
+                except:
+                    print("   error executing: ",command)
+        # self.THICK[6] = 110.0
 
 if __name__ == "__main__":
 
@@ -397,8 +405,12 @@ if __name__ == "__main__":
 
     print(dir(oe1))
 
-    print(">>>",oe1.RX_SLIT[1])
-    # assert(oe0.FDISTR,3)
+    print(">>>>>oe1.RX_SLIT",oe1.RX_SLIT)
+    print(">>>>>Y_ROT",oe1.Y_ROT )
+    print(">>>>>ISTAR1",oe1.ISTAR1 )
+    print(">>>>>THICK",oe1.THICK )
+
+    assert(oe1.THICK[6] == 110.0)
 
 
 
