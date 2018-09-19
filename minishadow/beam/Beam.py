@@ -13,12 +13,12 @@ class Beam(object):
         :return:
         """
         if array is not None:
-            ncol, N = array.shape
+            N, ncol = array.shape
             if ncol != 18:
-                raise Exception ("Bar array: must be [18,npoints]")
+                raise Exception ("Bad array: must be [npoints,18]")
             self.rays = array.copy()
         else:
-            self.rays = numpy.zeros((18,N))
+            self.rays = numpy.zeros((N,18))
 
     @classmethod
     def initialize_from_array(cls, array):
@@ -72,7 +72,7 @@ class Beam(object):
             return numpy.array(numpy.where(w < 0)).size
 
 
-        return self.rays.shape[1]
+        return self.rays.shape[0]
 
     def get_photon_energy_eV(self):
         A2EV = 2.0*numpy.pi/(codata.h*codata.c/codata.e*1e2)
@@ -128,11 +128,11 @@ class Beam(object):
         """
 
         if column <= 18:
-            out = self.rays[column-1,:]
+            out = self.rays[:,column-1]
         else:
             A2EV = 2.0*numpy.pi/(codata.h*codata.c/codata.e*1e2)
             col = column - 1
-            ray = self.rays.T
+            ray = self.rays
 
             if col==10: out =  ray[:,col]/A2EV
             if col==18: out =  2*numpy.pi*1.0e8/ray[:,10]
@@ -165,18 +165,58 @@ class Beam(object):
                 Sin = numpy.sin(ray[:,13]-ray[:,14])
                 out =  2*numpy.sqrt(E2s*E2p)*Sin
 
+            if col==33:
+                out =  numpy.sum(numpy.array([ ray[:,i]*ray[:,i] for i in [6,7,8,15,16,17] ]),axis=0) *\
+                ray[:,10]/A2EV
+
+            if col==34:
+                out = numpy.abs(numpy.arcsin(ray[:,3]))
+            if col==35:
+                out = numpy.abs(numpy.arcsin(ray[:,5]))
+            if col==36:
+                f = self.getshonecol(10)
+                w = self.getshonecol(23)
+                xp = self.getshonecol(4)
+                if nolost == 1:
+                    findices  = numpy.where(f > 0.0)
+                    if len(findices[0])==0:
+                        col_mean = numpy.average(xp, weights=w)
+                    else:
+                        col_mean = numpy.average(xp[findices], weights=w[findices])
+                else:
+                    col_mean = numpy.average(xp, weights=w)
+                out = numpy.abs(numpy.arcsin(xp - col_mean))
+            if col==37:
+                f = self.getshonecol(10)
+                w = self.getshonecol(23)
+                zp = self.getshonecol(6)
+                if nolost == 1:
+                    findices  = numpy.where(f > 0.0)
+                    if len(findices[0])==0:
+                        col_mean = numpy.average(zp, weights=w)
+                    else:
+                        col_mean = numpy.average(zp[findices], weights=w[findices])
+                else:
+                    col_mean = numpy.average(zp, weights=w)
+
+
+                out = numpy.abs(numpy.arcsin(zp - col_mean))
+
+
+
+
         if nolost == 0:
             return out.copy()
 
         if nolost == 1:
-            f  = numpy.where(self.rays[9,:] > 0.0)
+            f  = numpy.where(self.rays[:,9] > 0.0)
             if len(f[0])==0:
                 print ('Beam.get_column: no GOOD rays, returning empty array')
                 return numpy.empty(0)
             return out[f].copy()
 
         if nolost == 2:
-            f  = numpy.where(self.rays[9,:] < 0.0)
+            f  = numpy.where(self.rays[:,9] < 0.0)
             if len(f[0])==0:
                 print ('Beam.get_column: no BAD rays, returning empty array')
                 return numpy.empty(0)
@@ -184,7 +224,7 @@ class Beam(object):
 
     def get_columns(self,columns,nolost=0):
         ret = []
-        if isinstance(columns, int): return self.get_column(column,nolost=nolost)
+        if isinstance(columns, int): return self.get_column(columns,nolost=nolost)
         for c in columns:
             ret.append(self.get_column(c,nolost=nolost))
         return numpy.array(tuple(ret))
@@ -360,14 +400,14 @@ class Beam(object):
         :param value:
         :return:
         """
-        self.rays[column-1,:] = value
+        self.rays[:,column-1] = value
 
     def set_photon_energy_eV(self,energy_eV):
         A2EV = 2.0*numpy.pi/(codata.h*codata.c/codata.e*1e2)
-        self.rays[10,:] = energy_eV * A2EV
+        self.rays[:,10] = energy_eV * A2EV
 
     def set_photon_wavelength(self,wavelength):
-        self.rays[10,:] =  2*numpy.pi/(wavelength * 1e2)
+        self.rays[:,10] =  2*numpy.pi/(wavelength * 1e2)
 
 
     #
@@ -401,13 +441,13 @@ class Beam(object):
         """
         a0 = self.rays
         try:
-            tof = (-a0[1,:] + dist)/a0[4,:]
-            self.rays[0,:] += tof * self.rays[3,:]
-            self.rays[1,:] += tof * self.rays[4,:]
-            self.rays[2,:] += tof * self.rays[5,:]
+            tof = (-a0[:,1] + dist)/a0[:,4]
+            self.rays[:,0] += tof * self.rays[:,3]
+            self.rays[:,1] += tof * self.rays[:,4]
+            self.rays[:,2] += tof * self.rays[:,5]
 
             if resetY:
-                self.rays[1,:] = 0.0
+                self.rays[:,1] = 0.0
 
         except AttributeError:
             print ('Beam.retrace: No rays')
@@ -424,9 +464,9 @@ class Beam(object):
         if numpy.array(qdist1).size != 3:
             raise Exception("Input must be a vector [x,y,z]")
 
-        self.rays[0,:] += qdist1[0]
-        self.rays[1,:] += qdist1[1]
-        self.rays[2,:] += qdist1[2]
+        self.rays[:,0] += qdist1[0]
+        self.rays[:,1] += qdist1[1]
+        self.rays[:,2] += qdist1[2]
 
 
     def rotate(self,theta1,axis=1,rad=1):
@@ -465,9 +505,9 @@ class Beam(object):
             newtorot = torot + tstart[i] - 1
             newtoroti = newtorot -1
 
-            self.rays[newtoroti[0],:] =  a1[newtoroti[0],:] * costh + a1[newtoroti[1],:] * sinth
-            self.rays[newtoroti[1],:] = -a1[newtoroti[0],:] * sinth + a1[newtoroti[1],:] * costh
-            self.rays[newaxisi]       =  a1[newaxisi,:]
+            self.rays[:,newtoroti[0]] =  a1[:,newtoroti[0]] * costh + a1[:,newtoroti[1]] * sinth
+            self.rays[:,newtoroti[1]] = -a1[:,newtoroti[0]] * sinth + a1[:,newtoroti[1]] * costh
+            self.rays[:,newaxisi]       =  a1[:,newaxisi]
 
     #
     # file i/o

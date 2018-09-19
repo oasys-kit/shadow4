@@ -18,12 +18,12 @@ class TestBeam(unittest.TestCase):
         print(a.info())
         self.assertEqual(100,a.get_number_of_rays())
 
-        a = Beam(array=numpy.zeros( (18,1000) ))
+        a = Beam(array=numpy.zeros( (1000,18) ))
         print(a.info())
         print(a.info())
         self.assertEqual(1000,a.get_number_of_rays())
 
-        a = Beam.initialize_from_array(numpy.zeros( (18,500) ))
+        a = Beam.initialize_from_array(numpy.zeros( (500,18) ))
         print(a.info())
         print(a.info())
         self.assertEqual(500,a.get_number_of_rays())
