@@ -33,7 +33,7 @@ class Conic(object):
     #
     @classmethod
     def initialize_as_sphere_from_focal_distances(cls,p, q, theta1, cylindrical=0, cylangle=0.0, switch_convexity=0):
-        ccc = SurfaceConic()
+        ccc = Conic()
         ccc.set_sphere_from_focal_distances(p,q,theta1)
         if cylindrical:
             ccc.set_cylindrical(cylangle)
@@ -44,7 +44,7 @@ class Conic(object):
 
     @classmethod
     def initialize_as_ellipsoid_from_focal_distances(cls,p, q, theta1, cylindrical=0, cylangle=0.0, switch_convexity=0):
-        ccc = SurfaceConic()
+        ccc = Conic()
         ccc.set_ellipsoid_from_focal_distances(p,q,theta1)
         if cylindrical:
             ccc.set_cylindrical(cylangle)
@@ -54,7 +54,7 @@ class Conic(object):
 
     @classmethod
     def initialize_as_paraboloid_from_focal_distances(cls,p, q, theta1, cylindrical=0, cylangle=0.0, switch_convexity=0):
-        ccc = SurfaceConic()
+        ccc = Conic()
         ccc.set_paraboloid_from_focal_distances(p,q,theta1)
         if cylindrical:
             ccc.set_cylindrical(cylangle)
@@ -64,7 +64,7 @@ class Conic(object):
 
     @classmethod
     def initialize_as_hyperboloid_from_focal_distances(cls,p, q, theta1, cylindrical=0, cylangle=0.0, switch_convexity=0):
-        ccc = SurfaceConic()
+        ccc = Conic()
         ccc.set_hyperboloid_from_focal_distances(p,q,theta1)
         if cylindrical:
             ccc.set_cylindrical(cylangle)
@@ -77,7 +77,7 @@ class Conic(object):
     #
     @classmethod
     def initialize_as_sphere_from_curvature_radius(cls, radius, cylindrical=0, cylangle=0.0, switch_convexity=0):
-        ccc = SurfaceConic()
+        ccc = Conic()
         ccc.set_sphere_from_curvature_radius(radius)
         if cylindrical:
             ccc.set_cylindrical(cylangle)
@@ -86,7 +86,7 @@ class Conic(object):
         return ccc
 
     def duplicate(self):
-        return SurfaceConic.initialize_from_coefficients(self.ccc.copy())
+        return Conic.initialize_from_coefficients(self.ccc.copy())
 
     #
     # getters

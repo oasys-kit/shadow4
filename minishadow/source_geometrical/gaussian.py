@@ -168,7 +168,7 @@ class SourceGaussian(object):
         V2y = v2[1,:].copy().flatten()
         V2z = v2[2,:].copy().flatten()
 
-        return numpy.vstack((V1x,V1y,V1z,V2x,V2y,V2z))
+        return numpy.vstack((V1x,V1y,V1z,V2x,V2y,V2z)).T
 
 
     #
@@ -223,12 +223,12 @@ class SourceGaussian(object):
         :return:
         """
 
-        rays = numpy.zeros((18,self.get_number_of_points()))
-        rays[0:6] = self.get_volume()
-        rays[6] = 1.0 # Es
-        rays[9] = 1   # flag
-        rays[10] = 2 * numpy.pi / (wavelength * 1e2) # wavenumber
-        rays[11] = numpy.arange(self.get_number_of_points(),dtype=float) # index
+        rays = numpy.zeros((self.get_number_of_points(),18))
+        rays[:,0:6] = self.get_volume()
+        rays[:,6] = 1.0 # Es
+        rays[:,9] = 1   # flag
+        rays[:,10] = 2 * numpy.pi / (wavelength * 1e2) # wavenumber
+        rays[:,11] = numpy.arange(self.get_number_of_points(),dtype=float) # index
         return Beam.initialize_from_array(rays)
 
 

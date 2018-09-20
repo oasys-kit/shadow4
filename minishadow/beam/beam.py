@@ -517,7 +517,7 @@ class Beam(object):
         #TODO this dump uses now shadow3. To be removed after checking or write using fully python
         import Shadow
         beam_shadow3 = Shadow.Beam(N=self.get_number_of_rays())
-        beam_shadow3.rays = self.get_rays().T.copy()
+        beam_shadow3.rays = self.get_rays().copy()
         return beam_shadow3
 
         # beam_shadow3.write(file)

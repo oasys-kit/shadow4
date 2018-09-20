@@ -3,7 +3,7 @@ from collections import OrderedDict
 
 from minishadow.source_geometrical.gaussian import SourceGaussian
 from minishadow.beam.beam import Beam
-from minishadow.optical_elements. import OpticalElemenLensIdeal, OpticalElemenLensSuperIdeal
+from minishadow.optical_elements.lens_ideal import LensIdeal, LensSuperIdeal
 
 try:
     import Shadow
@@ -84,7 +84,7 @@ def id16ni_multilayer_as_ideal_lens(beam,do_plot=False):
     p = 28.3
     q = 11.70
     F = 1/(1/p+1/q)
-    lens1 = OpticalElemenLensIdeal("ML",focal_x=F,focal_z=0,p=p,q=q)
+    lens1 = LensIdeal("ML",focal_x=F,focal_z=0,p=p,q=q)
     beam.traceOE(lens1,1,overwrite=True)
 
 
@@ -108,7 +108,7 @@ def id16ni_kb_as_ideal_lenses(beam,do_plot=False):
     p = 144.90
     q = 0.025
     F = 1.0/(1/184.90+1/0.10)
-    lens2 = OpticalElemenLensIdeal("KBV",focal_x=0,focal_z=F,p=p,q=q)
+    lens2 = LensIdeal("KBV",focal_x=0,focal_z=F,p=p,q=q)
     # lens2 = OpticalElemenLensSuperIdeal("KBV",focal_p_x=0,focal_q_x=0,focal_p_z=184.90,focal_q_z=0.10,p=p,q=q)
     beam.traceOE(lens2,1,overwrite=True)
 
@@ -116,7 +116,7 @@ def id16ni_kb_as_ideal_lenses(beam,do_plot=False):
     p = 0.025
     q = 0.05
     F = 1.0/(1/144.95+1/0.05)
-    lens3 = OpticalElemenLensIdeal("KBH",focal_x=F,focal_z=0,p=p,q=q)
+    lens3 = LensIdeal("KBH",focal_x=F,focal_z=0,p=p,q=q)
     # lens3 = OpticalElemenLensSuperIdeal("KBH",focal_p_x=144.95,focal_q_x=0.05,focal_p_z=0,focal_q_z=0,p=p,q=q)
     beam.traceOE(lens3,1,overwrite=True)
 
