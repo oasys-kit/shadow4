@@ -159,15 +159,6 @@ class Toroid(object):
         # ! C
         # ! C move the ref. frame to the torus one.
         # ! C
-        # IF (F_TORUS.EQ.0) THEN
-        #    P(3)     = XIN(3) - R_MAJ - R_MIN
-        # ELSE IF (F_TORUS.EQ.1) THEN
-        #    P(3)     = XIN(3) - R_MAJ + R_MIN
-        # ELSE IF (F_TORUS.EQ.2) THEN
-        #    P(3)     = XIN(3) + R_MAJ - R_MIN
-        # ELSE IF (F_TORUS.EQ.3) THEN
-        #    P(3)     = XIN(3) + R_MAJ + R_MIN
-        # END IF
 
         if self.f_torus == 0:
             P3 = P3 - self.r_maj - self.r_min
@@ -180,9 +171,8 @@ class Toroid(object):
 
 
 
-        P1[-1],P2[-1],P3[-1],V1[-1],V2[-1],V3[-1]=-8.5306017543434476E-003,-2999.9940033165662   ,    -749991.61550754297      ,     6.4050812398434073E-005 , 0.99999800361779412,-1.9971624670828548E-003
+        #P1[-1],P2[-1],P3[-1],V1[-1],V2[-1],V3[-1]=-8.5306017543434476E-003,-2999.9940033165662   ,    -749991.61550754297      ,     6.4050812398434073E-005 , 0.99999800361779412,-1.9971624670828548E-003
 
-        print(">>>>>in intercept",XIN.shape,VIN.shape)
 
         #     ! ** Evaluates the quartic coefficients **
 
@@ -229,118 +219,74 @@ class Toroid(object):
         #     print("              P,V",P1[i],P2[i],P3[i],V1[i],V2[i],V3[i])
         #     print("              A,B,DD",A,B,DD[i],A**2,DD[i]+A**2)
 
-        #
-        #     ! srio danger
-        #     !     	CALL 	ZRPOLY (COEFF,4,H_OUTPUT,IER)
-        #     CALL ZRPOLY (COEFF,ifour,H_OUTPUT88,IER)
-        #     IF (IER.NE.0) WRITE(6,*)'Watch out: error in ZRPOLY',IER
-        #     DO 91 I = 1,4
-        #        TEST1(I)	= DIMAG( H_OUTPUT(I) )
-        # 91  CONTINUE
-        #     CHECK 	= TEST1(1)*TEST1(2)*TEST1(3)*TEST1(4)
-        #     IF (CHECK.NE.0.0D0) THEN
-        #        ! C all the solutions are complex; the beam is completely out of
-        #        ! C of the mirror.
-        #        I_RES	= -1
-        #        RETURN
-        #     ELSE
-        #     END IF
-        #     IF (I_RES.LT.0) THEN
-        #        ! C
-        #        ! C Ripple case : take the closest intercept.
-        #        ! C
-        #        ANSWER	= 1.0D+20
-        #        DO 11 I = 1,4
-        #           IF (TEST1(I).EQ.0.0D0) THEN
-        #              IF (ABS(DREAL(H_OUTPUT(I))).LT.ABS(ANSWER)) &
-        #                   ANSWER = DREAL( H_OUTPUT(I) )
-        #           END IF
-        # 11     CONTINUE
-        #     ELSE
-        #        ! C
-        #        ! C Usual case.
-        #        ! C
-        #        N_TEST	= 0
-        #        DO 21 I = 1, 4
-        #           TEMP=DREAL(H_OUTPUT(I))
-        #           IF (TEST1(I).EQ.0.0D0) THEN
-        #              ! C
-        #              ! C In the facet calculation, we only consider the positive
-        #              ! C intercepted length while in the Shadow we consider both the
-        #              ! C positive and negative solutions.
-        #              ! C the following arrangement can seperate the facet and
-        #              ! C original calculations. 5/12/92 G.J.
-        #              ! C
-        #              IF (F_FACET.GT.0) THEN
-        #                 IF (TEMP.GE.0.0D0) THEN
-        #                    N_TEST = N_TEST + 1
-        #                    TEST2(N_TEST)        = TEMP
-        #                 END IF
-        #              ELSE
-        #                 N_TEST = N_TEST + 1
-        #                 TEST2(N_TEST)	= TEMP
-        #              END IF
-        #           END IF
-        # 21     CONTINUE
-        #           ! C
-        #           ! C Sort the real intercept in ascending order.
-        #           ! C
-        #        DO 31 I = 1, N_TEST
-        #           IMIN	= I
-        #           AMIN	= TEST2(I)
-        #           DO 41 J = I, N_TEST
-        #              IF (TEST2(J).LT.AMIN) THEN
-        #                 AMIN	= TEST2(J)
-        #                 IMIN	= J
-        #              END IF
-        # 41        CONTINUE
-        #           XTEMP	= TEST2(I)
-        #           TEST2(I)	= TEST2(IMIN)
-        #           TEST2(IMIN)	= XTEMP
-        # 31     CONTINUE
-        # ! C
-        # ! C Pick the output according to F_TORUS.
-        # ! C
-        #        IF (F_TORUS.EQ.0) THEN
-        #           ANSWER	= TEST2(N_TEST)
-        #        ELSE IF (F_TORUS.EQ.1) THEN
-        #           IF (N_TEST.GT.1) THEN
-        #              ANSWER	= TEST2(N_TEST-1)
-        #           ELSE
-        #              I_RES	= -1
-        #              RETURN
-        #           END IF
-        #        ELSE IF (F_TORUS.EQ.2) THEN
-        #           IF (N_TEST.GT.1) THEN
-        #              ANSWER	= TEST2(2)
-        #           ELSE
-        #              I_RES	= -1
-        #              RETURN
-        #           END IF
-        #        ELSE IF (F_TORUS.EQ.3) THEN
-        #           ANSWER	= TEST2(1)
-        #        END IF
-        #     END IF
-        #
-        #     !srio@esrf.eu 2011-10-12 fixed a bug with toroidal mirrors
-        #     !set at a distance zero from previous star.xx file
-        #     ! WHY ANSWER SHOULD BE POSITIVE?
-        #     ! if the distance from source to torus is zero, it can be negative
-        #     i_res=1
-        #     return
-        #     !IF (ANSWER.GT.0.0D0.AND.ANSWER.LT.1.0D+20) THEN
-        #     !   I_RES = 1
-        #     !   RETURN
-        #     !ELSE
-        #     !   I_RES	= - 1
-        #     !   RETURN
-        #     !END IF
-        #   End Subroutine quartic
 
 
-        return numpy.ones(XIN.shape[1]),numpy.ones(XIN.shape[1])
+        # print(coeff,coeff.shape)
 
-        # return TPAR,IFLAG
+        AA.shape = -1
+        BB.shape = -1
+        CC.shape = -1
+        DD.shape = -1
+        # print(">>>>",AA.shape,BB.shape,CC.shape,DD.shape)
+
+        i_res = numpy.ones_like(AA)
+        answer = numpy.ones_like(AA)
+        for k in range(AA.size):
+            # print("coeff: ",i,1.0,AA[i],BB[i],CC[i],DD[i])
+            coeff = numpy.array([1.0,AA[k],BB[k],CC[k],DD[k]])
+            # print("coeff: ",i,coeff.shape,coeff)
+            h_output = numpy.roots(coeff)
+            # print(i,h_output)
+
+
+
+
+
+
+            # test1 = h_output.imag
+            # test2 = numpy.zeros_like(test1)
+            # # print(test1)
+
+            if h_output.imag.prod() != 0:
+                print("all the solutions are complex")
+                i_res[k] = -1
+                answer[k] = 0.0
+            else:
+                Answers = []
+
+                for i in range(4):
+                    if h_output[i].imag == 0:
+                        Answers.append(h_output[i].real)
+
+                #! C
+                #! C Sort the real intercept in ascending order.
+                #! C
+
+                Answers = numpy.sort(numpy.array(Answers))
+
+                # ! C
+                # ! C Pick the output according to F_TORUS.
+                # ! C
+
+                # TODO check correctness of  indices not shifted
+                if self.f_torus == 0:
+                    answer[k] = Answers[-1]
+                elif self.f_torus == 1:
+                    if len(Answers) > 1:
+                        answer[k] = Answers[-1]
+                    else:
+                        i_res[k] = -1
+                elif self.f_torus == 2:
+                    if len(Answers) > 1:
+                        answer[k] = Answers[1]
+                    else:
+                        i_res[k] = -1
+                elif self.f_torus == 3:
+                    answer[k] = Answers[0]
+
+
+        return answer,i_res
+
 
 
 
@@ -400,8 +346,11 @@ class Toroid(object):
         v1 =   newbeam.get_columns([4,5,6]) # numpy.array(a3.getshcol([4,5,6]))
         flag = newbeam.get_column(10)        # numpy.array(a3.getshonecol(10))
 
-
         t,iflag = self.calculate_intercept(x1,v1)
+
+        print(">>>>>",t)
+        # for i in range(t.size):
+        #     print(">>>>",t[i],iflag[i])
 
         x2 = x1 + v1 * t
         for i in range(flag.size):
