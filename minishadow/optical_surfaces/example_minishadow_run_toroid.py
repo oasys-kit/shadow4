@@ -125,14 +125,14 @@ def compare_results(do_assert=True):
         minimirr.load("minimirr.01")
         mirr     = Shadow.Beam()
         mirr.load("mirr.01")
-        assert_almost_equal(minimirr.rays[:,0:6],mirr.rays[:,0:6])
+        assert_almost_equal(minimirr.rays[:,0:6],mirr.rays[:,0:6],2)
 
 
         ministar = Shadow.Beam()
         ministar.load("ministar.01")
         star     = Shadow.Beam()
         star.load("star.01")
-        assert_almost_equal(ministar.rays[:,0:6],star.rays[:,0:6])
+        assert_almost_equal(ministar.rays[:,0:6],star.rays[:,0:6],2)
 
 
 def minishadow_run_toroid_mirror():
@@ -190,17 +190,17 @@ def minishadow_run_toroid_mirror():
     # # reflect beam in the mirror surface and dump mirr.01
     # #
     newbeam = t.apply_specular_reflection_on_beam(newbeam)
-    # newbeam.dump_shadow3_file('minimirr.01')
+    newbeam.dump_shadow3_file('minimirr.01')
     #
     # #
     # # put beam in lab frame and compute image
     # #
-    # newbeam.rotate(theta_grazing,axis=1)
-    # # TODO what about alpha?
-    # newbeam.retrace(q,resetY=True)
-    # newbeam.dump_shadow3_file('ministar.01')
+    newbeam.rotate(theta_grazing,axis=1)
+    # TODO what about alpha?
+    newbeam.retrace(q,resetY=True)
+    newbeam.dump_shadow3_file('ministar.01')
 
 if __name__ == "__main__":
     minishadow_run_toroid_mirror()
-    # compare_results()
+    compare_results()
 

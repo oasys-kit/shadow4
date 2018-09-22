@@ -129,17 +129,59 @@ class Toroid(object):
         # ;
         # ; Calculates the normal at intercept points x2 [see shadow's normal.F]
         # ;
-        # TODO
+
         normal = numpy.zeros_like(x2)
+
+        X_IN = x2[0]
+        Y_IN = x2[1]
+        Z_IN = x2[2]
 
         # normal[0,:] = 2 * self.ccc[1-1] * x2[0,:] + self.ccc[4-1] * x2[1,:] + self.ccc[6-1] * x2[2,:] + self.ccc[7-1]
         # normal[1,:] = 2 * self.ccc[2-1] * x2[1,:] + self.ccc[4-1] * x2[0,:] + self.ccc[5-1] * x2[2,:] + self.ccc[8-1]
         # normal[2,:] = 2 * self.ccc[3-1] * x2[2,:] + self.ccc[5-1] * x2[1,:] + self.ccc[6-1] * x2[0,:] + self.ccc[9-1]
         #
         # normalmod =  numpy.sqrt( normal[0,:]**2 + normal[1,:]**2 + normal[2,:]**2 )
-        normal[0,:] /= 0.0
-        normal[1,:] /= 0.0
-        normal[2,:] /= 1.0
+
+
+        # ! ** Torus case. The z coordinate is offsetted due to the change in
+        # ! ** ref. frame for this case.
+        # 	  IF (F_TORUS.EQ.0) THEN
+        #      	    Z_IN 	= Z_IN - R_MAJ - R_MIN
+        # 	  ELSE IF (F_TORUS.EQ.1) THEN
+        #      	    Z_IN 	= Z_IN - R_MAJ + R_MIN
+        # 	  ELSE IF (F_TORUS.EQ.2) THEN
+        #      	    Z_IN 	= Z_IN + R_MAJ - R_MIN
+        # 	  ELSE IF (F_TORUS.EQ.3) THEN
+        #      	    Z_IN 	= Z_IN + R_MAJ + R_MIN
+        # 	  END IF
+        #
+        if self.f_torus == 0:
+            Z_IN = Z_IN - self.r_maj - self.r_min
+        elif self.f_torus == 1:
+            Z_IN = Z_IN - self.r_maj + self.r_min
+        elif self.f_torus == 2:
+            Z_IN = Z_IN + self.r_maj - self.r_min
+        elif self.f_torus == 3:
+            Z_IN = Z_IN + self.r_maj + self.r_min
+
+
+        #      	  PART	= X_IN**2 + Y_IN**2 + Z_IN**2
+        #
+        #      	  VOUT(1)  = 4*X_IN*(PART + R_MAJ**2 - R_MIN**2)
+        #      	  VOUT(2)  = 4*Y_IN*(PART - (R_MAJ**2 + R_MIN**2))
+        #      	  VOUT(3)  = 4*Z_IN*(PART - (R_MAJ**2 + R_MIN**2))
+
+        PART = X_IN**2 + Y_IN**2 + Z_IN**2
+
+        normal[0,:] = 4*X_IN*(PART +  self.r_maj**2 - self.r_min**2)
+        normal[1,:] = 4*Y_IN*(PART - (self.r_maj**2 + self.r_min**2))
+        normal[2,:] = 4*Z_IN*(PART - (self.r_maj**2 + self.r_min**2))
+
+        n2 = numpy.sqrt(normal[0,:]**2 + normal[1,:]**2 + normal[2,:]**2)
+
+        normal[0,:] /= n2
+        normal[1,:] /= n2
+        normal[2,:] /= n2
 
         return normal
 
@@ -348,9 +390,9 @@ class Toroid(object):
 
         t,iflag = self.calculate_intercept(x1,v1)
 
-        print(">>>>>",t)
+        # print(">>>>>",x1,t)
         # for i in range(t.size):
-        #     print(">>>>",t[i],iflag[i])
+        #     print(">>>>",x1[0:3,i],t[i],iflag[i])
 
         x2 = x1 + v1 * t
         for i in range(flag.size):
@@ -362,6 +404,9 @@ class Toroid(object):
         # ;
 
         normal = self.get_normal(x2)
+
+        # for i in range(t.size):
+        #     print(">>>>",t[i],normal[:,i])
 
         # ;
         # ; reflection
