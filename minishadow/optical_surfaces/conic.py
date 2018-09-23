@@ -341,7 +341,37 @@ class Conic(object):
 
         return TPAR,IFLAG
 
+    def z_vs_xy(self,x,y):
 
+        ccc = self.ccc
+
+        AA 	= ccc[2] * numpy.ones_like(x)
+        BB = ccc[4] * y + ccc[5] * x + ccc[8]
+        CC = ccc[0]*x**2 + ccc[1]*y**2 + ccc[3]*x*y + ccc[6]*x + ccc[7]*y  + ccc[9]
+
+
+        shape_x =  x.shape
+
+
+        AAf = AA.flatten()
+        BBf = BB.flatten()
+        CCf = CC.flatten()
+
+        TPAR1 = numpy.zeros_like(CCf,dtype=complex)
+        TPAR2 = numpy.zeros_like(CCf,dtype=complex)
+
+        for i in range(AAf.size):
+            roots = numpy.roots([CCf[i],BBf[i],AAf[i]])
+            TPAR1[i] = roots[0]
+            TPAR2[i] = roots[1]
+
+
+        TPAR2.shape = shape_x
+
+        if TPAR2.size == 1:
+            TPAR2 = numpy.asscalar(TPAR2)
+
+        return TPAR2.real
 
     def set_cylindrical(self,CIL_ANG):
 
