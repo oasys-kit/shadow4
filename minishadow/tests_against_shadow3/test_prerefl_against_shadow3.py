@@ -1,4 +1,5 @@
 import os
+from minishadow.prerefl.prerefl import PreRefl
 
 prerefl_test_dot_inp = """prerefl_test
 Be5_30.dat
@@ -6,9 +7,6 @@ Be5_30.dat
 """
 
 if __name__ == "__main__":
-
-    from prerefl import PreRefl
-
     #
     # shadow3
     #

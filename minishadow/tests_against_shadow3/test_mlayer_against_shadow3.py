@@ -1,7 +1,7 @@
 import os
 import numpy
 from numpy.testing import assert_array_almost_equal
-from mlayer import MLayer
+from minishadow.mlayer.mlayer import MLayer
 
 
 __author__ = 'srio'

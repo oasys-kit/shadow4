@@ -1,11 +1,10 @@
+#
+# uses example 15 of tutorials
+#
 import numpy
 import platform
-
 from numpy.testing import assert_equal, assert_almost_equal
 
-#
-# shadow3
-#
 import Shadow
 
 #
@@ -14,6 +13,53 @@ import Shadow
 from minishadow.beam.beam import Beam
 from minishadow.optical_surfaces.toroid import Toroid
 
+
+def create_start_files():
+
+    # write (1) or not (0) SHADOW files start.xx end.xx star.xx
+    iwrite = 1
+
+    #
+    # initialize shadow3 source (oe0) and beam
+    #
+    oe0 = Shadow.Source()
+    oe1 = Shadow.OE()
+
+    #
+    # Define variables. See meaning of variables in:
+    #  https://raw.githubusercontent.com/srio/shadow3/master/docs/source.nml
+    #  https://raw.githubusercontent.com/srio/shadow3/master/docs/oe.nml
+    #
+
+    oe0.FDISTR = 3
+    oe0.F_COLOR = 3
+    oe0.F_PHOT = 0
+    oe0.HDIV1 = 0.0
+    oe0.HDIV2 = 0.0
+    oe0.IDO_VX = 0
+    oe0.IDO_VZ = 0
+    oe0.IDO_X_S = 0
+    oe0.IDO_Y_S = 0
+    oe0.IDO_Z_S = 0
+    oe0.PH1 = 5000.0
+    oe0.PH2 = 45000.0
+    oe0.SIGDIX = 8.84999972e-05
+    oe0.SIGDIZ = 7.1999998e-06
+    oe0.SIGMAX = 0.0057000001
+    oe0.SIGMAZ = 0.00104
+    oe0.VDIV1 = 0.0
+    oe0.VDIV2 = 0.0
+
+    oe1.DUMMY = 1.0
+    oe1.FMIRR = 3
+    oe1.T_IMAGE = 1000.0
+    oe1.T_INCIDENCE = 89.885408
+    oe1.T_REFLECTION = 89.885408
+    oe1.T_SOURCE = 3000.0
+
+
+    oe0.write("start.00")
+    oe1.write("start.01")
 
 
 def run_shadow3_from_start_files(iwrite=0):
@@ -111,23 +157,25 @@ def run_shadow3_from_start_files(iwrite=0):
 
 
 
-def compare_results(do_assert=True):
-    Shadow.ShadowTools.plotxy("minimirr.01",2,1,nbins=101,nolost=1,title="Mirror (Python)")
-    Shadow.ShadowTools.plotxy("mirr.01",2,1,nbins=101,nolost=1,title="Mirror (SHADOW)")
+def compare_results(do_plot=True,do_assert=True):
 
-    Shadow.ShadowTools.plotxy("ministar.01",1,3,nbins=101,nolost=1,title="Image (Python)")
-    Shadow.ShadowTools.plotxy("star.01",1,3,nbins=101,nolost=1,title="Image (SHADOW)")
+    if do_plot:
+        Shadow.ShadowTools.plotxy("minimirr.01",2,1,nbins=101,nolost=1,title="Mirror (Python)")
+        Shadow.ShadowTools.plotxy("mirr.01",2,1,nbins=101,nolost=1,title="Mirror (SHADOW)")
+
+        Shadow.ShadowTools.plotxy("ministar.01",1,3,nbins=101,nolost=1,title="Image (Python)")
+        Shadow.ShadowTools.plotxy("star.01",1,3,nbins=101,nolost=1,title="Image (SHADOW)")
 
 
     if do_assert:
-
+        print("Comparing files mirr.01 and minimirr.01")
         minimirr = Shadow.Beam()
         minimirr.load("minimirr.01")
         mirr     = Shadow.Beam()
         mirr.load("mirr.01")
         assert_almost_equal(minimirr.rays[:,0:6],mirr.rays[:,0:6],2)
 
-
+        print("Comparing files star.01 and ministar.01")
         ministar = Shadow.Beam()
         ministar.load("ministar.01")
         star     = Shadow.Beam()
@@ -201,6 +249,8 @@ def minishadow_run_toroid_mirror():
     newbeam.dump_shadow3_file('ministar.01')
 
 if __name__ == "__main__":
+
+    create_start_files()
     minishadow_run_toroid_mirror()
-    compare_results()
+    compare_results(do_plot=False,do_assert=True)
 

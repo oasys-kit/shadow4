@@ -4,6 +4,7 @@
 # https://www.reddit.com/r/matlab/comments/pd7rr/finding_the_point_of_intersection_between_a_line/
 
 from scipy.optimize import fsolve
+from scipy import interpolate
 from srxraylib.plot.gol import plot,plot_image, plot_surface
 
 
@@ -89,6 +90,194 @@ class Mesh(object):
     def set_surface(self,surface):
         self.surface = surface
 
+    def load_file(self,filename,kind='linear'):
+        x,y,z = self.read_surface_error_file(filename)
+        self.surface = interpolate.interp2d(x,y,z.T, kind=kind)
+
+    #copied from shadowOui util/shadow_util
+    @classmethod
+    def read_surface_error_file(cls, filename):
+
+        file = open(filename, "r")
+
+        rows = file.readlines()
+
+        dimensions = rows[0].split()
+        n_x = int(dimensions[0])
+        n_y = int(dimensions[1])
+
+        if n_x > 500:
+            raise Exception("Malformed file: maximum allowed point in X direction is 500")
+
+        x_coords = numpy.zeros(0)
+        y_coords = numpy.zeros(0)
+        z_values = numpy.zeros((n_x, n_y))
+
+
+        index = 1
+        dim_y_row = len(rows[index].split())
+        is_ycoord = True
+        first_x_row_index = 0
+
+        while(is_ycoord):
+            y_values = rows[index].split()
+
+            if len(y_values) == dim_y_row:
+                for y_value in y_values:
+                    y_coords = numpy.append(y_coords, float(y_value))
+            else:
+                first_x_row_index = index
+                is_ycoord = False
+
+            index +=1
+
+        first_x_row = rows[first_x_row_index].split()
+
+        if len(first_x_row) == 2:
+            x_index = 0
+            z_index = 0
+
+            for index in range(first_x_row_index, len(rows)):
+                if z_index == 0:
+                    values = rows[index].split()
+                    x_coords = numpy.append(x_coords, float(values[0]))
+                    z_value = float(values[1])
+                else:
+                    z_value = float(rows[index])
+
+                z_values[x_index, z_index] = z_value
+                z_index += 1
+
+                if z_index == n_y:
+                    x_index += 1
+                    z_index = 0
+        else:
+            x_rows = []
+
+            for index in range(2, len(rows)):
+
+                x_row = rows[index].split("\t")
+
+                if len(x_row) != 1 + n_y:
+                    x_row = rows[index].split()
+
+                if len(x_row) != 1 + n_y:
+                    raise Exception("Malformed file: check format")
+
+                x_rows.append(x_row)
+
+            for x_index in range(0, len(x_rows)):
+                x_coords = numpy.append(x_coords, float(x_rows[x_index][0]))
+
+                for z_index in range(0, len(x_rows[x_index]) - 1):
+                    z_value = float(x_rows[x_index][z_index + 1])
+
+                    z_values[x_index, z_index] = z_value
+
+        return x_coords, y_coords, z_values
+
+    def get_normal(self,x2):
+        # ;
+        # ; Calculates the normal at intercept points x2 [see shadow's normal.F]
+        # ;
+
+        normal = numpy.zeros_like(x2)
+
+        X_IN = x2[0]
+        Y_IN = x2[1]
+        Z_IN = x2[2]
+
+
+
+        normal[0,:] = 0.0
+        normal[1,:] = 0.0
+        normal[2,:] = 1.0
+
+        n2 = numpy.sqrt(normal[0,:]**2 + normal[1,:]**2 + normal[2,:]**2)
+
+        normal[0,:] /= n2
+        normal[1,:] /= n2
+        normal[2,:] /= n2
+
+        return normal
+
+    def calculate_intercept(self,XIN,VIN,keep=0):
+
+        P1 = XIN[0,:].flatten()
+        P2 = XIN[1,:].flatten()
+        P3 = XIN[2,:].flatten()
+
+        V1 = VIN[0,:].flatten()
+        V2 = VIN[1,:].flatten()
+        V3 = VIN[2,:].flatten()
+
+        answer = numpy.zeros_like(P1)
+        i_flag = numpy.ones_like(P1)
+
+        print(">>>>>>>>>",P1.shape)
+
+        print(">>>>> main loop to find solutions")
+        for i in range(P1.size):
+            self.__x0 = XIN[:,i]
+            self.__v0 = VIN[:,i]
+            try:
+                t_solution = self.solve(0.0)
+                answer[i] = t_solution
+            except:
+                i_flag[i] = -1
+
+        return answer,i_flag
+
+    def apply_specular_reflection_on_beam(self,newbeam):
+        # ;
+        # ; TRACING...
+        # ;
+
+        x1 =   newbeam.get_columns([1,2,3]) # numpy.array(a3.getshcol([1,2,3]))
+        v1 =   newbeam.get_columns([4,5,6]) # numpy.array(a3.getshcol([4,5,6]))
+        flag = newbeam.get_column(10)        # numpy.array(a3.getshonecol(10))
+
+        t,iflag = self.calculate_intercept(x1,v1)
+
+        # print(">>>>>",x1,t)
+        # for i in range(t.size):
+        #     print(">>>>",x1[0:3,i],t[i],iflag[i])
+        #
+        x2 = x1 + v1 * t
+        for i in range(flag.size):
+            if iflag[i] < 0: flag[i] = -100
+        #
+        #
+        # # ;
+        # # ; Calculates the normal at each intercept [see shadow's normal.F]
+        # # ;
+        #
+        normal = self.get_normal(x2)
+        #
+        # # for i in range(t.size):
+        # #     print(">>>>",t[i],normal[:,i])
+        #
+        # # ;
+        # # ; reflection
+        # # ;
+        #
+        # v2 = self.vector_reflection(v1,normal)
+        #
+        # # ;
+        # # ; writes the mirr.XX file
+        # # ;
+        #
+        # newbeam.set_column(1, x2[0])
+        # newbeam.set_column(2, x2[1])
+        # newbeam.set_column(3, x2[2])
+        # newbeam.set_column(4, v2[0])
+        # newbeam.set_column(5, v2[1])
+        # newbeam.set_column(6, v2[2])
+        # newbeam.set_column(10, flag )
+        #
+        return newbeam
+
+
 def sphere(x, y, radius=5.0):
         return radius - numpy.sqrt(radius**2 - x**2 - y**2)
 
@@ -124,3 +313,13 @@ if __name__ == "__main__":
     print("t_solution: ",t_solution)
     print("line: ",mm.line(t_solution))
     print("surface: ",mm.surface_vs_t(t_solution))
+
+    #
+    # now real surface from file
+    #
+    # x,y,z = mm.read_surface_error_file("test_mesh_conic.dat")
+    #
+    # print(z.min(),z.max())
+    # plot_surface(z,x,y)
+
+    mm.load_file("test_mesh_conic.dat")
