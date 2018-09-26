@@ -6,7 +6,7 @@
 from scipy.optimize import fsolve
 from scipy import interpolate
 from srxraylib.plot.gol import plot,plot_image, plot_surface
-
+import sys
 
 import numpy
 
@@ -183,15 +183,41 @@ class Mesh(object):
 
         normal = numpy.zeros_like(x2)
 
-        X_IN = x2[0]
-        Y_IN = x2[1]
-        Z_IN = x2[2]
+        eps = sys.float_info.epsilon
 
+        X_0 = x2[0]
+        Y_0 = x2[1]
+        Z_0 = x2[2]
 
+        X_1 = X_0 + eps
+        Y_1 = Y_0
+        Z_1 = self.surface(X_1,Y_1)
 
-        normal[0,:] = 0.0
-        normal[1,:] = 0.0
-        normal[2,:] = 1.0
+        X_2 = X_0
+        Y_2 = Y_0 + eps
+        Z_2 = self.surface(X_2,Y_2)
+
+        X_3 = X_1 - X_0
+        Y_3 = Y_1 - Y_0
+        Z_3 = Z_1 - Z_0
+
+        X_4 =  X_2 - X_0
+        Y_4 =  Y_2 - Y_0
+        Z_4 =  Z_2 - Z_0
+
+        # i   j   k
+        # x3  y3  z3
+        # x4  y4  z4
+
+        X_CROSS = Y_3 * Z_4 - Y_4 * Z_3
+        Y_CROSS = Z_3 * X_4 - X_3 * Z_4
+        Z_CROSS = X_3 * Y_4 - Y_3 * X_4
+
+        print(">>>>>",X_CROSS.shape,Y_CROSS.shape,Z_CROSS.shape,X_0.shape,Y_0.shape,Z_0.shape,Z_1.shape)
+
+        normal[0,:] = X_CROSS
+        normal[1,:] = Y_CROSS
+        normal[2,:] = Z_CROSS
 
         n2 = numpy.sqrt(normal[0,:]**2 + normal[1,:]**2 + normal[2,:]**2)
 

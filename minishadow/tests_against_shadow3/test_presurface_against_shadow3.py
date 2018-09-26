@@ -140,7 +140,7 @@ def create_start_files():
     oe0.IDO_X_S = 0
     oe0.IDO_Y_S = 0
     oe0.IDO_Z_S = 0
-    oe0.NPOINT = 25000
+    oe0.NPOINT = 250 #00
     oe0.PH1 = 9990.0
     oe0.PH2 = 10010.0
     oe0.SIGDIX = 8.84999972e-05
@@ -365,5 +365,5 @@ if __name__ == "__main__":
     create_gaussian_bump(do_plot=False)
     # write_bragg_preprocessor_file()
     minishadow_run_mesh_mirror()
-    compare_results(do_plot=True,do_assert=False)
+    compare_results(do_plot=False,do_assert=False)
 
