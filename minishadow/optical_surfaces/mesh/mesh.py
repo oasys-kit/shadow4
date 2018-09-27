@@ -5,11 +5,16 @@
 
 from scipy.optimize import fsolve
 from scipy import interpolate
-from srxraylib.plot.gol import plot,plot_image, plot_surface
+from srxraylib.plot.gol import plot,plot_image, plot_surface, plot_scatter
 import sys
 
 import numpy
 
+#
+#
+# rays[index,column]
+# vector[xyz,index]
+#
 
 
 def plot_surface_and_line(Z,x,y,zz,xx,yy,show=True):
@@ -183,27 +188,46 @@ class Mesh(object):
 
         normal = numpy.zeros_like(x2)
 
-        eps = sys.float_info.epsilon
+        eps = 1e6*sys.float_info.epsilon
 
-        X_0 = x2[0]
-        Y_0 = x2[1]
-        Z_0 = x2[2]
+        X_0 = x2[0,:]
+        Y_0 = x2[1,:]
+        Z_0 = x2[2,:]
 
         X_1 = X_0 + eps
         Y_1 = Y_0
-        Z_1 = self.surface(X_1,Y_1)
+        Z_1 = numpy.zeros_like(Y_1)
+        for i in range(Z_1.size):
+            Z_1[i] = self.surface(X_1[i],Y_1[i])
 
         X_2 = X_0
         Y_2 = Y_0 + eps
-        Z_2 = self.surface(X_2,Y_2)
+        Z_2 = numpy.zeros_like(Y_2)
+        for i in range(Z_1.size):
+            Z_2[i] = self.surface(X_2[i],Y_2[i])
 
+        #
         X_3 = X_1 - X_0
         Y_3 = Y_1 - Y_0
         Z_3 = Z_1 - Z_0
 
+        n2 = numpy.sqrt(X_3**2 + Y_3**2 + Z_3**2)
+
+        X_3 /= n2
+        Y_3 /= n2
+        Z_3 /= n2
+
+        #
         X_4 =  X_2 - X_0
         Y_4 =  Y_2 - Y_0
         Z_4 =  Z_2 - Z_0
+
+        n2 = numpy.sqrt(X_4**2 + Y_4**2 + Z_4**2)
+
+        X_4 /= n2
+        Y_4 /= n2
+        Z_4 /= n2
+
 
         # i   j   k
         # x3  y3  z3
@@ -213,17 +237,17 @@ class Mesh(object):
         Y_CROSS = Z_3 * X_4 - X_3 * Z_4
         Z_CROSS = X_3 * Y_4 - Y_3 * X_4
 
-        print(">>>>>",X_CROSS.shape,Y_CROSS.shape,Z_CROSS.shape,X_0.shape,Y_0.shape,Z_0.shape,Z_1.shape)
 
-        normal[0,:] = X_CROSS
-        normal[1,:] = Y_CROSS
-        normal[2,:] = Z_CROSS
 
-        n2 = numpy.sqrt(normal[0,:]**2 + normal[1,:]**2 + normal[2,:]**2)
+        # normal[0,:] = X_CROSS
+        # normal[1,:] = Y_CROSS
+        # normal[2,:] = Z_CROSS
 
-        normal[0,:] /= n2
-        normal[1,:] /= n2
-        normal[2,:] /= n2
+        n2 = numpy.sqrt(X_CROSS**2 + Y_CROSS**2 + Z_CROSS**2)
+
+        normal[0,:] = X_CROSS / n2
+        normal[1,:] = Y_CROSS / n2
+        normal[2,:] = Z_CROSS / n2
 
         return normal
 
@@ -240,7 +264,6 @@ class Mesh(object):
         answer = numpy.zeros_like(P1)
         i_flag = numpy.ones_like(P1)
 
-        print(">>>>>>>>>",P1.shape)
 
         print(">>>>> main loop to find solutions")
         for i in range(P1.size):
@@ -269,7 +292,11 @@ class Mesh(object):
         # for i in range(t.size):
         #     print(">>>>",x1[0:3,i],t[i],iflag[i])
         #
-        x2 = x1 + v1 * t
+        x2 = numpy.zeros_like(x1)
+        x2[0,:] = x1[0,:] + v1[0,:] * t
+        x2[1,:] = x1[1,:] + v1[1,:] * t
+        x2[2,:] = x1[2,:] + v1[2,:] * t
+
         for i in range(flag.size):
             if iflag[i] < 0: flag[i] = -100
         #
@@ -278,10 +305,10 @@ class Mesh(object):
         # # ; Calculates the normal at each intercept [see shadow's normal.F]
         # # ;
         #
-        normal = self.get_normal(x2)
+        v2 = self.get_normal(x2)
         #
-        # # for i in range(t.size):
-        # #     print(">>>>",t[i],normal[:,i])
+        # for i in range(t.size):
+        #     print(">>>>",t[i],v2[:,i],v2[:,i])
         #
         # # ;
         # # ; reflection
@@ -293,15 +320,15 @@ class Mesh(object):
         # # ; writes the mirr.XX file
         # # ;
         #
-        # newbeam.set_column(1, x2[0])
-        # newbeam.set_column(2, x2[1])
-        # newbeam.set_column(3, x2[2])
-        # newbeam.set_column(4, v2[0])
-        # newbeam.set_column(5, v2[1])
-        # newbeam.set_column(6, v2[2])
-        # newbeam.set_column(10, flag )
+        newbeam.rays[:,1-1] = x2[0,:]
+        newbeam.rays[:,2-1] = x2[1,:]
+        newbeam.rays[:,3-1] = x2[2,:]
+        newbeam.rays[:,4-1] = v2[0,:]
+        newbeam.rays[:,5-1] = v2[1,:]
+        newbeam.rays[:,6-1] = v2[2,:]
+        newbeam.rays[:,10-1] = flag
         #
-        return newbeam
+        return newbeam,t,x1,v1,x2,v2
 
 
 def sphere(x, y, radius=5.0):

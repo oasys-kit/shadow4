@@ -165,14 +165,15 @@ def create_start_files():
     oe1.RWIDX2 = 1.0
     oe1.R_LAMBDA = 5000.0
     oe1.T_IMAGE = 1000.0
-    oe1.T_INCIDENCE = 78.595
-    oe1.T_REFLECTION = 78.595
+    oe1.T_INCIDENCE = 78.595143
+    oe1.T_REFLECTION = 78.595143
     oe1.T_SOURCE = 3000.0
 
 
     oe0.write("start.00")
     oe1.write("start.01")
     print("Files written to disk: start.00 start.01")
+    return oe0,oe1
 
 
 def run_shadow3_from_start_files(iwrite=0):
@@ -262,7 +263,8 @@ def run_shadow3_from_start_files(iwrite=0):
     #TODO this gives error in Mac
     # oe1.load("start.01")
     # oe1_before_run.load("start.01")
-
+    oe0,oe1 = create_start_files()
+    oe0,oe1_before_run = create_start_files()
     #
     print(">>>>>>> calling trace...")
     beam.traceOE(oe1,1)
@@ -282,11 +284,11 @@ def run_shadow3_from_start_files(iwrite=0):
 def compare_results(do_plot=True,do_assert=True):
 
     if do_plot:
-        Shadow.ShadowTools.plotxy("minimirr.01",2,1,nbins=101,nolost=1,title="Mirror (Python)")
-        Shadow.ShadowTools.plotxy("mirr.01",2,1,nbins=101,nolost=1,title="Mirror (SHADOW)")
+        Shadow.ShadowTools.plotxy("minimirr.01",2,1,nbins=101,nolost=1,title="Mirror (Python)",ref=0)
+        Shadow.ShadowTools.plotxy("mirr.01",2,1,nbins=101,nolost=1,title="Mirror (SHADOW)",ref=0)
 
-        Shadow.ShadowTools.plotxy("ministar.01",1,3,nbins=101,nolost=1,title="Image (Python)")
-        Shadow.ShadowTools.plotxy("star.01",1,3,nbins=101,nolost=1,title="Image (SHADOW)")
+        Shadow.ShadowTools.plotxy("ministar.01",1,3,nbins=101,nolost=1,title="Image (Python)",ref=0)
+        Shadow.ShadowTools.plotxy("star.01",1,3,nbins=101,nolost=1,title="Image (SHADOW)",ref=0)
 
 
     if do_assert:
@@ -303,6 +305,13 @@ def compare_results(do_plot=True,do_assert=True):
         star     = Shadow.Beam()
         star.load("star.01")
         assert_almost_equal(ministar.rays[:,0:6],star.rays[:,0:6],2)
+
+    # minimirr = Shadow.Beam()
+    # minimirr.load("minimirr.01")
+    # mirr     = Shadow.Beam()
+    # mirr.load("mirr.01")
+    # for i in range(minimirr.nrays()):
+    #     print(minimirr.rays[i,0:3],mirr.rays[i,0:3])
 
 
 def minishadow_run_mesh_mirror():
@@ -321,6 +330,7 @@ def minishadow_run_mesh_mirror():
 
     # copy source to new Beam object
     newbeam = Beam.initialize_from_array(shadow3_beam_source.rays.copy())
+
 
     # ;
     # ; INPUTS
@@ -347,8 +357,11 @@ def minishadow_run_mesh_mirror():
     # # reflect beam in the mirror surface and dump mirr.01
     # #
     print(">>>>> calling apply_specular_reflection_on_beam")
-    newbeam = mm.apply_specular_reflection_on_beam(newbeam)
+    newbeam,t,x1,v1,x2,v2 = mm.apply_specular_reflection_on_beam(newbeam)
     print(">>>>> done apply_specular_reflection_on_beam")
+
+    for i,ti in enumerate(t):
+        print(">>",i,ti,x2[0:3,i],v2[0:3,i])
     newbeam.dump_shadow3_file('minimirr.01')
     #
     # #
@@ -365,5 +378,5 @@ if __name__ == "__main__":
     create_gaussian_bump(do_plot=False)
     # write_bragg_preprocessor_file()
     minishadow_run_mesh_mirror()
-    compare_results(do_plot=False,do_assert=False)
+    compare_results(do_plot=True,do_assert=False)
 
