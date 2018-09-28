@@ -10,7 +10,7 @@ import sys
 
 import numpy
 
-#
+
 #
 # rays[index,column]
 # vector[xyz,index]
@@ -95,7 +95,7 @@ class Mesh(object):
     def set_surface(self,surface):
         self.surface = surface
 
-    def load_file(self,filename,kind='linear'):
+    def load_file(self,filename,kind='cubic'):
         x,y,z = self.read_surface_error_file(filename)
         self.surface = interpolate.interp2d(x,y,z.T, kind=kind)
 
@@ -188,85 +188,39 @@ class Mesh(object):
 
         normal = numpy.zeros_like(x2)
 
-        eps = 1e6*sys.float_info.epsilon
+        eps = 100 * sys.float_info.epsilon
 
         X_0 = x2[0,:]
         Y_0 = x2[1,:]
         Z_0 = x2[2,:]
 
-        X_1 = X_0 + eps
-        Y_1 = Y_0
-        Z_1 = numpy.zeros_like(Y_1)
-        for i in range(Z_1.size):
-            Z_1[i] = self.surface(X_1[i],Y_1[i])
+        N_0 = numpy.zeros_like(X_0)
+        N_1 = numpy.zeros_like(X_0)
+        N_2 = numpy.ones_like(X_0)
+        for i in range(X_0.size):
+            z00 = self.surface(X_0[i],Y_0[i])
+            N_0[i] = -1.0 * (self.surface(X_0[i]+eps,Y_0[i]) - z00) / eps
+            N_1[i] = -1.0 * (self.surface(X_0[i],Y_0[i]+eps) - z00) / eps
 
-        X_2 = X_0
-        Y_2 = Y_0 + eps
-        Z_2 = numpy.zeros_like(Y_2)
-        for i in range(Z_1.size):
-            Z_2[i] = self.surface(X_2[i],Y_2[i])
 
+
+        n2 = numpy.sqrt(N_0**2 + N_1**2 + N_2**2)
         #
-        X_3 = X_1 - X_0
-        Y_3 = Y_1 - Y_0
-        Z_3 = Z_1 - Z_0
-
-        n2 = numpy.sqrt(X_3**2 + Y_3**2 + Z_3**2)
-
-        X_3 /= n2
-        Y_3 /= n2
-        Z_3 /= n2
-
-        #
-        X_4 =  X_2 - X_0
-        Y_4 =  Y_2 - Y_0
-        Z_4 =  Z_2 - Z_0
-
-        n2 = numpy.sqrt(X_4**2 + Y_4**2 + Z_4**2)
-
-        X_4 /= n2
-        Y_4 /= n2
-        Z_4 /= n2
-
-
-        # i   j   k
-        # x3  y3  z3
-        # x4  y4  z4
-
-        X_CROSS = Y_3 * Z_4 - Y_4 * Z_3
-        Y_CROSS = Z_3 * X_4 - X_3 * Z_4
-        Z_CROSS = X_3 * Y_4 - Y_3 * X_4
-
-
-
-        # normal[0,:] = X_CROSS
-        # normal[1,:] = Y_CROSS
-        # normal[2,:] = Z_CROSS
-
-        n2 = numpy.sqrt(X_CROSS**2 + Y_CROSS**2 + Z_CROSS**2)
-
-        normal[0,:] = X_CROSS / n2
-        normal[1,:] = Y_CROSS / n2
-        normal[2,:] = Z_CROSS / n2
+        normal[0,:] = N_0 / n2
+        normal[1,:] = N_1 / n2
+        normal[2,:] = N_2 / n2
 
         return normal
 
     def calculate_intercept(self,XIN,VIN,keep=0):
 
-        P1 = XIN[0,:].flatten()
-        P2 = XIN[1,:].flatten()
-        P3 = XIN[2,:].flatten()
-
-        V1 = VIN[0,:].flatten()
-        V2 = VIN[1,:].flatten()
-        V3 = VIN[2,:].flatten()
-
-        answer = numpy.zeros_like(P1)
-        i_flag = numpy.ones_like(P1)
+        npoints = XIN.shape[1]
+        answer = numpy.zeros(npoints)
+        i_flag = numpy.ones(npoints)
 
 
-        print(">>>>> main loop to find solutions")
-        for i in range(P1.size):
+        print(">>>>> main loop to find solutions (slow...)")
+        for i in range(npoints):
             self.__x0 = XIN[:,i]
             self.__v0 = VIN[:,i]
             try:
@@ -274,7 +228,7 @@ class Mesh(object):
                 answer[i] = t_solution
             except:
                 i_flag[i] = -1
-
+        print(">>>>> done main loop to find solutions (Thanks for waiting!)")
         return answer,i_flag
 
     def apply_specular_reflection_on_beam(self,newbeam):
@@ -282,16 +236,12 @@ class Mesh(object):
         # ; TRACING...
         # ;
 
-        x1 =   newbeam.get_columns([1,2,3]) # numpy.array(a3.getshcol([1,2,3]))
-        v1 =   newbeam.get_columns([4,5,6]) # numpy.array(a3.getshcol([4,5,6]))
-        flag = newbeam.get_column(10)        # numpy.array(a3.getshonecol(10))
+        x1 =   newbeam.get_columns([1,2,3])
+        v1 =   newbeam.get_columns([4,5,6])
+        flag = newbeam.get_column(10)
 
         t,iflag = self.calculate_intercept(x1,v1)
 
-        # print(">>>>>",x1,t)
-        # for i in range(t.size):
-        #     print(">>>>",x1[0:3,i],t[i],iflag[i])
-        #
         x2 = numpy.zeros_like(x1)
         x2[0,:] = x1[0,:] + v1[0,:] * t
         x2[1,:] = x1[1,:] + v1[1,:] * t
@@ -299,27 +249,23 @@ class Mesh(object):
 
         for i in range(flag.size):
             if iflag[i] < 0: flag[i] = -100
-        #
-        #
+
         # # ;
-        # # ; Calculates the normal at each intercept [see shadow's normal.F]
+        # # ; Calculates the normal at each intercept
         # # ;
-        #
-        v2 = self.get_normal(x2)
-        #
-        # for i in range(t.size):
-        #     print(">>>>",t[i],v2[:,i],v2[:,i])
-        #
-        # # ;
-        # # ; reflection
-        # # ;
-        #
-        # v2 = self.vector_reflection(v1,normal)
-        #
+
+        normal = self.get_normal(x2)
+
+        # ;
+        # ; reflection
+        # ;
+
+        v2 = self.vector_reflection(v1,normal)
+
         # # ;
         # # ; writes the mirr.XX file
         # # ;
-        #
+
         newbeam.rays[:,1-1] = x2[0,:]
         newbeam.rays[:,2-1] = x2[1,:]
         newbeam.rays[:,3-1] = x2[2,:]
@@ -330,6 +276,20 @@ class Mesh(object):
         #
         return newbeam,t,x1,v1,x2,v2
 
+    # todo: move to superclass or Vector class
+    def vector_reflection(self,v1,normal):
+        tmp = v1 * normal
+        tmp2 = tmp[0,:] + tmp[1,:] + tmp[2,:]
+        tmp3 = normal.copy()
+
+        for jj in (0,1,2):
+            tmp3[jj,:] = tmp3[jj,:] * tmp2
+
+        v2 = v1 - 2 * tmp3
+        v2mod = numpy.sqrt(v2[0,:]**2 + v2[1,:]**2 + v2[2,:]**2)
+        v2 /= v2mod
+
+        return v2
 
 def sphere(x, y, radius=5.0):
         return radius - numpy.sqrt(radius**2 - x**2 - y**2)
@@ -353,7 +313,6 @@ if __name__ == "__main__":
     zz = x0[2] + v0[2] * t
 
     # plot_surface_and_line(Z,x,y,zz,xx,yy)
-
 
     mm = Mesh()
     mm.set_ray(x0,v0)

@@ -112,7 +112,6 @@ def create_gaussian_bump(do_plot=True):
         plt.show()
 
 
-
 def create_start_files():
 
     # write (1) or not (0) SHADOW files start.xx end.xx star.xx
@@ -140,7 +139,7 @@ def create_start_files():
     oe0.IDO_X_S = 0
     oe0.IDO_Y_S = 0
     oe0.IDO_Z_S = 0
-    oe0.NPOINT = 250 #00
+    oe0.NPOINT = 5000
     oe0.PH1 = 9990.0
     oe0.PH2 = 10010.0
     oe0.SIGDIX = 8.84999972e-05
@@ -206,17 +205,15 @@ def run_shadow3_from_start_files(iwrite=0):
         oe0_before_run.load("start.00")
 
     beam.genSource(oe0)
-    print(">>>>>>> writing start and begin files...")
+
     if iwrite:
         oe0.write("end.00")
         beam.write("begin.dat")
-    print(">>>>>>> done writing start and begin files...")
 
     beam_source = beam.duplicate()
-    # return beam,beam.rays.T.copy()
 
-    oe1 = Shadow.OE()
-    oe1_before_run = Shadow.OE()
+    # oe1 = Shadow.OE()
+    # oe1_before_run = Shadow.OE()
 
 
     # if platform.system() == "Linux":
@@ -266,16 +263,11 @@ def run_shadow3_from_start_files(iwrite=0):
     oe0,oe1 = create_start_files()
     oe0,oe1_before_run = create_start_files()
     #
-    print(">>>>>>> calling trace...")
     beam.traceOE(oe1,1)
-    print(">>>>>>> done calling trace...")
     #
     if iwrite:
-        print(">>>>>>>  writing start and begin files...")
         oe1.write("end.01")
         beam.write("star.01")
-        print(">>>>>>> done writing start and begin files...")
-
 
     return beam_source,beam,oe0_before_run,oe1_before_run
 
@@ -306,25 +298,18 @@ def compare_results(do_plot=True,do_assert=True):
         star.load("star.01")
         assert_almost_equal(ministar.rays[:,0:6],star.rays[:,0:6],2)
 
-    # minimirr = Shadow.Beam()
-    # minimirr.load("minimirr.01")
-    # mirr     = Shadow.Beam()
-    # mirr.load("mirr.01")
-    # for i in range(minimirr.nrays()):
-    #     print(minimirr.rays[i,0:3],mirr.rays[i,0:3])
 
 
 def minishadow_run_mesh_mirror():
 
     # ;
-    # ; ray tracing of a single conic mirror using minishadow
+    # ; ray tracing of a surface defined with a mesh using minishadow
     # ; results are compared with shadow3
     # ;
-    #
 
     # ;
     # ; Runs shadow3
-    #
+    # ;
     shadow3_beam_source,shadow3_beam,oe0,oe1 = run_shadow3_from_start_files(iwrite=1)
 
 
@@ -335,7 +320,7 @@ def minishadow_run_mesh_mirror():
     # ;
     # ; INPUTS
     # ;
-    #
+
     p             = oe1.T_SOURCE # 1000.0       # source-mirror
     q             = oe1.T_IMAGE  # 300.0        # mirror-image
     alpha         = oe1.ALPHA    # 0.0      # mirror orientation angle
@@ -343,27 +328,22 @@ def minishadow_run_mesh_mirror():
 
     print("p=%f, q=%f, alpha=%f, theta_grazing=%f rad"%(p,q,alpha,theta_grazing))
 
-
     mm = Mesh()
     mm.load_file("bump.dat")
-
 
     newbeam.rotate(alpha,axis=2)
     newbeam.rotate(theta_grazing,axis=1)
     newbeam.translation([0.0,-p*numpy.cos(theta_grazing),p*numpy.sin(theta_grazing)])
 
-    #
+
     # #
     # # reflect beam in the mirror surface and dump mirr.01
     # #
-    print(">>>>> calling apply_specular_reflection_on_beam")
-    newbeam,t,x1,v1,x2,v2 = mm.apply_specular_reflection_on_beam(newbeam)
-    print(">>>>> done apply_specular_reflection_on_beam")
 
-    for i,ti in enumerate(t):
-        print(">>",i,ti,x2[0:3,i],v2[0:3,i])
+    newbeam,t,x1,v1,x2,v2 = mm.apply_specular_reflection_on_beam(newbeam)
+
     newbeam.dump_shadow3_file('minimirr.01')
-    #
+
     # #
     # # put beam in lab frame and compute image
     # #
@@ -378,5 +358,5 @@ if __name__ == "__main__":
     create_gaussian_bump(do_plot=False)
     # write_bragg_preprocessor_file()
     minishadow_run_mesh_mirror()
-    compare_results(do_plot=True,do_assert=False)
+    compare_results(do_plot=True,do_assert=True)
 
