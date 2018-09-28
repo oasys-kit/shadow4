@@ -12,7 +12,7 @@ import Shadow
 # minishadow
 #
 from minishadow.beam.beam import Beam
-from minishadow.optical_surfaces.mesh.mesh import Mesh
+from minishadow.optical_surfaces.mesh import Mesh
 
 def write_bragg_preprocessor_file():
     bragg(interactive=False, DESCRIPTOR="Si",H_MILLER_INDEX=1,K_MILLER_INDEX=1,L_MILLER_INDEX=1,
