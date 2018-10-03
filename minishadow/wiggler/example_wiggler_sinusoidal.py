@@ -1,8 +1,8 @@
 
 import numpy
-import srxraylib.sources.srfunc as srfunc
 
-from srxraylib.plot.gol import plot
+
+from srxraylib.plot.gol import plot, plot_scatter, plot_image
 
 from syned.storage_ring.magnetic_structures.wiggler import Wiggler
 from syned.storage_ring.electron_beam import ElectronBeam
@@ -10,6 +10,8 @@ from syned.storage_ring.electron_beam import ElectronBeam
 from source_wiggler import SourceWiggler
 
 def run_python_preprocessors():
+
+    import srxraylib.sources.srfunc as srfunc
 
     wigFile = "xshwig.sha"
     inData = ""
@@ -158,7 +160,7 @@ if __name__ == "__main__":
     #
     # syned
     #
-    syned_wiggler = Wiggler()
+    syned_wiggler = Wiggler(K_vertical=kValue,K_horizontal=0.0,period_length=per,number_of_periods=nPer)
 
     syned_electron_beam = ElectronBeam(energy_in_GeV=6.04,
                  energy_spread = 0.0,
@@ -174,10 +176,17 @@ if __name__ == "__main__":
     sourcewiggler = SourceWiggler(name="test",syned_electron_beam=syned_electron_beam,
                     syned_wiggler=syned_wiggler,
                     flag_emittance=1,
-                    emin=10490.0,emax=10510.0,ng_e=3)
+                    emin=10490.0,emax=10510.0,ng_e=10, ng_j=nTrajPoints)
 
 
-    sourcewiggler.set_energy_monochromatic(5000.0)
+    # sourcewiggler.set_energy_monochromatic(5000.0)
 
     print(sourcewiggler.info())
+
+    # sourcewiggler.calculate_radiation()
+
+    rays = sourcewiggler.calculate_rays()
+
+    plot_scatter(rays[:,0],rays[:,2])
+
 

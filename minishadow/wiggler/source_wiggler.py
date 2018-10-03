@@ -29,6 +29,7 @@ from scipy import interpolate
 from syned.storage_ring.magnetic_structures.wiggler import Wiggler
 from syned.storage_ring.electron_beam import ElectronBeam
 
+from srfunc import wiggler_trajectory, wiggler_cdf
 
 
 class SourceWiggler(object):
@@ -38,6 +39,7 @@ class SourceWiggler(object):
                  emin=10000.0,               # Photon energy scan from energy (in eV)
                  emax=11000.0,               # Photon energy scan to energy (in eV)
                  ng_e=11,                    # Photon energy scan number of points
+                 ng_j=20,                    # Number of points in electron trajectory (per period) for internal calculation only
                  flag_emittance=0,           # when sampling rays: Use emittance (0=No, 1=Yes)
                  ):
 
@@ -58,6 +60,8 @@ class SourceWiggler(object):
         self._EMAX            = emax   # Photon energy scan to energy (in eV)
         self._NG_E            = ng_e   # Photon energy scan number of points
 
+        self._NG_J            = ng_j       # Number of points in electron trajectory (per period)
+
         # ray tracing
         # self.SEED            = SEED   # Random seed
         # self.NRAYS           = NRAYS  # Number of rays
@@ -67,7 +71,9 @@ class SourceWiggler(object):
 
         # results of calculations
 
-        self._result_radiation = None
+        self._result_trajectory = None
+        self._result_parameters = None
+        self._result_cdf = None
 
 
     def info(self,debug=False):
@@ -92,19 +98,19 @@ class SourceWiggler(object):
             txt += "        Electron sigmaZ: %g [um]\n"%(1e6*sigmas[2])
             txt += "        Electron sigmaX': %f urad\n"%(1e6*sigmas[1])
             txt += "        Electron sigmaZ': %f urad\n"%(1e6*sigmas[3])
-        # txt += "Input Undulator parameters: \n"
-        # txt += "        period: %f m\n"%self.syned_undulator.period_length()
-        # txt += "        number of periods: %d\n"%self.syned_undulator.number_of_periods()
-        # txt += "        K-value: %f\n"%self.syned_undulator.K_vertical()
-        #
-        # txt += "-----------------------------------------------------\n"
-        #
-        # txt += "Lorentz factor (gamma): %f\n"%self.syned_electron_beam.gamma()
-        # txt += "Electron velocity: %.12f c units\n"%(numpy.sqrt(1.0 - 1.0 / self.syned_electron_beam.gamma() ** 2))
-        # txt += "Undulator length: %f m\n"%(self.syned_undulator.period_length()*self.syned_undulator.number_of_periods())
-        # K_to_B = (2.0 * numpy.pi / self.syned_undulator.period_length()) * codata.m_e * codata.c / codata.e
-        #
-        # txt += "Undulator peak magnetic field: %f T\n"%(K_to_B*self.syned_undulator.K_vertical())
+        txt += "Input Wiggler parameters: \n"
+        txt += "        period: %f m\n"%self.syned_wiggler.period_length()
+        txt += "        number of periods: %d\n"%self.syned_wiggler.number_of_periods()
+        txt += "        K-value: %f\n"%self.syned_wiggler.K_vertical()
+
+        txt += "-----------------------------------------------------\n"
+
+        txt += "Lorentz factor (gamma): %f\n"%self.syned_electron_beam.gamma()
+        txt += "Electron velocity: %.12f c units\n"%(numpy.sqrt(1.0 - 1.0 / self.syned_electron_beam.gamma() ** 2))
+        txt += "Undulator length: %f m\n"%(self.syned_wiggler.period_length()*self.syned_wiggler.number_of_periods())
+        K_to_B = (2.0 * numpy.pi / self.syned_wiggler.period_length()) * codata.m_e * codata.c / codata.e
+
+        txt += "Wiggler peak magnetic field: %f T\n"%(K_to_B*self.syned_wiggler.K_vertical())
         # txt += "Resonances: \n"
         # txt += "        harmonic number [n]                   %10d %10d %10d \n"%(1,3,5)
         # txt += "        wavelength [A]:                       %10.6f %10.6f %10.6f   \n"%(\
@@ -128,14 +134,14 @@ class SourceWiggler(object):
         #                                                         1e6*self.get_resonance_ring(3,1),
         #                                                         1e6*self.get_resonance_ring(5,1))
         #
-        # txt += "-----------------------------------------------------\n"
-        # txt += "Grids: \n"
-        # if self._NG_E == 1:
-        #     txt += "        photon energy %f eV\n"%(self._EMIN)
-        # else:
-        #     txt += "        photon energy from %10.3f eV to %10.3f eV\n"%(self._EMIN,self._EMAX)
-        # txt += "        number of points for the trajectory: %d\n"%(self._NG_J)
-        # txt += "        number of energy points: %d\n"%(self._NG_E)
+        txt += "-----------------------------------------------------\n"
+        txt += "Grids: \n"
+        if self._NG_E == 1:
+            txt += "        photon energy %f eV\n"%(self._EMIN)
+        else:
+            txt += "        photon energy from %10.3f eV to %10.3f eV\n"%(self._EMIN,self._EMAX)
+        txt += "        number of energy points: %d\n"%(self._NG_E)
+        txt += "        number of points for the trajectory: %d\n"%(self._NG_J)
         # txt += "        maximum elevation angle: %f urad\n"%(1e6*self._MAXANGLE)
         # txt += "        number of angular elevation points: %d\n"%(self._NG_T)
         # txt += "        number of angular azimuthal points: %d\n"%(self._NG_P)
@@ -194,16 +200,48 @@ class SourceWiggler(object):
 
     def calculate_radiation(self):
 
+        (traj, pars) = wiggler_trajectory(b_from=0,
+                                                 inData="",
+                                                 nPer=self.syned_wiggler.number_of_periods(),
+                                                 nTrajPoints=self._NG_J,
+                                                 ener_gev=self.syned_electron_beam._energy_in_GeV,
+                                                 per=self.syned_wiggler.period_length(),
+                                                 kValue=self.syned_wiggler.K_vertical(),
+                                                 trajFile="",
+                                                 shift_x_flag=0.0,
+                                                 shift_x_value=0.0,
+                                                 shift_betax_flag=0,
+                                                 shift_betax_value=0.0)
 
-        self._result_radiation = None
-
-    #
-    # get from results
-    #
+        self._result_trajectory = traj
+        self._result_parameters = pars
 
 
+        # traj[0,ii] = yx[i]
+        # traj[1,ii] = yy[i]+j * per - start_len
+        # traj[2,ii] = 0.0
+        # traj[3,ii] = betax[i]
+        # traj[4,ii] = betay[i]
+        # traj[5,ii] = 0.0
+        # traj[6,ii] = curv[i]
+        # traj[7,ii] = bz[i]
 
-    def calculate_rays(self,user_unit_to_m=1.0,F_COHER=0,NRAYS=5000,SEED=36255655452):
+        # plot(traj[1,:],traj[0,:])
+        # print(pars)
+
+        #
+        # calculate cdf and write file for Shadow/Source
+        #
+
+        self._result_cdf = wiggler_cdf(self._result_trajectory,
+                           enerMin=self._EMIN,
+                           enerMax=self._EMAX,
+                           enerPoints=self._NG_E,
+                           outFile="",
+                           elliptical=False)
+
+
+    def calculate_rays(self,user_unit_to_m=1.0,F_COHER=0,NRAYS=5000,SEED=123456):
         """
         compute the rays in SHADOW matrix (shape (npoints,18) )
         :param F_COHER: set this flag for coherent beam
@@ -211,7 +249,7 @@ class SourceWiggler(object):
         :return: rays, a numpy.array((npoits,18))
         """
 
-        if self._result_radiation is None:
+        if self._result_cdf is None:
             self.calculate_radiation()
 
         sampled_photon_energy,sampled_theta,sampled_phi = self._sample_photon_energy_theta_and_phi(NRAYS)
@@ -332,8 +370,8 @@ class SourceWiggler(object):
 
         # PHASEZ = PHASEX + POL_ANGLE * numpy.sign(ANGLEV)
 
-        rays[:,13] = PHASEX
-        rays[:,14] = PHASEZ
+        rays[:,13] = 0.0 # PHASEX
+        rays[:,14] = 0.0 # PHASEZ
 
         # set flag (col 10)
         rays[:,9] = 1.0
