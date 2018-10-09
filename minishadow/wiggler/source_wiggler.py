@@ -22,7 +22,8 @@ rays = sw.calculate_rays()    # sample rays. Result is a numpy.array of shape (N
 
 import numpy
 
-# from srxraylib.util.inverse_method_sampler import Sampler2D, Sampler3D
+from srxraylib.util.inverse_method_sampler import Sampler1D, Sampler2D, Sampler3D
+from srxraylib.plot.gol import plot,plot_scatter
 import scipy.constants as codata
 from scipy import interpolate
 
@@ -30,6 +31,8 @@ from syned.storage_ring.magnetic_structures.wiggler import Wiggler
 from syned.storage_ring.electron_beam import ElectronBeam
 
 from srfunc import wiggler_trajectory, wiggler_cdf
+
+from scipy.interpolate import interp1d
 
 
 class SourceWiggler(object):
@@ -275,11 +278,244 @@ class SourceWiggler(object):
             z_electron = 0.0
 
         x_photon = 0.0
-        y_photon = 0.0
+        y_photon = 0.0 # numpy.random.random(NRAYS)
         z_photon = 0.0
 
-        rays[:,0] = x_photon + x_electron
-        rays[:,1] = y_photon + y_electron
+        # traj[0,ii] = yx[i]
+        # traj[1,ii] = yy[i]+j * per - start_len
+        # traj[2,ii] = 0.0
+        # traj[3,ii] = betax[i]
+        # traj[4,ii] = betay[i]
+        # traj[5,ii] = 0.0
+        # traj[6,ii] = curv[i]
+        # traj[7,ii] = bz[i]
+
+        PATH_STEP = self._result_cdf["step"]
+        print(">>>>>>",PATH_STEP)
+        X_TRAJ = self._result_trajectory[0,:]
+        Y_TRAJ = self._result_trajectory[1,:]
+        ANGLE  = self._result_trajectory[3,:]
+        CURV   = self._result_trajectory[6,:]
+        EPSI_PATH = numpy.arange(CURV.size) * PATH_STEP # self._result_trajectory[7,:]
+
+        plot(Y_TRAJ,X_TRAJ)
+
+
+        # ! C We define the 5 arrays:
+        # ! C    Y_X(5,N)    ---> X(Y)
+        # ! C    Y_XPRI(5,N) ---> X'(Y)
+        # ! C    Y_CURV(5,N) ---> CURV(Y)
+        # ! C    Y_PATH(5,N) ---> PATH(Y)
+        # ! C    F(1,N) contains the array of Y values where the nodes are located.
+
+        # print(">>>>>>>",self._result_trajectory.shape)
+        # plot(self._result_trajectory[1,:],self._result_trajectory[0,:])
+
+        # CALL PIECESPL(SEED_Y, Y_TEMP,   NP_SY,   IER)
+        # CALL CUBSPL (Y_X,    X_TEMP,   NP_TRAJ, IER)
+        # CALL CUBSPL (Y_Z,    Z_TEMP,   NP_TRAJ, IER)
+        # CALL CUBSPL (Y_XPRI, ANG_TEMP, NP_TRAJ, IER)
+        # CALL CUBSPL (Y_ZPRI, ANG2_TEMP, NP_TRAJ, IER)
+        # CALL CUBSPL (Y_CURV, C_TEMP,   NP_TRAJ, IER)
+        # CALL CUBSPL (Y_PATH, P_TEMP,   NP_TRAJ, IER)
+
+        SEED_Y = interp1d(Y_TRAJ,Y_TRAJ,kind='cubic')
+        Y_X = interp1d(Y_TRAJ,X_TRAJ,kind='cubic')
+        Y_XPRI = interp1d(Y_TRAJ,ANGLE,kind='cubic')
+        Y_CURV = interp1d(Y_TRAJ,CURV,kind='cubic')
+        Y_PATH = interp1d(Y_TRAJ,EPSI_PATH,kind='cubic')
+
+        ARG_Y = numpy.random.random(NRAYS)
+
+        for itik in range(NRAYS):
+
+
+            # IF (F_WIGGLER.EQ.1) THEN
+            #     ARG_Y = GRID(2,ITIK)
+            #     CALL SPL_INT (SEED_Y, NP_SY,   ARG_Y,  Y_TRAJ,    IER)
+
+
+
+            #     ! srio@esrf.eu 2014-05-19
+            #     ! in wiggler some problems arise because spl_int
+            #     ! does not return a Y value in the correct range.
+            #     ! In those cases, we make a linear interpolation instead.
+            #     if ((y_traj.le.y_temp(1)).or.(y_traj.gt.y_temp(NP_SY))) then
+            #         y_traj_old = y_traj
+            #         CALL LIN_INT (SEED_Y, NP_SY,   ARG_Y,  Y_TRAJ,    IER)
+            #         print*,'SOURCESYNC: bad y_traj from SPL_INT, corrected with LIN_SPL: ',y_traj_old,'=>',y_traj
+            #     endif
+            #
+            #     CALL SPL_INT (Y_X,    NP_TRAJ, Y_TRAJ, X_TRAJ,    IER)
+            #     CALL SPL_INT (Y_XPRI, NP_TRAJ, Y_TRAJ, ANGLE,     IER)
+            #     CALL SPL_INT (Y_CURV, NP_TRAJ, Y_TRAJ, CURV,      IER)
+            #     CALL SPL_INT (Y_PATH, NP_TRAJ, Y_TRAJ, EPSI_PATH, IER)
+            # END IF
+
+
+
+
+            # ! C+++
+            # ! C Compute the path length to the middle (origin) of the wiggler.
+            # ! C We need to know the "center" of the wiggler coordinate.
+            # ! C input:     Y_PATH  ---> spline array
+            # ! C            NP_TRAJ ---> # of points
+            # ! C            Y_TRAJ  ---> calculation point (ind. variable)
+            # ! C output:    PATH0   ---> value of Y_PATH at X = Y_TRAJ. If
+            # ! C                         Y_TRAJ = 0, then PATH0 = 1/2 length
+            # ! C                         of trajectory.
+            # ! C+++
+
+            Y_TRAJ = 0.0
+            # CALL SPL_INT (Y_PATH, NP_TRAJ, Y_TRAJ, PATH0, IER)
+            PATH0 = Y_PATH(Y_TRAJ)
+
+
+            # CALL SPL_INT (Y_X,    NP_TRAJ, Y_TRAJ, X_TRAJ,    IER)
+            # CALL SPL_INT (Y_XPRI, NP_TRAJ, Y_TRAJ, ANGLE,     IER)
+            # CALL SPL_INT (Y_CURV, NP_TRAJ, Y_TRAJ, CURV,      IER)
+            # CALL SPL_INT (Y_PATH, NP_TRAJ, Y_TRAJ, EPSI_PATH, IER)
+
+            X_TRAJ = Y_X(Y_TRAJ)
+            ANGLE = Y_XPRI(Y_TRAJ)
+            CURV = Y_CURV(Y_TRAJ)
+            EPSI_PATH = Y_PATH(Y_TRAJ)
+
+            EPSI_PATH = EPSI_PATH - PATH0 #! now refer to wiggler's origin
+
+            # ! C
+            # ! C These flags are set because of the original program structure.
+            # ! C
+            F_PHOT  = 0
+            F_COLOR  = 3
+            FSOUR  = 3
+            FDISTR  = 4
+
+
+
+            # ! C
+            # ! C Gaussian -- In order to accomodate the generation nof finite emittance
+            # ! C beams, we had to remove the 'grid' case.
+            # ! C Includes IDs
+            # ! C
+            # ARG_X = GRID(1,ITIK)
+            # ARG_Z = GRID(3,ITIK)
+            ARG_X = numpy.random.random()
+            ARG_Z = numpy.random.random()
+
+            # ! C
+            # ! C Compute the actual distance (EPSI_W*) from the orbital focus
+            # ! C
+            # EPSI_WX = EPSI_DX + EPSI_PATH
+            # EPSI_WZ = EPSI_DZ + EPSI_PATH
+            #
+
+            EPSI_DX = 0.0
+            EPSI_DZ = 0.0
+
+            EPSI_WX = EPSI_DX + EPSI_PATH
+            EPSI_WZ = EPSI_DZ + EPSI_PATH
+
+
+            # ! BUG srio@esrf.eu found that these routine does not make the
+            # ! calculation correctly. Changed to new one BINORMAL
+            # !CALL GAUSS (SIGMAX, EPSI_X, EPSI_WX, XXX, E_BEAM(1), istar1)
+            # !CALL GAUSS (SIGMAZ, EPSI_Z, EPSI_WZ, ZZZ, E_BEAM(3), istar1)
+            # !
+            # ! calculation of the electrom beam moments at the current position
+            # ! (sX,sZ) = (epsi_wx,epsi_ez):
+            # ! <x2> = sX^2 + sigmaX^2
+            # ! <x x'> = sX sigmaXp^2
+            # ! <x'2> = sigmaXp^2                 (same for Z)
+            #
+            # ! then calculate the new recalculated sigmas (rSigmas) and correlation rho of the
+            # ! normal bivariate distribution at the point in the electron trajectory
+            # ! rsigmaX  = sqrt(<x2>)
+            # ! rsigmaXp = sqrt(<x'2>)
+            # ! rhoX =  <x x'>/ (rsigmaX rsigmaXp)      (same for Z)
+            #
+            # if (abs(sigmaX) .lt. 1e-15) then  !no emittance
+            #     sigmaXp = 0.0d0
+            #     XXX = 0.0
+            #     E_BEAM(1) = 0.0
+            # else
+            #     sigmaXp = epsi_Xold/sigmaX    ! true only at waist, use epsi_xOld as it has been redefined :(
+            #     rSigmaX = sqrt( (epsi_wX**2) * (sigmaXp**2) + sigmaX**2 )
+            #     rSigmaXp = sigmaXp
+            #     if (abs(rSigmaX*rSigmaXp) .lt. 1e-15) then  !no emittance
+            #         rhoX = 0.0
+            #     else
+            #         rhoX = epsi_wx * sigmaXp**2 / (rSigmaX * rSigmaXp)
+            #     endif
+            #
+            #     CALL BINORMAL (rSigmaX, rSigmaXp, rhoX, XXX, E_BEAM(1), istar1)
+            # endif
+            #
+
+            if self._FLAG_EMITTANCE:
+                #todo
+                pass
+            else:
+                sigmaXp = 0.0
+                XXX = 0.0
+                E_BEAM1 = 0.0
+
+                sigmaZp = 0.0
+                ZZZ = 0.0
+                E_BEAM3 = 0.0
+
+            # if (abs(sigmaZ) .lt. 1e-15) then  !no emittance
+            #     sigmaZp = 0.0d0
+            #     ZZZ = 0.0
+            #     E_BEAM(3) = 0.0
+            # else
+            #     sigmaZp = epsi_Zold/sigmaZ
+            #     rSigmaZ = sqrt( (epsi_wZ**2) * (sigmaZp**2) + sigmaZ**2 )
+            #     rSigmaZp = sigmaZp
+            #     if (abs(rSigmaZ*rSigmaZp) .lt. 1e-15) then  !no emittance
+            #         rhoZ = 0.0
+            #     else
+            #         rhoZ = epsi_wZ * SigmaZp**2 /(rSigmaZ*rSigmaZp)
+            #     end if
+            #     CALL BINORMAL (rSigmaZ, rSigmaZp, rhoZ, ZZZ, E_BEAM(3), istar1)
+            # endif
+            #
+            # ! C
+            # ! C For normal wiggler, XXX is perpendicular to the electron trajectory at
+            # ! C the point defined by (X_TRAJ,Y_TRAJ,0).
+            # ! C
+            # IF (F_WIGGLER.EQ.1) THEN   ! normal wiggler
+            #     YYY = Y_TRAJ - XXX*SIN(ANGLE)
+            #     XXX = X_TRAJ + XXX*COS(ANGLE)
+
+            YYY = Y_TRAJ - XXX * numpy.sin(ANGLE)
+            XXX = X_TRAJ + XXX * numpy.cos(ANGLE)
+
+            # plot_scatter(YYY,XXX,title="Number of rays: %d"%XXX.size)
+
+            #     GO TO 550
+            # ELSE IF (F_WIGGLER.EQ.2) THEN ! undulator
+            # ELSE IF (F_WIGGLER.EQ.3) THEN  ! eliptical wiggler
+            #     VTEMP(1) = XXX
+            #     VTEMP(2) = 0.0D0
+            #     VTEMP(3) = ZZZ
+            #     ANGLE1= -ANGLE1
+            #     ANGLE3= 0.0D0
+            #     CALL ROTATE(VTEMP,ANGLE3,ANGLE2,ANGLE1,VTEMP)
+            #     XXX=X_TRAJ + VTEMP(1)
+            #     YYY=Y_TRAJ + VTEMP(2)
+            #     ZZZ=Z_TRAJ + VTEMP(3)
+            #     !added srio@esrf.eu 20131105
+            #     go to 550
+            # END IF
+            # GO TO 111
+            print(">>>>>",itik,XXX,YYY)
+            rays[itik,0] = XXX
+            rays[itik,1] = YYY
+
+
+        # rays[:,0] = x_photon + x_electron
+        # rays[:,1] = y_photon + y_electron
         rays[:,2] = z_photon + z_electron
 
 

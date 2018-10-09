@@ -1107,6 +1107,7 @@ def wiggler_cdf(traj, enerMin=10000.0, enerMax=10010.0, enerPoints=101, \
 
     if outFile != "":
         f = open(outFile,"w")
+        #NP_TRAJ,PATH_STEP,BENER,RAD_MIN,RAD_MAX,PH1,PH2
         f.write("%d %e %e %e %e %e %e \n"%(np,step,bener,1.0/curv_max, 1.0/curv_min,energy_array[0],energy_array[-1]))
 
 

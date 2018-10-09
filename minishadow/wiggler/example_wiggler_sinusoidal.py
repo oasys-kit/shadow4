@@ -16,7 +16,7 @@ def run_python_preprocessors():
     wigFile = "xshwig.sha"
     inData = ""
 
-    nPer = 50
+    nPer = 5 # 50
     nTrajPoints = 501
     ener_gev = 6.04
     per = 0.040
@@ -99,6 +99,7 @@ def run_shadow3_source(ener_gev=6.04,use_emittances=True):
     oe0.PH1 = 5000.0
     oe0.PH2 = 100000.0
     oe0.POL_DEG = 0.0
+    oe0.NPOINT = 500
 
     if use_emittances:
         oe0.SIGMAX = 0.0078
@@ -119,6 +120,7 @@ def run_shadow3_source(ener_gev=6.04,use_emittances=True):
     oe0.WYSOU = 0.0
     oe0.WZSOU = 0.0
 
+    oe0.write("start.00")
     beam.genSource(oe0)
 
     Shadow.ShadowTools.plotxy(beam,1,3,nbins=101,nolost=1,title="Real space")
@@ -141,7 +143,7 @@ if __name__ == "__main__":
     wigFile = "xshwig.sha"
     inData = ""
 
-    nPer = 50
+    nPer = 5 # 50
     nTrajPoints = 501
     ener_gev = 6.04
     per = 0.040
@@ -175,7 +177,7 @@ if __name__ == "__main__":
 
     sourcewiggler = SourceWiggler(name="test",syned_electron_beam=syned_electron_beam,
                     syned_wiggler=syned_wiggler,
-                    flag_emittance=1,
+                    flag_emittance=0,
                     emin=10490.0,emax=10510.0,ng_e=10, ng_j=nTrajPoints)
 
 
@@ -185,8 +187,8 @@ if __name__ == "__main__":
 
     # sourcewiggler.calculate_radiation()
 
-    rays = sourcewiggler.calculate_rays()
+    rays = sourcewiggler.calculate_rays(NRAYS=500)
 
-    plot_scatter(rays[:,0],rays[:,2])
+    plot_scatter(rays[:,1],rays[:,0])
 
 
