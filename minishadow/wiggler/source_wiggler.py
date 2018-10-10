@@ -298,7 +298,7 @@ class SourceWiggler(object):
         CURV   = self._result_trajectory[6,:]
         EPSI_PATH = numpy.arange(CURV.size) * PATH_STEP # self._result_trajectory[7,:]
 
-        plot(Y_TRAJ,X_TRAJ)
+        # plot(Y_TRAJ,X_TRAJ)
 
 
         # ! C We define the 5 arrays:
@@ -319,11 +319,35 @@ class SourceWiggler(object):
         # CALL CUBSPL (Y_CURV, C_TEMP,   NP_TRAJ, IER)
         # CALL CUBSPL (Y_PATH, P_TEMP,   NP_TRAJ, IER)
 
-        SEED_Y = interp1d(Y_TRAJ,Y_TRAJ,kind='cubic')
-        Y_X = interp1d(Y_TRAJ,X_TRAJ,kind='cubic')
+        SEED_Y = interp1d(numpy.arange(Y_TRAJ.size)/(Y_TRAJ.size-1),Y_TRAJ,kind='linear')
+        Y_X    = interp1d(Y_TRAJ,X_TRAJ,kind='cubic')
         Y_XPRI = interp1d(Y_TRAJ,ANGLE,kind='cubic')
         Y_CURV = interp1d(Y_TRAJ,CURV,kind='cubic')
         Y_PATH = interp1d(Y_TRAJ,EPSI_PATH,kind='cubic')
+
+        # ! C+++
+        # ! C Compute the path length to the middle (origin) of the wiggler.
+        # ! C We need to know the "center" of the wiggler coordinate.
+        # ! C input:     Y_PATH  ---> spline array
+        # ! C            NP_TRAJ ---> # of points
+        # ! C            Y_TRAJ  ---> calculation point (ind. variable)
+        # ! C output:    PATH0   ---> value of Y_PATH at X = Y_TRAJ. If
+        # ! C                         Y_TRAJ = 0, then PATH0 = 1/2 length
+        # ! C                         of trajectory.
+        # ! C+++
+
+        Y_TRAJ = 0.0
+        # CALL SPL_INT (Y_PATH, NP_TRAJ, Y_TRAJ, PATH0, IER)
+        PATH0 = Y_PATH(Y_TRAJ)
+
+
+        # ! C
+        # ! C These flags are set because of the original program structure.
+        # ! C
+        F_PHOT  = 0
+        F_COLOR  = 3
+        FSOUR  = 3
+        FDISTR  = 4
 
         ARG_Y = numpy.random.random(NRAYS)
 
@@ -333,7 +357,9 @@ class SourceWiggler(object):
             # IF (F_WIGGLER.EQ.1) THEN
             #     ARG_Y = GRID(2,ITIK)
             #     CALL SPL_INT (SEED_Y, NP_SY,   ARG_Y,  Y_TRAJ,    IER)
-
+            # arg_y = ARG_Y[itik]
+            arg_y = itik/(NRAYS-1)
+            Y_TRAJ = SEED_Y(arg_y)
 
 
             #     ! srio@esrf.eu 2014-05-19
@@ -352,56 +378,13 @@ class SourceWiggler(object):
             #     CALL SPL_INT (Y_PATH, NP_TRAJ, Y_TRAJ, EPSI_PATH, IER)
             # END IF
 
-
-
-
-            # ! C+++
-            # ! C Compute the path length to the middle (origin) of the wiggler.
-            # ! C We need to know the "center" of the wiggler coordinate.
-            # ! C input:     Y_PATH  ---> spline array
-            # ! C            NP_TRAJ ---> # of points
-            # ! C            Y_TRAJ  ---> calculation point (ind. variable)
-            # ! C output:    PATH0   ---> value of Y_PATH at X = Y_TRAJ. If
-            # ! C                         Y_TRAJ = 0, then PATH0 = 1/2 length
-            # ! C                         of trajectory.
-            # ! C+++
-
-            Y_TRAJ = 0.0
-            # CALL SPL_INT (Y_PATH, NP_TRAJ, Y_TRAJ, PATH0, IER)
-            PATH0 = Y_PATH(Y_TRAJ)
-
-
-            # CALL SPL_INT (Y_X,    NP_TRAJ, Y_TRAJ, X_TRAJ,    IER)
-            # CALL SPL_INT (Y_XPRI, NP_TRAJ, Y_TRAJ, ANGLE,     IER)
-            # CALL SPL_INT (Y_CURV, NP_TRAJ, Y_TRAJ, CURV,      IER)
-            # CALL SPL_INT (Y_PATH, NP_TRAJ, Y_TRAJ, EPSI_PATH, IER)
-
             X_TRAJ = Y_X(Y_TRAJ)
             ANGLE = Y_XPRI(Y_TRAJ)
             CURV = Y_CURV(Y_TRAJ)
             EPSI_PATH = Y_PATH(Y_TRAJ)
 
-            EPSI_PATH = EPSI_PATH - PATH0 #! now refer to wiggler's origin
+            print("\n>>><<<",arg_y,Y_TRAJ,X_TRAJ,ANGLE,CURV,EPSI_PATH)
 
-            # ! C
-            # ! C These flags are set because of the original program structure.
-            # ! C
-            F_PHOT  = 0
-            F_COLOR  = 3
-            FSOUR  = 3
-            FDISTR  = 4
-
-
-
-            # ! C
-            # ! C Gaussian -- In order to accomodate the generation nof finite emittance
-            # ! C beams, we had to remove the 'grid' case.
-            # ! C Includes IDs
-            # ! C
-            # ARG_X = GRID(1,ITIK)
-            # ARG_Z = GRID(3,ITIK)
-            ARG_X = numpy.random.random()
-            ARG_Z = numpy.random.random()
 
             # ! C
             # ! C Compute the actual distance (EPSI_W*) from the orbital focus
@@ -410,11 +393,11 @@ class SourceWiggler(object):
             # EPSI_WZ = EPSI_DZ + EPSI_PATH
             #
 
-            EPSI_DX = 0.0
-            EPSI_DZ = 0.0
-
-            EPSI_WX = EPSI_DX + EPSI_PATH
-            EPSI_WZ = EPSI_DZ + EPSI_PATH
+            # EPSI_DX = 0.0
+            # EPSI_DZ = 0.0
+            #
+            # EPSI_WX = EPSI_DX + EPSI_PATH
+            # EPSI_WZ = EPSI_DZ + EPSI_PATH
 
 
             # ! BUG srio@esrf.eu found that these routine does not make the
@@ -464,21 +447,6 @@ class SourceWiggler(object):
                 ZZZ = 0.0
                 E_BEAM3 = 0.0
 
-            # if (abs(sigmaZ) .lt. 1e-15) then  !no emittance
-            #     sigmaZp = 0.0d0
-            #     ZZZ = 0.0
-            #     E_BEAM(3) = 0.0
-            # else
-            #     sigmaZp = epsi_Zold/sigmaZ
-            #     rSigmaZ = sqrt( (epsi_wZ**2) * (sigmaZp**2) + sigmaZ**2 )
-            #     rSigmaZp = sigmaZp
-            #     if (abs(rSigmaZ*rSigmaZp) .lt. 1e-15) then  !no emittance
-            #         rhoZ = 0.0
-            #     else
-            #         rhoZ = epsi_wZ * SigmaZp**2 /(rSigmaZ*rSigmaZp)
-            #     end if
-            #     CALL BINORMAL (rSigmaZ, rSigmaZp, rhoZ, ZZZ, E_BEAM(3), istar1)
-            # endif
             #
             # ! C
             # ! C For normal wiggler, XXX is perpendicular to the electron trajectory at
@@ -491,33 +459,83 @@ class SourceWiggler(object):
             YYY = Y_TRAJ - XXX * numpy.sin(ANGLE)
             XXX = X_TRAJ + XXX * numpy.cos(ANGLE)
 
+            # print(">>>>> XXX,YYY,ZZZ,ANGLE",XXX,YYY,ZZZ,ANGLE)
+
             # plot_scatter(YYY,XXX,title="Number of rays: %d"%XXX.size)
 
-            #     GO TO 550
-            # ELSE IF (F_WIGGLER.EQ.2) THEN ! undulator
-            # ELSE IF (F_WIGGLER.EQ.3) THEN  ! eliptical wiggler
-            #     VTEMP(1) = XXX
-            #     VTEMP(2) = 0.0D0
-            #     VTEMP(3) = ZZZ
-            #     ANGLE1= -ANGLE1
-            #     ANGLE3= 0.0D0
-            #     CALL ROTATE(VTEMP,ANGLE3,ANGLE2,ANGLE1,VTEMP)
-            #     XXX=X_TRAJ + VTEMP(1)
-            #     YYY=Y_TRAJ + VTEMP(2)
-            #     ZZZ=Z_TRAJ + VTEMP(3)
-            #     !added srio@esrf.eu 20131105
-            #     go to 550
-            # END IF
-            # GO TO 111
-            print(">>>>>",itik,XXX,YYY)
             rays[itik,0] = XXX
             rays[itik,1] = YYY
+            rays[itik,2] = ZZZ
+
+            #
+            # directions
+            #
+
+            #     ! C
+            #     ! C Synchrotron source
+            #     ! C Note. The angle of emission IN PLANE is the same as the one used
+            #     ! C before. This will give rise to a source curved along the orbit.
+            #     ! C The elevation angle is instead characteristic of the SR distribution.
+            #     ! C The electron beam emittance is included at this stage. Note that if
+            #     ! C EPSI = 0, we'll have E_BEAM = 0.0, with no changes.
+            #     ! C
+            #     IF (F_WIGGLER.EQ.3) ANGLE=0        ! Elliptical Wiggler.
+            #     ANGLEX =   ANGLE + E_BEAM(1)
+            #     DIREC(1)  =   TAN(ANGLEX)
+            #     IF (R_ALADDIN.LT.0.0D0) DIREC(1) = - DIREC(1)
+            #     DIREC(2)  =   1.0D0
+            #     ARG_ANG  =   GRID(6,ITIK)
+            #     ! C
+            #     ! C In the case of SR, we take into account the fact that the electron
+            #     ! C trajectory is not orthogonal to the field. This will give a correction
+            #     ! C to the photon energy.  We can write it as a correction to the
+            #     ! C magnetic field strength; this will linearly shift the critical energy
+            #     ! C and, with it, the energy of the emitted photon.
+            #     ! C
+            #     E_TEMP(3) =   TAN(E_BEAM(3))/COS(E_BEAM(1))
+            #     E_TEMP(2) =   1.0D0
+            #     E_TEMP(1) =   TAN(E_BEAM(1))
+            #     CALL NORM (E_TEMP,E_TEMP)
+            #     CORREC =   SQRT(1.0D0-E_TEMP(3)**2)
+            #     4400 CONTINUE
+            #     IF (FDISTR.EQ.6) THEN
+            #         CALL ALADDIN1 (ARG_ANG,ANGLEV,F_POL,IER)
+            #         Q_WAVE =   TWOPI*PHOTON(1)/TOCM*CORREC
+            #         POL_DEG =   ARG_ANG
+            #     ELSE IF (FDISTR.EQ.4) THEN
+            #         ARG_ENER =   WRAN (ISTAR1)
+            #         RAD_MIN =   ABS(R_MAGNET)
+            #
+            #         i1 = 1
+            #         CALL WHITE  &
+            #         (RAD_MIN,CORREC,ARG_ENER,ARG_ANG,Q_WAVE,ANGLEV,POL_DEG,i1)
+            #     END IF
+            #     IF (ANGLEV.LT.0.0) I_CHANGE = -1
+            #     ANGLEV =   ANGLEV + E_BEAM(3)
+            #     ! C
+            #     ! C Test if the ray is within the specified limits
+            #     ! C
+            #     IF (FGRID.EQ.0.OR.FGRID.EQ.2) THEN
+            #         IF (ANGLEV.GT.VDIV1.OR.ANGLEV.LT.-VDIV2) THEN
+            #             ARG_ANG = WRAN(ISTAR1)
+            #             ! C
+            #             ! C If it is outside the range, then generate another ray.
+            #             ! C
+            #             GO TO 4400
+            #         END IF
+            #     END IF
+            #     DIREC(3)  =   TAN(ANGLEV)/COS(ANGLEX)
+            #     IF (F_WIGGLER.EQ.3) THEN
+            #         CALL ROTATE (DIREC, ANGLE3,ANGLE2,ANGLE1,DIREC)
+            #     END IF
+            #     CALL NORM (DIREC,DIREC)
+            # print*,">>>>DIREC,FGRID,R_ALADDIN: ",DIREC,FGRID,R_ALADDIN
+            #     GO TO 1111
 
 
-        # rays[:,0] = x_photon + x_electron
-        # rays[:,1] = y_photon + y_electron
-        rays[:,2] = z_photon + z_electron
-
+            rays[itik,3] = 0.0 # VX
+            rays[itik,4] = 1.0 # VY
+            rays[itik,5] = 0.0 # VZ
 
         if user_unit_to_m != 1.0:
             rays[:,0] /= user_unit_to_m
@@ -528,9 +546,7 @@ class SourceWiggler(object):
         # sample divergences (cols 4-6): the Shadow way
         #
 
-        rays[:,3] = 0.0 # VX
-        rays[:,4] = 1.0 # VY
-        rays[:,5] = 0.0 # VZ
+
 
 
         #
