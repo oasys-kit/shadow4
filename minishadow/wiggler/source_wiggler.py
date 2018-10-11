@@ -30,7 +30,7 @@ from scipy import interpolate
 from syned.storage_ring.magnetic_structures.wiggler import Wiggler
 from syned.storage_ring.electron_beam import ElectronBeam
 
-from srfunc import wiggler_trajectory, wiggler_cdf
+from srfunc import wiggler_trajectory, wiggler_cdf, sync_g1
 
 from scipy.interpolate import interp1d
 
@@ -351,6 +351,12 @@ class SourceWiggler(object):
 
         ARG_Y = numpy.random.random(NRAYS)
 
+        energy_over_critical_energy = numpy.linspace(1e-3,10,1000)
+        # plot(energy_over_critical_energy,sync_g1(energy_over_critical_energy),xlog=False,ylog=False)
+        samplerE = Sampler1D(sync_g1(energy_over_critical_energy),energy_over_critical_energy)
+        sampled_energies,h,h_center = samplerE.get_n_sampled_points_and_histogram(NRAYS)
+        # plot(h_center,h)
+
         for itik in range(NRAYS):
 
 
@@ -384,6 +390,33 @@ class SourceWiggler(object):
             EPSI_PATH = Y_PATH(Y_TRAJ)
 
             print("\n>>><<<",arg_y,Y_TRAJ,X_TRAJ,ANGLE,CURV,EPSI_PATH)
+
+
+            # EPSI_PATH = EPSI_PATH - PATH0 ! now refer to wiggler's origin
+            # IF (CURV.LT.0) THEN
+            #     POL_ANGLE = 90.0D0  ! instant orbit is CW
+            # ELSE
+            #     POL_ANGLE = -90.0D0  !     CCW
+            # END IF
+            # IF (CURV.EQ.0) THEN
+            #     R_MAGNET = 1.0D+20
+            # ELSE
+            #     R_MAGNET = ABS(1.0D0/CURV)
+            # END IF
+            # POL_ANGLE  = TORAD*POL_ANGLE
+
+            EPSI_PATH = EPSI_PATH - PATH0 # now refer to wiggler's origin
+            if CURV < 0:
+                POL_ANGLE = 90.0 # instant orbit is CW
+            else:
+                POL_ANGLE = -90.0 # CCW
+
+            if CURV == 0.0:
+                R_MAGNET = 1.0e20
+            else:
+                R_MAGNET = numpy.abs(1.0/CURV)
+
+            POL_ANGLE  = POL_ANGLE * numpy.pi / 180.0
 
 
             # ! C
@@ -485,6 +518,13 @@ class SourceWiggler(object):
             #     IF (R_ALADDIN.LT.0.0D0) DIREC(1) = - DIREC(1)
             #     DIREC(2)  =   1.0D0
             #     ARG_ANG  =   GRID(6,ITIK)
+
+            ANGLEX = ANGLE + E_BEAM1
+            DIREC1 = numpy.tan(ANGLEX)
+            DIREC2 = 1.0
+            ARG_ANG = numpy.random.random()
+
+
             #     ! C
             #     ! C In the case of SR, we take into account the fact that the electron
             #     ! C trajectory is not orthogonal to the field. This will give a correction
@@ -498,6 +538,21 @@ class SourceWiggler(object):
             #     CALL NORM (E_TEMP,E_TEMP)
             #     CORREC =   SQRT(1.0D0-E_TEMP(3)**2)
             #     4400 CONTINUE
+
+            E_TEMP3 = numpy.tan(E_BEAM3)/numpy.cos(E_BEAM1)
+            E_TEMP2 = 1.0
+            E_TEMP1 = numpy.tan(E_BEAM1)
+
+            e_temp_norm = numpy.sqrt( E_TEMP1**2 + E_TEMP2**2 + E_TEMP3**2)
+
+            E_TEMP3 /= e_temp_norm
+            E_TEMP2 /= e_temp_norm
+            E_TEMP1 /= e_temp_norm
+
+
+            CORREC = numpy.sqrt(1.0 - E_TEMP3**2)
+
+
             #     IF (FDISTR.EQ.6) THEN
             #         CALL ALADDIN1 (ARG_ANG,ANGLEV,F_POL,IER)
             #         Q_WAVE =   TWOPI*PHOTON(1)/TOCM*CORREC
@@ -510,6 +565,28 @@ class SourceWiggler(object):
             #         CALL WHITE  &
             #         (RAD_MIN,CORREC,ARG_ENER,ARG_ANG,Q_WAVE,ANGLEV,POL_DEG,i1)
             #     END IF
+
+
+            ARG_ENER = numpy.random.random()
+            RAD_MIN = numpy.abs(R_MAGNET)
+
+            i1 = 1
+            # CALL WHITE (RAD_MIN,CORREC,ARG_ENER,ARG_ANG,Q_WAVE,ANGLEV,POL_DEG,i1)
+
+            print("   >> R_MAGNET, DIREC",R_MAGNET,DIREC1,DIREC2)
+            print("   >> RAD_MIN,CORREC,ARG_ENER,ARG_ANG,",RAD_MIN,CORREC,ARG_ENER,ARG_ANG)
+            s1 = sampled_energies[itik]
+            gamma = self.syned_electron_beam.gamma()
+            m2ev = codata.c * codata.h / codata.e
+            TOANGS = m2ev * 1e10
+            critical_energy = TOANGS*3.0*numpy.power(gamma,3)/4.0/numpy.pi/1.0e10*(1.0/RAD_MIN)
+            photon_energy = s1 * critical_energy
+
+            wavelength = codata.h * codata.c / codata.e /photon_energy
+            Q_WAVE = 2 * numpy.pi / (wavelength*1e2)
+            print("   >> PHOTON ENERGY, Ec, lambda, Q: ",photon_energy,critical_energy,wavelength*1e10,Q_WAVE)
+
+
             #     IF (ANGLEV.LT.0.0) I_CHANGE = -1
             #     ANGLEV =   ANGLEV + E_BEAM(3)
             #     ! C

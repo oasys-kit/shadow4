@@ -66,6 +66,7 @@ try:
     codata_ec = codata.e
 
 except ImportError:
+    #TODO update these constants
     print("Failed to import scipy. Finding alternative ways.")
     codata_c = numpy.array(299792458.0)
     codata_me = numpy.array(9.10938291e-31)
