@@ -27,8 +27,8 @@ def run_python_preprocessors():
     shift_betax_flag = 0
     shift_betax_value = 0.0
 
-    e_min = 5000.0
-    e_max = 100000.0
+    e_min = 70490.0 # 5000.0
+    e_max = 70510.0 # 100000.0
 
     # ("Calculate electron trajectory"
     (traj, pars) = srfunc.wiggler_trajectory(b_from=0,
@@ -70,17 +70,49 @@ def run_python_preprocessors():
 
     print("CDF written to file %s \n"%(str(wigFile)))
 
-def run_shadow3_source(ener_gev=6.04,use_emittances=True):
+def run_shadow3_source(ener_gev=6.04,use_emittances=True,EMIN=10000.0,EMAX=11000.0,NRAYS=500):
     import Shadow
 
     oe0 = Shadow.Source()
     beam = Shadow.Beam()
 
 
+    # oe0.BENER = 6.04
+    # oe0.CONV_FACT = 100.0
+    # oe0.FDISTR = 0
+    # oe0.FILE_TRAJ = b'/Users/srio/Oasys/xshwig.sha'
+    # oe0.FSOUR = 0
+    # oe0.FSOURCE_DEPTH = 0
+    # oe0.F_COLOR = 0
+    # oe0.F_PHOT = 0
+    # oe0.F_WIGGLER = 1
+    # oe0.HDIV1 = 1.0
+    # oe0.HDIV2 = 1.0
+    # oe0.IDO_VX = 0
+    # oe0.IDO_VZ = 0
+    # oe0.IDO_X_S = 0
+    # oe0.IDO_Y_S = 0
+    # oe0.IDO_Z_S = 0
+    # oe0.ISTAR1 = 5676561
+    # oe0.NCOL = 0
+    # oe0.N_COLOR = 0
+    # oe0.PH1 = 70490.0
+    # oe0.PH2 = 70510.0
+    # oe0.POL_DEG = 0.0
+    # oe0.SIGMAX = 0.0
+    # oe0.SIGMAY = 0.0
+    # oe0.SIGMAZ = 0.0
+    # oe0.VDIV1 = 1.0
+    # oe0.VDIV2 = 1.0
+    # oe0.WXSOU = 0.0
+    # oe0.WYSOU = 0.0
+    # oe0.WZSOU = 0.0
+
+
     oe0.BENER = ener_gev
     oe0.CONV_FACT = 100.0
     oe0.FDISTR = 0
-    oe0.FILE_TRAJ = b'xshwig.sha'
+    oe0.FILE_TRAJ = b'/Users/srio/Oasys/xshwig.sha' # b'xshwig.sha'
     oe0.FSOUR = 0
     oe0.FSOURCE_DEPTH = 0
     oe0.F_COLOR = 0
@@ -96,10 +128,10 @@ def run_shadow3_source(ener_gev=6.04,use_emittances=True):
     oe0.ISTAR1 = 5676561
     oe0.NCOL = 0
     oe0.N_COLOR = 0
-    oe0.PH1 = 5000.0
-    oe0.PH2 = 100000.0
+    oe0.PH1 = EMIN
+    oe0.PH2 = EMAX
     oe0.POL_DEG = 0.0
-    oe0.NPOINT = 500
+    oe0.NPOINT = NRAYS
 
     if use_emittances:
         oe0.SIGMAX = 0.0078
@@ -120,21 +152,54 @@ def run_shadow3_source(ener_gev=6.04,use_emittances=True):
     oe0.WYSOU = 0.0
     oe0.WZSOU = 0.0
 
+
     oe0.write("start.00")
     beam.genSource(oe0)
+    beam.write("begin.dat")
 
-    Shadow.ShadowTools.plotxy(beam,1,3,nbins=101,nolost=1,title="Real space")
+    # Shadow.ShadowTools.plotxy(beam,1,3,nbins=101,nolost=1,title="Real space")
 
+    # a = Shadow.Beam()
+    # a.load("begin.dat")
+    # rays = a.rays
+    # plot_scatter(rays[:,1],rays[:,0],title="Trajectory")
+    # # plot_scatter(rays[:,3],rays[:,5],title="Divergences")
+
+    return beam
+
+def compare_rays_with_shadow3_beam(raysnew,beam):
+
+    import Shadow
+    # Shadow.ShadowTools.plotxy(beam,1,3,nbins=101,nolost=1,title="Real space")
+
+    a = Shadow.Beam()
+    a.load("begin.dat")
+    rays = a.rays
+
+    plot_scatter(rays[:,1],rays[:,0],title="Trajectory shadow3",show=False)
+    plot_scatter(raysnew[:,1],raysnew[:,0],title="Trajectory new")
+
+
+    plot_scatter(rays[:,3],rays[:,5],title="Divergences shadow3",show=False)
+    plot_scatter(raysnew[:,3],raysnew[:,5],title="Divergences new")
+
+    plot_scatter(rays[:,0],rays[:,2],title="Real Space shadow3",show=False)
+    plot_scatter(raysnew[:,0],raysnew[:,2],title="Real Space new")
 
 
 if __name__ == "__main__":
+
+    e_min = 70490.0 # 5000.0
+    e_max = 70510.0 # 100000.0
+    NRAYS = 5000
+
 
     #
     # current way
     #
 
-    # run_python_preprocessors()
-    # run_shadow3_source(ener_gev=6.04,use_emittances=False)
+    run_python_preprocessors()
+    beam_shadow3 = run_shadow3_source(ener_gev=6.04,EMIN=e_min,EMAX=e_max,NRAYS=NRAYS,use_emittances=False)
 
     #
     # new way
@@ -154,8 +219,8 @@ if __name__ == "__main__":
     shift_betax_flag = 0
     shift_betax_value = 0.0
 
-    e_min = 5000.0
-    e_max = 100000.0
+    e_min = 70490.0 # 5000.0
+    e_max = 70510.0 # 100000.0
 
     sw = SourceWiggler()
 
@@ -178,7 +243,7 @@ if __name__ == "__main__":
     sourcewiggler = SourceWiggler(name="test",syned_electron_beam=syned_electron_beam,
                     syned_wiggler=syned_wiggler,
                     flag_emittance=0,
-                    emin=10490.0,emax=10510.0,ng_e=10, ng_j=nTrajPoints)
+                    emin=e_min,emax=e_max,ng_e=10, ng_j=nTrajPoints)
 
 
     # sourcewiggler.set_energy_monochromatic(5000.0)
@@ -187,8 +252,12 @@ if __name__ == "__main__":
 
     # sourcewiggler.calculate_radiation()
 
-    rays = sourcewiggler.calculate_rays(NRAYS=500)
+    rays = sourcewiggler.calculate_rays(NRAYS=NRAYS)
 
-    plot_scatter(rays[:,1],rays[:,0])
+    # plot_scatter(rays[:,1],rays[:,0],title="Trajectory")
+    # plot_scatter(rays[:,0],rays[:,2],title="Real Space")
+    # plot_scatter(rays[:,3],rays[:,5],title="Divergences")
 
 
+
+    compare_rays_with_shadow3_beam(rays,beam_shadow3)

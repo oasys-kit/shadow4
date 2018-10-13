@@ -562,8 +562,7 @@ def sync_ang(flag,angle_mrad,polarization=0, \
         eene = energy/ec_ev
         gamma = e_gev*1e3/codata_mee
         a5=sync_f(angle_mrad*gamma/1e3,eene,polarization=polarization)* \
-        numpy.power(eene,2)* \
-            a8*i_a*hdiv_mrad*numpy.power(e_gev,2)
+            numpy.power(eene,2)*a8*i_a*hdiv_mrad*numpy.power(e_gev,2)
         return a5
 
 
@@ -1544,9 +1543,9 @@ def wiggler_harmonics(Bs,Nh=41,fileOutH=""):
 # tests
 #
 def test_xraybooklet_fig2_1(pltOk=False):
-    # 
-    # example 1, Fig 2-1 in http://xdb.lbl.gov/Section2/Sec_2-1.html
-    #
+    print("# ")
+    print("# example 1, Fig 2-1 in http://xdb.lbl.gov/Section2/Sec_2-1.html ")
+    print("# ")
     y = numpy.logspace(-3,1,100)  #  from 0.001 to 10, 100 points
     g1 = sync_g1(y,polarization=0)
     h2 = sync_hi(y,i=2,polarization=0)
@@ -1575,9 +1574,9 @@ def test_xraybooklet_fig2_1(pltOk=False):
             print(" %f  %e %e "%(y[i],g1[i],h2[i]))
 
 def test_xraybooklet_fig2_2(pltOk=False):
-    # 
-    # example  2, Fig 2-2 in http://xdb.lbl.gov/Section2/Sec_2-1.html
-    #
+    print("# ")
+    print("# example  2, Fig 2-2 in http://xdb.lbl.gov/Section2/Sec_2-1.html ")
+    print("# ")
 
     y = numpy.linspace(0,8,100)  #  from 0.001 to 10, 100 points
     f3   = sync_f(y,3.0,polarization=1)
@@ -1635,9 +1634,9 @@ def test_xraybooklet_fig2_2(pltOk=False):
             print(" %f  %e %e "%(y[i],f3[i],f3pi[i]))
 
 def test_esrf_bm_spectrum(pltOk=False):
-    # 
-    # example 3, ESRF BM spectrum
-    #
+    print("#")
+    print("# example 3, ESRF BM spectrum")
+    print("#")
     # input for ESRF
     e_gev = 6.04    # electron energy in GeV
     r_m = 25.0      # magnetic radius in m
@@ -1670,9 +1669,9 @@ def test_esrf_bm_spectrum(pltOk=False):
             print(" %f  %12.3e"%(energy_ev[i],flux[i]))
 
 def test_esrf_bm_angle_power(pltOk=False):
-    # 
-    # example 4: ESRF BM angular emission of power
-    #
+    print("#")
+    print("# example 4: ESRF BM angular emission of power")
+    print("#")
     # input for ESRF
     e_gev = 6.04    # electron energy in GeV
     r_m = 25.0      # magnetic radius in m
@@ -1700,9 +1699,9 @@ def test_esrf_bm_angle_power(pltOk=False):
             print("  %f  %f"%(angle_mrad[i],flux[i]))
 
 def test_esrf_bm_angle_flux(pltOk=False):
-    # 
-    # example 5: ESRF BM angular emission of flux
-    #
+    print("#")
+    print("# example 5: ESRF BM angular emission of flux")
+    print("#")
 
     # input for ESRF
     e_gev = 6.04    # electron energy in GeV
@@ -1742,10 +1741,10 @@ def test_esrf_bm_angle_flux(pltOk=False):
             print("  %f  %f"%(angle_mrad[i],fluxEc[i]))
 
 def test_clarke_43(pltOk=False):
-    #
-    # Example 6 Slide 35 of
-    # http:https://www.cockcroft.ac.uk/wp-content/uploads/2014/12/Lecture-1.pdf
-    #
+    print("#")
+    print("# Example 6 Slide 35 of")
+    print("# http:https://www.cockcroft.ac.uk/wp-content/uploads/2014/12/Lecture-1.pdf")
+    print("#")
 
 
     def calcFWHM(h,binSize):
@@ -1814,7 +1813,7 @@ def test_clarke_43(pltOk=False):
         plt.xlabel(xtitle)
         plt.ylabel(ytitle)
 
-        plt.figure(63)
+        plt.figure(62)
         plt.plot(a,fm[:,2],'green',label="10*$\omega_c$")
         plt.plot(a,fmPar[:,2],"g--")
         plt.plot(a,fmPer[:,2],"g-.")
@@ -1830,9 +1829,9 @@ def test_clarke_43(pltOk=False):
                 print("  %f  %f  %e   "%(e[j],a[i],fm[i,j]))
 
 def test_esrf_bm_2d(pltOk=False):
-    #
-    # Example 7, ESRF flux vs energy and angle
-    #
+    print("#")
+    print("# Example 7, ESRF flux vs energy and angle")
+    print("#")
     # input for ESRF
     e_gev = 6.04    # electron energy in GeV
     r_m = 25.0      # magnetic radius in m
@@ -1873,9 +1872,9 @@ def test_esrf_bm_2d(pltOk=False):
                 print("  %f  %f  %e   "%(a[i],e[j],fm[i,j]))
 
 def test_wiggler_flux_vs_r(pltOk=False):
-    #
-    # Example 8 (Wiggler flux vs bending radius at a given photon energy)
-    #
+    print("#")
+    print("# Example 8 (Wiggler flux vs bending radius at a given photon energy)")
+    print("#")
     r_m = numpy.linspace(1.0,500.0,100)
     flux = wiggler_nphoton(r_m,electronEnergy=6.04,photonEnergy=10000.0)
     toptitle = "Wiggler flux vs bending radius at photon energy E=10 keV"
@@ -1896,9 +1895,9 @@ def test_wiggler_flux_vs_r(pltOk=False):
 
 
 def test_wiggler_external_b(pltOk=False):
-    #
-    # Example 9 (Wiggler trajectory and flux for a 3pole wiggler 
-    #
+    print("#")
+    print("# Example 9 (Wiggler trajectory and flux for a 3pole wiggler ")
+    print("#")
 
     # this is the B(s) map (T, m)
     b_t = numpy.array([[ -1.00000000e-01,   1.08200000e-03],
@@ -2083,15 +2082,15 @@ if __name__ == '__main__':
     except ImportError:
         print("failed to import matplotlib. No on-line plots.")
 
-    test_xraybooklet_fig2_1(pltOk=pltOk)
-    test_xraybooklet_fig2_2(pltOk=pltOk)
-    test_esrf_bm_spectrum(pltOk=pltOk)
-    test_esrf_bm_angle_power(pltOk=pltOk)
-    test_esrf_bm_angle_flux(pltOk=pltOk)
+    # test_xraybooklet_fig2_1(pltOk=pltOk)
+    # test_xraybooklet_fig2_2(pltOk=pltOk)
+    # test_esrf_bm_spectrum(pltOk=pltOk)
+    # test_esrf_bm_angle_power(pltOk=pltOk)
+    # test_esrf_bm_angle_flux(pltOk=pltOk)
     test_clarke_43(pltOk=pltOk)
-    test_esrf_bm_2d(pltOk=pltOk)
-    test_wiggler_flux_vs_r(pltOk=pltOk)
-    test_wiggler_external_b(pltOk=pltOk)
+    # test_esrf_bm_2d(pltOk=pltOk)
+    # test_wiggler_flux_vs_r(pltOk=pltOk)
+    # test_wiggler_external_b(pltOk=pltOk)
 
     if pltOk: plt.show()
 

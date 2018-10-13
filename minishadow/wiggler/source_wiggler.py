@@ -30,7 +30,7 @@ from scipy import interpolate
 from syned.storage_ring.magnetic_structures.wiggler import Wiggler
 from syned.storage_ring.electron_beam import ElectronBeam
 
-from srfunc import wiggler_trajectory, wiggler_cdf, sync_g1
+from srfunc import wiggler_trajectory, wiggler_spectrum, wiggler_cdf, sync_g1, sync_f, sync_ene, sync_ang
 
 from scipy.interpolate import interp1d
 
@@ -229,8 +229,6 @@ class SourceWiggler(object):
         # traj[6,ii] = curv[i]
         # traj[7,ii] = bz[i]
 
-        # plot(traj[1,:],traj[0,:])
-        # print(pars)
 
         #
         # calculate cdf and write file for Shadow/Source
@@ -291,14 +289,13 @@ class SourceWiggler(object):
         # traj[7,ii] = bz[i]
 
         PATH_STEP = self._result_cdf["step"]
-        print(">>>>>>",PATH_STEP)
-        X_TRAJ = self._result_trajectory[0,:]
-        Y_TRAJ = self._result_trajectory[1,:]
-        ANGLE  = self._result_trajectory[3,:]
-        CURV   = self._result_trajectory[6,:]
+        X_TRAJ = self._result_cdf["x"]
+        Y_TRAJ = self._result_cdf["y"]
+        SEEDIN = self._result_cdf["cdf"]
+        ANGLE  = self._result_cdf["angle"]
+        CURV   = self._result_cdf["curv"]
         EPSI_PATH = numpy.arange(CURV.size) * PATH_STEP # self._result_trajectory[7,:]
 
-        # plot(Y_TRAJ,X_TRAJ)
 
 
         # ! C We define the 5 arrays:
@@ -308,8 +305,6 @@ class SourceWiggler(object):
         # ! C    Y_PATH(5,N) ---> PATH(Y)
         # ! C    F(1,N) contains the array of Y values where the nodes are located.
 
-        # print(">>>>>>>",self._result_trajectory.shape)
-        # plot(self._result_trajectory[1,:],self._result_trajectory[0,:])
 
         # CALL PIECESPL(SEED_Y, Y_TEMP,   NP_SY,   IER)
         # CALL CUBSPL (Y_X,    X_TEMP,   NP_TRAJ, IER)
@@ -319,7 +314,7 @@ class SourceWiggler(object):
         # CALL CUBSPL (Y_CURV, C_TEMP,   NP_TRAJ, IER)
         # CALL CUBSPL (Y_PATH, P_TEMP,   NP_TRAJ, IER)
 
-        SEED_Y = interp1d(numpy.arange(Y_TRAJ.size)/(Y_TRAJ.size-1),Y_TRAJ,kind='linear')
+        SEED_Y = interp1d(SEEDIN,Y_TRAJ,kind='linear')
         Y_X    = interp1d(Y_TRAJ,X_TRAJ,kind='cubic')
         Y_XPRI = interp1d(Y_TRAJ,ANGLE,kind='cubic')
         Y_CURV = interp1d(Y_TRAJ,CURV,kind='cubic')
@@ -344,27 +339,42 @@ class SourceWiggler(object):
         # ! C
         # ! C These flags are set because of the original program structure.
         # ! C
-        F_PHOT  = 0
-        F_COLOR  = 3
-        FSOUR  = 3
-        FDISTR  = 4
+        # F_PHOT  = 0
+        # F_COLOR  = 3
+        # FSOUR  = 3
+        # FDISTR  = 4
 
-        ARG_Y = numpy.random.random(NRAYS)
 
-        energy_over_critical_energy = numpy.linspace(1e-3,10,1000)
-        # plot(energy_over_critical_energy,sync_g1(energy_over_critical_energy),xlog=False,ylog=False)
-        samplerE = Sampler1D(sync_g1(energy_over_critical_energy),energy_over_critical_energy)
-        sampled_energies,h,h_center = samplerE.get_n_sampled_points_and_histogram(NRAYS)
-        # plot(h_center,h)
+        ws_ev,ws_f,tmp =  wiggler_spectrum(self._result_trajectory,
+                                enerMin=self._EMIN, enerMax=self._EMAX, nPoints=500,
+                                per=self.syned_wiggler.period_length(), electronCurrent=self.syned_electron_beam._current,
+                                outFile="", elliptical=False)
+
+        ws_flux_per_ev = ws_f / (ws_ev*1e-3)
+        samplerE = Sampler1D(ws_flux_per_ev,ws_ev)
+        sampled_energies,h,h_center = samplerE.get_n_sampled_points_and_histogram(100*NRAYS)
+
+        a = numpy.linspace(-0.6,0.6,150)
+        a8 = 1.0
+        hdiv_mrad = 1.0
+        # i_a = self.syned_electron_beam._current
+        #
+        # fm = sync_f(a*self.syned_electron_beam.gamma()/1e3,eene,polarization=0) * \
+        #         numpy.power(eene,2)*a8*i_a*hdiv_mrad*numpy.power(self.syned_electron_beam._energy_in_GeV,2)
+        #
+        # plot(a,fm,title="sync_f")
+        #
+        # samplerAng = Sampler1D(fm,a)
+        #
+        # sampled_theta,hx,h = samplerAng.get_n_sampled_points_and_histogram(10*NRAYS)
+        # plot(h,hx)
+
 
         for itik in range(NRAYS):
 
-
-            # IF (F_WIGGLER.EQ.1) THEN
             #     ARG_Y = GRID(2,ITIK)
             #     CALL SPL_INT (SEED_Y, NP_SY,   ARG_Y,  Y_TRAJ,    IER)
-            # arg_y = ARG_Y[itik]
-            arg_y = itik/(NRAYS-1)
+            arg_y = numpy.random.random() # ARG_Y[itik]
             Y_TRAJ = SEED_Y(arg_y)
 
 
@@ -389,7 +399,7 @@ class SourceWiggler(object):
             CURV = Y_CURV(Y_TRAJ)
             EPSI_PATH = Y_PATH(Y_TRAJ)
 
-            print("\n>>><<<",arg_y,Y_TRAJ,X_TRAJ,ANGLE,CURV,EPSI_PATH)
+            # print("\n>>><<<",arg_y,Y_TRAJ,X_TRAJ,ANGLE,CURV,EPSI_PATH)
 
 
             # EPSI_PATH = EPSI_PATH - PATH0 ! now refer to wiggler's origin
@@ -492,10 +502,6 @@ class SourceWiggler(object):
             YYY = Y_TRAJ - XXX * numpy.sin(ANGLE)
             XXX = X_TRAJ + XXX * numpy.cos(ANGLE)
 
-            # print(">>>>> XXX,YYY,ZZZ,ANGLE",XXX,YYY,ZZZ,ANGLE)
-
-            # plot_scatter(YYY,XXX,title="Number of rays: %d"%XXX.size)
-
             rays[itik,0] = XXX
             rays[itik,1] = YYY
             rays[itik,2] = ZZZ
@@ -522,7 +528,6 @@ class SourceWiggler(object):
             ANGLEX = ANGLE + E_BEAM1
             DIREC1 = numpy.tan(ANGLEX)
             DIREC2 = 1.0
-            ARG_ANG = numpy.random.random()
 
 
             #     ! C
@@ -566,27 +571,45 @@ class SourceWiggler(object):
             #         (RAD_MIN,CORREC,ARG_ENER,ARG_ANG,Q_WAVE,ANGLEV,POL_DEG,i1)
             #     END IF
 
-
-            ARG_ENER = numpy.random.random()
             RAD_MIN = numpy.abs(R_MAGNET)
 
-            i1 = 1
-            # CALL WHITE (RAD_MIN,CORREC,ARG_ENER,ARG_ANG,Q_WAVE,ANGLEV,POL_DEG,i1)
 
-            print("   >> R_MAGNET, DIREC",R_MAGNET,DIREC1,DIREC2)
-            print("   >> RAD_MIN,CORREC,ARG_ENER,ARG_ANG,",RAD_MIN,CORREC,ARG_ENER,ARG_ANG)
-            s1 = sampled_energies[itik]
+            # CALL WHITE (RAD_MIN,CORREC,ARG_ENER,ARG_ANG,Q_WAVE,ANGLEV,POL_DEG,i1)
+            ARG_ANG = numpy.random.random()
+            ARG_ENER = numpy.random.random()
+
+
+            # print("   >> R_MAGNET, DIREC",R_MAGNET,DIREC1,DIREC2)
+            # print("   >> RAD_MIN,CORREC,ARG_ENER,ARG_ANG,",RAD_MIN,CORREC,ARG_ENER,ARG_ANG)
+
+            #
             gamma = self.syned_electron_beam.gamma()
             m2ev = codata.c * codata.h / codata.e
             TOANGS = m2ev * 1e10
             critical_energy = TOANGS*3.0*numpy.power(gamma,3)/4.0/numpy.pi/1.0e10*(1.0/RAD_MIN)
-            photon_energy = s1 * critical_energy
 
-            wavelength = codata.h * codata.c / codata.e /photon_energy
+            sampled_photon_energy = sampled_energies[itik]
+            wavelength = codata.h * codata.c / codata.e /sampled_photon_energy
             Q_WAVE = 2 * numpy.pi / (wavelength*1e2)
-            print("   >> PHOTON ENERGY, Ec, lambda, Q: ",photon_energy,critical_energy,wavelength*1e10,Q_WAVE)
+            print("   >> PHOTON ENERGY, Ec, lambda, Q: ",sampled_photon_energy,critical_energy,wavelength*1e10,Q_WAVE)
 
 
+            eene = sampled_photon_energy / critical_energy
+
+            fm = sync_f(a*1e-3*self.syned_electron_beam.gamma(),eene,polarization=0) * \
+                numpy.power(eene,2)*a8*self.syned_electron_beam._current*hdiv_mrad * \
+                numpy.power(self.syned_electron_beam._energy_in_GeV,2)
+
+
+            samplerAng = Sampler1D(fm,a*1e-3)
+
+            sampled_theta = samplerAng.get_sampled(ARG_ENER)
+
+
+            print("sampled_theta: ",sampled_theta, "sampled_energy: ",sampled_photon_energy, "eene ",eene)
+
+            ANGLEV = sampled_theta
+            ANGLEV += E_BEAM3
             #     IF (ANGLEV.LT.0.0) I_CHANGE = -1
             #     ANGLEV =   ANGLEV + E_BEAM(3)
             #     ! C
@@ -602,17 +625,22 @@ class SourceWiggler(object):
             #         END IF
             #     END IF
             #     DIREC(3)  =   TAN(ANGLEV)/COS(ANGLEX)
+
+            DIREC3 = numpy.tan(ANGLEV) / numpy.cos(ANGLEX)
             #     IF (F_WIGGLER.EQ.3) THEN
             #         CALL ROTATE (DIREC, ANGLE3,ANGLE2,ANGLE1,DIREC)
             #     END IF
             #     CALL NORM (DIREC,DIREC)
-            # print*,">>>>DIREC,FGRID,R_ALADDIN: ",DIREC,FGRID,R_ALADDIN
-            #     GO TO 1111
 
+            direc_norm = numpy.sqrt(DIREC1**2 + DIREC2**2 + DIREC3**2)
 
-            rays[itik,3] = 0.0 # VX
-            rays[itik,4] = 1.0 # VY
-            rays[itik,5] = 0.0 # VZ
+            DIREC1 /= direc_norm
+            DIREC2 /= direc_norm
+            DIREC3 /= direc_norm
+
+            rays[itik,3] = DIREC1 # VX
+            rays[itik,4] = DIREC2 # VY
+            rays[itik,5] = DIREC3 # VZ
 
         if user_unit_to_m != 1.0:
             rays[:,0] /= user_unit_to_m
