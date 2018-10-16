@@ -164,7 +164,7 @@ def run_shadow3_source(ener_gev=6.04,use_emittances=True,EMIN=10000.0,EMAX=11000
     # rays = a.rays
     # plot_scatter(rays[:,1],rays[:,0],title="Trajectory")
     # # plot_scatter(rays[:,3],rays[:,5],title="Divergences")
-
+    # print(">>>>>>>>>>>>>>>>>",oe0.PH1,oe0.PH2)
     return beam
 
 def compare_rays_with_shadow3_beam(raysnew,beam):
@@ -172,25 +172,33 @@ def compare_rays_with_shadow3_beam(raysnew,beam):
     import Shadow
     # Shadow.ShadowTools.plotxy(beam,1,3,nbins=101,nolost=1,title="Real space")
 
-    a = Shadow.Beam()
-    a.load("begin.dat")
-    rays = a.rays
+    # a = Shadow.Beam()
+    # a.load("begin.dat")
+    # rays = a.rays
 
-    plot_scatter(rays[:,1],rays[:,0],title="Trajectory shadow3",show=False)
-    plot_scatter(raysnew[:,1],raysnew[:,0],title="Trajectory new")
+    rays = beam.rays
 
+    # plot_scatter(rays[:,1],rays[:,0],title="Trajectory shadow3",show=False)
+    # plot_scatter(raysnew[:,1],raysnew[:,0],title="Trajectory new")
+    #
+    #
+    # plot_scatter(rays[:,3],rays[:,5],title="Divergences shadow3",show=False)
+    # plot_scatter(raysnew[:,3],raysnew[:,5],title="Divergences new")
+    #
+    # plot_scatter(rays[:,0],rays[:,2],title="Real Space shadow3",show=False)
+    # plot_scatter(raysnew[:,0],raysnew[:,2],title="Real Space new")
 
-    plot_scatter(rays[:,3],rays[:,5],title="Divergences shadow3",show=False)
-    plot_scatter(raysnew[:,3],raysnew[:,5],title="Divergences new")
-
-    plot_scatter(rays[:,0],rays[:,2],title="Real Space shadow3",show=False)
-    plot_scatter(raysnew[:,0],raysnew[:,2],title="Real Space new")
+    b = Shadow.Beam()
+    b.rays = raysnew
+    Shadow.ShadowTools.histo1(beam_shadow3,11,ref=23,nolost=1)
+    Shadow.ShadowTools.histo1(b,11,ref=23,nolost=1)
 
 
 if __name__ == "__main__":
 
-    e_min = 70490.0 # 5000.0
-    e_max = 70510.0 # 100000.0
+
+    e_min = 5000.0 # 70490.0 #
+    e_max = 100000.0 # 70510.0 #
     NRAYS = 5000
 
 
@@ -219,8 +227,6 @@ if __name__ == "__main__":
     shift_betax_flag = 0
     shift_betax_value = 0.0
 
-    e_min = 70490.0 # 5000.0
-    e_max = 70510.0 # 100000.0
 
     sw = SourceWiggler()
 

@@ -352,7 +352,7 @@ class SourceWiggler(object):
 
         ws_flux_per_ev = ws_f / (ws_ev*1e-3)
         samplerE = Sampler1D(ws_flux_per_ev,ws_ev)
-        sampled_energies,h,h_center = samplerE.get_n_sampled_points_and_histogram(100*NRAYS)
+        sampled_energies,h,h_center = samplerE.get_n_sampled_points_and_histogram(NRAYS)
 
         a = numpy.linspace(-0.6,0.6,150)
         a8 = 1.0
@@ -591,7 +591,7 @@ class SourceWiggler(object):
             sampled_photon_energy = sampled_energies[itik]
             wavelength = codata.h * codata.c / codata.e /sampled_photon_energy
             Q_WAVE = 2 * numpy.pi / (wavelength*1e2)
-            print("   >> PHOTON ENERGY, Ec, lambda, Q: ",sampled_photon_energy,critical_energy,wavelength*1e10,Q_WAVE)
+            # print("   >> PHOTON ENERGY, Ec, lambda, Q: ",sampled_photon_energy,critical_energy,wavelength*1e10,Q_WAVE)
 
 
             eene = sampled_photon_energy / critical_energy
@@ -600,13 +600,28 @@ class SourceWiggler(object):
                 numpy.power(eene,2)*a8*self.syned_electron_beam._current*hdiv_mrad * \
                 numpy.power(self.syned_electron_beam._energy_in_GeV,2)
 
+            fm_s = sync_f(a*1e-3*self.syned_electron_beam.gamma(),eene,polarization=1) * \
+                numpy.power(eene,2)*a8*self.syned_electron_beam._current*hdiv_mrad * \
+                numpy.power(self.syned_electron_beam._energy_in_GeV,2)
+
+            fm.shape = -1
+            fm_s.shape = -1
+            # print(">>>>",a.shape,fm.shape,fm_s.shape)
+            pol_deg_interpolator = interp1d(a*1e-3,fm_s/fm)
+
 
             samplerAng = Sampler1D(fm,a*1e-3)
 
+            # samplerPol = Sampler1D(fm_s/fm,a*1e-3)
+
+            # plot(a*1e-3,fm_s/fm)
+
             sampled_theta = samplerAng.get_sampled(ARG_ENER)
 
+            sampled_pol_deg = pol_deg_interpolator(sampled_theta)
 
-            print("sampled_theta: ",sampled_theta, "sampled_energy: ",sampled_photon_energy, "eene ",eene)
+
+            # print("sampled_theta: ",sampled_theta, "sampled_energy: ",sampled_photon_energy, "sampled pol ",sampled_pol_deg)
 
             ANGLEV = sampled_theta
             ANGLEV += E_BEAM3
@@ -658,8 +673,6 @@ class SourceWiggler(object):
         # electric field vectors (cols 7-9, 16-18) and phases (cols 14-15)
         #
 
-        # beam.rays[:,6] =  1.0
-
         # ! C
         # ! C  ---------------------------------------------------------------------
         # ! C                 POLARIZATION
@@ -699,15 +712,16 @@ class SourceWiggler(object):
 
 
 
+        POL_DEG = sampled_pol_deg
+        DENOM = numpy.sqrt(1.0 - 2.0 * POL_DEG + 2.0 * POL_DEG**2)
+        AX = POL_DEG/DENOM
+        for i in range(3):
+            A_VEC[:,i] *= AX
 
-        # DENOM = numpy.sqrt(1.0 - 2.0 * POL_DEG + 2.0 * POL_DEG**2)
-        # AX = POL_DEG/DENOM
-        # for i in range(3):
-        #     A_VEC[:,i] *= AX
-        #
-        # AZ = (1.0-POL_DEG)/DENOM
-        # for i in range(3):
-        #     AP_VEC[:,i] *= AZ
+        AZ = (1.0-POL_DEG)/DENOM
+        for i in range(3):
+            AP_VEC[:,i] *= AZ
+
 
         rays[:,6:9] =  A_VEC
         rays[:,15:18] = AP_VEC
@@ -737,8 +751,11 @@ class SourceWiggler(object):
         # photon energy (col 11)
         #
 
-        A2EV = 2.0*numpy.pi/(codata.h*codata.c/codata.e*1e2)
-        rays[:,10] =  sampled_photon_energy * A2EV
+        # A2EV = 2.0*numpy.pi/(codata.h*codata.c/codata.e*1e2)
+        sampled_photon_energy = sampled_energies
+        wavelength = codata.h * codata.c / codata.e /sampled_photon_energy
+        Q_WAVE = 2 * numpy.pi / (wavelength*1e2)
+        rays[:,10] =  Q_WAVE # sampled_photon_energy * A2EV
 
         # col 12 (ray index)
         rays[:,11] =  1 + numpy.arange(NRAYS)
