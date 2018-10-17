@@ -9,7 +9,7 @@ from syned.storage_ring.electron_beam import ElectronBeam
 
 from source_wiggler import SourceWiggler
 
-def run_python_preprocessors():
+def run_python_preprocessors(e_min=1000.0,e_max=10000.0 ):
 
     import srxraylib.sources.srfunc as srfunc
 
@@ -27,8 +27,8 @@ def run_python_preprocessors():
     shift_betax_flag = 0
     shift_betax_value = 0.0
 
-    e_min = 70490.0 # 5000.0
-    e_max = 70510.0 # 100000.0
+     # 5000.0
+     # 100000.0
 
     # ("Calculate electron trajectory"
     (traj, pars) = srfunc.wiggler_trajectory(b_from=0,
@@ -60,7 +60,7 @@ def run_python_preprocessors():
     #
     # calculate cdf and write file for Shadow/Source
     #
-
+    print(">>>>>>>>>>>>>>>>>>>>>>>>>><<<<<<<<<<<<<<<<",e_min,e_max)
     srfunc.wiggler_cdf(traj,
                        enerMin=e_min,
                        enerMax=e_max,
@@ -134,11 +134,17 @@ def run_shadow3_source(ener_gev=6.04,use_emittances=True,EMIN=10000.0,EMAX=11000
     oe0.NPOINT = NRAYS
 
     if use_emittances:
-        oe0.SIGMAX = 0.0078
+        moment_xx=(400e-6)**2
+        moment_xxp=0.0
+        moment_xpxp=(10e-6)**2
+        moment_yy=(10e-6)**2
+        moment_yyp=0.0
+        moment_ypyp=(4e-6)**2
+        oe0.SIGMAX = 1e2 * numpy.sqrt(moment_xx)
         oe0.SIGMAY = 0.0
-        oe0.SIGMAZ = 0.0036
-        oe0.EPSI_X = 3.8e-07
-        oe0.EPSI_Z = 3.8e-09
+        oe0.SIGMAZ = 1e2 * numpy.sqrt(moment_yy)
+        oe0.EPSI_X = 1e2 * numpy.sqrt(moment_xx) * numpy.sqrt(moment_xpxp)
+        oe0.EPSI_Z = 1e2 * numpy.sqrt(moment_yy) * numpy.sqrt(moment_ypyp)
     else:
         oe0.SIGMAX = 0.0
         oe0.SIGMAY = 0.0
@@ -154,6 +160,7 @@ def run_shadow3_source(ener_gev=6.04,use_emittances=True,EMIN=10000.0,EMAX=11000
 
 
     oe0.write("start.00")
+    print(">>>>>>>>>>>>>>>>>>>>>>>>>><<",oe0.PH1,oe0.PH2)
     beam.genSource(oe0)
     beam.write("begin.dat")
 
@@ -178,15 +185,15 @@ def compare_rays_with_shadow3_beam(raysnew,beam):
 
     rays = beam.rays
 
-    # plot_scatter(rays[:,1],rays[:,0],title="Trajectory shadow3",show=False)
-    # plot_scatter(raysnew[:,1],raysnew[:,0],title="Trajectory new")
-    #
-    #
-    # plot_scatter(rays[:,3],rays[:,5],title="Divergences shadow3",show=False)
-    # plot_scatter(raysnew[:,3],raysnew[:,5],title="Divergences new")
-    #
-    # plot_scatter(rays[:,0],rays[:,2],title="Real Space shadow3",show=False)
-    # plot_scatter(raysnew[:,0],raysnew[:,2],title="Real Space new")
+    plot_scatter(rays[:,1],rays[:,0],title="Trajectory shadow3",show=False)
+    plot_scatter(raysnew[:,1],raysnew[:,0],title="Trajectory new")
+
+
+    plot_scatter(rays[:,3],rays[:,5],title="Divergences shadow3",show=False)
+    plot_scatter(raysnew[:,3],raysnew[:,5],title="Divergences new")
+
+    plot_scatter(rays[:,0],rays[:,2],title="Real Space shadow3",show=False)
+    plot_scatter(raysnew[:,0],raysnew[:,2],title="Real Space new")
 
     b = Shadow.Beam()
     b.rays = raysnew
@@ -195,19 +202,25 @@ def compare_rays_with_shadow3_beam(raysnew,beam):
 
 
 if __name__ == "__main__":
-
+    import Shadow
+    import os
 
     e_min = 5000.0 # 70490.0 #
     e_max = 100000.0 # 70510.0 #
+    e_min = 70490.0 #
+    e_max = 70510.0 #
     NRAYS = 5000
+    use_emittances=True
 
 
     #
     # current way
     #
-
-    run_python_preprocessors()
-    beam_shadow3 = run_shadow3_source(ener_gev=6.04,EMIN=e_min,EMAX=e_max,NRAYS=NRAYS,use_emittances=False)
+    # os.system("rm begin.dat start.00 xshwig.sha")
+    # os.system("pwd")
+    run_python_preprocessors(e_min=e_min,e_max=e_max)
+    beam_shadow3 = run_shadow3_source(ener_gev=6.04,EMIN=e_min,EMAX=e_max,NRAYS=NRAYS,use_emittances=use_emittances)
+    # Shadow.ShadowTools.histo1("begin.dat",11)
 
     #
     # new way
@@ -248,7 +261,7 @@ if __name__ == "__main__":
 
     sourcewiggler = SourceWiggler(name="test",syned_electron_beam=syned_electron_beam,
                     syned_wiggler=syned_wiggler,
-                    flag_emittance=0,
+                    flag_emittance=use_emittances,
                     emin=e_min,emax=e_max,ng_e=10, ng_j=nTrajPoints)
 
 
@@ -263,7 +276,6 @@ if __name__ == "__main__":
     # plot_scatter(rays[:,1],rays[:,0],title="Trajectory")
     # plot_scatter(rays[:,0],rays[:,2],title="Real Space")
     # plot_scatter(rays[:,3],rays[:,5],title="Divergences")
-
 
 
     compare_rays_with_shadow3_beam(rays,beam_shadow3)

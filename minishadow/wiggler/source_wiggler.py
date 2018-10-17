@@ -65,10 +65,6 @@ class SourceWiggler(object):
 
         self._NG_J            = ng_j       # Number of points in electron trajectory (per period)
 
-        # ray tracing
-        # self.SEED            = SEED   # Random seed
-        # self.NRAYS           = NRAYS  # Number of rays
-
 
         self._FLAG_EMITTANCE  =  flag_emittance # Yes  # Use emittance (0=No, 1=Yes)
 
@@ -242,7 +238,8 @@ class SourceWiggler(object):
                            elliptical=False)
 
 
-    def calculate_rays(self,user_unit_to_m=1.0,F_COHER=0,NRAYS=5000,SEED=123456):
+    def calculate_rays(self,user_unit_to_m=1.0,F_COHER=0,NRAYS=5000,SEED=123456,
+                       EPSI_DX=0.0,EPSI_DZ=0.0):
         """
         compute the rays in SHADOW matrix (shape (npoints,18) )
         :param F_COHER: set this flag for coherent beam
@@ -274,10 +271,6 @@ class SourceWiggler(object):
             x_electron = 0.0
             y_electron = 0.0
             z_electron = 0.0
-
-        x_photon = 0.0
-        y_photon = 0.0 # numpy.random.random(NRAYS)
-        z_photon = 0.0
 
         # traj[0,ii] = yx[i]
         # traj[1,ii] = yy[i]+j * per - start_len
@@ -432,15 +425,8 @@ class SourceWiggler(object):
             # ! C
             # ! C Compute the actual distance (EPSI_W*) from the orbital focus
             # ! C
-            # EPSI_WX = EPSI_DX + EPSI_PATH
-            # EPSI_WZ = EPSI_DZ + EPSI_PATH
-            #
-
-            # EPSI_DX = 0.0
-            # EPSI_DZ = 0.0
-            #
-            # EPSI_WX = EPSI_DX + EPSI_PATH
-            # EPSI_WZ = EPSI_DZ + EPSI_PATH
+            EPSI_WX = EPSI_DX + EPSI_PATH
+            EPSI_WZ = EPSI_DZ + EPSI_PATH
 
 
             # ! BUG srio@esrf.eu found that these routine does not make the
@@ -479,13 +465,37 @@ class SourceWiggler(object):
             #
 
             if self._FLAG_EMITTANCE:
-                #todo
-                pass
+                #     CALL BINORMAL (rSigmaX, rSigmaXp, rhoX, XXX, E_BEAM(1), istar1)
+                #     [  c11  c12  ]     [  sigma1^2           rho*sigma1*sigma2   ]
+                #     [  c21  c22  ]  =  [  rho*sigma1*sigma2  sigma2^2            ]
+                sigmaX,sigmaXp,sigmaZ,sigmaZp = self.syned_electron_beam.get_sigmas_all()
+
+                epsi_wX = sigmaX * sigmaXp
+                rSigmaX = numpy.sqrt( (epsi_wX**2) * (sigmaXp**2) + sigmaX**2 )
+                rSigmaXp = sigmaXp
+                rhoX = epsi_wX * sigmaXp**2 / (rSigmaX * rSigmaXp)
+                mean = [0, 0]
+                cov = [[sigmaX**2, rhoX*sigmaX*sigmaXp], [rhoX*sigmaX*sigmaXp, sigmaXp**2]]  # diagonal covariance
+                sampled_x, sampled_xp = numpy.random.multivariate_normal(mean, cov, 1).T
+                # plot_scatter(sampled_x,sampled_xp)
+                XXX = sampled_x
+                E_BEAM1 = sampled_xp
+
+                epsi_wZ = sigmaZ * sigmaZp
+                rSigmaZ = numpy.sqrt( (epsi_wZ**2) * (sigmaZp**2) + sigmaZ**2 )
+                rSigmaZp = sigmaZp
+                rhoZ = epsi_wZ * sigmaZp**2 / (rSigmaZ * rSigmaZp)
+                mean = [0, 0]
+                cov = [[sigmaZ**2, rhoZ*sigmaZ*sigmaZp], [rhoZ*sigmaZ*sigmaZp, sigmaZp**2]]  # diagonal covariance
+                sampled_z, sampled_zp = numpy.random.multivariate_normal(mean, cov, 1).T
+                ZZZ = sampled_z
+                E_BEAM3 = sampled_zp
+
             else:
                 sigmaXp = 0.0
                 XXX = 0.0
                 E_BEAM1 = 0.0
-
+                rhoX = 0.0
                 sigmaZp = 0.0
                 ZZZ = 0.0
                 E_BEAM3 = 0.0
@@ -604,10 +614,18 @@ class SourceWiggler(object):
                 numpy.power(eene,2)*a8*self.syned_electron_beam._current*hdiv_mrad * \
                 numpy.power(self.syned_electron_beam._energy_in_GeV,2)
 
+            fm_pol = numpy.zeros_like(fm)
+            for i in range(fm_pol.size):
+                if fm[i] == 0.0:
+                    fm_pol[i] = 0
+                else:
+                    fm_pol[i] = fm_s[i] / fm[i]
+
             fm.shape = -1
             fm_s.shape = -1
+            fm_pol.shape = -1
             # print(">>>>",a.shape,fm.shape,fm_s.shape)
-            pol_deg_interpolator = interp1d(a*1e-3,fm_s/fm)
+            pol_deg_interpolator = interp1d(a*1e-3,fm_pol)
 
 
             samplerAng = Sampler1D(fm,a*1e-3)
