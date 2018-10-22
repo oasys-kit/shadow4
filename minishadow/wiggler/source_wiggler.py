@@ -30,7 +30,7 @@ from scipy import interpolate
 from syned.storage_ring.magnetic_structures.wiggler import Wiggler
 from syned.storage_ring.electron_beam import ElectronBeam
 
-from srfunc import wiggler_trajectory, wiggler_spectrum, wiggler_cdf, sync_g1, sync_f, sync_ene, sync_ang
+from minishadow.bending_magnet.srfunc import wiggler_trajectory, wiggler_spectrum, wiggler_cdf, sync_g1, sync_f, sync_ene, sync_ang
 
 from scipy.interpolate import interp1d
 
@@ -808,8 +808,6 @@ class SourceWiggler(object):
         #
         # sample divergences
         #
-
-
         return 0,0,0
 
 

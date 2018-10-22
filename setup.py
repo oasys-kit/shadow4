@@ -52,6 +52,8 @@ PACKAGES = [
     "minishadow.io",
     "minishadow.source_geometrical",
     "minishadow.undulator",
+    "minishadow.wiggler",
+    "minishadow.bending_magnet",
     "minishadow.optical_elements",
     "minishadow.optical_surfaces",
     "minishadow.prerefl",
