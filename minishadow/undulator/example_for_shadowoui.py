@@ -14,7 +14,8 @@ from Shadow import Beam as Shadow3Beam
 
 if __name__ == "__main__":
 
-    do_plots = False
+    from srxraylib.plot.gol import plot
+    do_plots = True
     #
     # syned
     #
@@ -31,15 +32,18 @@ if __name__ == "__main__":
                  moment_yyp=0.0,
                  moment_ypyp=(4e-6)**2 )
 
-    sourceundulator = SourceUndulator(name="test",syned_electron_beam=ebeam,syned_undulator=su,
-                    flag_emittance=1,flag_size=2,
+    sourceundulator = SourceUndulator(name="test",
+                    syned_electron_beam=ebeam,
+                    syned_undulator=su,
+                    flag_emittance=1,
+                    flag_size=2,
                     emin=10490.0,emax=10510.0,ng_e=3,
                     maxangle=0.015,ng_t=100,ng_p=11,ng_j=20,
                     code_undul_phot="pySRU")
 
 
-    sourceundulator.set_energy_monochromatic_at_resonance(1.0) # 0.98)
-    # sourceundulator._MAXANGLE = 40e-6
+    sourceundulator.set_energy_monochromatic_at_resonance(0.98)
+    # sourceundulator._MAXANGLE *= 1.2
 
     print(sourceundulator.info())
 
@@ -59,7 +63,6 @@ if __name__ == "__main__":
         plot_image(polarization[0],1e6*theta,phi,aspect='auto',title="polarization",xtitle="theta [urad]",ytitle="phi [rad]")
 
 
-    # beam = sourceundulator.calculate_shadow3_beam(user_unit_to_m=1.0,F_COHER=0,NRAYS=15000,SEED=5655452)
     rays = sourceundulator.calculate_rays(user_unit_to_m=1.0,F_COHER=0,NRAYS=15000,SEED=5655452)
 
     print(sourceundulator.info())
@@ -92,3 +95,7 @@ if __name__ == "__main__":
         plot_scatter(1e6*shadow3_beam.rays[:,0],1e6*shadow3_beam.rays[:,2],title="real space",xtitle="X [um]",ytitle="Z [um]",show=False)
         plot_scatter(1e6*shadow3_beam.rays[:,3],1e6*shadow3_beam.rays[:,5],title="divergence space",xtitle="X [urad]",ytitle="Z [urad]",show=True)
 
+        if sourceundulator._result_photon_size_distribution is not None:
+            plot(sourceundulator._result_photon_size_distribution["x"]*1e6,
+                 sourceundulator._result_photon_size_distribution["y"],
+                 title="Photon size distribution",xtitle="R [um]",ytitle="Intensity [a.u.]")

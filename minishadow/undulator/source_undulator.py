@@ -31,9 +31,9 @@ from scipy import interpolate
 from syned.storage_ring.magnetic_structures.undulator import Undulator
 from syned.storage_ring.electron_beam import ElectronBeam
 
-from orangecontrib.shadow.util.undulator.source_undulator_factory import SourceUndulatorFactory
-from orangecontrib.shadow.util.undulator.source_undulator_factory_srw import SourceUndulatorFactorySrw
-from orangecontrib.shadow.util.undulator.source_undulator_factory_pysru import SourceUndulatorFactoryPysru
+from minishadow.undulator.source_undulator_factory import SourceUndulatorFactory
+from minishadow.undulator.source_undulator_factory_srw import SourceUndulatorFactorySrw
+from minishadow.undulator.source_undulator_factory_pysru import SourceUndulatorFactoryPysru
 
 
 INTEGRATION_METHOD = 1 # 0=sum, 1=trapz
@@ -87,6 +87,7 @@ class SourceUndulator(object):
         # results of calculations
 
         self._result_radiation = None
+        self._result_photon_size_distribution = None
 
 
     def info(self,debug=False):
@@ -183,15 +184,12 @@ class SourceUndulator(object):
     def get_resonance_ring(self,harmonic_number=1, ring_order=1):
         return 1.0/self.syned_electron_beam.gamma()*numpy.sqrt( ring_order / harmonic_number * (1+0.5*self.syned_undulator.K_vertical()**2) )
 
-    # def set_harmonic(self,harmonic):
 
     def set_energy_monochromatic_at_resonance(self,harmonic_number):
 
         self.set_energy_monochromatic(self.syned_undulator.resonance_energy(
             self.syned_electron_beam.gamma(),harmonic=harmonic_number))
         # take 3*sigma - _MAXANGLE is in RAD
-
-        # self._MAXANGLE = 3 * 0.69 * 1e3 * self.get_resonance_central_cone(harmonic_number)
         self._MAXANGLE = 3 * 0.69 * self.syned_undulator.gaussian_central_cone_aperture(self.syned_electron_beam.gamma(),harmonic_number)
 
     def set_energy_monochromatic(self,emin):
@@ -230,7 +228,7 @@ class SourceUndulator(object):
     def calculate_radiation(self):
 
         """
-        Calculates the radiation (emission) as a function pf theta (elevation angle) and phi (azimuthal angle)
+        Calculates the radiation (emission) as a function of theta (elevation angle) and phi (azimuthal angle)
         This radiation will be sampled to create the source
 
         It calls undul_phot* in SourceUndulatorFactory
@@ -297,7 +295,6 @@ class SourceUndulator(object):
         undul_phot_dict["info"] = self.info()
 
         self._result_radiation = undul_phot_dict
-        # return undul_phot_dict
 
     #
     # get from results
@@ -427,21 +424,6 @@ class SourceUndulator(object):
         flux,spectral_power,photon_energy = self.get_flux_and_spectral_power()
         return spectral_power,photon_energy
 
-
-    # def calculate_shadow3_beam(self,user_unit_to_m=1.0,F_COHER=0,NRAYS=5000,SEED=36255655452):
-    #
-    #
-    #     import Shadow
-    #
-    #     rays = self.calculate_rays(user_unit_to_m=user_unit_to_m,F_COHER=F_COHER,NRAYS=NRAYS,SEED=SEED)
-    #
-    #     beam = Shadow.Beam(N=NRAYS)
-    #
-    #     beam.rays = rays
-    #
-    #     return beam
-
-
     def calculate_rays(self,user_unit_to_m=1.0,F_COHER=0,NRAYS=5000,SEED=36255655452):
         """
         compute the rays in SHADOW matrix (shape (npoints,18) )
@@ -481,7 +463,7 @@ class SourceUndulator(object):
             z_photon = 0.0
         elif self._FLAG_SIZE == 1:
             undulator_length = self.syned_undulator.length()
-            lambda1 = codata.h*codata.c/codata.e / sampled_photon_energy.mean()
+            lambda1 = codata.h*codata.c/codata.e / numpy.array(sampled_photon_energy).mean()
 
             # calculate sizes of the photon undulator beam
             # see formulas 25 & 30 in Elleaume (Onaki & Elleaume)
@@ -496,45 +478,61 @@ class SourceUndulator(object):
             y_photon = 0.0
             z_photon = tmp[:,1]
         elif self._FLAG_SIZE == 2:
-            x_photon = 0.0
-            y_photon = 0.0
-            z_photon = 0.0
-
-
-
-            from srxraylib.plot.gol import plot_image,plot, plot_scatter
+            # we need to retrieve the emission as a function of the angle
             radiation,photon_energy, theta,phi = self.get_radiation_polar()
-            plot_image(radiation[0],1e6*theta,phi,aspect='auto',title="intensity",xtitle="theta [urad]",ytitle="phi [rad]")
-            mean_photon_energy = numpy.array(sampled_photon_energy).mean()
+
+            mean_photon_energy = numpy.array(sampled_photon_energy).mean() # todo: use the weighted mean?
             shape_radiation = radiation.shape
             radial_flux = radiation.sum(axis=2) / shape_radiation[2]
             radial_flux = radial_flux.sum(axis=0) / shape_radiation[0]
-            plot(theta*1e6,radial_flux,xtitle="urad")
+            # doble the arrays for 1D propagation
+            THETA = numpy.concatenate((-theta[::-1],theta[1::]),axis=None)
+            RADIAL_FLUX = numpy.concatenate( (radial_flux[::-1],radial_flux[1::]),axis=None)
 
 
+            #
+            # we propagate the emission at a long distance back to the source plane
+            #
+            distance = 100.
 
+            # estimate magnification for the propagator
             lambda1 = codata.h*codata.c/codata.e / mean_photon_energy
             s_phot = 2.740/(4e0*numpy.pi)*numpy.sqrt(self.syned_undulator.length()*lambda1)
-            distance = 100.
-            aperture = theta[-1]*distance
-            magnification = s_phot*10 / aperture
-            print(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> M",magnification)
-            THETA = numpy.concatenate((-theta[::-1],theta[1::]),axis=None)
-            RADIATION_FLUX = numpy.concatenate( (radial_flux[::-1],radial_flux[1::]),axis=None)
-            plot(THETA*1e6,RADIATION_FLUX,title="before call",xtitle="urad")
-            xx,yy = self._back_propagation_for_size_calculation(THETA,RADIATION_FLUX,
-                                    mean_photon_energy,distance=distance,magnification=magnification)
+            magnification = s_phot*10 / (theta[-1]*distance)
 
+            # do the propagation; result is stored in self._photon_size_distribution
+            self._back_propagation_for_size_calculation(THETA,RADIAL_FLUX,
+                                mean_photon_energy,distance=distance,magnification=magnification)
+
+
+            # we sample rays following the resulting radial distribution
+            xx = self._result_photon_size_distribution["x"]
+            yy = self._result_photon_size_distribution["y"]
             sampler_radial = Sampler1D(yy,xx)
-            r, hy, hx = sampler_radial.get_n_sampled_points_and_histogram(NRAYS)
-            angle = numpy.random.random(NRAYS) * 2 * numpy.pi
 
-            xxx = r * numpy.cos(angle)
-            yyy = r * numpy.sin(angle)
-            plot_scatter(xxx,yyy)
-            plot(hx,hy,title="histogram")
-            plot(xx*1e6,yy,title="backpropagated",xtitle="um")
+            r = sampler_radial.get_n_sampled_points(NRAYS)
+            angle = numpy.random.random(NRAYS) * numpy.pi / 2
 
+            #
+            # sample coordinates: the Shadow way
+            #
+            THETABM = numpy.abs(r)
+            PHI = angle
+            A_Z = numpy.arcsin(numpy.sin(THETABM)*numpy.sin(PHI))
+            A_X = numpy.arccos(numpy.cos(THETABM)/numpy.cos(A_Z))
+            THETABM = A_Z
+            PHI  = A_X
+            # ! C Decide in which quadrant THETA and PHI are.
+            myrand = numpy.random.random(NRAYS)
+            THETABM[numpy.where(myrand < 0.5)] *= -1.0
+            myrand = numpy.random.random(NRAYS)
+            PHI[numpy.where(myrand < 0.5)] *= -1.0
+            ANGLEX = PHI
+            ANGLEV = THETABM
+
+            x_photon = numpy.tan(ANGLEX)
+            y_photon = 0.0
+            z_photon = numpy.tan(ANGLEV)/numpy.cos(ANGLEX)
 
 
         rays[:,0] = x_photon + x_electron
@@ -716,6 +714,18 @@ class SourceUndulator(object):
 
     def _back_propagation_for_size_calculation(self,theta,radiation_flux,photon_energy,
                                                 distance=100.0,magnification=0.010000):
+        """
+        Calculate the radiation_flux vs theta at a "distance"
+        Back propagate to -distance
+        The result is the size distrubution
+
+        :param theta:
+        :param radiation_flux:
+        :param photon_energy:
+        :param distance:
+        :param magnification:
+        :return: None; stores results in self._photon_size_distribution
+        """
 
         from wofry.propagator.wavefront1D.generic_wavefront import GenericWavefront1D
         from wofry.propagator.propagator import PropagationManager, PropagationElements, PropagationParameters
@@ -724,21 +734,13 @@ class SourceUndulator(object):
         from wofry.propagator.propagators1D.fresnel_zoom import FresnelZoom1D
         from wofry.beamline.optical_elements.ideal_elements.screen import WOScreen1D
 
-        # from srxraylib.plot.gol import plot
-        # plot(theta,radiation_flux,title="inside")
 
         input_wavefront = GenericWavefront1D().initialize_wavefront_from_arrays(theta*distance,numpy.sqrt(radiation_flux)+0j)
         input_wavefront.set_photon_energy(photon_energy)
         input_wavefront.set_spherical_wave(radius=distance,complex_amplitude=numpy.sqrt(radiation_flux)+0j)
         # input_wavefront.save_h5_file("tmp2.h5","wfr")
 
-        #
-        from srxraylib.plot.gol import plot
-        plot(input_wavefront.get_abscissas()*1e6,input_wavefront.get_intensity(),title="at distance=%f"%distance)
-
-
         optical_element = WOScreen1D()
-
         #
         # propagating
         #
@@ -760,9 +762,7 @@ class SourceUndulator(object):
             pass
         output_wavefront = propagator.do_propagation(propagation_parameters=propagation_parameters,handler_name='FRESNEL_ZOOM_1D')
 
-        # plot(output_wavefront.get_abscissas()*1e6,output_wavefront.get_intensity())
-
-        return output_wavefront.get_abscissas(),output_wavefront.get_intensity()
+        self._result_photon_size_distribution = {"x":output_wavefront.get_abscissas(),"y":output_wavefront.get_intensity()}
 
 
     def _cross(self,u,v):
