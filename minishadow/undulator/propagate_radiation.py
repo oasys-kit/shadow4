@@ -15,9 +15,12 @@ from wofry.propagator.propagators1D.fresnel_zoom import FresnelZoom1D
 
 
 input_wavefront = GenericWavefront1D()
-input_wavefront = input_wavefront.load_h5_file("tmp.h5","wfr")
+input_wavefront = input_wavefront.load_h5_file("/users/srio/OASYS1.1/minishadow/minishadow/undulator/tmp.h5","wfr")
 
-plot(input_wavefront.get_abscissas()*1e6,input_wavefront.get_intensity())
+# input_wavefront.rescale_amplitude( 1.0/numpy.sqrt(input_wavefront.get_intensity().max()))
+
+# input_wavefront.set_spherical_wave(radius=100,complex_amplitude=numpy.abs(input_wavefront.get_intensity()) )
+# plot(input_wavefront.get_abscissas()*1e6,input_wavefront.get_intensity())
 
 
 
@@ -37,7 +40,7 @@ beamline_element = BeamlineElement(optical_element=optical_element,
                 angle_azimuthal=numpy.radians(0.000000)))
 propagation_elements.add_beamline_element(beamline_element)
 propagation_parameters = PropagationParameters(wavefront=input_wavefront.duplicate(),propagation_elements = propagation_elements)
-propagation_parameters.set_additional_parameters('magnification_x', 0.010000)
+propagation_parameters.set_additional_parameters('magnification_x', 0.01 ) #0.010000)
 
 #
 propagator = PropagationManager.Instance()

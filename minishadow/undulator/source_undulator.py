@@ -24,7 +24,7 @@ rays = su.calculate_rays()    # sample rays. Result is a numpy.array of shape (N
 
 import numpy
 
-from srxraylib.util.inverse_method_sampler import Sampler2D, Sampler3D
+from srxraylib.util.inverse_method_sampler import Sampler1D, Sampler2D, Sampler3D
 import scipy.constants as codata
 from scipy import interpolate
 
@@ -172,6 +172,9 @@ class SourceUndulator(object):
             flag = "point"
         elif self._FLAG_SIZE == 1:
             flag = "Gaussian"
+        elif self._FLAG_SIZE == 2:
+            flag = "Propagated"
+
         txt += "        sampling flag: %d (%s)\n"%(self._FLAG_SIZE,flag)
 
         txt += "-----------------------------------------------------\n"
@@ -493,7 +496,45 @@ class SourceUndulator(object):
             y_photon = 0.0
             z_photon = tmp[:,1]
         elif self._FLAG_SIZE == 2:
-            raise Exception("To be implemented")
+            x_photon = 0.0
+            y_photon = 0.0
+            z_photon = 0.0
+
+
+
+            from srxraylib.plot.gol import plot_image,plot, plot_scatter
+            radiation,photon_energy, theta,phi = self.get_radiation_polar()
+            plot_image(radiation[0],1e6*theta,phi,aspect='auto',title="intensity",xtitle="theta [urad]",ytitle="phi [rad]")
+            mean_photon_energy = numpy.array(sampled_photon_energy).mean()
+            shape_radiation = radiation.shape
+            radial_flux = radiation.sum(axis=2) / shape_radiation[2]
+            radial_flux = radial_flux.sum(axis=0) / shape_radiation[0]
+            plot(theta*1e6,radial_flux,xtitle="urad")
+
+
+
+            lambda1 = codata.h*codata.c/codata.e / mean_photon_energy
+            s_phot = 2.740/(4e0*numpy.pi)*numpy.sqrt(self.syned_undulator.length()*lambda1)
+            distance = 100.
+            aperture = theta[-1]*distance
+            magnification = s_phot*10 / aperture
+            print(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> M",magnification)
+            THETA = numpy.concatenate((-theta[::-1],theta[1::]),axis=None)
+            RADIATION_FLUX = numpy.concatenate( (radial_flux[::-1],radial_flux[1::]),axis=None)
+            plot(THETA*1e6,RADIATION_FLUX,title="before call",xtitle="urad")
+            xx,yy = self._back_propagation_for_size_calculation(THETA,RADIATION_FLUX,
+                                    mean_photon_energy,distance=distance,magnification=magnification)
+
+            sampler_radial = Sampler1D(yy,xx)
+            r, hy, hx = sampler_radial.get_n_sampled_points_and_histogram(NRAYS)
+            angle = numpy.random.random(NRAYS) * 2 * numpy.pi
+
+            xxx = r * numpy.cos(angle)
+            yyy = r * numpy.sin(angle)
+            plot_scatter(xxx,yyy)
+            plot(hx,hy,title="histogram")
+            plot(xx*1e6,yy,title="backpropagated",xtitle="um")
+
 
 
         rays[:,0] = x_photon + x_electron
@@ -672,6 +713,57 @@ class SourceUndulator(object):
         rays[:,11] = 0.0
 
         return rays
+
+    def _back_propagation_for_size_calculation(self,theta,radiation_flux,photon_energy,
+                                                distance=100.0,magnification=0.010000):
+
+        from wofry.propagator.wavefront1D.generic_wavefront import GenericWavefront1D
+        from wofry.propagator.propagator import PropagationManager, PropagationElements, PropagationParameters
+        from syned.beamline.beamline_element import BeamlineElement
+        from syned.beamline.element_coordinates import ElementCoordinates
+        from wofry.propagator.propagators1D.fresnel_zoom import FresnelZoom1D
+        from wofry.beamline.optical_elements.ideal_elements.screen import WOScreen1D
+
+        # from srxraylib.plot.gol import plot
+        # plot(theta,radiation_flux,title="inside")
+
+        input_wavefront = GenericWavefront1D().initialize_wavefront_from_arrays(theta*distance,numpy.sqrt(radiation_flux)+0j)
+        input_wavefront.set_photon_energy(photon_energy)
+        input_wavefront.set_spherical_wave(radius=distance,complex_amplitude=numpy.sqrt(radiation_flux)+0j)
+        # input_wavefront.save_h5_file("tmp2.h5","wfr")
+
+        #
+        from srxraylib.plot.gol import plot
+        plot(input_wavefront.get_abscissas()*1e6,input_wavefront.get_intensity(),title="at distance=%f"%distance)
+
+
+        optical_element = WOScreen1D()
+
+        #
+        # propagating
+        #
+        #
+        propagation_elements = PropagationElements()
+        beamline_element = BeamlineElement(optical_element=optical_element,
+                        coordinates=ElementCoordinates(p=0.0,q=-distance,
+                        angle_radial=numpy.radians(0.000000),
+                        angle_azimuthal=numpy.radians(0.000000)))
+        propagation_elements.add_beamline_element(beamline_element)
+        propagation_parameters = PropagationParameters(wavefront=input_wavefront.duplicate(),propagation_elements = propagation_elements)
+        propagation_parameters.set_additional_parameters('magnification_x', magnification)
+
+        #
+        propagator = PropagationManager.Instance()
+        try:
+            propagator.add_propagator(FresnelZoom1D())
+        except:
+            pass
+        output_wavefront = propagator.do_propagation(propagation_parameters=propagation_parameters,handler_name='FRESNEL_ZOOM_1D')
+
+        # plot(output_wavefront.get_abscissas()*1e6,output_wavefront.get_intensity())
+
+        return output_wavefront.get_abscissas(),output_wavefront.get_intensity()
+
 
     def _cross(self,u,v):
         # w = u X v
