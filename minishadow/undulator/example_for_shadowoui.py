@@ -7,13 +7,14 @@ from syned.storage_ring.electron_beam import ElectronBeam
 from syned.storage_ring.magnetic_structures.undulator import Undulator
 
 # from orangecontrib.shadow.util.undulator.source_undulator import SourceUndulator
-from minishadow.undulator.source_undulator import SourceUndulator
+from orangecontrib.shadow.util.undulator.source_undulator import SourceUndulator
 
 from Shadow import Beam as Shadow3Beam
 
 
 if __name__ == "__main__":
 
+    import numpy
     from srxraylib.plot.gol import plot
     do_plots = True
     #
@@ -35,14 +36,14 @@ if __name__ == "__main__":
     sourceundulator = SourceUndulator(name="test",
                     syned_electron_beam=ebeam,
                     syned_undulator=su,
-                    flag_emittance=1,
-                    flag_size=2,
+                    flag_emittance=0,
+                    flag_size=1,
                     emin=10490.0,emax=10510.0,ng_e=3,
                     maxangle=0.015,ng_t=100,ng_p=11,ng_j=20,
                     code_undul_phot="pySRU")
 
 
-    sourceundulator.set_energy_monochromatic_at_resonance(0.98)
+    sourceundulator.set_energy_monochromatic_at_resonance(1.0) # 0.98)
     # sourceundulator._MAXANGLE *= 1.2
 
     print(sourceundulator.info())
@@ -95,7 +96,14 @@ if __name__ == "__main__":
         plot_scatter(1e6*shadow3_beam.rays[:,0],1e6*shadow3_beam.rays[:,2],title="real space",xtitle="X [um]",ytitle="Z [um]",show=False)
         plot_scatter(1e6*shadow3_beam.rays[:,3],1e6*shadow3_beam.rays[:,5],title="divergence space",xtitle="X [urad]",ytitle="Z [urad]",show=True)
 
-        if sourceundulator._result_photon_size_distribution is not None:
-            plot(sourceundulator._result_photon_size_distribution["x"]*1e6,
-                 sourceundulator._result_photon_size_distribution["y"],
-                 title="Photon size distribution",xtitle="R [um]",ytitle="Intensity [a.u.]")
+        plot(sourceundulator.get_photon_size_distribution()[0]*1e6,
+             sourceundulator.get_photon_size_distribution()[1],
+             title="Photon size distribution",xtitle="R [um]",ytitle="Intensity [a.u.]")
+
+    # checl the correc size sampling (values must agree for FLAG_SIZE=1!!!)
+    x_photon = rays[:,0]
+    z_photon = rays[:,2]
+    R = numpy.sqrt(x_photon**2 + z_photon**2)
+    print(">> s_phot, Std R", sourceundulator._result_photon_size_sigma, numpy.sqrt( (R**2).sum() / (R.size-1) ))
+    print(">> s_phot, Std X", sourceundulator._result_photon_size_sigma, numpy.sqrt( (x_photon**2).sum() / (x_photon.size-1) ))
+    print(">> s_phot, Std Z", sourceundulator._result_photon_size_sigma, numpy.sqrt( (z_photon**2).sum() / (z_photon.size-1) ))
