@@ -7,7 +7,7 @@ from syned.storage_ring.electron_beam import ElectronBeam
 from syned.storage_ring.magnetic_structures.undulator import Undulator
 
 # from orangecontrib.shadow.util.undulator.source_undulator import SourceUndulator
-from orangecontrib.shadow.util.undulator.source_undulator import SourceUndulator
+from minishadow.undulator.source_undulator import SourceUndulator
 
 from Shadow import Beam as Shadow3Beam
 
@@ -37,7 +37,7 @@ if __name__ == "__main__":
                     syned_electron_beam=ebeam,
                     syned_undulator=su,
                     flag_emittance=0,
-                    flag_size=1,
+                    flag_size=2,
                     emin=10490.0,emax=10510.0,ng_e=3,
                     maxangle=0.015,ng_t=100,ng_p=11,ng_j=20,
                     code_undul_phot="pySRU")

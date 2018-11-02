@@ -31,9 +31,9 @@ from scipy import interpolate
 from syned.storage_ring.magnetic_structures.undulator import Undulator
 from syned.storage_ring.electron_beam import ElectronBeam
 
-from orangecontrib.shadow.util.undulator.source_undulator_factory import SourceUndulatorFactory
-from orangecontrib.shadow.util.undulator.source_undulator_factory_srw import SourceUndulatorFactorySrw
-from orangecontrib.shadow.util.undulator.source_undulator_factory_pysru import SourceUndulatorFactoryPysru
+from minishadow.undulator.source_undulator_factory import SourceUndulatorFactory
+from minishadow.undulator.source_undulator_factory_srw import SourceUndulatorFactorySrw
+from minishadow.undulator.source_undulator_factory_pysru import SourceUndulatorFactoryPysru
 
 
 INTEGRATION_METHOD = 1 # 0=sum, 1=trapz

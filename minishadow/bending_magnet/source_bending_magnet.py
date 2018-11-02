@@ -18,16 +18,15 @@ from scipy import interpolate
 from syned.storage_ring.magnetic_structures.bending_magnet import BendingMagnet
 from syned.storage_ring.electron_beam import ElectronBeam
 
-from minishadow.bending_magnet.srfunc import wiggler_trajectory, wiggler_spectrum, wiggler_cdf, sync_g1, sync_f, sync_ene, sync_ang
-
-from scipy.interpolate import interp1d
+# from minishadow.bending_magnet.srfunc import wiggler_trajectory, wiggler_spectrum, wiggler_cdf, sync_g1, sync_f, sync_ene, sync_ang
+#
+# from scipy.interpolate import interp1d
 
 
 class SourceBendingMagnet(object):
     def __init__(self,name="",
                  syned_electron_beam=None,
                  syned_bending_magnet=None,
-                 radius=10.0,magnetic_field=1.0,length=0.050,
                  emin=10000.0,               # Photon energy scan from energy (in eV)
                  emax=11000.0,               # Photon energy scan to energy (in eV)
                  ng_e=11,                    # Photon energy scan number of points
@@ -55,7 +54,7 @@ class SourceBendingMagnet(object):
         self._NG_J            = ng_j       # Number of points in electron trajectory (per period)
 
 
-        self._FLAG_EMITTANCE  =  flag_emittance # Yes  # Use emittance (0=No, 1=Yes)
+        self._FLAG_EMITTANCE  =  flag_emittance # Yes  # Use emittance (0=No, 1=Yes) #todo kw in calculate rays
 
         # # results of calculations
         #
@@ -64,127 +63,86 @@ class SourceBendingMagnet(object):
         # self._result_cdf = None
 
 
-    # def info(self,debug=False):
-    #     """
-    #     gets text info
-    #
-    #     :param debug: if True, list the undulator variables (Default: debug=True)
-    #     :return:
-    #     """
-    #     # list all non-empty keywords
-    #     txt = ""
-    #
-    #
-    #     txt += "-----------------------------------------------------\n"
-    #
-    #     txt += "Input Electron parameters: \n"
-    #     txt += "        Electron energy: %f geV\n"%self.syned_electron_beam._energy_in_GeV
-    #     txt += "        Electron current: %f A\n"%self.syned_electron_beam._current
-    #     if self._FLAG_EMITTANCE:
-    #         sigmas = self.syned_electron_beam.get_sigmas_all()
-    #         txt += "        Electron sigmaX: %g [um]\n"%(1e6*sigmas[0])
-    #         txt += "        Electron sigmaZ: %g [um]\n"%(1e6*sigmas[2])
-    #         txt += "        Electron sigmaX': %f urad\n"%(1e6*sigmas[1])
-    #         txt += "        Electron sigmaZ': %f urad\n"%(1e6*sigmas[3])
-    #     txt += "Input Wiggler parameters: \n"
-    #     txt += "        period: %f m\n"%self.syned_wiggler.period_length()
-    #     txt += "        number of periods: %d\n"%self.syned_wiggler.number_of_periods()
-    #     txt += "        K-value: %f\n"%self.syned_wiggler.K_vertical()
-    #
-    #     txt += "-----------------------------------------------------\n"
-    #
-    #     txt += "Lorentz factor (gamma): %f\n"%self.syned_electron_beam.gamma()
-    #     txt += "Electron velocity: %.12f c units\n"%(numpy.sqrt(1.0 - 1.0 / self.syned_electron_beam.gamma() ** 2))
-    #     txt += "Undulator length: %f m\n"%(self.syned_wiggler.period_length()*self.syned_wiggler.number_of_periods())
-    #     K_to_B = (2.0 * numpy.pi / self.syned_wiggler.period_length()) * codata.m_e * codata.c / codata.e
-    #
-    #     txt += "Wiggler peak magnetic field: %f T\n"%(K_to_B*self.syned_wiggler.K_vertical())
-    #     # txt += "Resonances: \n"
-    #     # txt += "        harmonic number [n]                   %10d %10d %10d \n"%(1,3,5)
-    #     # txt += "        wavelength [A]:                       %10.6f %10.6f %10.6f   \n"%(\
-    #     #                                                         1e10*self.syned_undulator.resonance_wavelength(self.syned_electron_beam.gamma(),harmonic=1),
-    #     #                                                         1e10*self.syned_undulator.resonance_wavelength(self.syned_electron_beam.gamma(),harmonic=3),
-    #     #                                                         1e10*self.syned_undulator.resonance_wavelength(self.syned_electron_beam.gamma(),harmonic=5))
-    #     # txt += "        energy [eV]   :                       %10.3f %10.3f %10.3f   \n"%(\
-    #     #                                                         self.syned_undulator.resonance_energy(self.syned_electron_beam.gamma(),harmonic=1),
-    #     #                                                         self.syned_undulator.resonance_energy(self.syned_electron_beam.gamma(),harmonic=3),
-    #     #                                                         self.syned_undulator.resonance_energy(self.syned_electron_beam.gamma(),harmonic=5))
-    #     # txt += "        frequency [Hz]:                       %10.3g %10.3g %10.3g   \n"%(\
-    #     #                                                         1e10*self.syned_undulator.resonance_frequency(self.syned_electron_beam.gamma(),harmonic=1),
-    #     #                                                         1e10*self.syned_undulator.resonance_frequency(self.syned_electron_beam.gamma(),harmonic=3),
-    #     #                                                         1e10*self.syned_undulator.resonance_frequency(self.syned_electron_beam.gamma(),harmonic=5))
-    #     # txt += "        central cone 'half' width [urad]:     %10.6f %10.6f %10.6f   \n"%(\
-    #     #                                                         1e6*self.syned_undulator.gaussian_central_cone_aperture(self.syned_electron_beam.gamma(),1),
-    #     #                                                         1e6*self.syned_undulator.gaussian_central_cone_aperture(self.syned_electron_beam.gamma(),3),
-    #     #                                                         1e6*self.syned_undulator.gaussian_central_cone_aperture(self.syned_electron_beam.gamma(),5))
-    #     # txt += "        first ring at [urad]:                 %10.6f %10.6f %10.6f   \n"%(\
-    #     #                                                         1e6*self.get_resonance_ring(1,1),
-    #     #                                                         1e6*self.get_resonance_ring(3,1),
-    #     #                                                         1e6*self.get_resonance_ring(5,1))
-    #     #
-    #     txt += "-----------------------------------------------------\n"
-    #     txt += "Grids: \n"
-    #     if self._NG_E == 1:
-    #         txt += "        photon energy %f eV\n"%(self._EMIN)
-    #     else:
-    #         txt += "        photon energy from %10.3f eV to %10.3f eV\n"%(self._EMIN,self._EMAX)
-    #     txt += "        number of energy points: %d\n"%(self._NG_E)
-    #     txt += "        number of points for the trajectory: %d\n"%(self._NG_J)
-    #     # txt += "        maximum elevation angle: %f urad\n"%(1e6*self._MAXANGLE)
-    #     # txt += "        number of angular elevation points: %d\n"%(self._NG_T)
-    #     # txt += "        number of angular azimuthal points: %d\n"%(self._NG_P)
-    #     # # txt += "        number of rays: %d\n"%(self.NRAYS)
-    #     # # txt += "        random seed: %d\n"%(self.SEED)
-    #     # txt += "-----------------------------------------------------\n"
-    #     #
-    #     # txt += "calculation code: %s\n"%self.code_undul_phot
-    #     # if self._result_radiation is None:
-    #     #     txt += "radiation: NOT YET CALCULATED\n"
-    #     # else:
-    #     #     txt += "radiation: CALCULATED\n"
-    #     # txt += "Sampling: \n"
-    #     # if self._FLAG_SIZE == 0:
-    #     #     flag = "point"
-    #     # elif self._FLAG_SIZE == 1:
-    #     #     flag = "Gaussian"
-    #     # txt += "        sampling flag: %d (%s)\n"%(self._FLAG_SIZE,flag)
-    #
-    #     txt += "-----------------------------------------------------\n"
-    #     return txt
-    #
-    #
-    # def set_energy_monochromatic(self,emin):
-    #     """
-    #     Sets a single energy line for the source (monochromatic)
-    #     :param emin: the energy in eV
-    #     :return:
-    #     """
-    #     self._EMIN = emin
-    #     self._EMAX = emin
-    #     self._NG_E = 1
-    #
-    #
-    # def set_energy_box(self,emin,emax,npoints=None):
-    #     """
-    #     Sets a box for photon energy distribution for the source
-    #     :param emin:  Photon energy scan from energy (in eV)
-    #     :param emax:  Photon energy scan to energy (in eV)
-    #     :param npoints:  Photon energy scan number of points (optinal, if not set no changes)
-    #     :return:
-    #     """
-    #
-    #     self._EMIN = emin
-    #     self._EMAX = emax
-    #     if npoints != None:
-    #         self._NG_E = npoints
-    #
-    # def get_energy_box(self):
-    #     """
-    #     Gets the limits of photon energy distribution for the source
-    #     :return: emin,emax,number_of_points
-    #     """
-    #     return self._EMIN,self._EMAX,self._NG_E
-    #
+    def info(self,debug=False):
+        """
+        gets text info
+
+        :param debug: if True, list the undulator variables (Default: debug=True)
+        :return:
+        """
+        # list all non-empty keywords
+        txt = ""
+
+
+        txt += "-----------------------------------------------------\n"
+
+        txt += "Input Electron parameters: \n"
+        txt += "        Electron energy: %f geV\n"%self.syned_electron_beam.energy()
+        txt += "        Electron current: %f A\n"%self.syned_electron_beam.current()
+        if self._FLAG_EMITTANCE:
+            sigmas = self.syned_electron_beam.get_sigmas_all()
+            txt += "        Electron sigmaX: %g [um]\n"%(1e6*sigmas[0])
+            txt += "        Electron sigmaZ: %g [um]\n"%(1e6*sigmas[2])
+            txt += "        Electron sigmaX': %f urad\n"%(1e6*sigmas[1])
+            txt += "        Electron sigmaZ': %f urad\n"%(1e6*sigmas[3])
+        txt += "Input Bending Magnet parameters: \n"
+        txt += "        radius: %f m\n"%self.syned_bending_magnet._radius
+        txt += "        magnetic field: %f T\n"%self.syned_bending_magnet._magnetic_field
+        txt += "        length: %f m\n"%self.syned_bending_magnet._length
+
+
+        txt += "-----------------------------------------------------\n"
+
+        txt += "Lorentz factor (gamma): %f\n"%self.syned_electron_beam.gamma()
+        txt += "Electron velocity: %.12f c units\n"%(numpy.sqrt(1.0 - 1.0 / self.syned_electron_beam.gamma() ** 2))
+
+        #
+        txt += "-----------------------------------------------------\n"
+        txt += "Grids: \n"
+        if self._NG_E == 1:
+            txt += "        photon energy %f eV\n"%(self._EMIN)
+        else:
+            txt += "        photon energy from %10.3f eV to %10.3f eV\n"%(self._EMIN,self._EMAX)
+        txt += "        number of energy points: %d\n"%(self._NG_E)
+        txt += "        number of points for the trajectory: %d\n"%(self._NG_J)
+
+
+        txt += "-----------------------------------------------------\n"
+        return txt
+
+
+    def set_energy_monochromatic(self,emin):
+        """
+        Sets a single energy line for the source (monochromatic)
+        :param emin: the energy in eV
+        :return:
+        """
+        self._EMIN = emin
+        self._EMAX = emin
+        self._NG_E = 1
+
+
+    def set_energy_box(self,emin,emax,npoints=None):
+        """
+        Sets a box for photon energy distribution for the source
+        :param emin:  Photon energy scan from energy (in eV)
+        :param emax:  Photon energy scan to energy (in eV)
+        :param npoints:  Photon energy scan number of points (optinal, if not set no changes)
+        :return:
+        """
+
+        self._EMIN = emin
+        self._EMAX = emax
+        if npoints != None:
+            self._NG_E = npoints
+
+    def get_energy_box(self):
+        """
+        Gets the limits of photon energy distribution for the source
+        :return: emin,emax,number_of_points
+        """
+        return self._EMIN,self._EMAX,self._NG_E
+
     #
     # def calculate_radiation(self):
     #
@@ -227,284 +185,153 @@ class SourceBendingMagnet(object):
     #                        elliptical=False)
     #
     #
-    # def calculate_rays(self,user_unit_to_m=1.0,F_COHER=0,NRAYS=5000,SEED=123456,
-    #                    EPSI_DX=0.0,EPSI_DZ=0.0):
-    #     """
-    #     compute the rays in SHADOW matrix (shape (npoints,18) )
-    #     :param F_COHER: set this flag for coherent beam
-    #     :param user_unit_to_m: default 1.0 (m)
-    #     :return: rays, a numpy.array((npoits,18))
-    #     """
+    def calculate_rays(self,user_unit_to_m=1.0,F_COHER=0,NRAYS=5000,SEED=123456,
+                       EPSI_DX=0.0,EPSI_DZ=0.0):
+        """
+        compute the rays in SHADOW matrix (shape (npoints,18) )
+        :param F_COHER: set this flag for coherent beam
+        :param user_unit_to_m: default 1.0 (m)
+        :return: rays, a numpy.array((npoits,18))
+        """
     #
     #     if self._result_cdf is None:
     #         self.calculate_radiation()
     #
     #     sampled_photon_energy,sampled_theta,sampled_phi = self._sample_photon_energy_theta_and_phi(NRAYS)
     #
-    #     if SEED != 0:
-    #         numpy.random.seed(SEED)
-    #
-    #
-    #     sigmas = self.syned_electron_beam.get_sigmas_all()
-    #
-    #     rays = numpy.zeros((NRAYS,18))
-    #
-    #     #
-    #     # sample sizes (cols 1-3)
-    #     #
-    #     if self._FLAG_EMITTANCE:
-    #         x_electron = numpy.random.normal(loc=0.0,scale=sigmas[0],size=NRAYS)
-    #         y_electron = 0.0
-    #         z_electron = numpy.random.normal(loc=0.0,scale=sigmas[2],size=NRAYS)
-    #     else:
-    #         x_electron = 0.0
-    #         y_electron = 0.0
-    #         z_electron = 0.0
-    #
-    #     # traj[0,ii] = yx[i]
-    #     # traj[1,ii] = yy[i]+j * per - start_len
-    #     # traj[2,ii] = 0.0
-    #     # traj[3,ii] = betax[i]
-    #     # traj[4,ii] = betay[i]
-    #     # traj[5,ii] = 0.0
-    #     # traj[6,ii] = curv[i]
-    #     # traj[7,ii] = bz[i]
-    #
-    #     PATH_STEP = self._result_cdf["step"]
-    #     X_TRAJ = self._result_cdf["x"]
-    #     Y_TRAJ = self._result_cdf["y"]
-    #     SEEDIN = self._result_cdf["cdf"]
-    #     ANGLE  = self._result_cdf["angle"]
-    #     CURV   = self._result_cdf["curv"]
-    #     EPSI_PATH = numpy.arange(CURV.size) * PATH_STEP # self._result_trajectory[7,:]
-    #
-    #
-    #
-    #     # ! C We define the 5 arrays:
-    #     # ! C    Y_X(5,N)    ---> X(Y)
-    #     # ! C    Y_XPRI(5,N) ---> X'(Y)
-    #     # ! C    Y_CURV(5,N) ---> CURV(Y)
-    #     # ! C    Y_PATH(5,N) ---> PATH(Y)
-    #     # ! C    F(1,N) contains the array of Y values where the nodes are located.
-    #
-    #
-    #     # CALL PIECESPL(SEED_Y, Y_TEMP,   NP_SY,   IER)
-    #     # CALL CUBSPL (Y_X,    X_TEMP,   NP_TRAJ, IER)
-    #     # CALL CUBSPL (Y_Z,    Z_TEMP,   NP_TRAJ, IER)
-    #     # CALL CUBSPL (Y_XPRI, ANG_TEMP, NP_TRAJ, IER)
-    #     # CALL CUBSPL (Y_ZPRI, ANG2_TEMP, NP_TRAJ, IER)
-    #     # CALL CUBSPL (Y_CURV, C_TEMP,   NP_TRAJ, IER)
-    #     # CALL CUBSPL (Y_PATH, P_TEMP,   NP_TRAJ, IER)
-    #
-    #     SEED_Y = interp1d(SEEDIN,Y_TRAJ,kind='linear')
-    #     Y_X    = interp1d(Y_TRAJ,X_TRAJ,kind='cubic')
-    #     Y_XPRI = interp1d(Y_TRAJ,ANGLE,kind='cubic')
-    #     Y_CURV = interp1d(Y_TRAJ,CURV,kind='cubic')
-    #     Y_PATH = interp1d(Y_TRAJ,EPSI_PATH,kind='cubic')
-    #
-    #     # ! C+++
-    #     # ! C Compute the path length to the middle (origin) of the wiggler.
-    #     # ! C We need to know the "center" of the wiggler coordinate.
-    #     # ! C input:     Y_PATH  ---> spline array
-    #     # ! C            NP_TRAJ ---> # of points
-    #     # ! C            Y_TRAJ  ---> calculation point (ind. variable)
-    #     # ! C output:    PATH0   ---> value of Y_PATH at X = Y_TRAJ. If
-    #     # ! C                         Y_TRAJ = 0, then PATH0 = 1/2 length
-    #     # ! C                         of trajectory.
-    #     # ! C+++
-    #
-    #     Y_TRAJ = 0.0
-    #     # CALL SPL_INT (Y_PATH, NP_TRAJ, Y_TRAJ, PATH0, IER)
-    #     PATH0 = Y_PATH(Y_TRAJ)
-    #
-    #
-    #     # ! C
-    #     # ! C These flags are set because of the original program structure.
-    #     # ! C
-    #     # F_PHOT  = 0
-    #     # F_COLOR  = 3
-    #     # FSOUR  = 3
-    #     # FDISTR  = 4
-    #
-    #
-    #     ws_ev,ws_f,tmp =  wiggler_spectrum(self._result_trajectory,
-    #                             enerMin=self._EMIN, enerMax=self._EMAX, nPoints=500,
-    #                             per=self.syned_wiggler.period_length(), electronCurrent=self.syned_electron_beam._current,
-    #                             outFile="", elliptical=False)
-    #
-    #     ws_flux_per_ev = ws_f / (ws_ev*1e-3)
-    #     samplerE = Sampler1D(ws_flux_per_ev,ws_ev)
-    #     sampled_energies,h,h_center = samplerE.get_n_sampled_points_and_histogram(NRAYS)
-    #
-    #     a = numpy.linspace(-0.6,0.6,150)
-    #     a8 = 1.0
-    #     hdiv_mrad = 1.0
-    #     # i_a = self.syned_electron_beam._current
-    #     #
-    #     # fm = sync_f(a*self.syned_electron_beam.gamma()/1e3,eene,polarization=0) * \
-    #     #         numpy.power(eene,2)*a8*i_a*hdiv_mrad*numpy.power(self.syned_electron_beam._energy_in_GeV,2)
-    #     #
-    #     # plot(a,fm,title="sync_f")
-    #     #
-    #     # samplerAng = Sampler1D(fm,a)
-    #     #
-    #     # sampled_theta,hx,h = samplerAng.get_n_sampled_points_and_histogram(10*NRAYS)
-    #     # plot(h,hx)
-    #
-    #
-    #     for itik in range(NRAYS):
-    #
-    #         #     ARG_Y = GRID(2,ITIK)
-    #         #     CALL SPL_INT (SEED_Y, NP_SY,   ARG_Y,  Y_TRAJ,    IER)
-    #         arg_y = numpy.random.random() # ARG_Y[itik]
-    #         Y_TRAJ = SEED_Y(arg_y)
-    #
-    #
-    #         #     ! srio@esrf.eu 2014-05-19
-    #         #     ! in wiggler some problems arise because spl_int
-    #         #     ! does not return a Y value in the correct range.
-    #         #     ! In those cases, we make a linear interpolation instead.
-    #         #     if ((y_traj.le.y_temp(1)).or.(y_traj.gt.y_temp(NP_SY))) then
-    #         #         y_traj_old = y_traj
-    #         #         CALL LIN_INT (SEED_Y, NP_SY,   ARG_Y,  Y_TRAJ,    IER)
-    #         #         print*,'SOURCESYNC: bad y_traj from SPL_INT, corrected with LIN_SPL: ',y_traj_old,'=>',y_traj
-    #         #     endif
-    #         #
-    #         #     CALL SPL_INT (Y_X,    NP_TRAJ, Y_TRAJ, X_TRAJ,    IER)
-    #         #     CALL SPL_INT (Y_XPRI, NP_TRAJ, Y_TRAJ, ANGLE,     IER)
-    #         #     CALL SPL_INT (Y_CURV, NP_TRAJ, Y_TRAJ, CURV,      IER)
-    #         #     CALL SPL_INT (Y_PATH, NP_TRAJ, Y_TRAJ, EPSI_PATH, IER)
-    #         # END IF
-    #
-    #         X_TRAJ = Y_X(Y_TRAJ)
-    #         ANGLE = Y_XPRI(Y_TRAJ)
-    #         CURV = Y_CURV(Y_TRAJ)
-    #         EPSI_PATH = Y_PATH(Y_TRAJ)
-    #
-    #         # print("\n>>><<<",arg_y,Y_TRAJ,X_TRAJ,ANGLE,CURV,EPSI_PATH)
-    #
-    #
-    #         # EPSI_PATH = EPSI_PATH - PATH0 ! now refer to wiggler's origin
-    #         # IF (CURV.LT.0) THEN
-    #         #     POL_ANGLE = 90.0D0  ! instant orbit is CW
-    #         # ELSE
-    #         #     POL_ANGLE = -90.0D0  !     CCW
-    #         # END IF
-    #         # IF (CURV.EQ.0) THEN
-    #         #     R_MAGNET = 1.0D+20
-    #         # ELSE
-    #         #     R_MAGNET = ABS(1.0D0/CURV)
-    #         # END IF
-    #         # POL_ANGLE  = TORAD*POL_ANGLE
-    #
-    #         EPSI_PATH = EPSI_PATH - PATH0 # now refer to wiggler's origin
-    #         if CURV < 0:
-    #             POL_ANGLE = 90.0 # instant orbit is CW
-    #         else:
-    #             POL_ANGLE = -90.0 # CCW
-    #
-    #         if CURV == 0.0:
-    #             R_MAGNET = 1.0e20
-    #         else:
-    #             R_MAGNET = numpy.abs(1.0/CURV)
-    #
-    #         POL_ANGLE  = POL_ANGLE * numpy.pi / 180.0
-    #
-    #
-    #         # ! C
-    #         # ! C Compute the actual distance (EPSI_W*) from the orbital focus
-    #         # ! C
-    #         EPSI_WX = EPSI_DX + EPSI_PATH
-    #         EPSI_WZ = EPSI_DZ + EPSI_PATH
-    #
-    #
-    #         # ! BUG srio@esrf.eu found that these routine does not make the
-    #         # ! calculation correctly. Changed to new one BINORMAL
-    #         # !CALL GAUSS (SIGMAX, EPSI_X, EPSI_WX, XXX, E_BEAM(1), istar1)
-    #         # !CALL GAUSS (SIGMAZ, EPSI_Z, EPSI_WZ, ZZZ, E_BEAM(3), istar1)
-    #         # !
-    #         # ! calculation of the electrom beam moments at the current position
-    #         # ! (sX,sZ) = (epsi_wx,epsi_ez):
-    #         # ! <x2> = sX^2 + sigmaX^2
-    #         # ! <x x'> = sX sigmaXp^2
-    #         # ! <x'2> = sigmaXp^2                 (same for Z)
-    #         #
-    #         # ! then calculate the new recalculated sigmas (rSigmas) and correlation rho of the
-    #         # ! normal bivariate distribution at the point in the electron trajectory
-    #         # ! rsigmaX  = sqrt(<x2>)
-    #         # ! rsigmaXp = sqrt(<x'2>)
-    #         # ! rhoX =  <x x'>/ (rsigmaX rsigmaXp)      (same for Z)
-    #         #
-    #         # if (abs(sigmaX) .lt. 1e-15) then  !no emittance
-    #         #     sigmaXp = 0.0d0
-    #         #     XXX = 0.0
-    #         #     E_BEAM(1) = 0.0
-    #         # else
-    #         #     sigmaXp = epsi_Xold/sigmaX    ! true only at waist, use epsi_xOld as it has been redefined :(
-    #         #     rSigmaX = sqrt( (epsi_wX**2) * (sigmaXp**2) + sigmaX**2 )
-    #         #     rSigmaXp = sigmaXp
-    #         #     if (abs(rSigmaX*rSigmaXp) .lt. 1e-15) then  !no emittance
-    #         #         rhoX = 0.0
-    #         #     else
-    #         #         rhoX = epsi_wx * sigmaXp**2 / (rSigmaX * rSigmaXp)
-    #         #     endif
-    #         #
-    #         #     CALL BINORMAL (rSigmaX, rSigmaXp, rhoX, XXX, E_BEAM(1), istar1)
-    #         # endif
-    #         #
-    #
-    #         if self._FLAG_EMITTANCE:
-    #             #     CALL BINORMAL (rSigmaX, rSigmaXp, rhoX, XXX, E_BEAM(1), istar1)
-    #             #     [  c11  c12  ]     [  sigma1^2           rho*sigma1*sigma2   ]
-    #             #     [  c21  c22  ]  =  [  rho*sigma1*sigma2  sigma2^2            ]
-    #             sigmaX,sigmaXp,sigmaZ,sigmaZp = self.syned_electron_beam.get_sigmas_all()
-    #
-    #             epsi_wX = sigmaX * sigmaXp
-    #             rSigmaX = numpy.sqrt( (epsi_wX**2) * (sigmaXp**2) + sigmaX**2 )
-    #             rSigmaXp = sigmaXp
-    #             rhoX = epsi_wX * sigmaXp**2 / (rSigmaX * rSigmaXp)
-    #             mean = [0, 0]
-    #             cov = [[sigmaX**2, rhoX*sigmaX*sigmaXp], [rhoX*sigmaX*sigmaXp, sigmaXp**2]]  # diagonal covariance
-    #             sampled_x, sampled_xp = numpy.random.multivariate_normal(mean, cov, 1).T
-    #             # plot_scatter(sampled_x,sampled_xp)
-    #             XXX = sampled_x
-    #             E_BEAM1 = sampled_xp
-    #
-    #             epsi_wZ = sigmaZ * sigmaZp
-    #             rSigmaZ = numpy.sqrt( (epsi_wZ**2) * (sigmaZp**2) + sigmaZ**2 )
-    #             rSigmaZp = sigmaZp
-    #             rhoZ = epsi_wZ * sigmaZp**2 / (rSigmaZ * rSigmaZp)
-    #             mean = [0, 0]
-    #             cov = [[sigmaZ**2, rhoZ*sigmaZ*sigmaZp], [rhoZ*sigmaZ*sigmaZp, sigmaZp**2]]  # diagonal covariance
-    #             sampled_z, sampled_zp = numpy.random.multivariate_normal(mean, cov, 1).T
-    #             ZZZ = sampled_z
-    #             E_BEAM3 = sampled_zp
-    #
-    #         else:
-    #             sigmaXp = 0.0
-    #             XXX = 0.0
-    #             E_BEAM1 = 0.0
-    #             rhoX = 0.0
-    #             sigmaZp = 0.0
-    #             ZZZ = 0.0
-    #             E_BEAM3 = 0.0
-    #
-    #         #
-    #         # ! C
-    #         # ! C For normal wiggler, XXX is perpendicular to the electron trajectory at
-    #         # ! C the point defined by (X_TRAJ,Y_TRAJ,0).
-    #         # ! C
-    #         # IF (F_WIGGLER.EQ.1) THEN   ! normal wiggler
-    #         #     YYY = Y_TRAJ - XXX*SIN(ANGLE)
-    #         #     XXX = X_TRAJ + XXX*COS(ANGLE)
-    #
-    #         YYY = Y_TRAJ - XXX * numpy.sin(ANGLE)
-    #         XXX = X_TRAJ + XXX * numpy.cos(ANGLE)
-    #
-    #         rays[itik,0] = XXX
-    #         rays[itik,1] = YYY
-    #         rays[itik,2] = ZZZ
-    #
+        if SEED != 0:
+            numpy.random.seed(SEED)
+
+
+        sigmas = self.syned_electron_beam.get_sigmas_all()
+
+        rays = numpy.zeros((NRAYS,18))
+
+        RAD_MIN= numpy.abs(self.syned_bending_magnet._radius)
+        RAD_MAX= numpy.abs(self.syned_bending_magnet._radius)
+
+        # r_aladdin	=  bending magnet radius in units of length used for source size, CCW rings negative.
+
+        r_aladdin = self.syned_bending_magnet._radius
+
+
+
+        F_COHER = 0
+        if r_aladdin < 0:
+            POL_ANGLE = -90.0 * numpy.pi / 2
+        else:
+            POL_ANGLE = 90.0 * numpy.pi / 2
+
+        # hdiv1	=  0.0000000000000000E+00 - horizontal divergence in +X (radians).
+        # hdiv2	=  0.0000000000000000E+00 - horizontal divergence in -X (radians).
+
+        HDIV1 = 0.5 * numpy.abs( self.syned_bending_magnet._length / self.syned_bending_magnet._radius )
+        HDIV2 = HDIV1
+
+
+        for itik in range(NRAYS):
+            # ! Synchrontron depth
+            ANGLE  =  numpy.random.random() * (HDIV1 + HDIV2) - HDIV2
+            EPSI_PATH =  numpy.abs(r_aladdin) * ANGLE
+
+
+
+            #
+            # ! then calculate the new recalculated sigmas (rSigmas) and correlation rho of the
+            # ! normal bivariate distribution at the point in the electron trajectory
+            # ! rsigmaX  = sqrt(<x2>)
+            # ! rsigmaXp = sqrt(<x'2>)
+            # ! rhoX =  <x x'>/ (rsigmaX rsigmaXp)      (same for Z)
+            #
+            # if (abs(sigmaX) .lt. 1e-15) then  !no emittance
+            # sigmaXp = 0.0d0
+            # XXX = 0.0
+            # E_BEAM(1) = 0.0
+            # else
+            # sigmaXp = epsi_Xold/sigmaX    ! true only at waist, use epsi_xOld as it has been redefined :(
+            # rSigmaX = sqrt( (epsi_wX**2) * (sigmaXp**2) + sigmaX**2 )
+            # rSigmaXp = sigmaXp
+            # if (abs(rSigmaX*rSigmaXp) .lt. 1e-15) then  !no emittance
+            # rhoX = 0.0
+            # else
+            # rhoX = epsi_wx * sigmaXp**2 / (rSigmaX * rSigmaXp)
+            # endif
+
+
+            if self._FLAG_EMITTANCE:
+                sigma_x, sigma_xp, sigma_z, sigma_zp = self.syned_electron_beam.get_sigmas_all()
+
+                # ! calculation of the electrom beam moments at the current position
+                # ! (sX,sZ) = (epsi_wx,epsi_ez):
+                # ! <x2> = sX^2 + sigmaX^2
+                # ! <x x'> = sX sigmaXp^2
+                # ! <x'2> = sigmaXp^2                 (same for Z)
+
+                epsi_wX = sigma_x * sigma_xp
+                rSigmaX = numpy.sqrt( (epsi_wX**2) * (sigma_xp**2) + sigma_x**2 )
+                rSigmaXp = sigma_xp
+                rhoX = epsi_wX * sigma_xp**2 / (rSigmaX * rSigmaXp)
+                mean = [0, 0]
+                cov = [[rSigmaX**2, rhoX*rSigmaX*rSigmaXp], [rhoX*rSigmaX*rSigmaXp, rSigmaXp**2]]  # diagonal covariance
+                sampled_x, sampled_xp = numpy.random.multivariate_normal(mean, cov, 1).T
+                # plot_scatter(sampled_x,sampled_xp,title="X")
+                XXX = sampled_x
+                E_BEAM1 = sampled_xp
+
+
+                epsi_wZ = sigma_z * sigma_zp
+                rSigmaZ = numpy.sqrt( (epsi_wZ**2) * (sigma_zp**2) + sigma_z**2 )
+                rSigmaZp = sigma_zp
+                rhoZ = epsi_wZ * sigma_zp**2 / (rSigmaZ * rSigmaZp)
+                mean = [0, 0]
+                cov = [[rSigmaZ**2, rhoZ*rSigmaZ*rSigmaZp], [rhoZ*rSigmaZ*rSigmaZp, rSigmaZp**2]]  # diagonal covariance
+                sampled_z, sampled_zp = numpy.random.multivariate_normal(mean, cov, 1).T
+                # plot_scatter(sampled_z,sampled_zp,title="Z")
+                ZZZ = sampled_z
+                E_BEAM3 = sampled_zp
+
+                # print(">>>>>>>>>",sampled_x,sampled_z)
+            else:
+                sigma_x, sigma_xp, sigma_z, sigma_zp = (0.0, 0.0, 0.0, 0.0)
+
+                rhoX = 0.0
+
+                XXX = 0.0
+                E_BEAM1 = 0.0
+
+                ZZZ = 0.0
+                E_BEAM3 = 0.0
+
+
+            # ! C
+            # ! C Synchrotron depth distribution
+            # ! C
+            # 440	CONTINUE
+            # ! CC	R_ALADDIN NEGATIVE FOR COUNTER-CLOCKWISE SOURCE
+            # IF (R_ALADDIN.LT.0) THEN
+            # YYY = (ABS(R_ALADDIN) + XXX) * SIN(ANGLE)
+            # ELSE
+            # YYY = ( R_ALADDIN - XXX) * SIN(ANGLE)
+            # END IF
+            # XXX  =   COS(ANGLE) * XXX + R_ALADDIN * (1.0D0 - COS(ANGLE))
+
+
+            # Synchrotron depth distribution
+            # R_ALADDIN NEGATIVE FOR COUNTER-CLOCKWISE SOURCE
+            if r_aladdin < 0:
+                YYY = numpy.abs(r_aladdin + XXX) * numpy.sin(ANGLE)
+            else:
+                YYY = numpy.abs(r_aladdin - XXX) * numpy.sin(ANGLE)
+
+            XXX = numpy.cos(ANGLE) * XXX + r_aladdin * (1.0 - numpy.cos(ANGLE))
+
+
+            rays[itik,0] = XXX
+            rays[itik,1] = YYY
+            rays[itik,2] = ZZZ
+
+
+
     #         #
     #         # directions
     #         #
@@ -770,7 +597,12 @@ class SourceBendingMagnet(object):
     #     # col 13 (optical path)
     #     rays[:,11] = 0.0
     #
-    #     return rays
+
+
+        # plot_scatter(rays[:,0]*1e6,rays[:,2]*1e6,xtitle="X um",ytitle="Z um")
+        # plot_scatter(rays[:,1],rays[:,0]*1e6,xtitle="Y m",ytitle="X um")
+        # plot_scatter(rays[:,1],rays[:,2]*1e6,xtitle="Y m",ytitle="Z um")
+        return rays
     #
     # def _cross(self,u,v):
     #     # w = u X v
