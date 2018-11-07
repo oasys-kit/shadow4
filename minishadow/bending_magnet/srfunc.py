@@ -2087,8 +2087,8 @@ if __name__ == '__main__':
     # test_esrf_bm_spectrum(pltOk=pltOk)
     # test_esrf_bm_angle_power(pltOk=pltOk)
     # test_esrf_bm_angle_flux(pltOk=pltOk)
-    test_clarke_43(pltOk=pltOk)
-    # test_esrf_bm_2d(pltOk=pltOk)
+    # test_clarke_43(pltOk=pltOk)
+    test_esrf_bm_2d(pltOk=pltOk)
     # test_wiggler_flux_vs_r(pltOk=pltOk)
     # test_wiggler_external_b(pltOk=pltOk)
 
