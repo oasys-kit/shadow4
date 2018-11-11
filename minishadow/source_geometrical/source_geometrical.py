@@ -1,6 +1,10 @@
 import numpy
+import scipy.constants as codata
+
 from probability_distributions import Rectangle2D, Ellipse2D, Gaussian2D
 from probability_distributions import Flat2D, Uniform2D, Conical2D
+
+from srxraylib.util.inverse_method_sampler import Sampler1D
 
 
 class SourceGeometrical(object):
@@ -12,10 +16,12 @@ class SourceGeometrical(object):
 
         self.set_spatial_type_by_name(spatial_type)
         self.set_angular_distribution_by_name(angular_distribution)
-        # self.energy_distribution = energy_distribution
+        self.set_energy_distribution_by_name(energy_distribution)
 
 
-
+    #
+    # spatial type
+    #
     @classmethod
     def spatial_type_list(cls):
         # fsour	= 0 - spatial source type/shape in X-Z plane.  Options are:
@@ -58,6 +64,9 @@ class SourceGeometrical(object):
         self.__sigmax = sigma_h
         self.__sigmaz = sigma_v
 
+    #
+    # angular distribution
+    #
     @classmethod
     def angular_distribution_list(cls):
          # fdistr	= 2 - defines source angle distribution types:
@@ -120,10 +129,118 @@ class SourceGeometrical(object):
         self.__cone_max = cone_max
         self.__cone_min = cone_min
 
+    #
+    # energy distribution
+    #
+
+
+    #
+    # f_color = 1 - photon energy distribution type.  Options are:
+    #   single energy (1),
+    #   multiple discrete energies, up to 10 energies (2),
+    #   uniform energy distribution (3),
+    #
     @classmethod
     def energy_distribution_list(cls):
         return ["Single line","Several lines","Uniform","Relative intensities","Gaussian","User defined"]
 
+    def set_energy_distribution_by_name(self,name):
+        if name == "Single line":
+            self.set_energy_distribution_singleline()
+        elif name == "Several lines":
+            self.set_energy_distribution_severallines()
+        elif name == "Uniform":
+            self.set_energy_distribution_uniform()
+        elif name == "Relative intensities":
+            self.set_energy_distribution_relativeintensities()
+        elif name == "Gaussian":
+            self.set_energy_distribution_gaussian()
+        elif name == "User defined":
+            self.set_energy_distribution_userdefined()
+        else:
+            raise Exception("Wrong angular distribution: %s"%name)
+
+    def _set_energy_distribution_unit(self,name='eV'):
+        if name == 'eV':
+            self.__f_phot = 0
+        elif name == 'A':
+            self.__f_phot = 1
+        else:
+            raise Exception("Bar name for energy units, valid names are: eV, A")
+
+    def set_energy_distribution_singleline(self,value=1000,unit='eV'):
+        # f_phot	=             0 - defines whether the photon energy will be
+        # 			  specified in eV (0) or Angstroms (1).
+        self.energy_distribution = "Single line"
+        self._set_energy_distribution_unit(unit)
+        #WARNING: ph1, ph2, etc. become ph (array)
+        self.__ph = [value]
+
+
+    def set_energy_distribution_severallines(self,values=[1000.0,2000.0],unit='eV'):
+        self.energy_distribution = "Several lines"
+        self._set_energy_distribution_unit(unit)
+        #WARNING: ph1, ph2, etc. become ph (array)
+        self.__ph = values
+
+    def set_energy_distribution_uniform(self,value_min=1000.0,value_max=2000.0,unit='eV'):
+        self.energy_distribution = "Uniform"
+        self._set_energy_distribution_unit(unit)
+        #WARNING: ph1, ph2, etc. become ph (array)
+        self.__ph = [value_min,value_max]
+
+    def set_energy_distribution_relativeintensities(self,values=[1000.0,2000.0],weights=[1.0,2.0],unit='eV'):
+        self.energy_distribution = "Relative intensities"
+        self._set_energy_distribution_unit(unit)
+        #WARNING: ph1, ph2, etc. become ph (array)
+        self.__ph = values
+        self.__rl = weights
+
+    # WARNING: limits suppressed
+    def set_energy_distribution_gaussian(self,center=1000.0,sigma=10.0,unit='eV'):
+        self.energy_distribution = "Gaussian"
+        self._set_energy_distribution_unit(unit)
+        #WARNING: ph1, ph2, etc. become ph (array)
+        self.__ph = [center,sigma]
+
+    def set_energy_distribution_userdefined(self,spectrum_abscissas,spectrum_ordinates,unit='eV'):
+        self.energy_distribution = "User defined"
+        self._set_energy_distribution_unit(unit)
+        self.__ph_spectrum_abscissas = spectrum_abscissas
+        self.__ph_spectrum_ordinates = spectrum_ordinates
+
+    # conversors: wavenumber is in cm^(-1), wavenumber in m, energy in eV
+    @classmethod
+    def _energy_to_wavelength(cls, photon_energy):
+        wavelength = codata.h * codata.c / codata.e / photon_energy
+        return wavelength
+
+    @classmethod
+    def _wavelength_to_wavenumber(cls, wavelength):
+        return 2 * numpy.pi / (wavelength * 1e2)
+
+    @classmethod
+    def _energy_to_wavenumber(cls, photon_energy):
+        return cls._wavelength_to_wavenumber(cls._energy_to_wavelength(photon_energy))
+
+    # the other way around
+    @classmethod
+    def _wavenumber_to_wavelength(cls, wavenumber):
+        return 2 * numpy.pi / (wavenumber * 1e2)
+
+    @classmethod
+    def _wavelength_to_energy(cls, wavelength):
+        return codata.h * codata.c / codata.e / wavelength
+
+    @classmethod
+    def _wavenumber_to_energy(cls,wavenumber):
+        return cls._wavelength_to_energy(cls._wavenumber_to_wavelength(wavenumber))
+
+
+
+    #
+    # sampler
+    #
     @classmethod
     def _sample_rays_default(cls,N=5000):
         rays = numpy.zeros((N,18))
@@ -196,7 +313,85 @@ class SourceGeometrical(object):
         else:
             raise Exception("Bad value of angular_distribution")
 
+        #
+        # energy distribution
+        # ["Single line","Several lines","Uniform","Relative intensities","Gaussian","User defined"]
+        #
+        print(">> energy distribution: ",self.energy_distribution)
+
+        if self.energy_distribution == "Single line":
+            if self.__f_phot == 0:
+                rays[:,10] = self._energy_to_wavenumber(self.__ph[0])
+            else:
+                rays[:,10] = self._wavelength_to_wavenumber(self.__ph[0])
+        elif self.energy_distribution == "Several lines":
+            values = numpy.array(self.__ph)
+            n_test =   (numpy.random.random(N) * values.size).astype(int)
+            sampled_values = values[n_test]
+            if self.__f_phot == 0:
+                rays[:,10] = self._energy_to_wavenumber(sampled_values)
+            else:
+                rays[:,10] = self._wavelength_to_wavenumber(sampled_values)
+        elif self.energy_distribution == "Relative intensities":
+            values = numpy.array(self.__ph)
+            relative_intensities = numpy.array(self.__rl)
+            # ! C
+            # ! C Normalize so that each energy has a probability and so that the sum
+            # ! C of the probabilities of all the energies is 1.
+            # ! C
+            relative_intensities /= relative_intensities.sum()
+            # ! C
+            # ! C Arrange the probabilities so that they comprise the (0,1) interval,
+            # ! C e.g. (energy1,0.3), (energy2, 0.1), (energy3, 0.6) is translated to
+            # ! C 0.0, 0.3, 0.4, 1.0. Then a random number falling in an interval
+            # ! C assigned to a certain energy results in the ray being assigned that
+            # ! C photon energy.
+            # ! C
+
+            TMP_B = 0
+            for i in range(relative_intensities.size):
+                TMP_B += relative_intensities[i]
+                relative_intensities[i] = TMP_B
+
+            sampled_values = numpy.zeros(N)
+            for i in range(N):
+                DPS_RAN3 = numpy.random.random()
+                if (DPS_RAN3 > 0. and DPS_RAN3 <= relative_intensities[0]):
+                    sampled_values[i] = values[0]
+
+                for j in range(1,values.size):
+                    if (DPS_RAN3 > relative_intensities[j-1] and DPS_RAN3 <= relative_intensities[j]):
+                        sampled_values[i] = values[j]
+
+            if self.__f_phot == 0:
+                rays[:,10] = self._energy_to_wavenumber(sampled_values)
+            else:
+                rays[:,10] = self._wavelength_to_wavenumber(sampled_values)
+
+        elif self.energy_distribution == "Gaussian":
+            sampled_values = numpy.random.normal(loc=self.__ph[0], scale=self.__ph[1], size=N)
+            if self.__f_phot == 0:
+                rays[:,10] = self._energy_to_wavenumber(sampled_values)
+            else:
+                rays[:,10] = self._wavelength_to_wavenumber(sampled_values)
+        elif self.energy_distribution == "User defined":
+            sampler = Sampler1D(self.__ph_spectrum_ordinates,self.__ph_spectrum_abscissas)
+            sampled_values = sampler.get_n_sampled_points(N)
+            # sampled_values, hy, hx = sampler.get_n_sampled_points_and_histogram(N)
+            # plot(hx,hy)
+
+            if self.__f_phot == 0:
+                rays[:,10] = self._energy_to_wavenumber(sampled_values)
+            else:
+                rays[:,10] = self._wavelength_to_wavenumber(sampled_values)
+        else:
+            raise Exception("Bad value of energy_distribution")
+
+
+
+
         return rays
+
 
 if __name__ == "__main__":
 
@@ -247,4 +442,28 @@ if __name__ == "__main__":
     gs.set_angular_distribution_conical(2e-5,1e-5)
 
     rays = gs.calculate_rays(5000)
-    plot_scatter(1e6*rays[:,3],1e6*rays[:,5],title="Conical div")
+    # plot_scatter(1e6*rays[:,3],1e6*rays[:,5],title="Conical div")
+
+
+    # energy monochromatic
+    gs = SourceGeometrical()
+    # gs.set_energy_distribution_singleline(2000.0,unit='eV')
+    # gs.set_energy_distribution_severallines([1000.0,2000.0,3000.,8000],unit='eV')
+    # gs.set_energy_distribution_relativeintensities([1000.0,2000.0,3000.,8000],[1.,2.,3,4],unit='eV')
+    gs.set_energy_distribution_gaussian(10000.0,2000.0,unit='eV')
+
+    rays = gs.calculate_rays(5000)
+    ev = gs._wavenumber_to_energy(rays[:,10])
+    # plot_scatter(rays[:,11],ev,title="Energy: xxx")
+
+
+    # energy external spectrum
+    gs = SourceGeometrical()
+    x = numpy.linspace(1000.0,100000,2000)
+    y = numpy.exp(- (x-50000)**2 / 2 / 10000**2 )
+    # plot(x,y)
+    gs.set_energy_distribution_userdefined(x,y,unit='eV')
+    rays = gs.calculate_rays(5000)
+    ev = gs._wavenumber_to_energy(rays[:,10])
+    plot_scatter(rays[:,11],ev,title="Energy: sampled from numerical spectrum")
+
