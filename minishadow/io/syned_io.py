@@ -79,3 +79,5 @@ if __name__ == "__main__":
     # print(bm_input.info())
     print(ls1.info())
 
+    ls1.to_json("tmp.json")
+

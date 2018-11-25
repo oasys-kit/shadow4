@@ -75,7 +75,7 @@ if __name__ == "__main__":
 
     t_exact = ccc.calculate_intercept(x0,v0,keep=0)
 
-    print("exact solution: ",t_exact[0][0])
+    print("exact solution: ",t_exact)#[0][0])
 
     #
     # mesh object using exact surface
@@ -105,7 +105,7 @@ if __name__ == "__main__":
 
     Z = ccc.z_vs_xy(X,Y)
 
-    plot_surface(Z.real,x,y)
+    # plot_surface(Z.real,x,y)
 
 
     #
@@ -123,5 +123,5 @@ if __name__ == "__main__":
     print("   line: ",mm.line(t_mesh_file))
     print("   surface: ",mm.surface_vs_t(t_mesh_file))
 
-    assert (numpy.abs(t_mesh - t_exact[0][0]) < 1e-4)
+    assert (numpy.abs(t_mesh - t_exact) < 1e-4)
     assert (numpy.abs(t_mesh_file - t_mesh) < 1e-4)
