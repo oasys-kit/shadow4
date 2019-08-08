@@ -146,7 +146,9 @@ class SourceBendingMagnet(object):
 
     def calculate_rays(self, F_COHER=0, NRAYS=5000, SEED=123456,
                        EPSI_DX=0.0, EPSI_DZ=0.0,
-                       psi_interval_in_units_one_over_gamma=3.0, verbose=False):
+                       psi_interval_in_units_one_over_gamma=None,
+                       psi_interval_number_of_points=1001,
+                       verbose=False):
         """
         compute the rays in SHADOW matrix (shape (npoints,18) )
         :param F_COHER: set this flag for coherent beam
@@ -182,7 +184,19 @@ class SourceBendingMagnet(object):
                 print(">>> calculate_rays: is monochromatic")
             gamma = self.syned_electron_beam.gamma()
             critical_energy = self.syned_bending_magnet.get_critical_energy(self.syned_electron_beam.energy())
-            angle_array_mrad = numpy.linspace(-psi_interval_in_units_one_over_gamma * 1e3 / gamma, psi_interval_in_units_one_over_gamma * 1e3 / gamma, 101) # interval +/- 3 gamma**(-1)
+
+            if psi_interval_in_units_one_over_gamma is None:
+                c = numpy.array([-0.3600382,0.11188709]) # see file fit_psi_interval.py
+                x = numpy.log10(self._EMIN/critical_energy)
+                y_fit = c[1] + c[0] * x
+                psi_interval_in_units_one_over_gamma = int(10**y_fit) # this is the semi interval
+                psi_interval_in_units_one_over_gamma *= 4 # doubled interval
+                if psi_interval_in_units_one_over_gamma < 2 :
+                    psi_interval_in_units_one_over_gamma = 2
+
+            angle_array_mrad = numpy.linspace(-0.5*psi_interval_in_units_one_over_gamma * 1e3 / gamma,
+                                              0.5*psi_interval_in_units_one_over_gamma * 1e3 / gamma,
+                                              psi_interval_number_of_points)
             if verbose:
                 print(">>> calculate_rays: sync_ang (s) E=%f GeV, I=%f A, D=%f mrad, R=%f m, PhE=%f eV, Ec=%f eV, PhE/Ec=%f "% ( \
                     self.syned_electron_beam.energy(),

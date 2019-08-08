@@ -17,7 +17,14 @@ if __name__ == "__main__":
                                        moment_ypyp=(30e-12 / 31e-6)**2,
                                        )
 
-    syned_bending_magnet = BendingMagnet(radius=5.0,magnetic_field=1.26754,length=5.0*0.069)
+    # syned_bending_magnet = BendingMagnet(radius=-5.0,magnetic_field=-1.26754,length=5.0*0.069)
+
+    syned_bending_magnet = BendingMagnet.initialize_from_magnetic_field_divergence_and_electron_energy(
+        magnetic_field=-1.26754,divergence=69e-3,electron_energy_in_GeV=1.9)
+    #
+    # syned_bending_magnet = BendingMagnet.initialize_from_magnetic_radius_divergence_and_electron_energy(
+    #     magnetic_radius=-5.0,divergence=69e-3,electron_energy_in_GeV=1.9)
+
 
     emin = 0.4                # Photon energy scan from energy (in eV)
     emax = 0.4                # Photon energy scan to energy (in eV)
@@ -38,8 +45,7 @@ if __name__ == "__main__":
 
     print(bm.info())
 
-    rays = bm.calculate_rays(F_COHER=0,NRAYS=5000,SEED=123456,EPSI_DX=0.0,EPSI_DZ=0.0,
-                             psi_interval_in_units_one_over_gamma=50.0,verbose=False)
+    rays = bm.calculate_rays(F_COHER=0,NRAYS=5000,SEED=123456,EPSI_DX=0.0,EPSI_DZ=0.0,verbose=False)
 
 
     plot_scatter(rays[:,0]*1e6,rays[:,2]*1e6,xtitle="X um",ytitle="Z um")
