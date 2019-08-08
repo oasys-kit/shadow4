@@ -144,8 +144,9 @@ class SourceBendingMagnet(object):
             return True
         return False
 
-    def calculate_rays(self,F_COHER=0,NRAYS=5000,SEED=123456,
-                       EPSI_DX=0.0,EPSI_DZ=0.0):
+    def calculate_rays(self, F_COHER=0, NRAYS=5000, SEED=123456,
+                       EPSI_DX=0.0, EPSI_DZ=0.0,
+                       psi_interval_in_units_one_over_gamma=3.0, verbose=False):
         """
         compute the rays in SHADOW matrix (shape (npoints,18) )
         :param F_COHER: set this flag for coherent beam
@@ -176,11 +177,22 @@ class SourceBendingMagnet(object):
         HDIV1 = 0.5 * self.syned_bending_magnet.horizontal_divergence()
         HDIV2 = HDIV1
 
-
         if self.is_monochromatic():
+            if verbose:
+                print(">>> calculate_rays: is monochromatic")
             gamma = self.syned_electron_beam.gamma()
             critical_energy = self.syned_bending_magnet.get_critical_energy(self.syned_electron_beam.energy())
-            angle_array_mrad = numpy.linspace(-3e3/gamma,3e3/gamma,101) # interval +/- 3 gamma**(-1)
+            angle_array_mrad = numpy.linspace(-psi_interval_in_units_one_over_gamma * 1e3 / gamma, psi_interval_in_units_one_over_gamma * 1e3 / gamma, 101) # interval +/- 3 gamma**(-1)
+            if verbose:
+                print(">>> calculate_rays: sync_ang (s) E=%f GeV, I=%f A, D=%f mrad, R=%f m, PhE=%f eV, Ec=%f eV, PhE/Ec=%f "% ( \
+                    self.syned_electron_beam.energy(),
+                    self.syned_electron_beam.current(),
+                    (HDIV1 + HDIV2) * 1e3,
+                    self.syned_bending_magnet._radius,  # not needed anyway
+                    self._EMIN,
+                    critical_energy,
+                    self._EMIN/critical_energy,
+                      ))
             angular_distribution_s = sync_ang(1,#Flux at a given photon energy
                                             angle_array_mrad,
                                             polarization=1,#1 Parallel (l2=1, l3=0, in Sokolov&Ternov notation)
@@ -190,6 +202,10 @@ class SourceBendingMagnet(object):
                                             r_m=self.syned_bending_magnet._radius,#not needed anyway
                                             energy=self._EMIN,
                                             ec_ev=critical_energy)
+
+            # print(">>>>>>",angle_array_mrad,angular_distribution_s)
+            if verbose:
+                print(">>> calculate_rays: sync_ang (p)")
             angular_distribution_p = sync_ang(1,#Flux at a given photon energy
                                             angle_array_mrad,
                                             polarization=2,#1 Parallel (l2=1, l3=0, in Sokolov&Ternov notation)
@@ -202,13 +218,24 @@ class SourceBendingMagnet(object):
             angular_distribution_s = angular_distribution_s.flatten()
             angular_distribution_p = angular_distribution_p.flatten()
 
+            if verbose:
+                from srxraylib.plot.gol import plot
+                plot(angle_array_mrad,angular_distribution_s,
+                     angle_array_mrad,angular_distribution_p,xtitle="angle / mrad",legend=["s","p"])
+
+
             sampler_angle = Sampler1D(angular_distribution_s+angular_distribution_p,angle_array_mrad*1e-3)
+            if verbose:
+                print(">>> calculate_rays: get_n_sampled_points (angle)")
             sampled_angle = sampler_angle.get_n_sampled_points(NRAYS)
+            if verbose:
+                print(">>> calculate_rays: DONE get_n_sampled_points (angle)  %d points"%(sampled_angle.size))
+
             pol_deg_interpolator = interp1d(angle_array_mrad*1e-3,
                     angular_distribution_s/(angular_distribution_s+angular_distribution_p))
             sampled_polarization = pol_deg_interpolator(sampled_angle)
 
-            sampled_photon_energy = numpy.zeros_like(sampler_angle) + self._EMIN
+            sampled_photon_energy = numpy.zeros_like(sampled_angle) + self._EMIN
 
         else:
             gamma = self.syned_electron_beam.gamma()
@@ -407,7 +434,7 @@ class SourceBendingMagnet(object):
 
             # interpolate for the photon energy,vertical angle,and the degree of polarization.
 
-            wavelength = codata.h * codata.c / codata.e /sampled_photon_energy[itik]
+            wavelength = codata.h * codata.c / codata.e / sampled_photon_energy[itik]
             Q_WAVE = 2 * numpy.pi / (wavelength*1e2)
             ANGLEV = sampled_angle[itik]
             POL_DEG = sampled_polarization[itik]
