@@ -303,7 +303,7 @@ def sync_g1(x,polarization=0):
     raise ValueError("invalid polarization=: %s" % polarization)
 
 
-def sync_f(rAngle,rEnergy=None,polarization=0,gauss=0,l2=1,l1=0 ):
+def sync_f(rAngle,rEnergy=None,polarization=0,gauss=0,l2=1,l3=0 ):
     r""" angular dependency of synchrotron radiation emission
 
       NAME:
@@ -2082,15 +2082,15 @@ if __name__ == '__main__':
     except ImportError:
         print("failed to import matplotlib. No on-line plots.")
 
-    # test_xraybooklet_fig2_1(pltOk=pltOk)
-    # test_xraybooklet_fig2_2(pltOk=pltOk)
-    # test_esrf_bm_spectrum(pltOk=pltOk)
-    # test_esrf_bm_angle_power(pltOk=pltOk)
-    # test_esrf_bm_angle_flux(pltOk=pltOk)
-    # test_clarke_43(pltOk=pltOk)
+    test_xraybooklet_fig2_1(pltOk=pltOk)
+    test_xraybooklet_fig2_2(pltOk=pltOk)
+    test_esrf_bm_spectrum(pltOk=pltOk)
+    test_esrf_bm_angle_power(pltOk=pltOk)
+    test_esrf_bm_angle_flux(pltOk=pltOk)
+    test_clarke_43(pltOk=pltOk)
     test_esrf_bm_2d(pltOk=pltOk)
-    # test_wiggler_flux_vs_r(pltOk=pltOk)
-    # test_wiggler_external_b(pltOk=pltOk)
+    test_wiggler_flux_vs_r(pltOk=pltOk)
+    test_wiggler_external_b(pltOk=pltOk)
 
     if pltOk: plt.show()
 
