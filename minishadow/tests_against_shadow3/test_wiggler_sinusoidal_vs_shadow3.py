@@ -11,7 +11,7 @@ from minishadow.wiggler.source_wiggler import SourceWiggler
 
 def run_python_preprocessors(e_min=1000.0,e_max=10000.0 ):
 
-    import minishadow.bending_magnet.srfunc as srfunc
+    import srxraylib.sources.srfunc as srfunc
 
     wigFile = "xshwig.sha"
     inData = ""
@@ -78,7 +78,7 @@ def run_shadow3_source(ener_gev=6.04,use_emittances=True,EMIN=10000.0,EMAX=11000
     oe0.BENER = ener_gev
     oe0.CONV_FACT = 100.0
     oe0.FDISTR = 0
-    oe0.FILE_TRAJ = b'/Users/srio/Oasys/xshwig.sha' # b'xshwig.sha'
+    oe0.FILE_TRAJ = b'xshwig.sha' # b'xshwig.sha'
     oe0.FSOUR = 0
     oe0.FSOURCE_DEPTH = 0
     oe0.F_COLOR = 0

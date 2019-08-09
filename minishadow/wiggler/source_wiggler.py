@@ -28,11 +28,16 @@ import scipy.constants as codata
 from scipy import interpolate
 
 from syned.storage_ring.magnetic_structures.wiggler import Wiggler
+from minishadow.wiggler.magnetic_structure_1D_field import MagneticStructure1DField
+
 from syned.storage_ring.electron_beam import ElectronBeam
 
-from minishadow.bending_magnet.srfunc import wiggler_trajectory, wiggler_spectrum, wiggler_cdf, sync_g1, sync_f, sync_ene, sync_ang
+
+from srxraylib.sources.srfunc import wiggler_trajectory, wiggler_spectrum, wiggler_cdf, sync_g1, sync_f, sync_ene, sync_ang
 
 from scipy.interpolate import interp1d
+
+
 
 
 class SourceWiggler(object):
@@ -97,19 +102,28 @@ class SourceWiggler(object):
             txt += "        Electron sigmaZ: %g [um]\n"%(1e6*sigmas[2])
             txt += "        Electron sigmaX': %f urad\n"%(1e6*sigmas[1])
             txt += "        Electron sigmaZ': %f urad\n"%(1e6*sigmas[3])
-        txt += "Input Wiggler parameters: \n"
-        txt += "        period: %f m\n"%self.syned_wiggler.period_length()
-        txt += "        number of periods: %d\n"%self.syned_wiggler.number_of_periods()
-        txt += "        K-value: %f\n"%self.syned_wiggler.K_vertical()
 
-        txt += "-----------------------------------------------------\n"
+        if isinstance(self.syned_wiggler,Wiggler):  # conventional wiggler
+            txt += "Input Wiggler parameters: \n"
+            txt += "        period: %f m\n"%self.syned_wiggler.period_length()
+            txt += "        number of periods: %d\n"%self.syned_wiggler.number_of_periods()
+            txt += "        K-value: %f\n"%self.syned_wiggler.K_vertical()
 
-        txt += "Lorentz factor (gamma): %f\n"%self.syned_electron_beam.gamma()
-        txt += "Electron velocity: %.12f c units\n"%(numpy.sqrt(1.0 - 1.0 / self.syned_electron_beam.gamma() ** 2))
-        txt += "Undulator length: %f m\n"%(self.syned_wiggler.period_length()*self.syned_wiggler.number_of_periods())
-        K_to_B = (2.0 * numpy.pi / self.syned_wiggler.period_length()) * codata.m_e * codata.c / codata.e
+            txt += "-----------------------------------------------------\n"
 
-        txt += "Wiggler peak magnetic field: %f T\n"%(K_to_B*self.syned_wiggler.K_vertical())
+            txt += "Lorentz factor (gamma): %f\n"%self.syned_electron_beam.gamma()
+            txt += "Electron velocity: %.12f c units\n"%(numpy.sqrt(1.0 - 1.0 / self.syned_electron_beam.gamma() ** 2))
+            txt += "Undulator length: %f m\n"%(self.syned_wiggler.period_length()*self.syned_wiggler.number_of_periods())
+            K_to_B = (2.0 * numpy.pi / self.syned_wiggler.period_length()) * codata.m_e * codata.c / codata.e
+
+            txt += "Wiggler peak magnetic field: %f T\n"%(K_to_B*self.syned_wiggler.K_vertical())
+
+        if isinstance(self.syned_wiggler,MagneticStructure1DField):  # conventional wiggler
+            txt += "Input Wiggler parameters: \n"
+            txt += "        from external magnetic field \n"
+            txt += self.syned_wiggler.info()
+
+
         # txt += "Resonances: \n"
         # txt += "        harmonic number [n]                   %10d %10d %10d \n"%(1,3,5)
         # txt += "        wavelength [A]:                       %10.6f %10.6f %10.6f   \n"%(\
@@ -199,21 +213,48 @@ class SourceWiggler(object):
 
     def calculate_radiation(self):
 
-        (traj, pars) = wiggler_trajectory(b_from=0,
-                                                 inData="",
-                                                 nPer=self.syned_wiggler.number_of_periods(),
-                                                 nTrajPoints=self._NG_J,
-                                                 ener_gev=self.syned_electron_beam._energy_in_GeV,
-                                                 per=self.syned_wiggler.period_length(),
-                                                 kValue=self.syned_wiggler.K_vertical(),
-                                                 trajFile="",
-                                                 shift_x_flag=0.0,
-                                                 shift_x_value=0.0,
-                                                 shift_betax_flag=0,
-                                                 shift_betax_value=0.0)
+
+        if isinstance(self.syned_wiggler,Wiggler):
+            (traj, pars) = wiggler_trajectory(b_from=0,
+                                                     inData="",
+                                                     nPer=self.syned_wiggler.number_of_periods(),
+                                                     nTrajPoints=self._NG_J,
+                                                     ener_gev=self.syned_electron_beam._energy_in_GeV,
+                                                     per=self.syned_wiggler.period_length(),
+                                                     kValue=self.syned_wiggler.K_vertical(),
+                                                     trajFile="",
+                                                     shift_x_flag=0.0,
+                                                     shift_x_value=0.0,
+                                                     shift_betax_flag=0,
+                                                     shift_betax_value=0.0)
+
+        elif isinstance(self.syned_wiggler,MagneticStructure1DField):
+
+            inData = numpy.vstack((self.syned_wiggler.y,self.syned_wiggler.B)).T
+
+            (traj, pars) = wiggler_trajectory(b_from=1,
+                                                     inData=inData,
+                                                     nPer=1,
+                                                     nTrajPoints=self._NG_J,
+                                                     ener_gev=self.syned_electron_beam._energy_in_GeV,
+                                                     # per=self.syned_wiggler.period_length(),
+                                                     # kValue=self.syned_wiggler.K_vertical(),
+                                                     trajFile="",
+                                                     shift_x_flag=0.0,
+                                                     shift_x_value=0.0,
+                                                     shift_betax_flag=0,
+                                                     shift_betax_value=0.0)
+
 
         self._result_trajectory = traj
         self._result_parameters = pars
+
+        # print(">>>>>>>>>> traj pars: ",traj.shape,pars)
+        #
+        # plot(traj[1, :], traj[0, :], xtitle="Y", ytitle="X")
+        # plot(traj[1, :], traj[3, :], xtitle="Y", ytitle="BetaX")
+        # plot(traj[1, :], traj[6, :], xtitle="Y", ytitle="Curvature")
+        # plot(traj[1, :], traj[7, :], xtitle="Y", ytitle="B")
 
 
         # traj[0,ii] = yx[i]
@@ -238,8 +279,7 @@ class SourceWiggler(object):
                            elliptical=False)
 
 
-    def calculate_rays(self,user_unit_to_m=1.0,F_COHER=0,NRAYS=5000,SEED=123456,
-                       EPSI_DX=0.0,EPSI_DZ=0.0):
+    def calculate_rays(self,user_unit_to_m=1.0,F_COHER=0,NRAYS=5000,SEED=123456,EPSI_DX=0.0,EPSI_DZ=0.0):
         """
         compute the rays in SHADOW matrix (shape (npoints,18) )
         :param F_COHER: set this flag for coherent beam
@@ -290,7 +330,6 @@ class SourceWiggler(object):
         EPSI_PATH = numpy.arange(CURV.size) * PATH_STEP # self._result_trajectory[7,:]
 
 
-
         # ! C We define the 5 arrays:
         # ! C    Y_X(5,N)    ---> X(Y)
         # ! C    Y_XPRI(5,N) ---> X'(Y)
@@ -337,14 +376,15 @@ class SourceWiggler(object):
         # FSOUR  = 3
         # FDISTR  = 4
 
-
         ws_ev,ws_f,tmp =  wiggler_spectrum(self._result_trajectory,
-                                enerMin=self._EMIN, enerMax=self._EMAX, nPoints=500,
-                                per=self.syned_wiggler.period_length(), electronCurrent=self.syned_electron_beam._current,
-                                outFile="", elliptical=False)
+                                    enerMin=self._EMIN, enerMax=self._EMAX, nPoints=500,
+                                    # per=self.syned_wiggler.period_length(),
+                                    electronCurrent=self.syned_electron_beam._current,
+                                    outFile="", elliptical=False)
 
         ws_flux_per_ev = ws_f / (ws_ev*1e-3)
         samplerE = Sampler1D(ws_flux_per_ev,ws_ev)
+
         sampled_energies,h,h_center = samplerE.get_n_sampled_points_and_histogram(NRAYS)
 
         a = numpy.linspace(-0.6,0.6,150)
@@ -361,6 +401,7 @@ class SourceWiggler(object):
         #
         # sampled_theta,hx,h = samplerAng.get_n_sampled_points_and_histogram(10*NRAYS)
         # plot(h,hx)
+
 
 
         for itik in range(NRAYS):
@@ -420,7 +461,6 @@ class SourceWiggler(object):
                 R_MAGNET = numpy.abs(1.0/CURV)
 
             POL_ANGLE  = POL_ANGLE * numpy.pi / 180.0
-
 
             # ! C
             # ! C Compute the actual distance (EPSI_W*) from the orbital focus
@@ -603,7 +643,6 @@ class SourceWiggler(object):
             Q_WAVE = 2 * numpy.pi / (wavelength*1e2)
             # print("   >> PHOTON ENERGY, Ec, lambda, Q: ",sampled_photon_energy,critical_energy,wavelength*1e10,Q_WAVE)
 
-
             eene = sampled_photon_energy / critical_energy
 
             fm = sync_f(a*1e-3*self.syned_electron_beam.gamma(),eene,polarization=0) * \
@@ -624,9 +663,9 @@ class SourceWiggler(object):
             fm.shape = -1
             fm_s.shape = -1
             fm_pol.shape = -1
-            # print(">>>>",a.shape,fm.shape,fm_s.shape)
-            pol_deg_interpolator = interp1d(a*1e-3,fm_pol)
 
+
+            pol_deg_interpolator = interp1d(a*1e-3,fm_pol)
 
             samplerAng = Sampler1D(fm,a*1e-3)
 
@@ -634,7 +673,11 @@ class SourceWiggler(object):
 
             # plot(a*1e-3,fm_s/fm)
 
-            sampled_theta = samplerAng.get_sampled(ARG_ENER)
+            if fm.min() == fm.max():
+                print("Warning: cannot compute divergence for ray index %d"%itik)
+                sampled_theta = 0.0
+            else:
+                sampled_theta = samplerAng.get_sampled(ARG_ENER)
 
             sampled_pol_deg = pol_deg_interpolator(sampled_theta)
 
@@ -871,3 +914,4 @@ if __name__ == "__main__":
     plot_scatter(rays[:,1],rays[:,0],title="trajectory",show=False)
     plot_scatter(rays[:,0],rays[:,2],title="real space",show=False)
     plot_scatter(rays[:,3],rays[:,5],title="divergence space")
+

@@ -19,7 +19,7 @@ from scipy.interpolate import interp1d,interp2d
 from syned.storage_ring.magnetic_structures.bending_magnet import BendingMagnet
 from syned.storage_ring.electron_beam import ElectronBeam
 
-from minishadow.bending_magnet.srfunc import sync_ene, sync_ang
+from srxraylib.sources.srfunc import sync_ene, sync_ang
 
 # from srxraylib.plot.gol import plot,plot_scatter,plot_image
 
