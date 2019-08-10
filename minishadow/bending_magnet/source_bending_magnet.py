@@ -179,25 +179,29 @@ class SourceBendingMagnet(object):
         HDIV1 = 0.5 * self.syned_bending_magnet.horizontal_divergence()
         HDIV2 = HDIV1
 
+        gamma = self.syned_electron_beam.gamma()
+        critical_energy = self.syned_bending_magnet.get_critical_energy(self.syned_electron_beam.energy())
+
+        if psi_interval_in_units_one_over_gamma is None:
+            c = numpy.array([-0.3600382, 0.11188709])  # see file fit_psi_interval.py
+            x = numpy.log10(self._EMIN / critical_energy)
+            y_fit = c[1] + c[0] * x
+            psi_interval_in_units_one_over_gamma = 10 ** y_fit  # this is the semi interval
+            psi_interval_in_units_one_over_gamma *= 4  # doubled interval
+            if psi_interval_in_units_one_over_gamma < 2:
+                psi_interval_in_units_one_over_gamma = 2
+
+        if verbose:
+            print(">>> psi_interval_in_units_one_over_gamma: ",psi_interval_in_units_one_over_gamma)
+
+
+        angle_array_mrad = numpy.linspace(-0.5*psi_interval_in_units_one_over_gamma * 1e3 / gamma,
+                                          0.5*psi_interval_in_units_one_over_gamma * 1e3 / gamma,
+                                          psi_interval_number_of_points)
+
         if self.is_monochromatic():
             if verbose:
                 print(">>> calculate_rays: is monochromatic")
-            gamma = self.syned_electron_beam.gamma()
-            critical_energy = self.syned_bending_magnet.get_critical_energy(self.syned_electron_beam.energy())
-
-            if psi_interval_in_units_one_over_gamma is None:
-                c = numpy.array([-0.3600382,0.11188709]) # see file fit_psi_interval.py
-                x = numpy.log10(self._EMIN/critical_energy)
-                y_fit = c[1] + c[0] * x
-                psi_interval_in_units_one_over_gamma = int(10**y_fit) # this is the semi interval
-                psi_interval_in_units_one_over_gamma *= 4 # doubled interval
-                if psi_interval_in_units_one_over_gamma < 2 :
-                    psi_interval_in_units_one_over_gamma = 2
-
-            angle_array_mrad = numpy.linspace(-0.5*psi_interval_in_units_one_over_gamma * 1e3 / gamma,
-                                              0.5*psi_interval_in_units_one_over_gamma * 1e3 / gamma,
-                                              psi_interval_number_of_points)
-            if verbose:
                 print(">>> calculate_rays: sync_ang (s) E=%f GeV, I=%f A, D=%f mrad, R=%f m, PhE=%f eV, Ec=%f eV, PhE/Ec=%f "% ( \
                     self.syned_electron_beam.energy(),
                     self.syned_electron_beam.current(),
@@ -207,6 +211,8 @@ class SourceBendingMagnet(object):
                     critical_energy,
                     self._EMIN/critical_energy,
                       ))
+
+
             angular_distribution_s = sync_ang(1,#Flux at a given photon energy
                                             angle_array_mrad,
                                             polarization=1,#1 Parallel (l2=1, l3=0, in Sokolov&Ternov notation)
@@ -217,9 +223,10 @@ class SourceBendingMagnet(object):
                                             energy=self._EMIN,
                                             ec_ev=critical_energy)
 
-            # print(">>>>>>",angle_array_mrad,angular_distribution_s)
+
             if verbose:
                 print(">>> calculate_rays: sync_ang (p)")
+
             angular_distribution_p = sync_ang(1,#Flux at a given photon energy
                                             angle_array_mrad,
                                             polarization=2,#1 Parallel (l2=1, l3=0, in Sokolov&Ternov notation)
@@ -229,6 +236,7 @@ class SourceBendingMagnet(object):
                                             r_m=self.syned_bending_magnet._radius,#not needed anyway
                                             energy=self._EMIN,
                                             ec_ev=critical_energy)
+
             angular_distribution_s = angular_distribution_s.flatten()
             angular_distribution_p = angular_distribution_p.flatten()
 
@@ -236,7 +244,6 @@ class SourceBendingMagnet(object):
                 from srxraylib.plot.gol import plot
                 plot(angle_array_mrad,angular_distribution_s,
                      angle_array_mrad,angular_distribution_p,xtitle="angle / mrad",legend=["s","p"])
-
 
             sampler_angle = Sampler1D(angular_distribution_s+angular_distribution_p,angle_array_mrad*1e-3)
             if verbose:
@@ -251,11 +258,12 @@ class SourceBendingMagnet(object):
 
             sampled_photon_energy = numpy.zeros_like(sampled_angle) + self._EMIN
 
-        else:
-            gamma = self.syned_electron_beam.gamma()
-            critical_energy = self.syned_bending_magnet.get_critical_energy(self.syned_electron_beam.energy())
-            angle_array_mrad = numpy.linspace(-3e3/gamma,3e3/gamma,101) # interval +/- 3 gamma**(-1)
+        else: # polychromatic
+
             photon_energy_array = numpy.linspace(self._EMIN,self._EMAX,self._NG_E)
+
+            if verbose:
+                print(">>> sync_ene: calculating energy distribution")
 
             fm_s = sync_ene(4,photon_energy_array,
                           ec_ev=self.syned_bending_magnet.get_critical_energy(self.syned_electron_beam.energy()),
@@ -279,9 +287,14 @@ class SourceBendingMagnet(object):
 
             fm = fm_s + fm_p
 
-            # print(">>>>>>>",fm.shape,angle_array_mrad.shape,photon_energy_array.shape)
-            # plot_image(fm,angle_array_mrad,photon_energy_array,aspect='auto',show=0)
-            # plot_image(fm_s/fm,angle_array_mrad,photon_energy_array,aspect='auto',title="polarization")
+            if verbose:
+                print(">>> DONE sync_ene: calculating energy distribution",photon_energy_array.shape,fm.shape)
+                from srxraylib.plot.gol import plot,plot_image
+                plot(photon_energy_array,fm[fm.shape[0]//2,:],xtitle="Energy / eV",ytitle="Flux at zero elevation")
+                plot(angle_array_mrad, fm[:,0], xtitle="Angle / mrad", ytitle="Flux at Emin="%(photon_energy_array[0]))
+                print(">>>>>>>",fm.shape,angle_array_mrad.shape,photon_energy_array.shape)
+                plot_image(fm,angle_array_mrad,photon_energy_array,aspect='auto',show=0,title="flux",xtitle="Psi / mrad",ytitle="Energy / eV")
+                plot_image(fm_s/fm,angle_array_mrad,photon_energy_array,aspect='auto',title="polarization",xtitle="Psi / mrad",ytitle="Energy / eV")
 
             fm1 = numpy.zeros_like(fm)
             for i in range(fm.shape[0]):
@@ -329,7 +342,10 @@ class SourceBendingMagnet(object):
 
                 rSigmaX = numpy.sqrt( (epsi_wX**2) * (sigma_xp**2) + sigma_x**2 )
                 rSigmaXp = sigma_xp
-                rhoX = epsi_wX * sigma_xp**2 / (rSigmaX * rSigmaXp)
+                if rSigmaX * rSigmaXp != 0.0:
+                    rhoX = epsi_wX * sigma_xp**2 / (rSigmaX * rSigmaXp)
+                else:
+                    rhoX = 0.0
                 mean = [0, 0]
                 cov = [[rSigmaX**2, rhoX*rSigmaX*rSigmaXp], [rhoX*rSigmaX*rSigmaXp, rSigmaXp**2]]  # diagonal covariance
                 sampled_x, sampled_xp = numpy.random.multivariate_normal(mean, cov, 1).T
@@ -341,7 +357,10 @@ class SourceBendingMagnet(object):
                 epsi_wZ = EPSI_DZ + EPSI_PATH # sigma_z * sigma_zp
                 rSigmaZ = numpy.sqrt( (epsi_wZ**2) * (sigma_zp**2) + sigma_z**2 )
                 rSigmaZp = sigma_zp
-                rhoZ = epsi_wZ * sigma_zp**2 / (rSigmaZ * rSigmaZp)
+                if rSigmaZ * rSigmaZp != 0.0:
+                    rhoZ = epsi_wZ * sigma_zp**2 / (rSigmaZ * rSigmaZp)
+                else:
+                    rhoZ = 0.0
                 mean = [0, 0]
                 cov = [[rSigmaZ**2, rhoZ*rSigmaZ*rSigmaZp], [rhoZ*rSigmaZ*rSigmaZp, rSigmaZp**2]]  # diagonal covariance
                 sampled_z, sampled_zp = numpy.random.multivariate_normal(mean, cov, 1).T

@@ -9,12 +9,13 @@ from srxraylib.plot.gol import plot_scatter
 if __name__ == "__main__":
 
 
+    flag_emittance = True        # when sampling rays: Use emittance (0=No, 1=Yes)
 
     syned_electron_beam = ElectronBeam(energy_in_GeV=1.9,current=0.4,
-                                       moment_xx=(39e-6)**2,
-                                       moment_xpxp=(2000e-12 / 51e-6)**2,
-                                       moment_yy=(31e-6)**2,
-                                       moment_ypyp=(30e-12 / 31e-6)**2,
+                                       moment_xx   = (39e-6)**2,
+                                       moment_xpxp = (2000e-12 / 51e-6)**2,
+                                       moment_yy   = (31e-6)**2,
+                                       moment_ypyp = (30e-12 / 31e-6)**2,
                                        )
 
     # syned_bending_magnet = BendingMagnet(radius=-5.0,magnetic_field=-1.26754,length=5.0*0.069)
@@ -26,11 +27,11 @@ if __name__ == "__main__":
     #     magnetic_radius=-5.0,divergence=69e-3,electron_energy_in_GeV=1.9)
 
 
-    emin = 0.4                # Photon energy scan from energy (in eV)
-    emax = 0.4                # Photon energy scan to energy (in eV)
+    emin = 1000.0                # Photon energy scan from energy (in eV)
+    emax = 1001.0                # Photon energy scan to energy (in eV)
     ng_e = 200                # Photon energy scan number of points
     ng_j = 100                # Number of points in electron trajectory (per period) for internal calculation only
-    flag_emittance = 1        # when sampling rays: Use emittance (0=No, 1=Yes)
+
 
 
 

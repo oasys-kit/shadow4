@@ -17,17 +17,17 @@ from scipy.interpolate import interp1d
 
 if __name__ == "__main__":
 
-    e_min = 1000.0
-    e_max = 1000.1
+    use_emittances=True
+    e_min = 0.4
+    e_max = 0.4
     NRAYS = 5000
-    use_emittances=False
+
 
 
 
     wigFile = "xshwig.sha"
     inData = ""
 
-    nPer = 2 # 50
     nTrajPoints = 501
     ener_gev = 1.90
     per = 0.5
@@ -57,14 +57,18 @@ if __name__ == "__main__":
     # syned_wiggler = Wiggler(K_vertical=kValue,K_horizontal=0.0,period_length=per,number_of_periods=nPer)
 
     # B from file
-    filename = "/home/manuel/Oasys/BM_smooth.b"
+    # filename = "/home/manuel/Oasys/BM_smooth.b"
     filename = "/home/manuel/Oasys/BM_multi.b"
     syned_wiggler = MagneticStructure1DField.initialize_from_file(filename)
-    syned_wiggler.flip_B()
+    syned_wiggler.add_spatial_shift(-0.478)
+    # syned_wiggler.flip_B()
 
 
 
-
+    if e_min == e_max:
+        ng_e = 1
+    else:
+        ng_e = 10
 
     sourcewiggler = SourceWiggler(name="test",
                     syned_electron_beam=syned_electron_beam,
@@ -72,9 +76,12 @@ if __name__ == "__main__":
                     flag_emittance=use_emittances,
                     emin=e_min,
                     emax=e_max,
-                    ng_e=10,
+                    ng_e=ng_e,
                     ng_j=nTrajPoints)
 
+    # sourcewiggler.set_electron_initial_conditions_by_label(position_label="maximum",velocity_label="half_excursion")
+    sourcewiggler.set_electron_initial_conditions_by_label(position_label="maximum",
+                                                           velocity_label="user_value", velocity_value=0.094,)
 
 
     print(sourcewiggler.info())
@@ -82,7 +89,9 @@ if __name__ == "__main__":
 
     rays = sourcewiggler.calculate_rays(NRAYS=NRAYS)
 
-    plot_scatter(rays[:,1],rays[:,0],title="trajectory",show=False)
-    plot_scatter(rays[:,0],rays[:,2],title="real space",show=False)
-    plot_scatter(rays[:,3],rays[:,5],title="divergence space")
+    plot_scatter(rays[:,0]*1e6,rays[:,2]*1e6,xtitle="X um",ytitle="Z um")
+    plot_scatter(rays[:,1],rays[:,0]*1e6,xtitle="Y m",ytitle="X um")
+    plot_scatter(rays[:,1],rays[:,2]*1e6,xtitle="Y m",ytitle="Z um")
+    plot_scatter(rays[:,3]*1e6,rays[:,5]*1e6,xtitle="X' urad",ytitle="Z' urad")
+
 

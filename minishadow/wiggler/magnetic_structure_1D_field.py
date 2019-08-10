@@ -41,6 +41,10 @@ class MagneticStructure1DField(MagneticStructure):
     def flip_B(self):
         self.B *= -1.0
 
+    def add_spatial_shift(self,shift):
+        self.y += shift
+
+
 if __name__ == "__main__":
 
     from srxraylib.plot.gol import plot

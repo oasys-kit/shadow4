@@ -70,8 +70,10 @@ class SourceWiggler(object):
 
         self._NG_J            = ng_j       # Number of points in electron trajectory (per period)
 
-
         self._FLAG_EMITTANCE  =  flag_emittance # Yes  # Use emittance (0=No, 1=Yes)
+
+        # electron initial conditions for electron trahjectory calculations
+        self.set_electron_initial_conditions()
 
         # results of calculations
 
@@ -203,6 +205,54 @@ class SourceWiggler(object):
         if npoints != None:
             self._NG_E = npoints
 
+
+    def set_electron_initial_conditions(self,shift_x_flag=0,shift_x_value=0.0,shift_betax_flag=0,shift_betax_value=0.0):
+        self.shift_x_flag      = shift_x_flag
+        self.shift_x_value     = shift_x_value
+        self.shift_betax_flag  = shift_betax_flag
+        self.shift_betax_value = shift_betax_value
+
+    def set_electron_initial_conditions_by_label(self,
+                                        position_label="no_shift", # values are: no_shift, half_excursion, minimum, maximum, value_at_zero, user_value
+                                        velocity_label="no_shift", # values are: no_shift, half_excursion, minimum, maximum, value_at_zero, user_value
+                                        position_value=0.0,
+                                        velocity_value=0.0,
+                                        ):
+        self.shift_x_value = 0.0
+        self.shift_betax_value = 0.0
+
+        if position_label == "no_shift":
+            self.shift_x_flag = 0
+        elif position_label == "half_excursion":
+            self.shift_x_flag = 1
+        elif position_label == "minimum":
+            self.shift_x_flag = 2
+        elif position_label == "maximum":
+            self.shift_x_flag = 3
+        elif position_label == "value_at_zero":
+            self.shift_x_flag = 4
+        elif position_label == "user_value":
+            self.shift_x_flag = 5
+            self.position_value = position_value
+        else:
+            raise Exception("Invalid value for keyword position_label")
+
+        if velocity_label == "no_shift":
+            self.shift_betax_flag = 0
+        elif velocity_label == "half_excursion":
+            self.shift_betax_flag = 1
+        elif velocity_label == "minimum":
+            self.shift_betax_flag = 2
+        elif velocity_label == "maximum":
+            self.shift_betax_flag = 3
+        elif velocity_label == "value_at_zero":
+            self.shift_betax_flag = 4
+        elif velocity_label == "user_value":
+            self.shift_betax_flag = 5
+            self.shift_betax_value = velocity_value
+        else:
+            raise Exception("Invalid value for keyword velocity_label")
+
     def get_energy_box(self):
         """
         Gets the limits of photon energy distribution for the source
@@ -215,6 +265,7 @@ class SourceWiggler(object):
 
 
         if isinstance(self.syned_wiggler,Wiggler):
+
             (traj, pars) = wiggler_trajectory(b_from=0,
                                                      inData="",
                                                      nPer=self.syned_wiggler.number_of_periods(),
@@ -222,13 +273,19 @@ class SourceWiggler(object):
                                                      ener_gev=self.syned_electron_beam._energy_in_GeV,
                                                      per=self.syned_wiggler.period_length(),
                                                      kValue=self.syned_wiggler.K_vertical(),
-                                                     trajFile="",
-                                                     shift_x_flag=0.0,
-                                                     shift_x_value=0.0,
-                                                     shift_betax_flag=0,
-                                                     shift_betax_value=0.0)
+                                                     trajFile="",)
 
         elif isinstance(self.syned_wiggler,MagneticStructure1DField):
+
+            print(">>>>>>>>>>>>>>>>>>>>>>",
+                "shift_x_flag =      ",self.shift_x_flag,
+                "shift_x_value =     ",self.shift_x_value,
+                "shift_betax_flag =  ",self.shift_betax_flag,
+                "shift_betax_value = ",self.shift_betax_value
+                  )
+
+
+
 
             inData = numpy.vstack((self.syned_wiggler.y,self.syned_wiggler.B)).T
 
@@ -240,10 +297,10 @@ class SourceWiggler(object):
                                                      # per=self.syned_wiggler.period_length(),
                                                      # kValue=self.syned_wiggler.K_vertical(),
                                                      trajFile="",
-                                                     shift_x_flag=0.0,
-                                                     shift_x_value=0.0,
-                                                     shift_betax_flag=0,
-                                                     shift_betax_value=0.0)
+                                                     shift_x_flag       = self.shift_x_flag     ,
+                                                     shift_x_value      = self.shift_x_value    ,
+                                                     shift_betax_flag   = self.shift_betax_flag ,
+                                                     shift_betax_value  = self.shift_betax_value,)
 
 
         self._result_trajectory = traj
@@ -271,15 +328,19 @@ class SourceWiggler(object):
         # calculate cdf and write file for Shadow/Source
         #
 
+        print(">>>>>>>>>>>>>>>>>>>>  self._EMIN,self._EMAX,self._NG_E",self._EMIN,self._EMAX,self._NG_E)
         self._result_cdf = wiggler_cdf(self._result_trajectory,
                            enerMin=self._EMIN,
                            enerMax=self._EMAX,
                            enerPoints=self._NG_E,
-                           outFile="",
+                           outFile="tmp.cdf",
                            elliptical=False)
 
 
-    def calculate_rays(self,user_unit_to_m=1.0,F_COHER=0,NRAYS=5000,SEED=123456,EPSI_DX=0.0,EPSI_DZ=0.0):
+    def calculate_rays(self,user_unit_to_m=1.0,F_COHER=0,NRAYS=5000,SEED=123456,EPSI_DX=0.0,EPSI_DZ=0.0,
+                       psi_interval_in_units_one_over_gamma=None,
+                       psi_interval_number_of_points=1001,
+                       verbose=True):
         """
         compute the rays in SHADOW matrix (shape (npoints,18) )
         :param F_COHER: set this flag for coherent beam
@@ -290,7 +351,16 @@ class SourceWiggler(object):
         if self._result_cdf is None:
             self.calculate_radiation()
 
+        if verbose:
+            print(">>>   Results of calculate_radiation")
+            print(">>>       trajectory.shape: ",self._result_trajectory.shape)
+            print(">>>       cdf: ", self._result_cdf.keys())
+
+
         sampled_photon_energy,sampled_theta,sampled_phi = self._sample_photon_energy_theta_and_phi(NRAYS)
+
+        if verbose:
+            print(">>> sampled sampled_photon_energy,sampled_theta,sampled_phi:  ",sampled_photon_energy,sampled_theta,sampled_phi)
 
         if SEED != 0:
             numpy.random.seed(SEED)
@@ -387,7 +457,48 @@ class SourceWiggler(object):
 
         sampled_energies,h,h_center = samplerE.get_n_sampled_points_and_histogram(NRAYS)
 
-        a = numpy.linspace(-0.6,0.6,150)
+
+        ###############################################
+
+        gamma = self.syned_electron_beam.gamma()
+        m2ev = codata.c * codata.h / codata.e
+        TOANGS = m2ev * 1e10
+
+
+        #####################################################
+
+        RAD_MIN = 1.0 / numpy.abs(self._result_cdf["curv"]).max()
+
+        critical_energy = TOANGS * 3.0 * numpy.power(gamma, 3) / 4.0 / numpy.pi / 1.0e10 * (1.0 / RAD_MIN)
+
+        if psi_interval_in_units_one_over_gamma is None:
+            c = numpy.array([-0.3600382, 0.11188709])  # see file fit_psi_interval.py
+            # x = numpy.log10(self._EMIN / critical_energy)
+            x = numpy.log10(self._EMIN / (4 * critical_energy)) # the wiggler that does not have an unique
+                                                                # Ec. To be safe, I use 4 times the
+                                                                # Ec vale to make the interval wider than for the BM
+            y_fit = c[1] + c[0] * x
+            psi_interval_in_units_one_over_gamma = 10 ** y_fit  # this is the semi interval
+            psi_interval_in_units_one_over_gamma *= 4  # doubled interval
+            if psi_interval_in_units_one_over_gamma < 2:
+                psi_interval_in_units_one_over_gamma = 2
+
+        if verbose:
+            print(">>> psi_interval_in_units_one_over_gamma: ",psi_interval_in_units_one_over_gamma)
+
+        angle_array_mrad = numpy.linspace(-0.5*psi_interval_in_units_one_over_gamma * 1e3 / gamma,
+                                          0.5*psi_interval_in_units_one_over_gamma * 1e3 / gamma,
+                                          psi_interval_number_of_points)
+
+
+        # a = numpy.linspace(-0.6,0.6,150)
+
+        a = angle_array_mrad
+
+        #####################################################################
+
+
+
         a8 = 1.0
         hdiv_mrad = 1.0
         # i_a = self.syned_electron_beam._current
@@ -632,17 +743,20 @@ class SourceWiggler(object):
             # print("   >> R_MAGNET, DIREC",R_MAGNET,DIREC1,DIREC2)
             # print("   >> RAD_MIN,CORREC,ARG_ENER,ARG_ANG,",RAD_MIN,CORREC,ARG_ENER,ARG_ANG)
 
-            #
-            gamma = self.syned_electron_beam.gamma()
-            m2ev = codata.c * codata.h / codata.e
-            TOANGS = m2ev * 1e10
-            critical_energy = TOANGS*3.0*numpy.power(gamma,3)/4.0/numpy.pi/1.0e10*(1.0/RAD_MIN)
+#######################################################################
+            # gamma = self.syned_electron_beam.gamma()
+            # m2ev = codata.c * codata.h / codata.e
+            # TOANGS = m2ev * 1e10
+            # critical_energy = TOANGS*3.0*numpy.power(gamma,3)/4.0/numpy.pi/1.0e10*(1.0/RAD_MIN)
 
-            sampled_photon_energy = sampled_energies[itik]
-            wavelength = codata.h * codata.c / codata.e /sampled_photon_energy
-            Q_WAVE = 2 * numpy.pi / (wavelength*1e2)
+            # sampled_photon_energy = sampled_energies[itik]
+            # wavelength = codata.h * codata.c / codata.e /sampled_photon_energy
+            # Q_WAVE = 2 * numpy.pi / (wavelength*1e2)
             # print("   >> PHOTON ENERGY, Ec, lambda, Q: ",sampled_photon_energy,critical_energy,wavelength*1e10,Q_WAVE)
-
+###################################################################################
+            sampled_photon_energy = sampled_energies[itik]
+            # wavelength = codata.h * codata.c / codata.e /sampled_photon_energy
+            critical_energy = TOANGS * 3.0 * numpy.power(gamma, 3) / 4.0 / numpy.pi / 1.0e10 * (1.0 / RAD_MIN)
             eene = sampled_photon_energy / critical_energy
 
             fm = sync_f(a*1e-3*self.syned_electron_beam.gamma(),eene,polarization=0) * \
