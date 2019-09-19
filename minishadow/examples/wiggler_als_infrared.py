@@ -58,9 +58,9 @@ if __name__ == "__main__":
 
     # B from file
     # filename = "/home/manuel/Oasys/BM_smooth.b"
-    filename = "/home/manuel/Oasys/BM_multi.b"
+    filename = "/home/manuel/Oasys/BM_multi_centered.b"
     syned_wiggler = MagneticStructure1DField.initialize_from_file(filename)
-    syned_wiggler.add_spatial_shift(-0.478)
+    # syned_wiggler.add_spatial_shift(-0.478)
     # syned_wiggler.flip_B()
 
 
@@ -80,8 +80,8 @@ if __name__ == "__main__":
                     ng_j=nTrajPoints)
 
     # sourcewiggler.set_electron_initial_conditions_by_label(position_label="maximum",velocity_label="half_excursion")
-    sourcewiggler.set_electron_initial_conditions_by_label(position_label="maximum",
-                                                           velocity_label="user_value", velocity_value=0.094,)
+    sourcewiggler.set_electron_initial_conditions_by_label(position_label="value_at_zero",
+                                                           velocity_label="value_at_zero")
 
 
     print(sourcewiggler.info())

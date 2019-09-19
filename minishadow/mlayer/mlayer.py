@@ -34,13 +34,13 @@ class MLayer(object):
         index_pointer = 0
         np = int(lines[index_pointer])
         out_dict['np'] = np
-
         energy = numpy.zeros(np)
 
         index_pointer += 1
-        mylist = lines[index_pointer].split(" ")
+        # mylist = lines[index_pointer].split(" ")
+        mylist = lines[index_pointer].split()
         for i in range(np):
-            energy[i] = float(mylist[i])
+                energy[i] = float(mylist[i])
 
         out_dict["energy"] = energy
 
@@ -55,19 +55,19 @@ class MLayer(object):
 
         for i in range(np):
             index_pointer += 1
-            mylist = lines[index_pointer].strip().split("    ")
+            mylist = lines[index_pointer].strip().split()
             delta_s[i] = float(mylist[0])
             beta_s[i] = float(mylist[1])
 
         for i in range(np):
             index_pointer += 1
-            mylist = lines[index_pointer].strip().split("    ")
+            mylist = lines[index_pointer].strip().split()
             delta_e[i] = float(mylist[0])
             beta_e[i] = float(mylist[1])
 
         for i in range(np):
             index_pointer += 1
-            mylist = lines[index_pointer].strip().split("    ")
+            mylist = lines[index_pointer].strip().split()
             delta_o[i] = float(mylist[0])
             beta_o[i] = float(mylist[1])
 
@@ -89,6 +89,7 @@ class MLayer(object):
         index_pointer += 1
         npair = int(lines[index_pointer])
 
+
         out_dict["npair"] = npair
 
         thick = numpy.zeros(numpy.abs(npair))
@@ -98,7 +99,7 @@ class MLayer(object):
 
         for i in range(numpy.abs(npair)):
             index_pointer += 1
-            mylist = lines[index_pointer].strip().split("   ")
+            mylist = lines[index_pointer].strip().split()
             thick[i] = float(mylist[0])
             gamma1[i] = float(mylist[1])
             mlroughness1[i] = float(mylist[2])
@@ -140,7 +141,7 @@ class MLayer(object):
     # this is copied from shadow3 python preprocessors
     #
     @classmethod
-    def pre_mlayer(self, interactive=False, FILE="pre_mlayer.dat",E_MIN=5000.0,E_MAX=20000.0,
+    def pre_mlayer(cls, interactive=False, FILE="pre_mlayer.dat",E_MIN=5000.0,E_MAX=20000.0,
                    S_DENSITY=2.33,S_MATERIAL="Si",
                    E_DENSITY=2.40,E_MATERIAL="B4C",
                    O_DENSITY=9.40,O_MATERIAL="Ru",
@@ -323,24 +324,24 @@ class MLayer(object):
         f = open(fileout, 'wt')
         f.write("%i \n" % np)
         for i in range(np):
-            energy = 30e0*numpy.pow(10,elfactor*(istart+i-1))
+            energy = 30e0*numpy.power(10,elfactor*(istart+i-1))
             f.write("%e " % energy)
         f.write( "\n")
 
         for i in range(np):
-            energy = 30e0*numpy.pow(10,elfactor*(istart+i-1)) *1e-3 # in keV!!
+            energy = 30e0*numpy.power(10,elfactor*(istart+i-1)) *1e-3 # in keV!!
             delta = 1e0-xraylib.Refractive_Index_Re(matSubstrate,energy,denSubstrate)
             beta = xraylib.Refractive_Index_Im(matSubstrate,energy,denSubstrate)
             f.write( ("%26.17e "*2+"\n") % tuple([delta,beta]) )
 
         for i in range(np):
-            energy = 30e0*numpy.pow(10,elfactor*(istart+i-1)) *1e-3 # in keV!!
+            energy = 30e0*numpy.power(10,elfactor*(istart+i-1)) *1e-3 # in keV!!
             delta = 1e0-xraylib.Refractive_Index_Re(matEven,energy,denEven)
             beta = xraylib.Refractive_Index_Im(matEven,energy,denEven)
             f.write( ("%26.17e  "*2+"\n") % tuple([delta,beta]) )
 
         for i in range(np):
-            energy = 30e0*numpy.pow(10,elfactor*(istart+i-1)) *1e-3 # in keV!!
+            energy = 30e0*numpy.power(10,elfactor*(istart+i-1)) *1e-3 # in keV!!
             delta = 1e0-xraylib.Refractive_Index_Re(matOdd,energy,denOdd)
             beta = xraylib.Refractive_Index_Im(matOdd,energy,denOdd)
             f.write( ("%26.17e "*2+"\n") % tuple([delta,beta]) )
@@ -364,7 +365,11 @@ class MLayer(object):
 
         f.close()
         print("File written to disk: %s" % fileout)
-        return None
+
+
+        out = MLayer()
+        out.read_preprocessor_file(fileout)
+        return out
 
     # !
     # ! PRE_MLAYER_SCAN
@@ -419,7 +424,8 @@ class MLayer(object):
                 wnum = 2 * numpy.pi * energy / tocm
 
                 COS_POLE = 1.0
-                R_P,R_S,PHASEP,PHASES,ABSOR = self.reflec(wnum,sin_ref,COS_POLE,k_what)
+
+                R_S,R_P,tmp,phases,phasep = self.reflec(wnum,sin_ref,COS_POLE,k_what)
 
                 R_S_array[j-1,i-1] = R_S
                 R_P_array[j-1,i-1] = R_P
@@ -618,6 +624,21 @@ class MLayer(object):
 
         return R_S,R_P,0,phases,phasep
 
+    def plot_optical_constants(self):
+        from srxraylib.plot.gol import plot
+
+
+        ENER = self.pre_mlayer_dict["energy"]
+        DELTA_S = self.pre_mlayer_dict["delta_s"]
+        DELTA_E = self.pre_mlayer_dict["delta_e"]
+        DELTA_O = self.pre_mlayer_dict["delta_o"]
+        BETA_S = self.pre_mlayer_dict["beta_s"]
+        BETA_E = self.pre_mlayer_dict["beta_e"]
+        BETA_O = self.pre_mlayer_dict["beta_o"]
+
+        plot(ENER,DELTA_S,ENER,DELTA_E,ENER,DELTA_O,legend=["substrate","even (close to substrate)","odd (close to vacuum"])
+
+
     def fresnel(self,TFACT,GFACT,NPAIR,SIN_REF,COS_POLE,XLAM,
                 delo,dele,dels,beto,bete,bets,t_o,t_e,mlroughness1,mlroughness2):
 
@@ -707,6 +728,24 @@ class MLayer(object):
         ffvp = (fv-fo/ro2)/(fv+fo/ro2)
         ffsp = (fe/re2-fs/rs2)/(fe/re2+fs/rs2)
 
+        if NPAIR == 0: # now there is only substrate and vacuum
+            fe = fv
+            fo = fs
+            # ! Fresnel formula "S" (in function of incidence angle and critical angle)
+            ffe = (fe - fo) / (fe + fo)
+            ffo = -ffe
+            ffv = (fv - fo) / (fv + fo)
+            ffs = (fe - fs) / (fe + fs)
+            # ! Fresnel formula "P" (in function of incidence angle and critical angle)
+            ffep = (fe / re2 - fo / ro2) / (fe / re2 + fo / ro2)
+            ffop = -ffep
+            ffvp = (fv - fo / ro2) / (fv + fo / ro2)
+            ffsp = (fe / re2 - fs / rs2) / (fe / re2 + fs / rs2)
+
+
+
+
+
         # ! another way
         # ! ro=(1.0D0-delo-ci*beto)
         # ! re=(1.0D0-dele-ci*bete)
@@ -758,7 +797,6 @@ class MLayer(object):
 
         # ! loop over the bilayers
         # ! remember that "even" is the bottom sublayer
-
         for j in range(NPAIR): #   =1,n   ! n is the number of bilayers
             # ! C
             # ! C compute the thickness for the odd and even material :
@@ -791,12 +829,10 @@ class MLayer(object):
         # !
         # ! vacuum interface
         # !
-
         arg_v = fo * fv * sigma_v2 / numpy.sqrt(ro2)
         fnevot_v = numpy.exp(-prefact * arg_v)
         r = (r + ffv * fnevot_v) / (r * ffv * fnevot_v + 1.0)
         rp = (rp + ffvp * fnevot_v) / (rp * ffvp * fnevot_v + 1.0)
-
         #
         # !
         # ! calculate phases
@@ -806,27 +842,46 @@ class MLayer(object):
 
         PHASEP = numpy.arctan2(rp.imag,rp.real)
         anp = numpy.abs(rp)
-
         return ans,anp,PHASES,PHASEP
 
 if __name__ == "__main__":
 
     from srxraylib.plot.gol import plot
-    # a = MLayer.pre_mlayer()
+
+
+    # a = MLayer.pre_mlayer(
+    #     interactive=False,
+    #     FILE="pre_mlayer.dat",
+    #     E_MIN=100.0, E_MAX=500.0,
+    #     O_DENSITY=7.19, O_MATERIAL="Cr",  # odd: closer to vacuum
+    #     E_DENSITY=3.00, E_MATERIAL="Sc",  # even: closer to substrate
+    #     S_DENSITY=2.33, S_MATERIAL="Si",  # substrate
+    #     GRADE_DEPTH=0,
+    #     N_PAIRS=50,
+    #     THICKNESS=22.0,
+    #     GAMMA=10.0/22.0,  #  gamma ratio  =  t(even) / (t(odd) + t(even))")
+    #     ROUGHNESS_EVEN=0.0,
+    #     ROUGHNESS_ODD=0.0,
+    #     FILE_DEPTH="myfile_depth.dat",
+    #     GRADE_SURFACE=0,
+    #     FILE_SHADOW="mlayer1.sha",
+    #     FILE_THICKNESS="mythick.dat",
+    #     FILE_GAMMA="mygamma.dat",
+    #     AA0=1.0,AA1=0.0,AA2=0.0,AA3=0.0)
 
     a = MLayer()
-    a.read_preprocessor_file("/Users/srio/Oasys/mlayer.dat")
+    a.read_preprocessor_file("/home/manuel/Oasys/mlayer.par")
 
     #
     # energy scan
     #
-    # rs, rp, e, t = a.scan(fileOut=None, #"pre_mlayer_scan.dat",
-    #         energyN=51,energy1=5000.0,energy2=20000.0,
-    #         thetaN=1,theta1=0.75,theta2=0.75)
-    #
-    # print(rs.shape,rp.shape,e.shape,t.shape)
-    #
-    # plot(e,rs[:,0],xtitle="Photon energy [eV]",ytitle="Reflectivity")
+    rs, rp, e, t = a.scan(fileOut=None, #"pre_mlayer_scan.dat",
+            energyN=100,energy1=300.0,energy2=500.0,
+            thetaN=1,theta1=45.0,theta2=45.0)
+
+    print(rs.shape,rp.shape,e.shape,t.shape)
+
+    plot(e,rs[:,0],xtitle="Photon energy [eV]",ytitle="Reflectivity")
 
     #
     # theta scan
@@ -842,5 +897,5 @@ if __name__ == "__main__":
     #
     # single point
     #
-    a.scan(fileOut=None, #"pre_mlayer_scan.dat",
-            energyN=1,energy1=18700.0,thetaN=1,theta1=0.05)
+    # a.scan(fileOut=None, #"pre_mlayer_scan.dat",
+    #         energyN=1,energy1=18700.0,thetaN=1,theta1=0.05)
