@@ -120,7 +120,7 @@ def test_aw1():
                  legend = ["shadow3 (pre_mlayer_scan)","shadow4 (MLayer)"])
 
         print(s3[:,0].shape,s3[:,2].shape,t.shape, rs[:,0].shape)
-        assert_almost_equal(s3[:,2],rs[:,0])
+        assert_almost_equal(s3[:,2],rs[:,0],6)
 
 
 
@@ -148,6 +148,7 @@ def test_substrate():
         FILE_GAMMA="mygamma.dat",
         AA0=1.0,AA1=0.0,AA2=0.0,AA3=0.0)
 
+    # a.read_preprocessor_file("pre_mlayer.dat")
     #
     # energy scan
     #
@@ -175,5 +176,6 @@ if __name__ == "__main__":
     test_xoppy_defauls()
 
     test_aw1()
-
+    #
     test_substrate()
+

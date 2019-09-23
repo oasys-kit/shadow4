@@ -32,7 +32,7 @@ if __name__ == "__main__":
     f.close()
     print("File written to disk: pre_mlayer_scan.inp")
 
-    os.system("/Users/srio/OASYS1.1/shadow3/shadow3 < pre_mlayer_scan.inp")
+    os.system("/home/manuel/OASYS1.2/shadow3/shadow3 < pre_mlayer_scan.inp")
 
     shadow3_data = numpy.loadtxt("pre_mlayer_scan.dat")
 
