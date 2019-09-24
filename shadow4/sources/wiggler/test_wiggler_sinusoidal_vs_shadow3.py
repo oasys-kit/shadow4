@@ -7,7 +7,7 @@ from srxraylib.plot.gol import plot, plot_scatter, plot_image
 from syned.storage_ring.magnetic_structures.wiggler import Wiggler
 from syned.storage_ring.electron_beam import ElectronBeam
 
-from minishadow.wiggler.source_wiggler import SourceWiggler
+from shadow4.sources.wiggler.source_wiggler import SourceWiggler
 
 def run_python_preprocessors(e_min=1000.0,e_max=10000.0 ):
 

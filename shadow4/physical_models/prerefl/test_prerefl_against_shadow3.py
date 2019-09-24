@@ -1,5 +1,5 @@
 import os
-from minishadow.prerefl.prerefl import PreRefl
+from shadow4.physical_models.prerefl.prerefl import PreRefl
 
 prerefl_test_dot_inp = """prerefl_test
 Be5_30.dat
@@ -16,7 +16,7 @@ if __name__ == "__main__":
     f.close()
     print("File written to disk: prerefl_test.inp")
 
-    os.system("/Users/srio/OASYS1.1/shadow3/shadow3 < prerefl_test.inp")
+    os.system("/home/manuel/OASYS1.2/shadow3/shadow3 < prerefl_test.inp")
 
 
     #

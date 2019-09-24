@@ -1,7 +1,7 @@
 import Shadow
 import numpy
 
-from minishadow.bending_magnet.source_bending_magnet import SourceBendingMagnet
+from shadow4.sources.bending_magnet.source_bending_magnet import SourceBendingMagnet
 from syned.storage_ring.electron_beam import ElectronBeam
 from syned.storage_ring.magnetic_structures.bending_magnet import BendingMagnet
 

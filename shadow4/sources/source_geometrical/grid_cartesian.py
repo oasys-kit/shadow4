@@ -1,6 +1,6 @@
 
 import numpy
-from minishadow.beam.beam import Beam
+from shadow4.beam.beam import Beam
 
 class SourceGridCartesian(object):
 

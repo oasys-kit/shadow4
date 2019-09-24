@@ -1,6 +1,6 @@
 import numpy
 
-from minishadow.optical_surfaces.conic import Conic
+from shadow4.optical_surfaces.conic import Conic
 from srxraylib.plot.gol import plot_surface
 
 

@@ -28,7 +28,7 @@ import scipy.constants as codata
 from scipy import interpolate
 
 from syned.storage_ring.magnetic_structures.wiggler import Wiggler
-from minishadow.wiggler.magnetic_structure_1D_field import MagneticStructure1DField
+from shadow4.sources.wiggler.magnetic_structure_1D_field import MagneticStructure1DField
 
 from syned.storage_ring.electron_beam import ElectronBeam
 

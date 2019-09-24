@@ -11,8 +11,8 @@ import Shadow
 #
 # minishadow
 #
-from minishadow.beam.beam import Beam
-from minishadow.optical_surfaces.conic import Conic
+from shadow4.beam.beam import Beam
+from shadow4.optical_surfaces.conic import Conic
 
 
 

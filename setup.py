@@ -2,6 +2,7 @@
 # /*##########################################################################
 #
 # Copyright (c) 2016 European Synchrotron Radiation Facility
+# Copyright (c) 2019 Lawrence Berkeley National Laboratory
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -27,9 +28,9 @@
 # Memorandum: 
 #
 # Install from sources: 
-#     git clone https://github.com/srio/minishadow
-#     cd minishadow
-#     /Applications/Oasys1.1.app/Contents/MacOS/PythonApp -m pip install -e . --no-deps --no-binary :all:
+#     git clone https://github.com/srio/shadow4
+#     cd shadow4
+#     python -m pip install -e . --no-deps --no-binary :all:
 #
 # Upload to pypi (when uploading, increment the version number):
 #     python setup.py register (only once, not longer needed)
@@ -47,30 +48,36 @@ __date__ = "25/11/2016"
 from setuptools import setup
 
 PACKAGES = [
-    "minishadow",
-    "minishadow.beam",
-    "minishadow.io",
-    "minishadow.source_geometrical",
-    "minishadow.undulator",
-    "minishadow.wiggler",
-    "minishadow.bending_magnet",
-    "minishadow.optical_elements",
-    "minishadow.optical_surfaces",
-    "minishadow.prerefl",
-    "minishadow.mlayer",
+    "shadow4",
+    "shadow4.beam",
+    "shadow4.examples",
+    "shadow4.io",
+    "shadow4.sources.source_geometrical",
+    "shadow4.sources.undulator",
+    "shadow4.sources.wiggler",
+    "shadow4.sources.bending_magnet",
+    "shadow4.optical_elements",
+    "shadow4.optical_surfaces",
+    "shadow4.physical_models.prerefl",
+    "shadow4.physical_models.mlayer",
 ]
 
-setup(name='minishadow',
-      version='0.0.1',
-      description='implementation in python of some basic ray-tracing that mimic shadow',
+INSTALL_REQUIRES = (
+    'setuptools',
+    'numpy',
+    'scipy',
+    'syned',
+    'srxraylib',
+)
+
+
+setup(name='shadow4',
+      version='0.0.10',
+      description='shadow implementation in python',
       author='Manuel Sanchez del Rio',
-      author_email='srio@esrf.eu',
-      url='https://github.com/srio/minishadow/',
+      author_email='srio@lbl.gov, srio@esrf.eu',
+      url='https://github.com/srio/shadow4/',
       packages=PACKAGES,
-      install_requires=[
-                        'numpy',
-                        'scipy'
-                       ],
-      # test_suite='tests',
+      install_requires=INSTALL_REQUIRES,
      )
 

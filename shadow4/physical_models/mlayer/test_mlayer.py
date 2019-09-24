@@ -1,6 +1,6 @@
 
 from srxraylib.plot.gol import plot
-from minishadow.mlayer.mlayer import MLayer
+from shadow4.physical_models.mlayer.mlayer import MLayer
 import numpy
 from numpy.testing import assert_almost_equal
 
