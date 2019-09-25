@@ -17,10 +17,16 @@ import scipy.constants as codata
 
 tocm = codata.h*codata.c/codata.e*1e2 # 12398.419739640718e-8
 
+try:
+    import xraylib
+except:
+    pass
+
 class MLayer(object):
 
     def __init__(self):
 
+        self.using_pre_mlayer = False
         self.pre_mlayer_dict = None
 
     def read_preprocessor_file(self,filename):
@@ -408,7 +414,114 @@ class MLayer(object):
 
         out = MLayer()
         out.pre_mlayer_dict = pre_mlayer_dict
+        out.using_pre_mlayer = True
         return out
+
+
+    @classmethod
+    def initialize_from_bilayer_stack(cls,
+            material_S="Si", density_S=None, roughness_S=0.0,
+            material_E="B4C",density_E=None, roughness_E=0.0,
+            material_O="Ru", density_O=None, roughness_O=0.0,
+            bilayer_pairs=70,
+            bilayer_thickness=33.1,
+            bilayer_gamma=0.483,
+            ):
+
+        npair = int(bilayer_pairs)
+
+        #define variables
+        thick        = []  #[0e0]*npair
+        gamma1       = []  #[0e0]*npair
+        mlroughness1 = []  #[0e0]*npair
+        mlroughness2 = []  #[0e0]*npair
+        # material1    = []
+        # material2    = []
+        # density1     = []
+        # density2     = []
+
+        for i in range(npair):
+            thick.append(bilayer_thickness)   #  float(BILAYER_THICKNESS)
+            gamma1.append(bilayer_gamma)   #  float(BILAYER_GAMMA)
+            mlroughness1.append(roughness_E)   #  float(ROUGHNESS_E)
+            mlroughness2.append(roughness_O)   #  float(ROUGHNESS_O)
+            # material1.append(material_E)
+            # material2.append(material_O)
+            # density1.append(density_E)
+            # density2.append(density_O)
+
+        pre_mlayer_dict = {}
+
+        pre_mlayer_dict["np"] = bilayer_pairs
+
+
+
+
+        #! srio@esrf.eu 2012-06-07 Nevot-Croce ML roughness model implemented.
+        #! By convention, starting from the version that includes ML roughness
+        #! we set NPAR negative, in order to assure compatibility with old
+        #! versions. If NPAR<0, roughness data are read, if NPAR>0 no roughness.
+        pre_mlayer_dict["npair"] = -npair
+
+        pre_mlayer_dict["thick"]        = numpy.array(thick)
+        pre_mlayer_dict["gamma1"]       = numpy.array(gamma1)
+        pre_mlayer_dict["mlroughness1"] = numpy.array(mlroughness1)
+        pre_mlayer_dict["mlroughness2"] = numpy.array(mlroughness2)
+
+        #These keys are not in the original pre_mlayer_dict
+        pre_mlayer_dict["material1"] = material_E
+        pre_mlayer_dict["material2"] = material_O
+        pre_mlayer_dict["materialS"] = material_S
+
+
+        pre_mlayer_dict["roughnessS"] = roughness_S
+
+
+        pre_mlayer_dict["density1"] = density_E
+        pre_mlayer_dict["density2"] = density_O
+        pre_mlayer_dict["densityS"] = density_S
+
+        if pre_mlayer_dict["densityS"] is None:
+            try:
+                pre_mlayer_dict["densityS"] = xraylib.ElementDensity(xraylib.SymbolToAtomicNumber(pre_mlayer_dict["materialS"]))
+            except:
+                raise Exception("Failed to load density for material: %s"%(pre_mlayer_dict["material1"]))
+        if pre_mlayer_dict["density1"] is None:
+            try:
+                pre_mlayer_dict["density1"] = xraylib.ElementDensity(xraylib.SymbolToAtomicNumber(pre_mlayer_dict["material1"]))
+            except:
+                raise Exception("Failed to load density for material: %s"%(pre_mlayer_dict["material1"]))
+        if pre_mlayer_dict["density2"] is None:
+            try:
+                pre_mlayer_dict["density2"] = xraylib.ElementDensity(xraylib.SymbolToAtomicNumber(pre_mlayer_dict["material2"]))
+            except:
+                raise Exception("Failed to load density for material: %s"%(pre_mlayer_dict["material2"]))
+
+
+        # fill unused keys
+        pre_mlayer_dict["energy"] = None
+        pre_mlayer_dict["delta_s"] = None
+        pre_mlayer_dict["beta_s"] = None
+        pre_mlayer_dict["delta_e"] = None
+        pre_mlayer_dict["beta_e"] = None
+        pre_mlayer_dict["delta_o"] = None
+        pre_mlayer_dict["beta_o"] = None
+        pre_mlayer_dict["igrade"] = None
+        if pre_mlayer_dict["igrade"] == 1:
+            pre_mlayer_dict["fgrade"] = None
+        elif pre_mlayer_dict["igrade"] == 2:  # igrade=2, coefficients
+            pre_mlayer_dict["a0"] = None
+            pre_mlayer_dict["a1"] = None
+            pre_mlayer_dict["a2"] = None
+            pre_mlayer_dict["a3"] = None
+
+        # return
+        out = MLayer()
+        out.pre_mlayer_dict = pre_mlayer_dict
+        out.using_pre_mlayer = False
+        return out
+
+
 
     # !
     # ! PRE_MLAYER_SCAN
@@ -516,23 +629,11 @@ class MLayer(object):
         phasep = 0.0
 
         NIN = self.pre_mlayer_dict["np"]
-
-        ENER = self.pre_mlayer_dict["energy"]
-        wnum = 2 * numpy.pi * ENER / tocm
-        QMIN = wnum[0]
-        QSTEP = wnum[1] - wnum[0]
-
-        DELTA_S = self.pre_mlayer_dict["delta_s"]
-        DELTA_E = self.pre_mlayer_dict["delta_e"]
-        DELTA_O = self.pre_mlayer_dict["delta_o"]
-        BETA_S = self.pre_mlayer_dict["beta_s"]
-        BETA_E = self.pre_mlayer_dict["beta_e"]
-        BETA_O = self.pre_mlayer_dict["beta_o"]
-
+        PHOT_ENER = WNUM * tocm / (2 * numpy.pi)  # eV
         NPAIR = numpy.abs(self.pre_mlayer_dict["npair"])
-
+        XLAM = 2 * numpy.pi / WNUM * 1.0e8  # Angstrom
         gamma1 = self.pre_mlayer_dict["gamma1"]
-        t_oe   = self.pre_mlayer_dict["thick"]
+        t_oe = self.pre_mlayer_dict["thick"]
 
         # gamma1 = ratio t(even)/(t(odd)+t(even))  of each layer pair
         t_e = gamma1 * t_oe
@@ -541,92 +642,115 @@ class MLayer(object):
         mlroughness1 = self.pre_mlayer_dict["mlroughness1"]
         mlroughness2 = self.pre_mlayer_dict["mlroughness2"]
 
+        if self.using_pre_mlayer:
+            ENER = self.pre_mlayer_dict["energy"]
+            wnum = 2 * numpy.pi * ENER / tocm
+            QMIN = wnum[0]
+            QSTEP = wnum[1] - wnum[0]
 
-        i_grade = self.pre_mlayer_dict["igrade"]
-
-        # TODO graded ml
-        #         ! C
-        #         ! C Is the multilayer thickness graded ?
-        #         ! C
-        #         read    (iunit,*)   i_grade
-        #         ! 0=None
-        #         ! 1=spline files
-        #         ! 2=quadic coefficients
-        #
-        #         ! spline
-        #         if (i_grade.eq.1) then
-        #           read  (iunit,'(a)') file_grade
-        #           OPEN  (45, FILE=adjustl(FILE_GRADE), STATUS='OLD', &
-        #                 FORM='UNFORMATTED', IOSTAT=iErr)
-        #           ! srio added test
-        #           if (iErr /= 0 ) then
-        #             print *,"REFLEC: File not found: "//trim(adjustl(file_grade))
-        #             print *,'Error: REFLEC: File not found. Aborted.'
-        #             ! stop 'File not found. Aborted.'
-        #           end if
-        #
-        #           READ  (45) NTX, NTY
-        #           READ  (45) TX,TY
-        #           !DO 205 I = 1, NTX
-        #           !DO 205 J = 1, NTY
-        #           DO I = 1, NTX
-        #             DO J = 1, NTY
-        #               READ  (45) TSPL(1,I,1,J),TSPL(1,I,2,J),    & ! spline for t
-        #                          TSPL(2,I,1,J),TSPL(2,I,2,J)
-        #             END DO
-        #           END DO
-        #
-        #           READ (45) NGX, NGY
-        #           READ (45) GX,GY
-        #           DO I = 1, NGX
-        #             DO J = 1, NGY
-        #               READ (45) GSPL(1,I,1,J),GSPL(1,I,2,J),    & ! spline for gamma
-        #                         GSPL(2,I,1,J),GSPL(2,I,2,J)
-        #             END DO
-        #           END DO
-        #
-        #           CLOSE (45)
-        #         end if
-        #
-        #         if (i_grade.eq.2) then  ! quadric coefficients
-        #           !
-        #           ! laterally gradded multilayer
-        #           !
-        #
-        #           ! srio@esrf.eu added cubic term (requested B Meyer, LNLS)
-        #           read(iunit,*,IOSTAT=iErr) lateral_grade_constant,lateral_grade_slope, &
-        #                         lateral_grade_quadratic,lateral_grade_cubic
-        #
-        #         end if
-        #
-        #         close(unit=iunit)
-        #         tfilm = absor
-        #         RETURN
-        #     END IF
-        # END IF
+            DELTA_S = self.pre_mlayer_dict["delta_s"]
+            DELTA_E = self.pre_mlayer_dict["delta_e"]
+            DELTA_O = self.pre_mlayer_dict["delta_o"]
+            BETA_S = self.pre_mlayer_dict["beta_s"]
+            BETA_E = self.pre_mlayer_dict["beta_e"]
+            BETA_O = self.pre_mlayer_dict["beta_o"]
 
 
-        PHOT_ENER  = WNUM * tocm / (2*numpy.pi)   # eV
+
+            i_grade = self.pre_mlayer_dict["igrade"]
+
+            # TODO graded ml
+            #         ! C
+            #         ! C Is the multilayer thickness graded ?
+            #         ! C
+            #         read    (iunit,*)   i_grade
+            #         ! 0=None
+            #         ! 1=spline files
+            #         ! 2=quadic coefficients
+            #
+            #         ! spline
+            #         if (i_grade.eq.1) then
+            #           read  (iunit,'(a)') file_grade
+            #           OPEN  (45, FILE=adjustl(FILE_GRADE), STATUS='OLD', &
+            #                 FORM='UNFORMATTED', IOSTAT=iErr)
+            #           ! srio added test
+            #           if (iErr /= 0 ) then
+            #             print *,"REFLEC: File not found: "//trim(adjustl(file_grade))
+            #             print *,'Error: REFLEC: File not found. Aborted.'
+            #             ! stop 'File not found. Aborted.'
+            #           end if
+            #
+            #           READ  (45) NTX, NTY
+            #           READ  (45) TX,TY
+            #           !DO 205 I = 1, NTX
+            #           !DO 205 J = 1, NTY
+            #           DO I = 1, NTX
+            #             DO J = 1, NTY
+            #               READ  (45) TSPL(1,I,1,J),TSPL(1,I,2,J),    & ! spline for t
+            #                          TSPL(2,I,1,J),TSPL(2,I,2,J)
+            #             END DO
+            #           END DO
+            #
+            #           READ (45) NGX, NGY
+            #           READ (45) GX,GY
+            #           DO I = 1, NGX
+            #             DO J = 1, NGY
+            #               READ (45) GSPL(1,I,1,J),GSPL(1,I,2,J),    & ! spline for gamma
+            #                         GSPL(2,I,1,J),GSPL(2,I,2,J)
+            #             END DO
+            #           END DO
+            #
+            #           CLOSE (45)
+            #         end if
+            #
+            #         if (i_grade.eq.2) then  ! quadric coefficients
+            #           !
+            #           ! laterally gradded multilayer
+            #           !
+            #
+            #           ! srio@esrf.eu added cubic term (requested B Meyer, LNLS)
+            #           read(iunit,*,IOSTAT=iErr) lateral_grade_constant,lateral_grade_slope, &
+            #                         lateral_grade_quadratic,lateral_grade_cubic
+            #
+            #         end if
+            #
+            #         close(unit=iunit)
+            #         tfilm = absor
+            #         RETURN
+            #     END IF
+            # END IF
 
 
-        #         ! C
-        #         ! C Multilayers reflectivity.
-        #         ! C First interpolate for all the refractive indices.
-        #         ! C
 
-        XLAM  =   2*numpy.pi / WNUM * 1.0e8    # Angstrom
 
-        ELFACTOR  = numpy.log10(1.0e4/30.0e0)/300.0e0
 
-        index1  = numpy.log10(PHOT_ENER/ENER[0])/ELFACTOR
-        index1 = int(index1)
+            #         ! C
+            #         ! C Multilayers reflectivity.
+            #         ! C First interpolate for all the refractive indices.
+            #         ! C
 
-        DELS  = DELTA_S[index1] + (DELTA_S[index1+1] - DELTA_S[index1]) *(PHOT_ENER - ENER[index1])/(ENER[index1+1] - ENER[index1])
-        BETS  =  BETA_S[index1] + ( BETA_S[index1+1] -  BETA_S[index1]) *(PHOT_ENER - ENER[index1])/(ENER[index1+1] - ENER[index1])
-        DELE  = DELTA_E[index1] + (DELTA_E[index1+1] - DELTA_E[index1]) *(PHOT_ENER - ENER[index1])/(ENER[index1+1] - ENER[index1])
-        BETE  =  BETA_E[index1] + ( BETA_E[index1+1] -  BETA_E[index1]) *(PHOT_ENER - ENER[index1])/(ENER[index1+1] - ENER[index1])
-        DELO  = DELTA_O[index1] + (DELTA_O[index1+1] - DELTA_O[index1]) *(PHOT_ENER - ENER[index1])/(ENER[index1+1] - ENER[index1])
-        BETO  =  BETA_O[index1] + ( BETA_O[index1+1] -  BETA_O[index1]) *(PHOT_ENER - ENER[index1])/(ENER[index1+1] - ENER[index1])
+
+
+            ELFACTOR  = numpy.log10(1.0e4/30.0e0)/300.0e0
+
+            index1  = numpy.log10(PHOT_ENER/ENER[0])/ELFACTOR
+            index1 = int(index1)
+
+            DELS  = DELTA_S[index1] + (DELTA_S[index1+1] - DELTA_S[index1]) *(PHOT_ENER - ENER[index1])/(ENER[index1+1] - ENER[index1])
+            BETS  =  BETA_S[index1] + ( BETA_S[index1+1] -  BETA_S[index1]) *(PHOT_ENER - ENER[index1])/(ENER[index1+1] - ENER[index1])
+            DELE  = DELTA_E[index1] + (DELTA_E[index1+1] - DELTA_E[index1]) *(PHOT_ENER - ENER[index1])/(ENER[index1+1] - ENER[index1])
+            BETE  =  BETA_E[index1] + ( BETA_E[index1+1] -  BETA_E[index1]) *(PHOT_ENER - ENER[index1])/(ENER[index1+1] - ENER[index1])
+            DELO  = DELTA_O[index1] + (DELTA_O[index1+1] - DELTA_O[index1]) *(PHOT_ENER - ENER[index1])/(ENER[index1+1] - ENER[index1])
+            BETO  =  BETA_O[index1] + ( BETA_O[index1+1] -  BETA_O[index1]) *(PHOT_ENER - ENER[index1])/(ENER[index1+1] - ENER[index1])
+        else: # not using preprocessor, using xraylib
+            DELS  = 1.0 - xraylib.Refractive_Index_Re(self.pre_mlayer_dict["materialS"],1e-3*PHOT_ENER,self.pre_mlayer_dict["densityS"])
+            BETS  =       xraylib.Refractive_Index_Im(self.pre_mlayer_dict["materialS"],1e-3*PHOT_ENER,self.pre_mlayer_dict["densityS"])
+            DELE  = 1.0 - xraylib.Refractive_Index_Re(self.pre_mlayer_dict["material1"],1e-3*PHOT_ENER,self.pre_mlayer_dict["density1"])
+            BETE  =       xraylib.Refractive_Index_Im(self.pre_mlayer_dict["material1"],1e-3*PHOT_ENER,self.pre_mlayer_dict["density1"])
+            DELO  = 1.0 - xraylib.Refractive_Index_Re(self.pre_mlayer_dict["material2"],1e-3*PHOT_ENER,self.pre_mlayer_dict["density2"])
+            BETO  =       xraylib.Refractive_Index_Im(self.pre_mlayer_dict["material2"],1e-3*PHOT_ENER,self.pre_mlayer_dict["density2"])
+
+
 
         TFACT = 1.0
         GFACT = 1.0
@@ -663,19 +787,6 @@ class MLayer(object):
 
         return R_S,R_P,0,phases,phasep
 
-    def plot_optical_constants(self):
-        from srxraylib.plot.gol import plot
-
-
-        ENER = self.pre_mlayer_dict["energy"]
-        DELTA_S = self.pre_mlayer_dict["delta_s"]
-        DELTA_E = self.pre_mlayer_dict["delta_e"]
-        DELTA_O = self.pre_mlayer_dict["delta_o"]
-        BETA_S = self.pre_mlayer_dict["beta_s"]
-        BETA_E = self.pre_mlayer_dict["beta_e"]
-        BETA_O = self.pre_mlayer_dict["beta_o"]
-
-        plot(ENER,DELTA_S,ENER,DELTA_E,ENER,DELTA_O,legend=["substrate","even (close to substrate)","odd (close to vacuum"])
 
 
     def fresnel(self,TFACT,GFACT,NPAIR,SIN_REF,COS_POLE,XLAM,
@@ -912,34 +1023,30 @@ if __name__ == "__main__":
     b.read_preprocessor_file("pre_mlayer.dat")
 
 
-    for key in a.pre_mlayer_dict.keys():
-        print(">>>>",key)
-        print(a.pre_mlayer_dict[key] - b.pre_mlayer_dict[key])
-
     #
     # energy scan
     #
-    # rs, rp, e, t = a.scan(fileOut=None, #"pre_mlayer_scan.dat",
-    #         energyN=100,energy1=300.0,energy2=500.0,
-    #         thetaN=1,theta1=45.0,theta2=45.0)
-    #
-    # print(rs.shape,rp.shape,e.shape,t.shape)
-    #
-    # plot(e,rs[:,0],xtitle="Photon energy [eV]",ytitle="Reflectivity")
+    rs, rp, e, t = a.scan(fileOut=None, #"pre_mlayer_scan.dat",
+            energyN=100,energy1=300.0,energy2=500.0,
+            thetaN=1,theta1=45.0,theta2=45.0)
+
+    print(rs.shape,rp.shape,e.shape,t.shape)
+
+    plot(e,rs[:,0],xtitle="Photon energy [eV]",ytitle="Reflectivity")
 
     #
     # theta scan
     #
-    # rs, rp, e, t = a.scan(fileOut=None, #"pre_mlayer_scan.dat",
-    #         energyN=1,energy1=18700.0,energy2=18700.0,
-    #         thetaN=1000,theta1=0.001,theta2=2.0)
-    #
-    # print(rs.shape,rp.shape,e.shape,t.shape)
-    #
-    # plot(t,rs[0],xtitle="angle [deg]",ytitle="Reflectivity",ylog=False)
+    rs, rp, e, t = a.scan(fileOut=None, #"pre_mlayer_scan.dat",
+            energyN=1,energy1=400.0,energy2=401.0,
+            thetaN=1000,theta1=40.0,theta2=50.0)
+
+    print(rs.shape,rp.shape,e.shape,t.shape)
+
+    plot(t,rs[0],xtitle="angle [deg]",ytitle="Reflectivity",ylog=False)
 
     #
     # single point
     #
-    # a.scan(fileOut=None, #"pre_mlayer_scan.dat",
-    #         energyN=1,energy1=18700.0,thetaN=1,theta1=0.05)
+    a.scan(fileOut=None, #"pre_mlayer_scan.dat",
+            energyN=1,energy1=398.0,thetaN=1,theta1=45.0)
