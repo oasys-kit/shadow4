@@ -91,7 +91,7 @@ def test_aw1():
     #
     # energy scan
     #
-    rs, rp, e, t = a.scan(fileOut=None, #"pre_mlayer_scan.dat",
+    rs, rp, e, t = a.scan(h5file="", #"pre_mlayer_scan.dat",
             energyN=300,
             energy1=300.0, #300.0,
             energy2=500.0, #500.0,
@@ -152,7 +152,7 @@ def test_substrate():
     #
     # energy scan
     #
-    rs, rp, e, t = a.scan(fileOut=None, #"pre_mlayer_scan.dat",
+    rs, rp, e, t = a.scan(h5file="", #"pre_mlayer_scan.dat",
             energyN=1000,
             energy1=300.0, #300.0,
             energy2=6000.0, #500.0,
@@ -188,7 +188,7 @@ def test_no_preprocessor():
     #
 
     #
-    rs, rp, e, t = out.scan(fileOut=None,  # "pre_mlayer_scan.dat",
+    rs, rp, e, t = out.scan(h5file="",  # "pre_mlayer_scan.dat",
                           energyN=1, energy1=8050.0, energy2=8050.0,
                           thetaN=600, theta1=0.0, theta2=6.0)
     #
@@ -239,9 +239,9 @@ if __name__ == "__main__":
     #
     # test_xoppy_defauls()
     #
-    # test_aw1()
-    # #
-    # test_substrate()
+    test_aw1()
+    #
+    test_substrate()
 
     test_no_preprocessor()
 

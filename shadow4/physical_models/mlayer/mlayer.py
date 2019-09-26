@@ -17,6 +17,8 @@ import scipy.constants as codata
 
 tocm = codata.h*codata.c/codata.e*1e2 # 12398.419739640718e-8
 
+from srxraylib.util.h5_simple_writer import H5SimpleWriter
+
 try:
     import xraylib
 except:
@@ -534,7 +536,7 @@ class MLayer(object):
     # ! It can be used for testing pre_mlayer, or for simple calculations of
     # ! ML reflectivity.
     # !
-    def scan(self,fileOut=None,
+    def scan(self,h5file="",
             energyN = 51,energy1 = 5000.0,energy2 = 20000.0,
             thetaN = 1,theta1 = 0.75,theta2 = 0.75):
 
@@ -553,14 +555,6 @@ class MLayer(object):
         else:
             thetaS = 0.0
 
-        if fileOut is not None:
-            f = open(fileOut,'w')
-
-            f.write("#F %s\n"%(fileOut))
-            f.write("\n")
-            f.write("#S 1 pre_mlater_test results\n")
-            f.write("#N 4\n" )
-            f.write("#L energy[eV]  grazingAngle [deg]  R_S  R_P\n")
 
         R_S_array = numpy.zeros((energyN,thetaN))
         R_P_array = numpy.zeros_like(R_S_array)
@@ -597,12 +591,39 @@ class MLayer(object):
                     print("   R_P:                          ",R_P)
                     print("------------------------------------------------------------------------")
 
-                if fileOut is not None:
-                    f.write("%f  %f  %f  %f\n"%(energy,theta,R_S,R_P))
+        if h5file != "":
+            h5_initialize = True
+            if True: #try:
+                if h5_initialize:
+                    h5w = H5SimpleWriter.initialize_file(h5file, creator="xoppy_multilayer.py")
+                else:
+                    h5w = H5SimpleWriter(h5file, None)
+                h5_entry_name = "MLayer"
+                h5w.create_entry(h5_entry_name,nx_default="reflectivity-s")
+                if energyN == 1:
+                    h5w.add_dataset(theta_array, R_S_array[0], dataset_name="reflectivity-s", entry_name=h5_entry_name,
+                                    title_x="Grazing angle [deg]", title_y="Reflectivity-s")
+                elif thetaN == 1:
+                    h5w.add_dataset(energy_array, R_S_array[:,0], dataset_name="reflectivity-s", entry_name=h5_entry_name,
+                                    title_x="Photon energy [eV]", title_y="Reflectivity-s")
+                else:
+                    # h5w.create_entry(h5_entry_name, nx_default="EnergyAngleScan")
+                    h5w.add_image(R_S_array, energy_array, theta_array, image_name="EnergyAngleScan",
+                                  entry_name=h5_entry_name,
+                                  title_x="Photon Energy [eV]",
+                                  title_y="Grazing Angle [deg]")
 
-        if fileOut is not None:
-            f.close()
-            print("File %s written to disk"%fileOut)
+                h5w.create_entry("parameters", root_entry=h5_entry_name, nx_default=None)
+                for key in self.pre_mlayer_dict.keys():
+                    try:
+                        h5w.add_key(key, self.pre_mlayer_dict[key], entry_name=h5_entry_name + "/parameters")
+                    except:
+                        pass
+
+                print("File written to disk: %s" % h5file)
+            # except:
+            #     raise Exception("ERROR writing h5 file")
+
 
         return R_S_array,R_P_array,energy_array,theta_array
 
@@ -1026,7 +1047,7 @@ if __name__ == "__main__":
     #
     # energy scan
     #
-    rs, rp, e, t = a.scan(fileOut=None, #"pre_mlayer_scan.dat",
+    rs, rp, e, t = a.scan(h5file="",
             energyN=100,energy1=300.0,energy2=500.0,
             thetaN=1,theta1=45.0,theta2=45.0)
 
@@ -1037,7 +1058,7 @@ if __name__ == "__main__":
     #
     # theta scan
     #
-    rs, rp, e, t = a.scan(fileOut=None, #"pre_mlayer_scan.dat",
+    rs, rp, e, t = a.scan(h5file="",
             energyN=1,energy1=400.0,energy2=401.0,
             thetaN=1000,theta1=40.0,theta2=50.0)
 
@@ -1048,5 +1069,5 @@ if __name__ == "__main__":
     #
     # single point
     #
-    a.scan(fileOut=None, #"pre_mlayer_scan.dat",
+    a.scan(h5file="",
             energyN=1,energy1=398.0,thetaN=1,theta1=45.0)
