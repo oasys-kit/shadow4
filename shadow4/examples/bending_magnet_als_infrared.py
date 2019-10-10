@@ -3,11 +3,12 @@ from syned.storage_ring.electron_beam import ElectronBeam
 from syned.storage_ring.magnetic_structures.bending_magnet import BendingMagnet
 
 from shadow4.sources.bending_magnet.source_bending_magnet import SourceBendingMagnet
-from srxraylib.plot.gol import plot_scatter
+
 
 
 if __name__ == "__main__":
-
+    from srxraylib.plot.gol import plot_scatter, set_qt
+    set_qt()
 
     flag_emittance = True        # when sampling rays: Use emittance (0=No, 1=Yes)
 

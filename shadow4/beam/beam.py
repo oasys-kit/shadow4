@@ -1,5 +1,10 @@
 import numpy
 import scipy.constants as codata
+from numpy.testing import assert_almost_equal
+
+import h5py
+import time
+
 
 # IMPORTANT: Column 11 (index 10) is wavenumber (cm^-1) as internally in Shadow
 
@@ -56,9 +61,18 @@ class Beam(object):
     #
 
     def get_rays(self):
+        """
+
+        :return: numpy array (npoints,18)
+        """
         return self.rays.copy()
 
     def get_number_of_rays(self,nolost=0):
+        """
+
+        :param nolost: flag (default=0)
+        :return: number of rays
+        """
 
         try:
             w = self.get_column(10)
@@ -76,9 +90,15 @@ class Beam(object):
 
         return self.rays.shape[0]
 
-    def get_photon_energy_eV(self):
+    def get_photon_energy_eV(self,nolost=0):
+        """
+        returns the array with photon energy
+
+        :param nolost: 0: all rays  1: good rays, 2: bad rays
+        :return: array
+        """
         A2EV = 2.0*numpy.pi/(codata.h*codata.c/codata.e*1e2)
-        return self.get_column(11) / A2EV
+        return self.get_column(11,nolost=nolost) / A2EV
 
     def get_photon_wavelength(self):
         return 2*numpy.pi/self.get_column(11) * 1e-2
@@ -515,21 +535,21 @@ class Beam(object):
     # file i/o
     #
 
-    def get_shadow3_beam(self):
-        #TODO this dump uses now shadow3. To be removed after checking or write using fully python
-        import Shadow
-        beam_shadow3 = Shadow.Beam(N=self.get_number_of_rays())
-        beam_shadow3.rays = self.get_rays().copy()
-        return beam_shadow3
-
-        # beam_shadow3.write(file)
-        # print("File %s written to disk. "%file)
-
-    def dump_shadow3_file(self,file):
-        #TODO this dump uses now shadow3. To be removed after checking or write using fully python
-        beam3 = self.get_shadow3_beam()
-        beam3.write(file)
-        print("File %s written to disk. "%file)
+    # def get_shadow3_beam(self):
+    #     #TODO this dump uses now shadow3. To be removed after checking or write using fully python
+    #     import Shadow
+    #     beam_shadow3 = Shadow.Beam(N=self.get_number_of_rays())
+    #     beam_shadow3.rays = self.get_rays().copy()
+    #     return beam_shadow3
+    #
+    #     # beam_shadow3.write(file)
+    #     # print("File %s written to disk. "%file)
+    #
+    # def dump_shadow3_file(self,file):
+    #     #TODO this dump uses now shadow3. To be removed after checking or write using fully python
+    #     beam3 = self.get_shadow3_beam()
+    #     beam3.write(file)
+    #     print("File %s written to disk. "%file)
 
 
     #
@@ -552,3 +572,90 @@ class Beam(object):
     #
     # TODO: histo1, histo2
 
+    @classmethod
+    def column_names(cls):
+        return ["x","y","z",
+                      "v_x", "v_y", "v_z",
+                      "Es_x", "Es_y", "Es_z",
+                      "flag","wavevector","index","optical_path",
+                      "PhaseS","PhaseP",
+                      "Ep_x", "Ep_y", "Ep_z"]
+
+    def write(self,filename,overwrite=True,simulation_name="run001",beam_name="begin"):
+
+        if overwrite:
+            f = h5py.File(filename, 'w')
+        else:
+            f = h5py.File(filename, 'a')
+
+        # header
+        # point to the default data to be plotted
+        f.attrs['default'] = 'entry'
+        # give the HDF5 root some more attributes
+        f.attrs['file_name'] = filename
+        f.attrs['file_time'] = time.time()
+        f.attrs['creator'] = "shadow4"
+        f.attrs['HDF5_Version'] = h5py.version.hdf5_version
+        f.attrs['h5py_version'] = h5py.version.version
+
+
+        try:
+            f1 = f[simulation_name]
+        except:
+            f1 = f.create_group(simulation_name)
+
+        f1.attrs['NX_class'] = 'NXentry'
+        f1.attrs['default'] = "begin"
+
+        rays = self.get_rays()
+
+        f2 = f1.create_group(beam_name)
+        f2.attrs['NX_class'] = 'NXdata'
+        f2.attrs['signal'] =  b'z'
+        f2.attrs['axes'] = b'x'
+
+        column_names = self.column_names()
+
+        for i,column_name in enumerate(column_names):
+
+            # Y data
+            ds = f2.create_dataset(column_name, data=rays[:,i].copy())
+            ds.attrs['long_name'] = "column %s"%(i+1)  # suggested X axis plot label
+
+        f.close()
+        print("File written/updated: %s"%filename)
+
+    @classmethod
+    def load(cls,filename,simulation_name="run001",beam_name="begin"):
+
+        import h5py
+
+        f = h5py.File(filename, 'r')
+
+        column_names = cls.column_names()
+
+        try:
+            x = (f["%s/%s/x"%(simulation_name,beam_name)])[:]
+
+            beam = Beam(N=x.size)
+            rays = numpy.zeros( (x.size,18))
+            for i,column_name in enumerate(column_names):
+                rays[:,i] = (f["%s/%s/%s"%(simulation_name,beam_name,column_name)])[:]
+        except:
+            f.close()
+            raise Exception("Cannot find data in %s:/%s/%s" % (filename, simulation_name, beam_name))
+
+        f.close()
+
+        return Beam.initialize_from_array(rays)
+
+    def identical(self,beam2):
+
+        try:
+            assert_almost_equal(self.get_rays(),beam2.get_rays())
+            return True
+        except:
+            return False
+
+if __name__ == "__main__":
+    pass

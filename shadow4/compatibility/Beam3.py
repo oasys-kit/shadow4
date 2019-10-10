@@ -1,5 +1,7 @@
 
 
+import numpy
+
 from Shadow import Beam as Beam_shadow3
 from shadow4.beam.beam import Beam as Beam_shadow4
 
@@ -26,12 +28,41 @@ class Beam3(Beam_shadow3):
 
         return b3
 
+    @classmethod
+    def load_h5(cls,filename,simulation_name="run001",beam_name="begin"):
+
+        import h5py
+
+        f = h5py.File(filename, 'r')
+
+        column_names = Beam_shadow4.column_names()
+
+        try:
+            x = (f["%s/%s/x"%(simulation_name,beam_name)])[:]
+
+            rays = numpy.zeros( (x.size,18))
+            for i,column_name in enumerate(column_names):
+                rays[:,i] = (f["%s/%s/%s"%(simulation_name,beam_name,column_name)])[:]
+
+        except:
+            f.close()
+            raise Exception("Cannot find data in %s:/%s/%s"%(filename,simulation_name,beam_name))
+
+        f.close()
+
+        b3 = Beam3(N=x.size)
+        b3.rays = rays
+
+        return b3
+
 
 if __name__ == "__main__":
+
     from numpy.testing import assert_almost_equal
     import Shadow
     from shadow4.sources.source_geometrical.grid_cartesian import  SourceGridCartesian
     from srxraylib.plot.gol import set_qt
+
     set_qt()
 
     source = SourceGridCartesian.initialize_collimated_source(real_space=[10., 0.0, 10.0], real_space_points=[100, 1, 100])
@@ -45,10 +76,19 @@ if __name__ == "__main__":
 
     Shadow.ShadowTools.plotxy(b3,1,3)
 
-    assert(b3, Beam_shadow3)
+    assert(isinstance(b3, Beam_shadow3))
 
     assert_almost_equal(b3.rays[:,10],b4.rays[:,10])
 
     assert_almost_equal(b3.getshonecol(11), b4.get_photon_energy_eV(),3)
+
+
+    #
+    # test reader
+    #
+
+    a = Beam3.load_h5("../examples/begin.h5")
+
+    Shadow.ShadowTools.plotxy(a,1,3,title="imported from h5 (shadow4)")
 
 

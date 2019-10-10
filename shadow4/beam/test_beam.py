@@ -4,8 +4,8 @@ __date__ = "17/01/2017"
 
 
 import numpy
-import unittest
 from numpy.testing import assert_equal, assert_almost_equal
+import unittest
 from shadow4.beam.beam import Beam
 
 class TestBeam(unittest.TestCase):
@@ -104,4 +104,23 @@ class TestBeam(unittest.TestCase):
         assert_equal(a.get_column(1).mean(),0)
         assert_almost_equal(a.get_column(2).mean(),0.0)
         assert_almost_equal(a.get_column(3).mean(),15.0)
+
+    def test_write_and_load(self):
+        print("# ")
+        print("# file write/load ")
+        print("# ")
+        a = Beam.initialize_as_pencil(200)
+        a.rays[:, 0] = numpy.random.rand(200)
+        a.rays[:, 2] = numpy.random.rand(200)
+
+        a.write("tmp.h5", simulation_name="run1", beam_name="begin", overwrite=True)
+        a.write("tmp.h5", simulation_name="run1", beam_name="star01", overwrite=False)
+        a.write("tmp.h5", simulation_name="run2", beam_name="begin", overwrite=False)
+
+        b = Beam.load("tmp.h5",simulation_name="run2", beam_name="begin")
+
+        print("a is equal to b ? ", a.identical(b))
+        assert(a.identical(b))
+
+
 

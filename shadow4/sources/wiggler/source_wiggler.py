@@ -22,18 +22,17 @@ rays = sw.calculate_rays()    # sample rays. Result is a numpy.array of shape (N
 
 import numpy
 
-from srxraylib.util.inverse_method_sampler import Sampler1D, Sampler2D, Sampler3D
-from srxraylib.plot.gol import plot,plot_scatter
+from srxraylib.util.inverse_method_sampler import Sampler1D
+from srxraylib.plot.gol import plot_scatter
 import scipy.constants as codata
-from scipy import interpolate
 
 from syned.storage_ring.magnetic_structures.wiggler import Wiggler
-from shadow4.sources.wiggler.magnetic_structure_1D_field import MagneticStructure1DField
+from shadow4.syned.magnetic_structure_1D_field import MagneticStructure1DField
 
 from syned.storage_ring.electron_beam import ElectronBeam
 
 
-from srxraylib.sources.srfunc import wiggler_trajectory, wiggler_spectrum, wiggler_cdf, sync_g1, sync_f, sync_ene, sync_ang
+from srxraylib.sources.srfunc import wiggler_trajectory, wiggler_spectrum, wiggler_cdf, sync_f
 
 from scipy.interpolate import interp1d
 

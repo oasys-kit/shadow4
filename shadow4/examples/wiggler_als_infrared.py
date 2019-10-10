@@ -1,21 +1,56 @@
 
 import numpy
 
+from srxraylib.plot.gol import plot,plot_scatter, set_qt
 
-from srxraylib.plot.gol import plot,plot_scatter
-
-
-from syned.storage_ring.magnetic_structures.wiggler import Wiggler
-from minishadow.wiggler.magnetic_structure_1D_field import MagneticStructure1DField
+from shadow4.syned.magnetic_structure_1D_field import MagneticStructure1DField
 
 from syned.storage_ring.electron_beam import ElectronBeam
 
-from minishadow.wiggler.source_wiggler import SourceWiggler
+from shadow4.sources.wiggler.source_wiggler import SourceWiggler
 
-from scipy.interpolate import interp1d
+from shadow4.beam.beam import Beam
+
+from scipy.ndimage import gaussian_filter1d
+
+
+def create_file_with_magnetic_field(filename):
+
+    L = 1605.0 #mm
+
+    y = numpy.linspace(0,L, 2000)
+
+    B = y * 0.0
+
+
+    for i in range(y.size):
+        if y[i] > 75 and y[i] < 575: B[i] = -0.876
+        if y[i] > 650 and y[i] < 975: B[i] = 0.16
+        if y[i] > 1030 and y[i] < 1530: B[i] = -0.8497
+
+    # plot(y, B)
+
+
+
+    B2 = gaussian_filter1d(B, 2.5)
+
+    y -= y[y.size//2]
+    y *= 1e-3
+
+    plot(y, B, y, B2, legend=["original","smoothed"],xtitle="y / m",ytitle="B / T")
+
+    f = open(filename, "w")
+    for i in range(y.size):
+        f.write("%f  %f\n" % (y[i], B2[i]))
+    f.close()
+    print("File written to disk: %s"%filename)
+
+
 
 
 if __name__ == "__main__":
+
+    set_qt()
 
     use_emittances=True
     e_min = 0.4
@@ -32,7 +67,7 @@ if __name__ == "__main__":
     ener_gev = 1.90
     per = 0.5
     kValue = 4
-    trajFile = "tmp.traj"
+    trajFile = ""
     shift_x_flag = 0
     shift_x_value = 0.0
     shift_betax_flag = 0
@@ -57,8 +92,9 @@ if __name__ == "__main__":
     # syned_wiggler = Wiggler(K_vertical=kValue,K_horizontal=0.0,period_length=per,number_of_periods=nPer)
 
     # B from file
-    # filename = "/home/manuel/Oasys/BM_smooth.b"
-    filename = "/home/manuel/Oasys/BM_multi_centered.b"
+
+    filename = "BM_multi.b"
+    create_file_with_magnetic_field(filename)
     syned_wiggler = MagneticStructure1DField.initialize_from_file(filename)
     # syned_wiggler.add_spatial_shift(-0.478)
     # syned_wiggler.flip_B()
@@ -79,7 +115,7 @@ if __name__ == "__main__":
                     ng_e=ng_e,
                     ng_j=nTrajPoints)
 
-    # sourcewiggler.set_electron_initial_conditions_by_label(position_label="maximum",velocity_label="half_excursion")
+
     sourcewiggler.set_electron_initial_conditions_by_label(position_label="value_at_zero",
                                                            velocity_label="value_at_zero")
 
@@ -93,5 +129,7 @@ if __name__ == "__main__":
     plot_scatter(rays[:,1],rays[:,0]*1e6,xtitle="Y m",ytitle="X um")
     plot_scatter(rays[:,1],rays[:,2]*1e6,xtitle="Y m",ytitle="Z um")
     plot_scatter(rays[:,3]*1e6,rays[:,5]*1e6,xtitle="X' urad",ytitle="Z' urad")
+
+    Beam.initialize_from_array(rays).write("begin.h5")
 
 
