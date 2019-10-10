@@ -15,7 +15,7 @@ class Beam(object):
         if array is not None:
             N, ncol = array.shape
             if ncol != 18:
-                raise Exception ("Bad array: must be [npoints,18]")
+                raise Exception ("Bad array shape: must be (npoints,18)")
             self.rays = array.copy()
         else:
             self.rays = numpy.zeros((N,18))
@@ -27,6 +27,8 @@ class Beam(object):
         :param array:
         :return:
         """
+        if array.shape[1] != 18:
+            raise Exception("Bad array shape: must be (npoints,18)")
         return Beam(array=array)
 
     @classmethod

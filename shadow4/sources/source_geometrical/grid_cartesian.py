@@ -259,25 +259,6 @@ class SourceGridCartesian(object):
         return txt
 
 
-    #
-    # interfaces
-    #
-    def get_beam_shadow3(self,wavelength=1e-10):
-        """
-        Returns a shadow3 beam
-        :param wavelength: the photon wavelength in m
-        :return:
-        """
-        import Shadow
-        beam = Shadow.Beam(self.get_number_of_points())
-        beam.rays[:,0:6] = self.get_volume().T
-        beam.rays[:,6:18] = 0.0
-        beam.rays[:,6] = 1.0 # Es
-        beam.rays[:,9] = 1   # flag
-        beam.rays[:,10] = 2 * numpy.pi / (wavelength * 1e2) # wavenumber
-        beam.rays[:,11] = numpy.arange(self.get_number_of_points(),dtype=float) # index
-        return beam
-
     def get_beam(self,wavelength=1e-10):
         """
         Returns a Beam
@@ -285,16 +266,25 @@ class SourceGridCartesian(object):
         :return:
         """
 
-        rays = numpy.zeros((18,self.get_number_of_points()))
-        rays[0:6] = self.get_volume()
-        rays[6] = 1.0 # Es
-        rays[9] = 1   # flag
-        rays[10] = 2 * numpy.pi / (wavelength * 1e2) # wavenumber
-        rays[11] = numpy.arange(self.get_number_of_points(),dtype=float) # index
+        rays = numpy.zeros((self.get_number_of_points(),18))
+        rays[:, 0] = self.get_volume()[0,:]
+        rays[:, 1] = self.get_volume()[1,:]
+        rays[:, 2] = self.get_volume()[2,:]
+        rays[:, 3] = self.get_volume()[3,:]
+        rays[:, 4] = self.get_volume()[4,:]
+        rays[:, 5] = self.get_volume()[5,:]
+        rays[:,6] = 1.0 # Es
+        rays[:,9] = 1   # flag
+        rays[:,10] = 2 * numpy.pi / (wavelength * 1e2) # wavenumber
+        rays[:,11] = numpy.arange(self.get_number_of_points(),dtype=float) # index
+
         return Beam.initialize_from_array(rays)
 
 
 if __name__ == "__main__":
+    from srxraylib.plot.gol import plot_scatter, set_qt
+    from shadow4.compatibility.Beam3 import Beam3
+    set_qt()
 
     a = SourceGridCartesian.initialize_point_source(
                 direction_space        = [2e-3,2e-3],
@@ -325,25 +315,29 @@ if __name__ == "__main__":
     print("V: ",V.shape)
 
 
-    beam_shadow3 = a.get_beam_shadow3()
+
+    beam = a.get_beam()
+    beam_shadow3 = Beam3.initialize_from_shadow4_beam( beam )
+
     beam_shadow3.write("begin.dat")
 
     import Shadow
     Shadow.ShadowTools.plotxy(beam_shadow3,4,6)
 
 
-
-
-
     #
     #
-    a = SourceGridCartesian.initialize_collimated_source(real_space=[1.,0.0,1.0],real_space_points=[100,1,100])
+    a = SourceGridCartesian.initialize_collimated_source(real_space=[10.,0.0,10.0],real_space_points=[100,1,100])
     print(a.info())
-    beam_shadow3 = a.get_beam_shadow3()
-    # import Shadow
-    # Shadow.ShadowTools.plotxy(beam_shadow3,1,3)
+
 
     beam = a.get_beam()
-    from srxraylib.plot.gol import plot_scatter
-    plot_scatter(beam.get_column(1),beam.get_column(3))
-    print(beam.info())
+    plot_scatter(beam.get_column(1), beam.get_column(3))
+
+    beam_shadow3 = Beam3.initialize_from_shadow4_beam( beam )
+
+    import Shadow
+    Shadow.ShadowTools.plotxy(beam_shadow3,1,3)
+    #
+
+    beam_shadow3.write("begin.dat")

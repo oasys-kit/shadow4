@@ -1,6 +1,6 @@
 
 import numpy
-from minishadow.beam.beam import Beam
+from shadow4.beam.beam import Beam
 
 
 class SourceGaussian(object):
@@ -305,7 +305,8 @@ if __name__ == "__main__":
     print(a.info())
 
     beam = a.get_beam()
-    from srxraylib.plot.gol import plot_scatter
+    from srxraylib.plot.gol import plot_scatter, set_qt
+    set_qt()
     plot_scatter(beam.get_column(2),beam.get_column(1))
     print(beam.info())
 

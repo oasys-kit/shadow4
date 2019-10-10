@@ -1,5 +1,6 @@
 
-from grid_cartesian import SourceGridCartesian
+from shadow4.sources.source_geometrical.grid_cartesian import SourceGridCartesian
+from shadow4.compatibility.Beam3 import Beam3
 import unittest
 
 DO_PLOT = True
@@ -58,16 +59,17 @@ class TestGridCartesian(unittest.TestCase):
         #
         a = SourceGridCartesian.initialize_collimated_source(real_space=[1.,0.0,1.0],real_space_points=[100,1,100])
         print(a.info())
-        beam_shadow3 = a.get_beam_shadow3()
+        beam_shadow3 = Beam3.initialize_from_shadow4_beam(a.get_beam())
 
 
         beam = a.get_beam()
 
         if DO_PLOT:
+
+            from srxraylib.plot.gol import plot_scatter, set_qt
+            set_qt()
+            plot_scatter(beam.get_column(1),beam.get_column(3))
             import Shadow
             Shadow.ShadowTools.plotxy(beam_shadow3,1,3)
-
-            from srxraylib.plot.gol import plot_scatter
-            plot_scatter(beam.get_column(1),beam.get_column(3))
 
         print(beam.info())

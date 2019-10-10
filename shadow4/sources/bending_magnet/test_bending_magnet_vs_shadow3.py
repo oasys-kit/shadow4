@@ -106,10 +106,10 @@ def compare_rays_with_shadow3_beam(raysnew,beam,user_unit_to_m=1.0,do_plot=True,
                 fact = 1.0
             m0 = (raysnew[:,i]*fact).mean()
             m1 = beam.rays[:,i].mean()
-            print("\ncol %i, mean: "%(i+1),m0,m1,numpy.abs(m0-m1)/numpy.abs(m1))
+            print("\ncol %i, mean (new,old,diff/old): "%(i+1),m0,m1,numpy.abs(m0-m1)/numpy.abs(m1))
             std0 = (raysnew[:,i]*fact).std()
             std1 = beam.rays[:,i].std()
-            print("col %i, std: "%(i+1),std0,std1,numpy.abs(std0-std1)/numpy.abs(std1))
+            print("col %i, std (new,old,diff/old): "%(i+1),std0,std1,numpy.abs(std0-std1)/numpy.abs(std1))
 
             if i != 5:  # TODO check why it fails!!!
                 assert((numpy.abs(numpy.abs(m0)   -numpy.abs(m1) )    /numpy.abs(m1)) < 15.0)

@@ -1,8 +1,8 @@
 import numpy
 import scipy.constants as codata
 
-from probability_distributions import Rectangle2D, Ellipse2D, Gaussian2D
-from probability_distributions import Flat2D, Uniform2D, Conical2D
+from shadow4.sources.source_geometrical.probability_distributions import Rectangle2D, Ellipse2D, Gaussian2D
+from shadow4.sources.source_geometrical.probability_distributions import Flat2D, Uniform2D, Conical2D
 
 from srxraylib.util.inverse_method_sampler import Sampler1D
 
@@ -500,7 +500,8 @@ class SourceGeometrical(object):
 
 if __name__ == "__main__":
 
-    from srxraylib.plot.gol import plot,plot_scatter
+    from srxraylib.plot.gol import plot,plot_scatter, set_qt
+    set_qt()
 
     # rectangle
     gs = SourceGeometrical()
