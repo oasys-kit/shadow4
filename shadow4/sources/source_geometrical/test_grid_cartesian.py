@@ -1,6 +1,6 @@
 
 from shadow4.sources.source_geometrical.grid_cartesian import SourceGridCartesian
-from shadow4.compatibility.Beam3 import Beam3
+from shadow4.compatibility.beam3 import Beam3
 import unittest
 
 DO_PLOT = True

@@ -652,10 +652,30 @@ class Beam(object):
     def identical(self,beam2):
 
         try:
-            assert_almost_equal(self.get_rays(),beam2.get_rays())
+            assert_almost_equal(self.rays,beam2.rays)
             return True
         except:
             return False
+
+    def difference(self,beam2):
+        raysnew = beam2.rays
+        fact  = 1.0
+        for i in range(18):
+            m0 = (raysnew[:, i] * fact).mean()
+            m1 = self.rays[:, i].mean()
+            if numpy.abs(m1) > 1e-10:
+                print("\ncol %d, mean: beam_tocheck %g, beam %g , diff/beam %g: " % (i + 1, m0, m1, numpy.abs(m0 - m1) / numpy.abs(m1)))
+            else:
+                print("\ncol %d, mean: beam_tocheck %g, beam %g " % (i + 1, m0, m1))
+
+            std0 = (raysnew[:, i] * fact).std()
+            std1 = self.rays[:, i].std()
+            if numpy.abs(std1) > 1e-10:
+                print("col %d, std: beam_tocheck %g, beam %g , diff/beam %g" % (i + 1, std0, std1, numpy.abs(std0 - std1) / numpy.abs(std1)))
+            else:
+                print("col %d, std: beam_tocheck %g, beam %g " % (i + 1, std0, std1))
+
+
 
 if __name__ == "__main__":
     pass

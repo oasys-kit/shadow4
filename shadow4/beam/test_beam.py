@@ -122,5 +122,7 @@ class TestBeam(unittest.TestCase):
         print("a is equal to b ? ", a.identical(b))
         assert(a.identical(b))
 
+        a.difference(b)
+
 
 

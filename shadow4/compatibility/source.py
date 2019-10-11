@@ -1,4 +1,4 @@
-from gfile import GFile
+from shadow4.compatibility.gfile import GFile
 
 class Source(object):
 

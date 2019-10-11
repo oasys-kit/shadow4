@@ -283,7 +283,7 @@ class SourceGridCartesian(object):
 
 if __name__ == "__main__":
     from srxraylib.plot.gol import plot_scatter, set_qt
-    from shadow4.compatibility.Beam3 import Beam3
+    from shadow4.compatibility.beam3 import Beam3
     set_qt()
 
     a = SourceGridCartesian.initialize_point_source(
