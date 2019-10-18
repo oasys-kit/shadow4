@@ -234,6 +234,40 @@ def test_no_preprocessor():
         print(s3[:,1].shape,s3[:,2].shape,t.shape, rs[0].shape)
         assert_almost_equal(s3[:,2], rs[0],3)
 
+def test_xoppy():
+    # from orangecontrib.xoppy.util.mlayer import MLayer
+
+    out = MLayer.initialize_from_bilayer_stack(
+        material_S="Si", density_S=None, roughness_S=0.0,
+        material_E="W", density_E="10", roughness_E=0.0,
+        material_O="Si", density_O=None, roughness_O=0.0,
+        bilayer_pairs=50,
+        bilayer_thickness=50.0,
+        bilayer_gamma=0.5,
+    )
+
+    for key in out.pre_mlayer_dict.keys():
+        print(key, out.pre_mlayer_dict[key])
+    #
+    rs, rp, e, t = out.scan(h5file="",
+                            energyN=1, energy1=8050.0, energy2=15000.0,
+                            thetaN=600, theta1=0.0, theta2=6.0)
+
+    #
+    # plot (example)
+    #
+    myscan = 0
+    from srxraylib.plot.gol import plot, plot_image
+
+    if myscan == 0:  # angle scan
+        plot(t, rs[0], xtitle="angle [deg]", ytitle="Reflectivity-s", title="")
+    elif myscan == 1:  # energy scan
+        plot(e, rs[:, 0], xtitle="Photon energy [eV]", ytitle="Reflectivity-s", title="")
+    elif myscan == 2:  # double scan
+        plot_image(rs, e, t, xtitle="Photon energy [eV]", ytitle="Grazing angle [deg]", title="Reflectivity-s",
+                   aspect="auto")
+
+
 if __name__ == "__main__":
 
     #
@@ -244,4 +278,6 @@ if __name__ == "__main__":
     test_substrate()
 
     test_no_preprocessor()
+
+    test_xoppy()
 

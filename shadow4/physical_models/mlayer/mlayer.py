@@ -437,20 +437,12 @@ class MLayer(object):
         gamma1       = []  #[0e0]*npair
         mlroughness1 = []  #[0e0]*npair
         mlroughness2 = []  #[0e0]*npair
-        # material1    = []
-        # material2    = []
-        # density1     = []
-        # density2     = []
 
         for i in range(npair):
-            thick.append(bilayer_thickness)   #  float(BILAYER_THICKNESS)
-            gamma1.append(bilayer_gamma)   #  float(BILAYER_GAMMA)
+            thick.append(bilayer_thickness)    #  float(BILAYER_THICKNESS)
+            gamma1.append(bilayer_gamma)       #  float(BILAYER_GAMMA)
             mlroughness1.append(roughness_E)   #  float(ROUGHNESS_E)
             mlroughness2.append(roughness_O)   #  float(ROUGHNESS_O)
-            # material1.append(material_E)
-            # material2.append(material_O)
-            # density1.append(density_E)
-            # density2.append(density_O)
 
         pre_mlayer_dict = {}
 
@@ -486,18 +478,31 @@ class MLayer(object):
         if pre_mlayer_dict["densityS"] is None:
             try:
                 pre_mlayer_dict["densityS"] = xraylib.ElementDensity(xraylib.SymbolToAtomicNumber(pre_mlayer_dict["materialS"]))
+                print("Using density for substrate (%s): %f"%(pre_mlayer_dict["materialS"],
+                      pre_mlayer_dict["densityS"]))
             except:
                 raise Exception("Failed to load density for material: %s"%(pre_mlayer_dict["material1"]))
         if pre_mlayer_dict["density1"] is None:
             try:
                 pre_mlayer_dict["density1"] = xraylib.ElementDensity(xraylib.SymbolToAtomicNumber(pre_mlayer_dict["material1"]))
+                print("Using density for layer 1 (even) (%s): %f" % (pre_mlayer_dict["material1"],
+                      pre_mlayer_dict["density1"]))
             except:
                 raise Exception("Failed to load density for material: %s"%(pre_mlayer_dict["material1"]))
         if pre_mlayer_dict["density2"] is None:
             try:
                 pre_mlayer_dict["density2"] = xraylib.ElementDensity(xraylib.SymbolToAtomicNumber(pre_mlayer_dict["material2"]))
+                print("Using density for layer 2 (odd) (%s): %f" % (pre_mlayer_dict["material2"],
+                      pre_mlayer_dict["density2"]))
             except:
                 raise Exception("Failed to load density for material: %s"%(pre_mlayer_dict["material2"]))
+
+        if isinstance(pre_mlayer_dict["densityS"],str):
+            pre_mlayer_dict["densityS"] = float(pre_mlayer_dict["densityS"])
+        if isinstance(pre_mlayer_dict["density1"],str):
+            pre_mlayer_dict["density1"] = float(pre_mlayer_dict["density1"])
+        if isinstance(pre_mlayer_dict["density2"], str):
+            pre_mlayer_dict["density2"] = float(pre_mlayer_dict["density2"])
 
 
         # fill unused keys
