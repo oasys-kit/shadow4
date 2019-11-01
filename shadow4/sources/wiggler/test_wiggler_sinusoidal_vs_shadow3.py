@@ -250,3 +250,22 @@ if __name__ == "__main__":
     rays = sourcewiggler.calculate_rays(NRAYS=NRAYS)
 
     compare_rays_with_shadow3_beam(rays,beam_shadow3,do_plot=False,do_assert=True)
+
+
+
+    #
+    # check new sync_f function
+    #
+
+    from numpy.testing import assert_almost_equal
+    from shadow4.sources.wiggler.source_wiggler import sync_f_sigma_and_pi
+    from srxraylib.sources.srfunc import sync_f
+    rAngle = numpy.array([1,2,3,4])
+    rEnergy = 1.3
+    s,p = sync_f_sigma_and_pi(rAngle,rEnergy)
+    s0 = sync_f(rAngle, rEnergy, polarization=1)
+    p0 = sync_f(rAngle, rEnergy, polarization=2)
+    assert_almost_equal(s,s0[:,0])
+    assert_almost_equal(p, p0[:, 0])
+    print(">>>>s: ",s,s0[:,0])
+    print(">>>>p: ",p,p0[:,0])
