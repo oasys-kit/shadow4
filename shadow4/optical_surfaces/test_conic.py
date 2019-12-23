@@ -5,7 +5,7 @@
 #      ccc[6]*X   + ccc[7]*Y   + ccc[8]*Z + ccc[9] = 0
 
 
-from conic import Conic
+from shadow4.optical_surfaces.conic import Conic
 
 import numpy
 import unittest

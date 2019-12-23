@@ -7,8 +7,6 @@ from shadow4.sources.source_geometrical.probability_distributions import Flat2D,
 from srxraylib.util.inverse_method_sampler import Sampler1D
 
 
-
-
 class SourceGeometrical(object):
     def __init__(self,
                     spatial_type="Point",
