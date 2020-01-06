@@ -72,7 +72,7 @@ INSTALL_REQUIRES = (
 
 
 setup(name='shadow4',
-      version='0.0.10',
+      version='0.0.11',
       description='shadow implementation in python',
       author='Manuel Sanchez del Rio',
       author_email='srio@lbl.gov, srio@esrf.eu',

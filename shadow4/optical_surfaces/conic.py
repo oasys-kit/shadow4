@@ -147,13 +147,11 @@ class Conic(object):
         v1 =   newbeam.get_columns([4,5,6]) # numpy.array(a3.getshcol([4,5,6]))
         flag = newbeam.get_column(10)        # numpy.array(a3.getshonecol(10))
 
-        print(">>>>>>>>>>>>>>>>>>>>x1,v1",x1.shape,v1.shape,self.calculate_intercept(x1,v1))
         t1,t2 = self.calculate_intercept(x1,v1)
-        print(">>>>>>>>>>>>>>>>>>>>t1,t2", t1.shape, t2.shape)
         t, iflag = self.choose_solution(t1,t2)
 
-        for i in range(t.size):
-            print(">>>> solutions: ",t1[i],t2[i],t[i])
+        # for i in range(t.size):
+        #     print(">>>> solutions: ",t1[i],t2[i],t[i])
 
         x2 = x1 + v1 * t
         for i in range(flag.size):
@@ -336,9 +334,6 @@ class Conic(object):
                 else:
                     TPAR1[i] = -(BB[i] + numpy.sqrt(DETER)) * DENOM
                     TPAR2[i] = -(BB[i] - numpy.sqrt(DETER)) * DENOM
-
-                print(">>>>",TPAR1,TPAR2)
-
 
         if TPAR2.size == 1:
             TPAR2 = numpy.asscalar(TPAR2)
