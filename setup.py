@@ -41,15 +41,16 @@
 #     pip install <name>
 #
 
-__authors__ = ["M Sanchez del Rio - ESRF ISDD Advanced Analysis and Modelling"]
+__authors__ = ["M Sanchez del Rio - ESRF ISDD Advanced Analysis and Modelling - LBNL "]
 __license__ = "MIT"
-__date__ = "25/11/2016"
+__date__ = "2016-2020"
 
 from setuptools import setup
 
 PACKAGES = [
     "shadow4",
     "shadow4.beam",
+    "shadow4.compatibility",
     "shadow4.examples",
     "shadow4.io",
     "shadow4.sources.source_geometrical",
@@ -72,7 +73,7 @@ INSTALL_REQUIRES = (
 
 
 setup(name='shadow4',
-      version='0.0.11',
+      version='0.0.12',
       description='shadow implementation in python',
       author='Manuel Sanchez del Rio',
       author_email='srio@lbl.gov, srio@esrf.eu',
