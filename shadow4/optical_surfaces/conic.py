@@ -148,7 +148,7 @@ class Conic(object):
         flag = newbeam.get_column(10)        # numpy.array(a3.getshonecol(10))
 
         t1,t2 = self.calculate_intercept(x1,v1)
-        t, iflag = self.choose_solution(t1,t2)
+        t, iflag = self.choose_solution(t1,t2,reference_distance=-newbeam.get_column(2).mean())
 
         # for i in range(t.size):
         #     print(">>>> solutions: ",t1[i],t2[i],t[i])
@@ -343,15 +343,15 @@ class Conic(object):
 
 
 
-    def choose_solution(self,TPAR1,TPAR2):
+    def choose_solution(self,TPAR1,TPAR2,reference_distance=10.0):
         #todo remove this nasty thing
         TPAR = numpy.zeros_like(TPAR1)
         I_FLAG = numpy.ones_like(TPAR1)
-        T_SOURCE = 10.0
+
 
 
         for i in range(TPAR1.size):
-            if ( numpy.abs(TPAR1[i]-T_SOURCE) <= numpy.abs(TPAR2[i]-T_SOURCE)):
+            if ( numpy.abs(TPAR1[i]-reference_distance) <= numpy.abs(TPAR2[i]-reference_distance)):
                TPAR[i] = TPAR1[i]
             else:
                TPAR[i] = TPAR2[i]
@@ -697,16 +697,16 @@ class Conic(object):
         txt += "  ccc[3]*X*Y + ccc[4]*Y*Z + ccc[5]*X*Z  \n"
         txt += "  ccc[6]*X   + ccc[7]*Y   + ccc[8]*Z + ccc[9] = 0 \n"
         txt += " with \n"
-        txt += " c[0] = %f \n "%self.ccc[0]
-        txt += " c[1] = %f \n "%self.ccc[1]
-        txt += " c[2] = %f \n "%self.ccc[2]
-        txt += " c[3] = %f \n "%self.ccc[3]
-        txt += " c[4] = %f \n "%self.ccc[4]
-        txt += " c[5] = %f \n "%self.ccc[5]
-        txt += " c[6] = %f \n "%self.ccc[6]
-        txt += " c[7] = %f \n "%self.ccc[7]
-        txt += " c[8] = %f \n "%self.ccc[8]
-        txt += " c[9] = %f \n "%self.ccc[9]
+        txt += " c[0] = %g \n "%self.ccc[0]
+        txt += " c[1] = %g \n "%self.ccc[1]
+        txt += " c[2] = %g \n "%self.ccc[2]
+        txt += " c[3] = %g \n "%self.ccc[3]
+        txt += " c[4] = %g \n "%self.ccc[4]
+        txt += " c[5] = %g \n "%self.ccc[5]
+        txt += " c[6] = %g \n "%self.ccc[6]
+        txt += " c[7] = %g \n "%self.ccc[7]
+        txt += " c[8] = %g \n "%self.ccc[8]
+        txt += " c[9] = %g \n "%self.ccc[9]
         txt += "++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++'n"
 
         return txt
