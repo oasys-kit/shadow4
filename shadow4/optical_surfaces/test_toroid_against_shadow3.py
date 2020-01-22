@@ -6,6 +6,7 @@ import platform
 from numpy.testing import assert_equal, assert_almost_equal
 
 import Shadow
+from shadow4.compatibility.beam3 import Beam3
 
 #
 # minishadow
@@ -238,7 +239,8 @@ def minishadow_run_toroid_mirror():
     # # reflect beam in the mirror surface and dump mirr.01
     # #
     newbeam = t.apply_specular_reflection_on_beam(newbeam)
-    newbeam.dump_shadow3_file('minimirr.01')
+    # newbeam.dump_shadow3_file('minimirr.01')
+    Beam3.initialize_from_shadow4_beam(newbeam).write('minimirr.01')
     #
     # #
     # # put beam in lab frame and compute image
@@ -246,11 +248,12 @@ def minishadow_run_toroid_mirror():
     newbeam.rotate(theta_grazing,axis=1)
     # TODO what about alpha?
     newbeam.retrace(q,resetY=True)
-    newbeam.dump_shadow3_file('ministar.01')
+    # newbeam.dump_shadow3_file('ministar.01')
+    Beam3.initialize_from_shadow4_beam(newbeam).write('ministar.01')
 
 if __name__ == "__main__":
 
     create_start_files()
     minishadow_run_toroid_mirror()
-    compare_results(do_plot=False,do_assert=True)
+    compare_results(do_plot=True,do_assert=True)
 
