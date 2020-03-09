@@ -61,6 +61,7 @@ PACKAGES = [
     "shadow4.optical_surfaces",
     "shadow4.physical_models.prerefl",
     "shadow4.physical_models.mlayer",
+    "shadow4.syned",
 ]
 
 INSTALL_REQUIRES = (
@@ -73,7 +74,7 @@ INSTALL_REQUIRES = (
 
 
 setup(name='shadow4',
-      version='0.0.14',
+      version='0.0.15',
       description='shadow implementation in python',
       author='Manuel Sanchez del Rio',
       author_email='srio@lbl.gov, srio@esrf.eu',
