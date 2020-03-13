@@ -123,5 +123,5 @@ if __name__ == "__main__":
     print("   line: ",mm.line(t_mesh_file))
     print("   surface: ",mm.surface_vs_t(t_mesh_file))
 
-    assert (numpy.abs(t_mesh - t_exact) < 1e-4)
+    assert (numpy.abs(t_mesh - t_exact[1]) < 1e-4)
     assert (numpy.abs(t_mesh_file - t_mesh) < 1e-4)
