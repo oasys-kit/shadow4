@@ -429,13 +429,17 @@ class Conic(object):
         self.ccc[9-1]  = - self.ccc[9-1]
 
 
-    def set_sphere_from_focal_distances(self, ssour, simag, theta_grazing):
+    def set_sphere_from_focal_distances(self, ssour, simag, theta_grazing, verbose=True):
         # todo: implement also sagittal bending
         print("Theta grazing is: %f" %(theta_grazing))
         theta = (numpy.pi/2) - theta_grazing
-        print("Theta  is: %f" %(theta))
-        print('>>>> set_sphere_from_focal_distances: Angle with respect to the surface normal [rad]:',theta)
         rmirr = ssour * simag * 2 / numpy.cos(theta) / (ssour + simag)
+
+        if verbose:
+            txt = ""
+            txt += "p=%f, q=%f, theta_grazing=%f rad, theta_normal=%f rad\n"%(ssour,simag,theta_grazing,theta)
+            txt += "Radius= %f \n"%(rmirr)
+            print(txt)
 
         self.ccc[1-1] =  1.0	        # X^2  # = 0 in cylinder case
         self.ccc[2-1] =  1.0	        # Y^2
@@ -447,7 +451,6 @@ class Conic(object):
         self.ccc[8-1] =   .0	        # Y
         self.ccc[9-1] = -2 * rmirr	# Z
         self.ccc[10-1]  =   .0       # G
-        print(">>>> set_sphere_from_focal_distances: Spherical radius: %f \n"%(rmirr))
 
     def set_sphere_from_curvature_radius(self,rmirr):
         self.ccc[1-1] =  1.0	        # X^2  # = 0 in cylinder case
@@ -461,7 +464,7 @@ class Conic(object):
         self.ccc[9-1] = -2 * rmirr	# Z
         self.ccc[10-1]  =   .0       # G
 
-    def set_ellipsoid_from_focal_distances(self, ssour, simag, theta_grazing):
+    def set_ellipsoid_from_focal_distances(self, ssour, simag, theta_grazing, verbose=True):
 
         theta = (numpy.pi/2) - theta_grazing
         COSTHE = numpy.cos(theta)
@@ -495,20 +498,20 @@ class Conic(object):
         RTCEN[2-1] =  RNCEN[3-1]
         RTCEN[3-1] = -RNCEN[2-1]
 
-        # txt = [txt,  $
-        # String('Rev Ellipsoid a: ', $
-        # AXMAJ, Format='(A40,G20.15)'), $
-        # String('Rev Ellipsoid b: ', $
-        # AXMIN, Format='(A40,G20.15)'), $
-        # String('Rev Ellipsoid c=sqrt(a^2-b^2): ', $
-        # AFOCI, Format='(A40,G20.15)'), $
-        # String('Rev Ellipsoid focal discance c^2: ', $
-        # AFOCI^2, Format='(A40,G20.15)'), $
-        # String('Rev Ellipsoid excentricity: ', $
-        # ECCENT, Format='(A40,G20.15)'),$
-        # 'Mirror center at: '+vect2string([0,YCEN,ZCEN]), $
-        # 'Mirror normal: '+vect2string(RNCEN), $
-        # 'Mirror tangent: '+vect2string(RTCEN) ]
+        if verbose:
+            txt = ""
+            txt += "p=%f, q=%f, theta_grazing=%f rad, theta_normal=%f rad\n" % (ssour, simag, theta_grazing, theta)
+            txt += 'Ellipsoid of revolution a=%f \n'%AXMAJ
+            txt += 'Ellipsoid of revolution b=%f \n'%AXMIN
+            txt += 'Ellipsoid of revolution c=sqrt(a^2-b^2)=%f \n'%AFOCI
+            txt += 'Ellipsoid of revolution focal distance c^2=%f \n'%(AFOCI**2)
+            txt += 'Ellipsoid of revolution excentricity: %f \n'%ECCENT
+            txt += 'Optical element center at: [0,%f,%f]\n'%(YCEN,ZCEN)
+            txt += 'Optical element normal: [%f,%f,%f]\n'%(RNCEN[0],RNCEN[1],RNCEN[2])
+            txt += 'Optical element tangent: [%f,%f,%f]\n'%(RTCEN[0],RTCEN[1],RTCEN[2])
+            print(txt)
+
+
 
         # ;C Computes now the quadric coefficient with the mirror center
         # ;C located at (0,0,0) and normal along (0,0,1)
@@ -529,7 +532,8 @@ class Conic(object):
         self.ccc[9] = 0.0
 
 
-    def set_paraboloid_from_focal_distance(self, SSOUR, SIMAG, theta_grazing, infinity_location):
+    def set_paraboloid_from_focal_distances(self, SSOUR, SIMAG, theta_grazing, infinity_location="",
+                                            verbose=True):
         # ;C
         # ;C Computes the parabola
         # ;C
@@ -537,20 +541,35 @@ class Conic(object):
         COSTHE = numpy.cos(theta)
         SINTHE = numpy.sin(theta)
 
-        if infinity_location=="q":
+        if infinity_location == "":
+            if SSOUR <= SIMAG:
+                location = "q"
+            else:
+                location = "p"
+
+        if location=="q":
             PARAM = 2 * SSOUR * COSTHE**2
             YCEN = -SSOUR * SINTHE**2
             ZCEN = -2 * SSOUR * SINTHE * COSTHE
             fact = -1.0
-        elif infinity_location == "p":
+        elif location == "p":
             PARAM =   2 * SIMAG * COSTHE**2
             YCEN = - SIMAG * SINTHE**2
-            ZCEN = - 2 * SIMAG * SINTHE * COSTHE
+            ZCEN = -2 * SIMAG * SINTHE * COSTHE
             fact = 1.0
 
-        # txt = [txt, $
-        # String('Parabolois p: ', $
-        # PARAM, Format='(A40,G20.15)')]
+        if verbose:
+            txt = ""
+            if location == "p":
+                txt += "Source is at infinity\n"
+                txt += "q=%f, theta_grazing=%f rad, theta_normal=%f rad\n" % (SIMAG, theta_grazing, theta)
+            else:
+                txt += "Image is at infinity\n"
+                txt += "p=%f, theta_grazing=%f rad, theta_normal=%f rad\n" % (SSOUR, theta_grazing, theta)
+            txt += 'Parabloid of revolution PARAM=%f \n'%PARAM
+            txt += 'Optical element center at: [0,%f,%f]\n'%(YCEN,ZCEN)
+            print(txt)
+
         self.ccc[0] = 1.0
         self.ccc[1] = COSTHE**2
         self.ccc[2] = SINTHE**2
@@ -563,7 +582,7 @@ class Conic(object):
         self.ccc[9] = 0.0
 
 
-    def set_hyperboloid_from_focal_distances(self, SSOUR, SIMAG, theta_grazing):
+    def set_hyperboloid_from_focal_distances(self, SSOUR, SIMAG, theta_grazing, verbose=True):
 
         theta = (numpy.pi/2) - theta_grazing
         COSTHE = numpy.cos(theta)
@@ -645,7 +664,18 @@ class Conic(object):
         # 'Mirror center at: '+vect2string([0,YCEN,ZCEN]), $
         # 'Mirror normal: '+vect2string(RNCEN), $
         # 'Mirror tangent: '+vect2string(RTCEN) ]
-
+        if verbose:
+            txt = ""
+            txt += "p=%f, q=%f, theta_grazing=%f rad, theta_normal=%f rad\n" % (SSOUR, SIMAG, theta_grazing, theta)
+            txt += 'Hyperboloid of revolution a=%f \n'%AXMAJ
+            txt += 'Hyperboloid of revolution b=%f \n'%AXMIN
+            txt += 'Hyperboloid of revolution c=%f \n'%AFOCI
+            txt += 'Hyperboloid of revolution focal distance c^2=%f \n'%(AFOCI**2)
+            txt += 'Hyperboloid of revolution excentricity: %f \n'%ECCENT
+            txt += 'Optical element center at: [0,%f,%f]\n'%(YCEN,ZCEN)
+            txt += 'Optical element normal: [%f,%f,%f]\n'%(RNCEN[0],RNCEN[1],RNCEN[2])
+            txt += 'Optical element tangent: [%f,%f,%f]\n'%(RTCEN[0],RTCEN[1],RTCEN[2])
+            print(txt)
         # ;C
         # ;C Coefficients of the canonical form
         # ;C
@@ -666,20 +696,6 @@ class Conic(object):
         self.ccc[7] = 0.0
         self.ccc[8] = 2 * (B * YCEN * RNCEN[2-1] + C * ZCEN * RNCEN[3-1])
         self.ccc[9] = 0.0
-
-
-        #self.ccc[0] = -0.0111673
-        #self.ccc[1] = -0.005
-        #self.ccc[2] = 0.0338327
-        #self.ccc[3] = 0.0
-        #self.ccc[4] = 0.0333184
-        #self.ccc[5] = 0.0
-        #self.ccc[6] = 0.0
-        #self.ccc[7] = 0.0
-        #self.ccc[8] = -0.453685
-        #self.ccc[9] = 0.0
-        print("Axmax is:   %f" %(AXMAJ))
-        print("Axmin is:   %f" %(AXMIN))
 
     #
     # info
@@ -819,3 +835,72 @@ class Conic(object):
         c9 = self.ccc[2] * z0**2 + self.ccc[9] - self.ccc[8] * z0
 
         self.ccc = numpy.array([self.ccc[0], self.ccc[1], self.ccc[2], self.ccc[3], self.ccc[4], self.ccc[5], c6, c7, c8, c9])
+
+    def height(self,y=0,x=0,return_solution=0):
+        """
+
+        :param y: a scalar, vector or mesh
+        :param x: a scalar, vector or mesh
+            y and x must be homogeneous, otherwise an error will occur:
+             both scalars
+             both mesh
+             one scalar and another vector
+        :param return_solution: 0 = guess the solution with zero at pole,
+                                1 = get first solution
+                                2 = get second solution
+        :return: the height scalar/vector/mesh depending on inputs
+        """
+        aa = self.ccc[2]
+        bb = self.ccc[4] * y + self.ccc[5] * x + self.ccc[8]
+        cc = self.ccc[0] * x**2 + self.ccc[1] * y**2 + self.ccc[3] * x * y + \
+            self.ccc[6] * x + self.ccc[7] * y + self.ccc[9]
+
+        if aa != 0:
+            discr = bb**2 - 4 * aa * cc + 0j
+            s1 = (-bb + numpy.sqrt(discr)) / 2 / aa
+            s2 = (-bb - numpy.sqrt(discr)) / 2 / aa
+
+            if return_solution == 0: # select the solution close to zero at pole
+                if numpy.abs(s1).min() < numpy.abs(s2).min():
+                    ss = s1
+                else:
+                    ss = s2
+            elif return_solution == 1:
+                ss = s1
+            else:
+                ss = s2
+        else:
+            ss = -cc / bb
+
+        return numpy.real(ss)
+
+
+if __name__ == "__main__":
+
+    p = 13.73 + 13.599
+    q = 2.64
+    theta1 = 0.02181
+    # ccc = Conic.initialize_as_sphere_from_focal_distances(p, q, theta1, cylindrical=0, cylangle=0.0, switch_convexity=0)
+    # ccc = Conic.initialize_as_ellipsoid_from_focal_distances(p, q, theta1, cylindrical=0, cylangle=0.0, switch_convexity=0)
+    # ccc = Conic.initialize_as_paraboloid_from_focal_distances(p, q, theta1, cylindrical=0, cylangle=0.0, switch_convexity=0)
+    ccc = Conic.initialize_as_hyperboloid_from_focal_distances(p, q, theta1, cylindrical=0, cylangle=0.0, switch_convexity=0)
+    # print(ccc.info())
+
+    y = numpy.linspace(-0.15,0.15,100)
+    z = ccc.height(y)
+    from srxraylib.plot.gol import plot
+    plot(y,z)
+
+    #
+    #
+    #
+
+    y = numpy.linspace(-0.15, 0.15, 200)
+    x = numpy.linspace(-0.15, 0.15, 100)
+    Y = numpy.outer(numpy.ones_like(x),y)
+    X = numpy.outer(x,numpy.ones_like(y))
+    Z = ccc.height(Y,X)
+
+    from srxraylib.plot.gol import plot_image
+    plot_image(Z,x,y)
+
