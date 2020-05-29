@@ -438,6 +438,12 @@ class SourceWiggler(object):
         #
         # sample sizes (cols 1-3)
         #
+
+        #
+        if self._FLAG_EMITTANCE:
+            if numpy.array(numpy.abs(sigmas)).sum() == 0:
+                self._FLAG_EMITTANCE = False
+
         if self._FLAG_EMITTANCE:
             x_electron = numpy.random.normal(loc=0.0,scale=sigmas[0],size=NRAYS)
             y_electron = 0.0
@@ -1050,6 +1056,8 @@ class SourceWiggler(object):
 
 if __name__ == "__main__":
 
+    from srxraylib.plot.gol import set_qt
+    set_qt()
 
     e_min = 5000.0 # 70490.0 #
     e_max = 100000.0 # 70510.0 #
@@ -1081,6 +1089,7 @@ if __name__ == "__main__":
     # syned
     #
     syned_wiggler = Wiggler(K_vertical=kValue,K_horizontal=0.0,period_length=per,number_of_periods=nPer)
+
 
     syned_electron_beam = ElectronBeam(energy_in_GeV=6.04,
                  energy_spread = 0.0,

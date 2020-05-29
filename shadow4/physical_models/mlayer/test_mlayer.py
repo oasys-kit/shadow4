@@ -36,7 +36,7 @@ def test_xoppy_defauls():
     #
     # theta scan
     #
-    rs, rp, e, t = a.scan(fileOut=None,  # "pre_mlayer_scan.dat",
+    rs, rp, e, t = a.scan(
                           energyN=1, energy1=8050.0, energy2=8050.0,
                           thetaN=600, theta1=0.0, theta2=6.0)
 
@@ -273,11 +273,16 @@ if __name__ == "__main__":
     #
     # test_xoppy_defauls()
     #
-    test_aw1()
+    from srxraylib.plot.gol import set_qt
+    set_qt()
+
+    test_xoppy_defauls()
+
+    # test_aw1()
+    # #
+    # test_substrate()
     #
-    test_substrate()
-
-    test_no_preprocessor()
-
-    test_xoppy()
+    # test_no_preprocessor()
+    #
+    # test_xoppy()
 
