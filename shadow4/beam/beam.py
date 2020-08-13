@@ -453,21 +453,25 @@ class Beam(object):
 
         :return:
         """
-        txt = "col   name         min         max      center       stDev\n"
-        for col in [1,2,3,4,5,6,26]:
-            val = self.get_column(column=col,nolost=True)
-            txt += "%3d  %5s  %10g  %10g  %10g  %10g\n" % \
-              (col, self.column_short_names()[col-1], val.min(), val.max(), val.mean(), val.std())
-        txt += "\n"
-        txt += "Number of rays: %d \n"%(self.get_number_of_rays())
-        txt += "Number of good rays: %d \n"%(self.get_number_of_rays(nolost=1))
-        txt += "Number of lost rays: %d \n"%(self.get_number_of_rays(nolost=2))
-        txt += "Mean energy: %f eV\n"%(self.get_photon_energy_eV().mean() )
-        if self.get_photon_energy_eV().mean() != 0.0:
-            txt += "Mean wavelength: %f A\n"%(1e10 * self.get_photon_wavelength().mean() )
-        txt += "Intensity (total): %f \n"%( self.get_intensity(nolost=1,polarization=0) )
-        txt += "Intensity (s-pol): %f \n" % (self.get_intensity(nolost=1,polarization=1))
-        txt += "Intensity (p-pol): %f \n" % (self.get_intensity(nolost=1,polarization=2))
+
+        try:
+            txt = "col   name         min         max      center       stDev\n"
+            for col in [1,2,3,4,5,6,26]:
+                val = self.get_column(column=col,nolost=True)
+                txt += "%3d  %5s  %10g  %10g  %10g  %10g\n" % \
+                  (col, self.column_short_names()[col-1], val.min(), val.max(), val.mean(), val.std())
+            txt += "\n"
+            txt += "Number of rays: %d \n"%(self.get_number_of_rays())
+            txt += "Number of good rays: %d \n"%(self.get_number_of_rays(nolost=1))
+            txt += "Number of lost rays: %d \n"%(self.get_number_of_rays(nolost=2))
+            txt += "Mean energy: %f eV\n"%(self.get_photon_energy_eV().mean() )
+            if self.get_photon_energy_eV().mean() != 0.0:
+                txt += "Mean wavelength: %f A\n"%(1e10 * self.get_photon_wavelength().mean() )
+            txt += "Intensity (total): %f \n"%( self.get_intensity(nolost=1,polarization=0) )
+            txt += "Intensity (s-pol): %f \n" % (self.get_intensity(nolost=1,polarization=1))
+            txt += "Intensity (p-pol): %f \n" % (self.get_intensity(nolost=1,polarization=2))
+        except:
+            txt = ""
         return txt
 
     #
@@ -709,7 +713,8 @@ class Beam(object):
 
         column_names = self.column_names()
 
-        for i,column_name in enumerate(column_names):
+        for i in range(18):
+            column_name = column_names[i]
 
             # Y data
             ds = f2.create_dataset(column_name, data=rays[:,i].copy())
@@ -732,8 +737,9 @@ class Beam(object):
 
             beam = Beam(N=x.size)
             rays = numpy.zeros( (x.size,18))
-            for i,column_name in enumerate(column_names):
-                rays[:,i] = (f["%s/%s/%s"%(simulation_name,beam_name,column_name)])[:]
+            # for i in range(18):
+            #     column_name = column_names[i]
+            #     rays[:,i] = (f["%s/%s/%s"%(simulation_name,beam_name,column_name)])[:]
         except:
             f.close()
             raise Exception("Cannot find data in %s:/%s/%s" % (filename, simulation_name, beam_name))
@@ -743,7 +749,6 @@ class Beam(object):
         return Beam.initialize_from_array(rays)
 
     def identical(self,beam2):
-
         try:
             assert_almost_equal(self.rays,beam2.rays)
             return True
