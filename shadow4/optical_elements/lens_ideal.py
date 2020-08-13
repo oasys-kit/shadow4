@@ -1,6 +1,7 @@
 
 import numpy
 from collections import OrderedDict
+from shadow4.compatibility.beam3 import Beam3
 
 class LensIdeal(object):
 
@@ -114,8 +115,8 @@ class LensSuperIdeal(object):
 def test_with_collimated_beam():
 
 
-    from SourceGaussian import SourceGaussian
-    from Beam import Beam
+    from shadow4.sources.source_geometrical.gaussian import SourceGaussian
+    from shadow4.beam.beam import Beam
     from Shadow.ShadowTools import plotxy
 
     src = SourceGaussian.initialize_collimated_source(number_of_rays=10000,sigmaX=1e-6,sigmaZ=1e-6)
@@ -127,7 +128,8 @@ def test_with_collimated_beam():
     print(beam.info())
     SX, SZ = (1e6*beam.get_standard_deviation(1),1e6*beam.get_standard_deviation(3))
 
-    plotxy(beam.get_shadow3_beam(),1,3,nbins=100,title="SOURCE")
+    beam3 = Beam3.initialize_from_shadow4_beam(beam)
+    plotxy(beam3,1,3,nbins=100,title="SOURCE")
 
     lens1 = LensIdeal("test",focal_x=10.0,focal_z=10.0,p=100.0,q=10.0)
 
@@ -143,8 +145,8 @@ def test_with_collimated_beam():
         raise Exception("Undefined method")
 
     #
-
-    plotxy(beam2.get_shadow3_beam(),1,3,nbins=100,title="FOCAL PLANE")
+    beam3 = Beam3.initialize_from_shadow4_beam(beam2)
+    plotxy(beam3,1,3,nbins=100,title="FOCAL PLANE")
     FX, FZ = (1e6*beam2.get_standard_deviation(1),1e6*beam2.get_standard_deviation(3))
     print("Source dimensions: %f %f um"%(SX,SZ))
     print("Focal dimensions: %f %f um"%(FX,FZ))
@@ -153,9 +155,9 @@ def test_with_collimated_beam():
 
 def test_with_divergent_beam():
 
-    from SourceGaussian import SourceGaussian
-    from SourceGridCartesian import SourceGridCartesian
-    from Beam import Beam
+    from shadow4.sources.source_geometrical.gaussian import SourceGaussian
+    from shadow4.sources.source_geometrical.grid_cartesian import SourceGridCartesian
+    from shadow4.beam.beam import Beam
     from Shadow.ShadowTools import plotxy
 
     src = SourceGaussian.initialize_from_keywords(number_of_rays=100000,
@@ -178,11 +180,13 @@ def test_with_divergent_beam():
     print(beam.info())
     SX, SZ = (1e6*beam.get_standard_deviation(1),1e6*beam.get_standard_deviation(3))
 
-    plotxy(beam.get_shadow3_beam(),4,6,nbins=100,title="SOURCE DIVERGENCES")
+    beam3 = Beam3.initialize_from_shadow4_beam(beam)
+    plotxy(beam3,4,6,nbins=100,title="SOURCE DIVERGENCES")
 
     beam_tmp = beam.duplicate()
     beam_tmp.retrace(100.0)
-    plotxy(beam_tmp.get_shadow3_beam(),1,3,nbins=100,title="SOURCE AFTER 10m")
+    beam3 = Beam3.initialize_from_shadow4_beam(beam_tmp)
+    plotxy(beam3,1,3,nbins=100,title="SOURCE AFTER 10m")
     # plotxy(beam.get_shadow3_beam(),1,4,nbins=100,title="SOURCE PHASE SPACE")
 
     # p = 30
@@ -220,7 +224,8 @@ def test_with_divergent_beam():
     # plot_scatter(X,Y)
 
 
-    plotxy(beam2.get_shadow3_beam(),1,3,nbins=100,title="FOCAL PLANE",xrange=[-5e-9,5e-9],yrange=[-5e-9,5e-9])
+    beam3 = Beam3.initialize_from_shadow4_beam(beam2)
+    plotxy(beam3,1,3,nbins=100,title="FOCAL PLANE",xrange=[-5e-9,5e-9],yrange=[-5e-9,5e-9])
     # plotxy(beam2.get_shadow3_beam(),1,4,nbins=100,title="FOCAL PLANE PHASE SPACE")
 
     FX, FZ = (1e6*beam2.get_standard_deviation(1),1e6*beam2.get_standard_deviation(3))
@@ -238,8 +243,8 @@ def get_sigmas_radiation(photon_energy,undulator_length):
 
 def test_id16ni():
 
-    from minishadow.source_geometrical.gaussian import SourceGaussian
-    from minishadow.beam.beam import Beam
+    from shadow4.sources.source_geometrical.gaussian import SourceGaussian
+    from shadow4.beam.beam import Beam
     from Shadow.ShadowTools import plotxy
 
 
@@ -296,7 +301,8 @@ def test_id16ni():
     SX, SZ = (1e6*beam.get_standard_deviation(1),1e6*beam.get_standard_deviation(3))
 
     # plotxy(beam.get_shadow3_beam(),1,4,nbins=100,title="SOURCE H phase space")
-    plotxy(beam.get_shadow3_beam(),1,3,nbins=100)
+    beam3 = Beam3.initialize_from_shadow4_beam(beam)
+    plotxy(beam3,1,3,nbins=100)
 
     # multilayer
     p = 28.3
@@ -336,8 +342,8 @@ def test_id16ni():
 
 
     #
-
-    tkt = plotxy(beam.get_shadow3_beam(),1,3,nbins=300,xrange=[-0.0000005,0.0000005],yrange=[-0.0000005,0.0000005],title="FOCAL PLANE")
+    beam3 = Beam3.initialize_from_shadow4_beam(beam)
+    tkt = plotxy(beam3,1,3,nbins=300,xrange=[-0.0000005,0.0000005],yrange=[-0.0000005,0.0000005],title="FOCAL PLANE")
 
     print(tkt['fwhm_h'],tkt['fwhm_v'])
 

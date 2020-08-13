@@ -103,8 +103,13 @@ class Beam(object):
     def get_photon_wavelength(self):
         return 2*numpy.pi/self.get_column(11) * 1e-2
 
-    def get_intensity(self,nolost=0):
-        w = self.get_column(23,nolost=nolost)
+    def get_intensity(self,nolost=0,polarization=0):
+        if polarization == 0:
+            w = self.get_column(23,nolost=nolost)
+        elif polarization == 1:
+            w = self.get_column(24, nolost=nolost)
+        elif polarization == 2:
+            w = self.get_column(25, nolost=nolost)
         return w.sum()
 
     def get_column(self,column,nolost=0):
@@ -120,7 +125,7 @@ class Beam(object):
              8   Y component of the electromagnetic vector (s-polariz)
              9   Z component of the electromagnetic vector (s-polariz)
             10   Lost ray flag
-            11   wavenumber (2 pi / lambda[cm])
+            11   wavenumber (2 pi / lambda[cm]) !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
             12   Ray index
             13   Optical path length
             14   Phase (s-polarization) in rad
@@ -132,11 +137,11 @@ class Beam(object):
             19   Wavelength [A]
             20   R= SQRT(X^2+Y^2+Z^2)
             21   angle from Y axis
-            22   the magnituse of the Electromagnetic vector
+            22   the magnitude of the Electromagnetic vector
             23   |E|^2 (total intensity)
             24   total intensity for s-polarization
             25   total intensity for p-polarization
-            26   K = 2 pi / lambda [A^-1]
+            26   photon energy in eV !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
             27   K = 2 pi / lambda * col4 [A^-1]
             28   K = 2 pi / lambda * col5 [A^-1]
             29   K = 2 pi / lambda * col6 [A^-1]
@@ -144,58 +149,66 @@ class Beam(object):
             31   S1-stokes = |Ep|^2 - |Es|^2
             32   S2-stokes = 2 |Es| |Ep| cos(phase_s-phase_p)
             33   S3-stokes = 2 |Es| |Ep| sin(phase_s-phase_p)
+            34   Power = intensity(col 23) * energy (col 11)
+            35   Angle-X with Y: |arcsin(X')|
+            36   Angle-Z with Y: |arcsin(Z')|
+            37   Angle-X with Y: |arcsin(X') - mean(arcsin(X'))|
+            38   Angle-Z with Y: |arcsin(Z') - mean(arcsin(Z'))|
 
+            -11: column 26
         :param column:
         :return:
         """
+
+        if column == -11: column = 26
 
         if column <= 18:
             out = self.rays[:,column-1]
         else:
             A2EV = 2.0*numpy.pi/(codata.h*codata.c/codata.e*1e2)
-            col = column - 1
+            column_index = column - 1
             ray = self.rays
 
-            if col==10: out =  ray[:,col]/A2EV
-            if col==18: out =  2*numpy.pi*1.0e8/ray[:,10]
-            if col==19: out =  numpy.sqrt(ray[:,0]*ray[:,0]+ray[:,1]*ray[:,1]+ray[:,2]*ray[:,2])
-            if col==20: out =  numpy.arccos(ray[:,4])
-            if col==21: out =  numpy.sqrt(numpy.sum(numpy.array([ ray[:,i]*ray[:,i] for i in [6,7,8,15,16,17] ]),axis=0))
-            if col==22: out =  numpy.sum(numpy.array([ ray[:,i]*ray[:,i] for i in [6,7,8,15,16,17] ]),axis=0)
-            if col==23: out =  numpy.sum(numpy.array([ ray[:,i]*ray[:,i] for i in [6,7,8] ]),axis=0)
-            if col==24: out =  numpy.sum(numpy.array([ ray[:,i]*ray[:,i] for i in [15,16,17] ]),axis=0)
-            if col==25: out =  ray[:,10]*1.0e8
-            if col==26: out =  ray[:,3]*ray[:,10]*1.0e8
-            if col==27: out =  ray[:,4]*ray[:,10]*1.0e8
-            if col==28: out =  ray[:,5]*ray[:,10]*1.0e8
-            if col==29:
+             # if colu mn_index==10: out =  ray[:,column_index]/A2EV
+            if column == 19: out =  2*numpy.pi*1.0e8/ray[:,10]
+            if column == 20: out =  numpy.sqrt(ray[:,0]*ray[:,0]+ray[:,1]*ray[:,1]+ray[:,2]*ray[:,2])
+            if column == 21: out =  numpy.arccos(ray[:,4])
+            if column == 22: out =  numpy.sqrt(numpy.sum(numpy.array([ ray[:,i]*ray[:,i] for i in [6,7,8,15,16,17] ]),axis=0))
+            if column == 23: out =  numpy.sum(numpy.array([ ray[:,i]*ray[:,i] for i in [6,7,8,15,16,17] ]),axis=0)
+            if column == 24: out =  numpy.sum(numpy.array([ ray[:,i]*ray[:,i] for i in [6,7,8] ]),axis=0)
+            if column == 25: out =  numpy.sum(numpy.array([ ray[:,i]*ray[:,i] for i in [15,16,17] ]),axis=0)
+            if column == 26: out =  ray[:,10]/A2EV
+            if column == 27: out =  ray[:,3]*ray[:,10]*1.0e8
+            if column == 28: out =  ray[:,4]*ray[:,10]*1.0e8
+            if column == 29: out =  ray[:,5]*ray[:,10]*1.0e8
+            if column == 30:
                 E2s = numpy.sum(numpy.array([ ray[:,i]*ray[:,i] for i in [6,7,8] ]),axis=0)
                 E2p = numpy.sum(numpy.array([ ray[:,i]*ray[:,i] for i in [15,16,17] ]),axis=0)
                 out =  E2p+E2s
-            if col==30:
+            if column ==31:
                 E2s = numpy.sum(numpy.array([ ray[:,i]*ray[:,i] for i in [6,7,8] ]),axis=0)
                 E2p = numpy.sum(numpy.array([ ray[:,i]*ray[:,i] for i in [15,16,17] ]),axis=0)
                 out =  E2p-E2s
-            if col==31:
+            if column == 32:
                 E2s = numpy.sum(numpy.array([ ray[:,i]*ray[:,i] for i in [6,7,8] ]),axis=0)
                 E2p = numpy.sum(numpy.array([ ray[:,i]*ray[:,i] for i in [15,16,17] ]),axis=0)
                 Cos = numpy.cos(ray[:,13]-ray[:,14])
                 out =  2*numpy.sqrt(E2s*E2p)*Cos
-            if col==32:
+            if column == 33:
                 E2s = numpy.sum(numpy.array([ ray[:,i]*ray[:,i] for i in [6,7,8] ]),axis=0)
                 E2p = numpy.sum(numpy.array([ ray[:,i]*ray[:,i] for i in [15,16,17] ]),axis=0)
                 Sin = numpy.sin(ray[:,13]-ray[:,14])
                 out =  2*numpy.sqrt(E2s*E2p)*Sin
 
-            if col==33:
+            if column == 34:
                 out =  numpy.sum(numpy.array([ ray[:,i]*ray[:,i] for i in [6,7,8,15,16,17] ]),axis=0) *\
                 ray[:,10]/A2EV
 
-            if col==34:
+            if column == 35:
                 out = numpy.abs(numpy.arcsin(ray[:,3]))
-            if col==35:
+            if column == 36:
                 out = numpy.abs(numpy.arcsin(ray[:,5]))
-            if col==36:
+            if column == 37:
                 f = self.getshonecol(10)
                 w = self.getshonecol(23)
                 xp = self.getshonecol(4)
@@ -208,7 +221,7 @@ class Beam(object):
                 else:
                     col_mean = numpy.average(xp, weights=w)
                 out = numpy.abs(numpy.arcsin(xp - col_mean))
-            if col==37:
+            if column == 38:
                 f = self.getshonecol(10)
                 w = self.getshonecol(23)
                 zp = self.getshonecol(6)
@@ -440,14 +453,21 @@ class Beam(object):
 
         :return:
         """
-        txt = ""
+        txt = "col   name         min         max      center       stDev\n"
+        for col in [1,2,3,4,5,6,26]:
+            val = self.get_column(column=col,nolost=True)
+            txt += "%3d  %5s  %10g  %10g  %10g  %10g\n" % \
+              (col, self.column_short_names()[col-1], val.min(), val.max(), val.mean(), val.std())
+        txt += "\n"
         txt += "Number of rays: %d \n"%(self.get_number_of_rays())
         txt += "Number of good rays: %d \n"%(self.get_number_of_rays(nolost=1))
         txt += "Number of lost rays: %d \n"%(self.get_number_of_rays(nolost=2))
         txt += "Mean energy: %f eV\n"%(self.get_photon_energy_eV().mean() )
         if self.get_photon_energy_eV().mean() != 0.0:
             txt += "Mean wavelength: %f A\n"%(1e10 * self.get_photon_wavelength().mean() )
-        txt += "Intensity: %f \n"%( self.get_intensity(nolost=1) )
+        txt += "Intensity (total): %f \n"%( self.get_intensity(nolost=1,polarization=0) )
+        txt += "Intensity (s-pol): %f \n" % (self.get_intensity(nolost=1,polarization=1))
+        txt += "Intensity (p-pol): %f \n" % (self.get_intensity(nolost=1,polarization=2))
         return txt
 
     #
@@ -574,12 +594,76 @@ class Beam(object):
 
     @classmethod
     def column_names(cls):
-        return ["x","y","z",
-                      "v_x", "v_y", "v_z",
-                      "Es_x", "Es_y", "Es_z",
-                      "flag","wavevector","index","optical_path",
-                      "PhaseS","PhaseP",
-                      "Ep_x", "Ep_y", "Ep_z"]
+        return [
+                        "X spatial coordinate [user's unit]",
+                        "Y spatial coordinate [user's unit]",
+                        "Z spatial coordinate [user's unit]",
+                        "Xp direction or divergence [rads]",
+                        "Yp direction or divergence [rads]",
+                        "Zp direction or divergence [rads]",
+                        "X component of the electromagnetic vector (s-polariz)",
+                        "Y component of the electromagnetic vector (s-polariz)",
+                        "Z component of the electromagnetic vector (s-polariz)",
+                        "Lost ray flag",
+                        "Energy [eV]",
+                        "Ray index",
+                        "Optical path length",
+                        "Phase (s-polarization) in rad",
+                        "Phase (p-polarization) in rad",
+                        "X component of the electromagnetic vector (p-polariz)",
+                        "Y component of the electromagnetic vector (p-polariz)",
+                        "Z component of the electromagnetic vector (p-polariz)",
+                        "Wavelength [A]",
+                        "R= SQRT(X^2+Y^2+Z^2)",
+                        "angle from Y axis",
+                        "the magnitude of the Electromagnetic vector",
+                        "|E|^2 (total intensity)",
+                        "total intensity for s-polarization",
+                        "total intensity for p-polarization",
+                        "photon energy [eV]",
+                        "K = 2 pi / lambda * col4 [A^-1]",
+                        "K = 2 pi / lambda * col5 [A^-1]",
+                        "K = 2 pi / lambda * col6 [A^-1]",
+                        "S0-stokes = |Es|^2 + |Ep|^2",
+                        "S1-stokes = |Es|^2 - |Ep|^2",
+                        "S2-stokes = 2 |Es| |Ep| cos(phase_s-phase_p)",
+                        "S3-stokes = 2 |Es| |Ep| sin(phase_s-phase_p)",
+                        "Power = intensity(col 23) * energy (col 11)",
+                        "Angle-X with Y: |arcsin(X')|",
+                        "Angle-Z with Y: |arcsin(Z')|",
+                        "Angle-X with Y: |arcsin(X') - mean(arcsin(X'))|",
+                        "Angle-Z with Y: |arcsin(Z') - mean(arcsin(Z'))|",
+                ]
+
+    def column_short_names(cls):
+        return [
+                        "x","y","z",
+                        "v_x", "v_y", "v_z",
+                        "Es_x", "Es_y", "Es_z",
+                        "flag","K","idx","optical_path",
+                        "PhaseS","PhaseP",
+                        "Ep_x", "Ep_y", "Ep_z",
+                        "lambda [A]",
+                        "R",
+                        "angle from Y",
+                        "|E|",
+                        "I tot",
+                        "I s-pol",
+                        "I p-pol",
+                        "E[eV]",
+                        "Kx",
+                        "Ky",
+                        "Kz",
+                        "S0",
+                        "S1",
+                        "S2",
+                        "S3",
+                        "PWR",
+                        "Angle X^Y",
+                        "Angle Z^Y",
+                        "Angle X^Y",
+                        "Angle Z^Y",
+                ]
 
     def write(self,filename,overwrite=True,simulation_name="run001",beam_name="begin"):
 

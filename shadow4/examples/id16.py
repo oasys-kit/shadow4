@@ -1,9 +1,10 @@
 import numpy
 from collections import OrderedDict
 
-from minishadow.source_geometrical.gaussian import SourceGaussian
-from minishadow.beam.beam import Beam
-from minishadow.optical_elements.lens_ideal import LensIdeal, LensSuperIdeal
+from shadow4.sources.source_geometrical.gaussian import SourceGaussian
+from shadow4.beam.beam import Beam
+from shadow4.compatibility.beam3 import Beam3
+from shadow4.optical_elements.lens_ideal import LensIdeal, LensSuperIdeal
 
 try:
     import Shadow
@@ -125,7 +126,8 @@ def id16ni_kb_as_ideal_lenses(beam,do_plot=False):
     tkt = beam.histo2(1,3,nbins=300,xrange=[-0.0000005,0.0000005],yrange=[-0.0000005,0.0000005])
     if do_plot:
         if HAVE_SHADOW3:
-            Shadow.ShadowTools.plotxy(beam.get_shadow3_beam(),1,3,nbins=300,xrange=[-0.0000005,0.0000005],yrange=[-0.0000005,0.0000005],title="FOCAL PLANE")
+            beam3 = Beam3.initialize_from_shadow4_beam(beam)
+            Shadow.ShadowTools.plotxy(beam3,1,3,nbins=300,xrange=[-0.0000005,0.0000005],yrange=[-0.0000005,0.0000005],title="FOCAL PLANE")
         else:
             print("Error: cannot plot right now (need import shadow3)")
 
