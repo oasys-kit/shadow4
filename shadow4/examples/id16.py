@@ -148,6 +148,8 @@ def id16ni_kb_as_ideal_lenses(beam,do_plot=False):
     print("Demagnification:(HISTO) H:%g V:%g (theoretical: %g,%g) "%(f2dot35*SX/(f2dot35*1e6*tkt['fwhm_h']),SZ/(1e6*tkt['fwhm_v']),demagX[0]*demagX[1],demagZ))
 
 if __name__ == "__main__":
+    from srxraylib.plot.gol import set_qt
+    set_qt()
     beam = id16ni_source(do_plot=False)
     beam = id16ni_multilayer_as_ideal_lens(beam,do_plot=False)
     beam = id16ni_kb_as_ideal_lenses(beam,do_plot=True)

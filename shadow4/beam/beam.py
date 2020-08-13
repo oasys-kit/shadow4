@@ -510,6 +510,10 @@ class Beam(object):
         self.rays[:,1] += qdist1[1]
         self.rays[:,2] += qdist1[2]
 
+        #
+        # TODO: update optical path and may be phases of electric vectors
+        #
+
 
     def rotate(self,theta1,axis=1,rad=1):
         """
@@ -550,6 +554,11 @@ class Beam(object):
             self.rays[:,newtoroti[0]] =  a1[:,newtoroti[0]] * costh + a1[:,newtoroti[1]] * sinth
             self.rays[:,newtoroti[1]] = -a1[:,newtoroti[0]] * sinth + a1[:,newtoroti[1]] * costh
             self.rays[:,newaxisi]       =  a1[:,newaxisi]
+
+        #
+        # TODO: rotate electric vectors
+        #
+
 
     #
     # file i/o

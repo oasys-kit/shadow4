@@ -26,7 +26,8 @@ class Mirror(object):
         if self._beamline_element_syned is not None:
             return (self._beamline_element_syned.info())
 
-    def trace_beam(self,beam1):
+    def trace_beam(self,beam1,undo_shadow_orientation_angle_rotation=False):
+
         p = self._beamline_element_syned.get_coordinates().p()
         q = self._beamline_element_syned.get_coordinates().q()
         theta_grazing1 = numpy.pi - self._beamline_element_syned.get_coordinates().angle_radial()
@@ -49,35 +50,43 @@ class Mirror(object):
         if isinstance(self._beamline_element_syned.get_optical_element().get_surface_shape(),Plane):
             print(">>>>> Plane mirror")
             ccc = S4Conic.initialize_as_plane()
-            beam = ccc.apply_specular_reflection_on_beam(beam)
+            mirr = ccc.apply_specular_reflection_on_beam(beam)
         elif isinstance(self._beamline_element_syned.get_optical_element().get_boundary_shape(),Conic):
             print(">>>>> Conic (no plane) mirror")
             conic = self._beamline_element_syned.get_optical_element().get_boundary_shape()
             ccc = S4Conic.initialize_from_coefficients(conic._conic_coefficients)
-            beam = ccc.apply_specular_reflection_on_beam(beam)
+            mirr = ccc.apply_specular_reflection_on_beam(beam)
         elif isinstance(self._beamline_element_syned.get_optical_element().get_boundary_shape(), Toroidal):
             print(">>>>> Toroidal mirror")
             #...........
         else:
             raise Exception("cannot trace this surface shape")
-        #     if verbose:
-        #         print("\n\nElement %d is CONIC :\n" % (1 + oe_index), ccc.info())
-        #     newbeam = ccc.apply_specular_reflection_on_beam(newbeam)
-        # else:
-        #     if verbose:
-        #         print("\n\nElement %d is TOROIDAL :\n" % (1 + oe_index), toroid.info())
-        #     newbeam = toroid.apply_specular_reflection_on_beam(newbeam)
+
         #
+        # TODO: apply mirror boundaries...
         #
+
         #
-        # if q != 0.0:
-        #     beam.retrace(q,resetY=True)
+        # TODO: apply mirror reflectivity...
         #
-        # return beam
 
 
-        return beam
+        #
+        # from mirror reference system to image plane
+        #
 
+        beam_out = mirr.duplicate()
+        beam_out.rotate(theta_grazing1, axis=1)
+        # do not undo alpha rotation: newbeam.rotate(-alpha, axis=2)
+        if undo_shadow_orientation_angle_rotation:
+            beam_out.rotate(-alpha1, axis=2)
+            beam_out.retrace(q, resetY=True)
+
+        return beam_out, mirr
+
+    #
+    # i/o utilities
+    #
     def set_positions(self, p, q, theta_grazing, theta_azimuthal=None):
         self._beamline_element_syned.get_coordinates()._p = p
         self._beamline_element_syned.get_coordinates()._q = q
@@ -97,9 +106,14 @@ class Mirror(object):
 
 if __name__ == "__main__":
     from shadow4.beam.beam import Beam
-    beam0 = Beam.initialize_as_pencil(N=500)
+    from shadow4.sources.source_geometrical.gaussian import SourceGaussian
 
+    # beam0 = Beam.initialize_as_pencil(N=500)
+    source = SourceGaussian.initialize_from_keywords(500, 0, 0, 0, 1e-6, 1e-6)
 
+    beam0 = Beam()
+    beam0.genSource(source)
+    print(beam0.info())
 
     surface_shape = Plane() # SurfaceShape()
     boundary_shape = None   # BoundaryShape()
@@ -127,7 +141,11 @@ if __name__ == "__main__":
     # print(mirror1.info())
     print(mirror1.info())
 
-    beam1 = mirror1.trace_beam(beam0)
+    beam1, mirr1 = mirror1.trace_beam(beam0)
+    print(mirr1.info())
+    print(beam1.info())
+
+
 
 
 
