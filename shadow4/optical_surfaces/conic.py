@@ -138,7 +138,9 @@ class Conic(object):
         return normal
 
 
-    def apply_specular_reflection_on_beam(self,newbeam):
+    def apply_specular_reflection_on_beam(self, newbeam):
+
+
         # ;
         # ; TRACING...
         # ;

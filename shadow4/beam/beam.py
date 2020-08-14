@@ -4,7 +4,9 @@ from numpy.testing import assert_almost_equal
 
 import h5py
 import time
+import os
 
+from syned.beamline.shape import Rectangle, Ellipse
 
 # IMPORTANT: Column 11 (index 10) is wavenumber (cm^-1) as internally in Shadow
 
@@ -498,6 +500,9 @@ class Beam(object):
         except AttributeError:
             print ('Beam.retrace: No rays')
 
+        #
+        # TODO: modify optical path
+        #
 
     def translation(self,qdist1):
         """
@@ -562,7 +567,93 @@ class Beam(object):
         #
         # TODO: rotate electric vectors
         #
+    def apply_boundaries_syned(self, syned_boundary_object, flag_lost_value=-1):
+        if isinstance(syned_boundary_object, Rectangle):
+            # # self._x_left, self._x_right, self._y_bottom, self._y_top\
+            # rwidx2, rwidx1, rlen2, rlen1 = syned_boundary_object.get_boundaries()
+            x_left, x_right, y_bottom, y_top = syned_boundary_object.get_boundaries()
+            rwidx1, rwidx2, rlen1, rlen2 = x_right, -x_left, y_top, -y_bottom
+            print(">>>>>>>",x_left, x_right, y_bottom, y_top)
+            print(">>>>>>>", rwidx1, rwidx2, rlen1, rlen2)
+            self.apply_boundaries_shadow(fhit_c=1, fshape=1, rlen1=rlen1, rlen2=rlen2,
+                                         rwidx1=rwidx1, rwidx2=rwidx2, flag_lost_value=flag_lost_value)
 
+        else:
+            raise Exception("Not implemented boundary")
+
+    def apply_boundaries_shadow(self, fhit_c=0, fshape=1, rlen1=0.0, rlen2=0.0, rwidx1=0.0, rwidx2=0.0, flag_lost_value=-1):
+
+        """
+        fhit_c	= 0 - flag: mirror dimensions finite: yes (1), no(0).
+
+        fshape	= 0 - for fhit_c=1:
+                mirror shape rectangular (1)
+                full ellipse (2)
+                ellipse with hole (3).
+
+        rlen1	=  0.0
+                fshape=1: mirror half length +Y.
+                 fshape=3: internal minor axis (Y).
+        rlen2	=  0.0
+                fshape=1: mirror half length -Y.
+                fshape=2,3: external outline minor
+
+        rwidx1	=  0.0
+                fshape=1: mirror half width +X.
+                fshape=3: internal major axis (X).
+        rwidx2	=  0.0
+                fshape=1: mirror half width -X.
+                fshape=2,3: external outline major axis (X).
+        """
+
+        if fhit_c == 0:
+            return
+
+        x =   self.get_column(1)
+        y = self.get_column(2)
+        flag = self.get_column(10)        # numpy.array(a3.getshonecol(10))
+
+        if fshape == 1:  # rectangle
+            negative = False
+            x_min = -rwidx2
+            x_max =  rwidx1
+            y_min = -rlen2
+            y_max =  rlen1
+
+            if not negative:
+                window = numpy.ones_like(flag)
+                lower_window_x = numpy.where(x < x_min)
+                upper_window_x = numpy.where(x > x_max)
+                lower_window_y = numpy.where(y < y_min)
+                upper_window_y = numpy.where(y > y_max)
+
+                #
+                if len(lower_window_x) > 0: window[lower_window_x] = 0
+                if len(upper_window_x) > 0: window[upper_window_x] = 0
+                if len(lower_window_y) > 0: window[lower_window_y] = 0
+                if len(upper_window_y) > 0: window[upper_window_y] = 0
+
+            else:
+                window = numpy.ones_like(flag)
+                window2 = numpy.ones_like(window)
+                window_x = numpy.where((x_min <= x) & (x <= x_max))
+                window_y = numpy.where((y_min <= y) & (y <= y_max))
+
+                if len(window_x) > 0: window[window_x] = 0.0
+                if len(window_y) > 0: window2[window_y] = 0.0
+
+                window += window2
+                window_good = numpy.where(window > 0)
+                if len(window_good) > 0: window[window_good] = 1.0
+
+
+            flag[window < 1] = flag_lost_value
+            self.rays[:, 9] = flag
+
+        elif fshape == 2: # ellipse
+            pass
+        elif fshape == 3:  # hole in ellipse
+            pass
 
     #
     # file i/o
@@ -619,7 +710,7 @@ class Beam(object):
                         "Z component of the electromagnetic vector (s-polariz)",
                         "Lost ray flag",
                         "Energy [eV]",
-                        "Ray index",
+                        "Wavenumber [cm-1]",
                         "Optical path length",
                         "Phase (s-polarization) in rad",
                         "Phase (p-polarization) in rad",
@@ -648,12 +739,13 @@ class Beam(object):
                         "Angle-Z with Y: |arcsin(Z') - mean(arcsin(Z'))|",
                 ]
 
+    @classmethod
     def column_short_names(cls):
         return [
                         "x","y","z",
                         "v_x", "v_y", "v_z",
                         "Es_x", "Es_y", "Es_z",
-                        "flag","K","idx","optical_path",
+                        "flag","K [cm-1]","idx","OpPath",
                         "PhaseS","PhaseP",
                         "Ep_x", "Ep_y", "Ep_z",
                         "lambda [A]",
@@ -678,9 +770,20 @@ class Beam(object):
                         "Angle Z^Y",
                 ]
 
+    @classmethod
+    def column_short_names_with_column_number(cls):
+        names = cls.column_short_names()
+        for i in range(len(names)):
+            names[i] = "col%02d %s" % (i+1, names[i])
+        return names
+
     def write(self,filename,overwrite=True,simulation_name="run001",beam_name="begin"):
 
         if overwrite:
+            try:
+                os.remove(filename)
+            except:
+                pass
             f = h5py.File(filename, 'w')
         else:
             f = h5py.File(filename, 'a')
@@ -708,10 +811,10 @@ class Beam(object):
 
         f2 = f1.create_group(beam_name)
         f2.attrs['NX_class'] = 'NXdata'
-        f2.attrs['signal'] =  b'z'
-        f2.attrs['axes'] = b'x'
+        f2.attrs['signal'] =  b'col03 z'
+        f2.attrs['axes'] = b'col01 x'
 
-        column_names = self.column_names()
+        column_names = self.column_short_names_with_column_number()
 
         for i in range(18):
             column_name = column_names[i]
@@ -730,16 +833,17 @@ class Beam(object):
 
         f = h5py.File(filename, 'r')
 
-        column_names = cls.column_names()
+        column_names = cls.column_short_names_with_column_number()
 
         try:
-            x = (f["%s/%s/x"%(simulation_name,beam_name)])[:]
+            x = (f["%s/%s/col01 x"%(simulation_name,beam_name)])[:]
 
             beam = Beam(N=x.size)
             rays = numpy.zeros( (x.size,18))
-            # for i in range(18):
-            #     column_name = column_names[i]
-            #     rays[:,i] = (f["%s/%s/%s"%(simulation_name,beam_name,column_name)])[:]
+            for i in range(18):
+                column_name = column_names[i]
+                print(">>>>>","%s/%s/%s"%(simulation_name,beam_name,column_name))
+                rays[:,i] = (f["%s/%s/%s"%(simulation_name,beam_name,column_name)])[:]
         except:
             f.close()
             raise Exception("Cannot find data in %s:/%s/%s" % (filename, simulation_name, beam_name))
@@ -776,4 +880,6 @@ class Beam(object):
 
 
 if __name__ == "__main__":
-    pass
+    # pass
+
+    print(Beam().column_short_names_with_column_number())
