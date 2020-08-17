@@ -567,19 +567,65 @@ class Beam(object):
         #
         # TODO: rotate electric vectors
         #
-    def apply_boundaries_syned(self, syned_boundary_object, flag_lost_value=-1):
-        if isinstance(syned_boundary_object, Rectangle):
-            # # self._x_left, self._x_right, self._y_bottom, self._y_top\
-            # rwidx2, rwidx1, rlen2, rlen1 = syned_boundary_object.get_boundaries()
-            x_left, x_right, y_bottom, y_top = syned_boundary_object.get_boundaries()
-            rwidx1, rwidx2, rlen1, rlen2 = x_right, -x_left, y_top, -y_bottom
-            print(">>>>>>>",x_left, x_right, y_bottom, y_top)
-            print(">>>>>>>", rwidx1, rwidx2, rlen1, rlen2)
-            self.apply_boundaries_shadow(fhit_c=1, fshape=1, rlen1=rlen1, rlen2=rlen2,
-                                         rwidx1=rwidx1, rwidx2=rwidx2, flag_lost_value=flag_lost_value)
 
+
+    #
+    # crop
+    #
+    def crop_rectangle(self, x_col, x_min, x_max, y_col, y_min, y_max, negative=False, flag_lost_value=-1):
+
+
+
+        x =   self.get_column(x_col)
+        y = self.get_column(y_col)
+        flag = self.get_column(10)        # numpy.array(a3.getshonecol(10))
+
+        print(">>>>> crop_rectangle: ", x_min, x_max, y_min, y_max,)
+        if True:
+
+
+            if not negative:
+                window = numpy.ones_like(flag)
+                lower_window_x = numpy.where(x < x_min)
+                upper_window_x = numpy.where(x > x_max)
+                lower_window_y = numpy.where(y < y_min)
+                upper_window_y = numpy.where(y > y_max)
+
+                #
+                if len(lower_window_x) > 0: window[lower_window_x] = 0
+                if len(upper_window_x) > 0: window[upper_window_x] = 0
+                if len(lower_window_y) > 0: window[lower_window_y] = 0
+                if len(upper_window_y) > 0: window[upper_window_y] = 0
+
+            else:
+                window = numpy.ones_like(flag)
+                window2 = numpy.ones_like(window)
+                window_x = numpy.where((x_min <= x) & (x <= x_max))
+                window_y = numpy.where((y_min <= y) & (y <= y_max))
+
+                if len(window_x) > 0: window[window_x] = 0.0
+                if len(window_y) > 0: window2[window_y] = 0.0
+
+                window += window2
+                window_good = numpy.where(window > 0)
+                if len(window_good) > 0: window[window_good] = 1.0
+
+
+            flag[window < 1] = flag_lost_value
+            self.rays[:, 9] = flag
+
+            return window
+
+
+    def apply_boundaries_syned(self, syned_boundary_object, flag_lost_value=-1):
+        print(">>>>> apply_boundaries_syned: ", syned_boundary_object)
+        if isinstance(syned_boundary_object, type(None)):
+            return
+        elif isinstance(syned_boundary_object, Rectangle):
+            x_left, x_right, y_bottom, y_top = syned_boundary_object.get_boundaries()
+            self.crop_rectangle(1, x_left, x_right, 2, y_bottom, y_top)
         else:
-            raise Exception("Not implemented boundary")
+            raise Exception("Not good mirror boundary")
 
     def apply_boundaries_shadow(self, fhit_c=0, fshape=1, rlen1=0.0, rlen2=0.0, rwidx1=0.0, rwidx2=0.0, flag_lost_value=-1):
 
@@ -614,46 +660,42 @@ class Beam(object):
         flag = self.get_column(10)        # numpy.array(a3.getshonecol(10))
 
         if fshape == 1:  # rectangle
-            negative = False
             x_min = -rwidx2
             x_max =  rwidx1
             y_min = -rlen2
             y_max =  rlen1
-
-            if not negative:
-                window = numpy.ones_like(flag)
-                lower_window_x = numpy.where(x < x_min)
-                upper_window_x = numpy.where(x > x_max)
-                lower_window_y = numpy.where(y < y_min)
-                upper_window_y = numpy.where(y > y_max)
-
-                #
-                if len(lower_window_x) > 0: window[lower_window_x] = 0
-                if len(upper_window_x) > 0: window[upper_window_x] = 0
-                if len(lower_window_y) > 0: window[lower_window_y] = 0
-                if len(upper_window_y) > 0: window[upper_window_y] = 0
-
-            else:
-                window = numpy.ones_like(flag)
-                window2 = numpy.ones_like(window)
-                window_x = numpy.where((x_min <= x) & (x <= x_max))
-                window_y = numpy.where((y_min <= y) & (y <= y_max))
-
-                if len(window_x) > 0: window[window_x] = 0.0
-                if len(window_y) > 0: window2[window_y] = 0.0
-
-                window += window2
-                window_good = numpy.where(window > 0)
-                if len(window_good) > 0: window[window_good] = 1.0
-
-
-            flag[window < 1] = flag_lost_value
-            self.rays[:, 9] = flag
+            self.crop_rectangle(1, x_min, x_max, 2, y_min, y_max, negative=False, flag_lost_value=flag_lost_value)
 
         elif fshape == 2: # ellipse
-            pass
+            raise Exception("Not yet implemented")
         elif fshape == 3:  # hole in ellipse
-            pass
+            raise Exception("Not yet implemented")
+    #
+    # file i/o
+    #
+
+    # def get_shadow3_beam(self):
+    #     #TODO this dump uses now shadow3. To be removed after checking or write using fully python
+    #     import Shadow
+    #     beam_shadow3 = Shadow.Beam(N=self.get_number_of_rays())
+    #     beam_shadow3.rays = self.get_rays().copy()
+    #     return beam_shadow3
+    #
+    #     # beam_shadow3.write(file)
+    #     # print("File %s written to disk. "%file)
+    #
+    # def dump_shadow3_file(self,file):
+    #     #TODO this dump uses now shadow3. To be removed after checking or write using fully python
+    #     beam3 = self.get_shadow3_beam()
+    #     beam3.write(file)
+    #     print("File %s written to disk. "%file)
+
+
+    #
+    #  interfaces like in shadow3
+    #
+
+
 
     #
     # file i/o

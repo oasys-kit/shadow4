@@ -15,12 +15,22 @@ from shadow4.optical_surfaces.conic import Conic as S4Conic
 from shadow4.optical_surfaces.toroid import Toroid as S4Toroid
 
 from syned.beamline.optical_element_with_surface_shape import OpticalElementsWithSurfaceShape
+from syned.beamline.optical_elements.mirrors.mirror import Mirror as SyMirror
+
+from syned.beamline.shape import Rectangle, Ellipse
+
 
 class Mirror(object):
 
     def __init__(self, beamline_element_syned=None):
         if beamline_element_syned is None:
-            self._beamline_element_syned = BeamlineElement(SurfaceShape(),ElementCoordinates())
+            self._beamline_element_syned = BeamlineElement(
+                SyMirror(name="Undefined",
+                 surface_shape=Plane(),
+                 boundary_shape=None,
+                 coating=None,
+                 coating_thickness=None),
+                ElementCoordinates())
         else:
             self._beamline_element_syned = beamline_element_syned
 
@@ -60,14 +70,14 @@ class Mirror(object):
                 print(">>>>> Plane mirror")
                 ccc = S4Conic.initialize_as_plane()
                 mirr = ccc.apply_specular_reflection_on_beam(beam)
-                print(">>>>>>", self._beamline_element_syned.get_optical_element().get_boundary_shape())
                 mirr.apply_boundaries_syned(self._beamline_element_syned.get_optical_element().get_boundary_shape())
                 # mirr.apply_boundaries_shadow(fhit_c=1, fshape=1, rlen1=5e-05, rlen2=5e-05, rwidx1=2e-05, rwidx2=2e-05, flag_lost_value=-1)
-            elif isinstance(self._beamline_element_syned.get_optical_element().get_boundary_shape(),Conic):
+            elif isinstance(self._beamline_element_syned.get_optical_element().get_surface_shape(),Conic):
                 print(">>>>> Conic mirror")
                 conic = self._beamline_element_syned.get_optical_element().get_surface_shape()
                 ccc = S4Conic.initialize_from_coefficients(conic._conic_coefficients)
                 mirr = ccc.apply_specular_reflection_on_beam(beam)
+                mirr.apply_boundaries_syned(self._beamline_element_syned.get_optical_element().get_boundary_shape())
             elif isinstance(self._beamline_element_syned.get_optical_element().get_surface_shape(), Toroidal):
                 print(">>>>> Toroidal mirror")
                 #...........
@@ -115,6 +125,13 @@ class Mirror(object):
 
     def set_surface_toroid(self, min_radius=0.0, maj_radius=0.0):
         self._beamline_element_syned._optical_element = Toroidal(min_radius=min_radius, maj_radius=maj_radius)
+
+    def set_boundaries_rectangle(self, x_left=-1e3, x_right=1e3, y_bottom=-1e3, y_top=1e3):
+
+        print("<<<<<<<<<<<>>>>>>>>>>>>>>>",self._beamline_element_syned._optical_element)
+        self._beamline_element_syned._optical_element._boundary_shape = Rectangle(x_left=x_left, x_right=x_right, y_bottom=y_bottom, y_top=y_top)
+        print("<<<<<<<<<<<>>>>>>>>>>>>>>>", self._beamline_element_syned._optical_element._boundary_shape)
+
 
 if __name__ == "__main__":
     pass
