@@ -7,6 +7,7 @@ import time
 import os
 
 from syned.beamline.shape import Rectangle, Ellipse
+from shadow4.syned.shape import TwoEllipses # TODO move to syned
 
 # IMPORTANT: Column 11 (index 10) is wavenumber (cm^-1) as internally in Shadow
 
@@ -574,47 +575,116 @@ class Beam(object):
     #
     def crop_rectangle(self, x_col, x_min, x_max, y_col, y_min, y_max, negative=False, flag_lost_value=-1):
 
-
-
-        x =   self.get_column(x_col)
+        x = self.get_column(x_col)
         y = self.get_column(y_col)
         flag = self.get_column(10)        # numpy.array(a3.getshonecol(10))
 
-        print(">>>>> crop_rectangle: ", x_min, x_max, y_min, y_max,)
-        if True:
+        TESTX = (x - x_min) * (x_max - x)
+        TESTY = (y - y_min) * (y_max - y)
+
+        negative = True
+        indices_out = numpy.where(numpy.logical_or(TESTX < 0.0, TESTY < 0.0))
+
+        # if not negative:
+        #     window = numpy.ones_like(flag)
+        #     lower_window_x = numpy.where(x < x_min)
+        #     upper_window_x = numpy.where(x > x_max)
+        #     lower_window_y = numpy.where(y < y_min)
+        #     upper_window_y = numpy.where(y > y_max)
+        #
+        #     #
+        #     if len(lower_window_x) > 0: window[lower_window_x] = 0
+        #     if len(upper_window_x) > 0: window[upper_window_x] = 0
+        #     if len(lower_window_y) > 0: window[lower_window_y] = 0
+        #     if len(upper_window_y) > 0: window[upper_window_y] = 0
+        #
+        # else:
+        #     window = numpy.ones_like(flag)
+        #     window2 = numpy.ones_like(window)
+        #     window_x = numpy.where((x_min <= x) & (x <= x_max))
+        #     window_y = numpy.where((y_min <= y) & (y <= y_max))
+        #
+        #     if len(window_x) > 0: window[window_x] = 0.0
+        #     if len(window_y) > 0: window2[window_y] = 0.0
+        #
+        #     window += window2
+        #     window_good = numpy.where(window > 0)
+        #     if len(window_good) > 0: window[window_good] = 1.0
+
+        if negative:
+            window = numpy.zeros_like(flag)
+            if len(indices_out) > 0: window[indices_out] = 1
+        else:
+            window = numpy.ones_like(flag)
+            if len(indices_out) > 0: window[indices_out] = 0
+
+        flag[window < 1] = flag_lost_value
+        self.rays[:, 9] = flag
+
+        return window
+
+    def crop_ellipse(self, x_col, a1, a2, y_col, b1, b2, negative=False, flag_lost_value=-1):
+
+        x =   self.get_column(x_col)
+        y = self.get_column(y_col)
+        flag = self.get_column(10)
+
+        a0 = 0.5 * (a1 + a2)
+        b0 = 0.5 * (b1 + b2)
+        a11 = a2 - a1
+        b11 = b2 - b1
+
+        TESTX = (x - a0) ** 2 / (a11 / 2) ** 2 + (y - b0) ** 2 / (b11 / 2) ** 2 - 1.0
+        TESTX = - TESTX
+        TESTY = TESTX
+        indices_out = numpy.where(numpy.logical_or(TESTX < 0.0, TESTY < 0.0))
+
+        if negative:
+            window = numpy.zeros_like(flag)
+            if len(indices_out) > 0: window[indices_out] = 1
+        else:
+            window = numpy.ones_like(flag)
+            if len(indices_out) > 0: window[indices_out] = 0
 
 
-            if not negative:
-                window = numpy.ones_like(flag)
-                lower_window_x = numpy.where(x < x_min)
-                upper_window_x = numpy.where(x > x_max)
-                lower_window_y = numpy.where(y < y_min)
-                upper_window_y = numpy.where(y > y_max)
+        flag[window < 1] = flag_lost_value
+        self.rays[:, 9] = flag
 
-                #
-                if len(lower_window_x) > 0: window[lower_window_x] = 0
-                if len(upper_window_x) > 0: window[upper_window_x] = 0
-                if len(lower_window_y) > 0: window[lower_window_y] = 0
-                if len(upper_window_y) > 0: window[upper_window_y] = 0
+        return window
 
-            else:
-                window = numpy.ones_like(flag)
-                window2 = numpy.ones_like(window)
-                window_x = numpy.where((x_min <= x) & (x <= x_max))
-                window_y = numpy.where((y_min <= y) & (y <= y_max))
+    def crop_ellipse_with_hole(self, x_col, a1, a2, a3, a4,
+                                    y_col, b1, b2, b3, b4, negative=False, flag_lost_value=-1):
 
-                if len(window_x) > 0: window[window_x] = 0.0
-                if len(window_y) > 0: window2[window_y] = 0.0
+        x =   self.get_column(x_col)
+        y = self.get_column(y_col)
+        flag = self.get_column(10)
 
-                window += window2
-                window_good = numpy.where(window > 0)
-                if len(window_good) > 0: window[window_good] = 1.0
+        a0 = 0.5 * (a1 + a2)
+        b0 = 0.5 * (b1 + b2)
+        a11 = a2 - a1
+        b11 = b2 - b1
 
+        A0 = 0.5 * (a3 + a4)
+        B0 = 0.5 * (b3 + b4)
+        A11 = a4 - a3
+        B11 = b4 - b3
 
-            flag[window < 1] = flag_lost_value
-            self.rays[:, 9] = flag
+        TESTX = (x - A0) ** 2 / (A11 / 2) ** 2 + (y - B0) ** 2 / (B11 / 2) ** 2 - 1.0
+        TESTX = - TESTX
+        TESTY = (x - a0) ** 2 / (a11 / 2) ** 2 + (y - b0) ** 2 / (b11 / 2) ** 2 - 1.0
+        indices_out = numpy.where(numpy.logical_or(TESTX < 0.0, TESTY < 0.0))
 
-            return window
+        if negative:
+            window = numpy.zeros_like(flag)
+            if len(indices_out) > 0: window[indices_out] = 1
+        else:
+            window = numpy.ones_like(flag)
+            if len(indices_out) > 0: window[indices_out] = 0
+
+        flag[window < 1] = flag_lost_value
+        self.rays[:, 9] = flag
+
+        return window
 
 
     def apply_boundaries_syned(self, syned_boundary_object, flag_lost_value=-1):
@@ -624,6 +694,14 @@ class Beam(object):
         elif isinstance(syned_boundary_object, Rectangle):
             x_left, x_right, y_bottom, y_top = syned_boundary_object.get_boundaries()
             self.crop_rectangle(1, x_left, x_right, 2, y_bottom, y_top)
+        elif isinstance(syned_boundary_object, Ellipse):
+            a_axis_min, a_axis_max, b_axis_min, b_axis_max = syned_boundary_object.get_boundaries()
+            self.crop_ellipse(1, a_axis_min, a_axis_max, 2, b_axis_min, b_axis_max)
+        elif isinstance(syned_boundary_object, TwoEllipses):
+            a1_axis_min, a1_axis_max, b1_axis_min, b1_axis_max, \
+                a2_axis_min, a2_axis_max, b2_axis_min, b2_axis_max = syned_boundary_object.get_boundaries()
+            self.crop_ellipse_with_hole(1, a1_axis_min, a1_axis_max, a2_axis_min, a2_axis_max,
+                                        2, b1_axis_min, b1_axis_max, b2_axis_min, b2_axis_max,)
         else:
             raise Exception("Not good mirror boundary")
 
@@ -667,7 +745,7 @@ class Beam(object):
             self.crop_rectangle(1, x_min, x_max, 2, y_min, y_max, negative=False, flag_lost_value=flag_lost_value)
 
         elif fshape == 2: # ellipse
-            raise Exception("Not yet implemented")
+            self.crop_ellipse(1, -rwidx2/2, rwidx2/2, 2, -rlen2/2, rlen2/2, negative=False, flag_lost_value=flag_lost_value)
         elif fshape == 3:  # hole in ellipse
             raise Exception("Not yet implemented")
     #
