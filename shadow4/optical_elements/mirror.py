@@ -118,19 +118,18 @@ class Mirror(object):
             self._beamline_element_syned.get_coordinates()._angle_azimuthal = numpy.pi - theta_azimuthal
 
     def set_surface_plane(self):
-        self._beamline_element_syned._optical_element = Plane()
+        self._beamline_element_syned._optical_element._surface_shape = Plane()
 
     def set_surface_conic(self, conic_coefficients=[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,-1.0,0.0]):
-        self._beamline_element_syned._optical_element = Conic(conic_coefficients=conic_coefficients)
+        self._beamline_element_syned._optical_element._surface_shape = Conic(conic_coefficients=conic_coefficients)
 
     def set_surface_toroid(self, min_radius=0.0, maj_radius=0.0):
         self._beamline_element_syned._optical_element = Toroidal(min_radius=min_radius, maj_radius=maj_radius)
 
     def set_boundaries_rectangle(self, x_left=-1e3, x_right=1e3, y_bottom=-1e3, y_top=1e3):
+        self._beamline_element_syned._optical_element._boundary_shape = \
+            Rectangle(x_left=x_left, x_right=x_right, y_bottom=y_bottom, y_top=y_top)
 
-        print("<<<<<<<<<<<>>>>>>>>>>>>>>>",self._beamline_element_syned._optical_element)
-        self._beamline_element_syned._optical_element._boundary_shape = Rectangle(x_left=x_left, x_right=x_right, y_bottom=y_bottom, y_top=y_top)
-        print("<<<<<<<<<<<>>>>>>>>>>>>>>>", self._beamline_element_syned._optical_element._boundary_shape)
 
 
 if __name__ == "__main__":

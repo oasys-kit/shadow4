@@ -18,7 +18,7 @@ if __name__ == "__main__":
     set_qt()
 
 
-    do_plot = False
+    do_plot = True
     #
     # source
     #
@@ -65,8 +65,8 @@ if __name__ == "__main__":
     # shadow definitions
     #
     mirror1 = Mirror(beamline_element_syned=beamline_element_syned)
-    # mirror1.set_boundaries_rectangle(-10e-6, 10e-6, -15e-6, 15e-6)
-    # print(mirror1.info())
+    mirror1.set_boundaries_rectangle(-10e-6, 10e-6, -15e-6, 15e-6)
+    print(mirror1.info())
 
     #
     # run
@@ -78,9 +78,9 @@ if __name__ == "__main__":
     # check
     #
 
-    if True: #do_plot:
-        # beam1s3 = Beam3.initialize_from_shadow4_beam(beam1)
-        # plotxy(beam1s3, 1, 3, title="Image 1", nbins=101)
+    if do_plot:
+        beam1s3 = Beam3.initialize_from_shadow4_beam(beam1)
+        plotxy(beam1s3, 1, 3, title="Image 1", nbins=101)
         mirr1s3 = Beam3.initialize_from_shadow4_beam(mirr1)
         plotxy(mirr1s3, 2, 1, title="Footprint 1", nbins=101, nolost=1)
 
@@ -88,13 +88,14 @@ if __name__ == "__main__":
     # M2
     #
     mirror2 = Mirror()
+
     mirror2.set_positions(10,100,3e-3)
     mirror2.set_surface_conic([0,0,0,0,0,0,0,0,-1,0])
-    mirror2.set_boundaries_rectangle(-10e-6,10e-6,-15e-6,15e-6)
-
+    mirror2.set_boundaries_rectangle(-100e-6,100e-6,-150e-6,150e-6)
     print(mirror2.info())
+    #
+    #
     beam2, mirr2 = mirror2.trace_beam(beam1)
-
     beam2s3 = Beam3.initialize_from_shadow4_beam(beam2)
     plotxy(beam2s3, 1, 3, title="Image 2", nbins=101, nolost=1)
     mirr2s3 = Beam3.initialize_from_shadow4_beam(mirr2)
