@@ -6,7 +6,7 @@ from syned.beamline.optical_elements.mirrors.mirror import Mirror as SyMirror
 
 from shadow4.beam.beam import Beam
 from shadow4.sources.source_geometrical.gaussian import SourceGaussian
-from syned.beamline.shape import Plane, Conic
+from syned.beamline.shape import Plane, Conic, Toroidal
 from syned.beamline.shape import Rectangle, Ellipse
 from shadow4.syned.shape import TwoEllipses
 from shadow4.optical_elements.mirror import Mirror
@@ -44,7 +44,7 @@ if __name__ == "__main__":
     #
 
 
-    surface_shape = Plane() # SurfaceShape()
+    surface_shape = Toroidal(min_radius=5.0, maj_radius=2.0) # Plane() # SurfaceShape()
 
     # boundary_shape = None
 

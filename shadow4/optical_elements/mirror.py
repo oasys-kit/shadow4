@@ -70,23 +70,30 @@ class Mirror(object):
                 print(">>>>> Plane mirror")
                 ccc = S4Conic.initialize_as_plane()
                 mirr = ccc.apply_specular_reflection_on_beam(beam)
-                mirr.apply_boundaries_syned(self._beamline_element_syned.get_optical_element().get_boundary_shape())
+                # mirr.apply_boundaries_syned(self._beamline_element_syned.get_optical_element().get_boundary_shape())
                 # mirr.apply_boundaries_shadow(fhit_c=1, fshape=1, rlen1=5e-05, rlen2=5e-05, rwidx1=2e-05, rwidx2=2e-05, flag_lost_value=-1)
             elif isinstance(self._beamline_element_syned.get_optical_element().get_surface_shape(),Conic):
                 print(">>>>> Conic mirror")
                 conic = self._beamline_element_syned.get_optical_element().get_surface_shape()
                 ccc = S4Conic.initialize_from_coefficients(conic._conic_coefficients)
                 mirr = ccc.apply_specular_reflection_on_beam(beam)
-                mirr.apply_boundaries_syned(self._beamline_element_syned.get_optical_element().get_boundary_shape())
+                # mirr.apply_boundaries_syned(self._beamline_element_syned.get_optical_element().get_boundary_shape())
             elif isinstance(self._beamline_element_syned.get_optical_element().get_surface_shape(), Toroidal):
-                print(">>>>> Toroidal mirror")
-                #...........
+                print(">>>>> Toroidal mirror",self._beamline_element_syned.get_optical_element().get_surface_shape()._min_radius,
+                      self._beamline_element_syned.get_optical_element().get_surface_shape()._maj_radius)
+                toroid = S4Toroid()
+                toroid.set_toroid_radii( \
+                    self._beamline_element_syned.get_optical_element().get_surface_shape()._maj_radius,
+                    self._beamline_element_syned.get_optical_element().get_surface_shape()._min_radius,)
+                mirr = toroid.apply_specular_reflection_on_beam(beam)
+                # mirr.apply_boundaries_syned(self._beamline_element_syned.get_optical_element().get_boundary_shape())
             else:
                 raise Exception("cannot trace this surface shape")
 
         #
         # TODO: apply mirror boundaries...
         #
+        mirr.apply_boundaries_syned(self._beamline_element_syned.get_optical_element().get_boundary_shape())
 
         #
         # TODO: apply mirror reflectivity...
