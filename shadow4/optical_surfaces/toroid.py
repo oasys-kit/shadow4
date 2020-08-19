@@ -426,7 +426,7 @@ class Toroid(object):
         newbeam.set_column(6, v2[2])
         newbeam.set_column(10, flag )
 
-        return newbeam
+        return newbeam, normal
 
 
 if __name__ == "__main__":

@@ -290,7 +290,7 @@ class Mesh(object):
         newbeam.rays[:,6-1] = v2[2,:]
         newbeam.rays[:,10-1] = flag
         #
-        return newbeam,t,x1,v1,x2,v2
+        return newbeam,normal,t,x1,v1,x2,v2
 
     # todo: move to superclass or Vector class
     def vector_reflection(self,v1,normal):

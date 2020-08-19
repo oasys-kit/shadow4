@@ -48,6 +48,7 @@ class PreRefl(object):
     def preprocessor_info(self,verbose=False):
 
         print("\n========================================")
+        print("         preprocesor PreRefl info         ")
         for k in self.prerefl_dict.keys():
             try:
                 print(k,self.prerefl_dict[k][0])
@@ -58,6 +59,9 @@ class PreRefl(object):
         print("QMAX: %f  EMAX: %f "%(self.prerefl_dict["QMAX"], self.prerefl_dict["QMAX"] * tocm / (2*numpy.pi)))
         print("========================================")
 
+    def info(self):
+        return self.preprocessor_info()
+
     def get_refraction_index(self,energy1,verbose=False):
 
         wnum = 2*numpy.pi * energy1 / tocm
@@ -66,21 +70,25 @@ class PreRefl(object):
         QMIN = self.prerefl_dict["QMIN"]
 
         index1 = (wnum - QMIN) / QSTEP
+        index1 = numpy.array(index1).astype(int)
 
-        if index1 > self.prerefl_dict["NREFL"]:
-            raise Exception("Error: Photon energy above upper limit.")
+        if index1.max() > self.prerefl_dict["NREFL"]:
+            raise Exception("Error: Photon energy above tabulated upper limit.")
 
-        WNUM0 = QSTEP * int(index1) + QMIN
+        if index1.min() < 0:
+            raise Exception("Error: Photon energy below tabulated lower limit.")
+
+        # WNUM0 = QSTEP * int(index1) + QMIN
+        WNUM0 = QSTEP * index1 + QMIN
         DEL_X = wnum - WNUM0
         DEL_X = DEL_X / QSTEP
 
-        index1 = int(index1)
-
-
+        # index1 = int(index1)
 
         ALFA = self.prerefl_dict["ZF1"][index1] + (self.prerefl_dict["ZF1"][index1+1]-self.prerefl_dict["ZF1"][index1]) * DEL_X
         GAMMA = self.prerefl_dict["ZF2"][index1] + (self.prerefl_dict["ZF2"][index1+1]-self.prerefl_dict["ZF2"][index1]) * DEL_X
 
+        print(">>>", ALFA.shape, GAMMA.shape)
         refraction_index = (1.0 - ALFA / 2) + (GAMMA / 2)*1j
 
         if verbose:
@@ -170,13 +178,15 @@ if __name__ == "__main__":
 
     refraction_index = a.get_refraction_index(10000.0,verbose=True)
 
+    a.preprocessor_info()
+
     #
     # mirror reflectivity
     #
 
     a = PreRefl()
 
-    prerefl_file = "Rh1_50.dat"
+    prerefl_file = "Rh5_50.dat"
     a.read_preprocessor_file(prerefl_file)
 
     Energy = numpy.linspace(5000.0,40000.0,100)
@@ -185,6 +195,10 @@ if __name__ == "__main__":
     RS5 = numpy.zeros_like(Energy)
 
     a.preprocessor_info()
+
+    #
+    # scalar inputs
+    #
 
     for ii,ee in enumerate(Energy):
 
@@ -197,5 +211,15 @@ if __name__ == "__main__":
         RS5[ii] = rs
 
 
-    plot(Energy,RS0,Energy,RS5,ylog=True,legend=["no roughness","5A RMS roughness"])
+    plot(Energy,RS0,Energy,RS5,ylog=True,legend=["no roughness","5A RMS roughness"],title="scalar inputs")
+
+
+
+    # array inputs
+
+    Grazing_angle = numpy.ones_like(Energy) * 3.0
+    rs0, rp0, rav0 = a.reflectivity_fresnel(grazing_angle_mrad=Grazing_angle, photon_energy_ev=Energy, roughness_rms_A=0.0)
+    rs1, rp1, rav1 = a.reflectivity_fresnel(grazing_angle_mrad=Grazing_angle, photon_energy_ev=Energy, roughness_rms_A=5.0)
+
+    plot(Energy, rs0, Energy, rs1, ylog=True, legend=["no roughness", "5A RMS roughness"],title="array inputs")
 

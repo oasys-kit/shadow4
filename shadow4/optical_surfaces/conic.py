@@ -184,7 +184,7 @@ class Conic(object):
         newbeam.set_column(6, v2[2])
         newbeam.set_column(10, flag )
 
-        return newbeam
+        return newbeam, normal
 
     def calculate_intercept(self,XIN,VIN,keep=0):
 

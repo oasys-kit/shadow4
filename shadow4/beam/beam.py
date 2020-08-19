@@ -161,7 +161,7 @@ class Beam(object):
 
             -11: column 26
         :param column:
-        :return:
+        :return: a copy of the arrays
         """
 
         if column == -11: column = 26
@@ -749,6 +749,22 @@ class Beam(object):
             self.crop_ellipse(1, -rwidx2/2, rwidx2/2, 2, -rlen2/2, rlen2/2, negative=False, flag_lost_value=flag_lost_value)
         elif fshape == 3:  # hole in ellipse
             raise Exception("Not yet implemented")
+
+
+    def apply_reflectivity_s(self, Rs):
+        self.rays[:, 6] *= Rs
+        self.rays[:, 7] *= Rs
+        self.rays[:, 8] *= Rs
+
+    def apply_reflectivity_p(self, Rp):
+        self.rays[:, 15] *= Rp
+        self.rays[:, 16] *= Rp
+        self.rays[:, 17] *= Rp
+
+    def apply_reflectivities(self, Rs, Rp):
+        self.apply_reflectivity_s(Rs)
+        self.apply_reflectivity_p(Rp)
+
     #
     # file i/o
     #

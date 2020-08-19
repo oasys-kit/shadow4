@@ -6,14 +6,13 @@ from shadow4.syned.shape import Toroidal, Conic, NumericalMesh # TODO from syned
 from syned.beamline.element_coordinates import ElementCoordinates
 from syned.beamline.beamline import BeamlineElement
 
-from shadow4.optical_surfaces.conic import Conic as S4Conic
-from shadow4.optical_surfaces.toroid import Toroid as S4Toroid
-from shadow4.optical_surfaces.mesh import Mesh as S4Mesh
-
 from syned.beamline.optical_element_with_surface_shape import OpticalElementsWithSurfaceShape
 from syned.beamline.optical_elements.mirrors.mirror import Mirror as SyMirror
 
-from syned.beamline.shape import Rectangle, Ellipse
+from shadow4.optical_surfaces.conic import Conic as S4Conic
+from shadow4.optical_surfaces.toroid import Toroid as S4Toroid
+from shadow4.optical_surfaces.mesh import Mesh as S4Mesh
+from shadow4.physical_models.prerefl.prerefl import PreRefl
 
 
 class Mirror(object):
@@ -66,7 +65,7 @@ class Mirror(object):
         #
         soe = self._beamline_element_syned.get_optical_element()
 
-
+        v_in = beam.get_columns([4,5,6])
         if not isinstance(soe, OpticalElementsWithSurfaceShape): # undefined
             raise Exception("Undefined mirror")
         else:
@@ -74,7 +73,7 @@ class Mirror(object):
                 print(">>>>> Conic mirror")
                 conic = self._beamline_element_syned.get_optical_element().get_surface_shape()
                 ccc = S4Conic.initialize_from_coefficients(conic._conic_coefficients)
-                mirr = ccc.apply_specular_reflection_on_beam(beam)
+                mirr, normal = ccc.apply_specular_reflection_on_beam(beam)
             elif isinstance(self._beamline_element_syned.get_optical_element().get_surface_shape(), Toroidal):
                 print(">>>>> Toroidal mirror",self._beamline_element_syned.get_optical_element().get_surface_shape()._min_radius,
                       self._beamline_element_syned.get_optical_element().get_surface_shape()._maj_radius)
@@ -82,12 +81,12 @@ class Mirror(object):
                 toroid.set_toroid_radii( \
                     self._beamline_element_syned.get_optical_element().get_surface_shape()._maj_radius,
                     self._beamline_element_syned.get_optical_element().get_surface_shape()._min_radius,)
-                mirr = toroid.apply_specular_reflection_on_beam(beam)
+                mirr, normal = toroid.apply_specular_reflection_on_beam(beam)
             elif isinstance(self._beamline_element_syned.get_optical_element().get_surface_shape(), NumericalMesh):
                 print(">>>>> NumericalMesh mirror")
                 num_mesh = S4Mesh()
                 num_mesh.load_h5file(self._beamline_element_syned.get_optical_element().get_surface_shape()._h5file)
-                mirr,t,x1,v1,x2,v2 = num_mesh.apply_specular_reflection_on_beam(beam)
+                mirr,normal,t,x1,v1,x2,v2 = num_mesh.apply_specular_reflection_on_beam(beam)
             else:
                 raise Exception("cannot trace this surface shape")
 
@@ -97,7 +96,43 @@ class Mirror(object):
         mirr.apply_boundaries_syned(self._beamline_element_syned.get_optical_element().get_boundary_shape())
 
         #
-        # TODO: apply mirror reflectivity...
+        # apply mirror reflectivity
+        # TODO: add phase
+        #
+
+        coating = self._beamline_element_syned.get_optical_element()._coating
+        print(">>>>>>>>>>>>>>>>>> COATING: ", coating)
+        import os
+        if coating is not None:
+            if os.path.isfile(coating):
+                prerefl_file = coating
+                print(">>>>>>>>>>> PREREFL FILE", prerefl_file)
+                pr = PreRefl()
+                pr.read_preprocessor_file(prerefl_file)
+                print(pr.info())
+            else:
+                raise Exception("the syned coating in mirror definition must contain the prerefl preprocessor file")
+
+            v_out = beam.get_columns([4, 5, 6])
+            angle_in = numpy.arccos( v_in[0,:] * normal[0,:] +
+                                     v_in[1,:] * normal[1,:] +
+                                     v_in[2,:] * normal[2,:])
+
+            angle_out = numpy.arccos( v_out[0,:] * normal[0,:] +
+                                     v_out[1,:] * normal[1,:] +
+                                     v_out[2,:] * normal[2,:])
+
+            grazing_angle_mrad = 1e3 * (numpy.pi / 2 - angle_in)
+
+            Rs, Rp, Ru = pr.reflectivity_fresnel(grazing_angle_mrad=grazing_angle_mrad,
+                                                 photon_energy_ev=beam.get_column(-11),
+                                                 roughness_rms_A=0.0)
+
+            beam.apply_reflectivities(numpy.sqrt(Rs), numpy.sqrt(Rp))
+
+
+        #
+        # TODO: write angle.xx for comparison
         #
 
 
@@ -119,7 +154,6 @@ class Mirror(object):
     # i/o utilities
     #
     def set_positions(self, p, q, theta_grazing, theta_azimuthal=None):
-        print(">>>>>>>>>>>>>>>>>>>", self._beamline_element_syned)
         self._beamline_element_syned.get_coordinates()._p = p
         self._beamline_element_syned.get_coordinates()._q = q
         self._beamline_element_syned.get_coordinates()._angle_radial = numpy.pi / 2 - theta_grazing
@@ -127,7 +161,8 @@ class Mirror(object):
             self._beamline_element_syned.get_coordinates()._angle_azimuthal = numpy.pi - theta_azimuthal
 
     def set_surface_plane(self):
-        self._beamline_element_syned._optical_element._surface_shape = Plane()
+        self._beamline_element_syned._optical_element._surface_shape = \
+            Conic(conic_coefficients=[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,-1.0,0.0])
 
     def set_surface_conic(self, conic_coefficients=[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,-1.0,0.0]):
         self._beamline_element_syned._optical_element._surface_shape = Conic(conic_coefficients=conic_coefficients)
