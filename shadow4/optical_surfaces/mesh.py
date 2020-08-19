@@ -95,9 +95,25 @@ class Mesh(object):
     def set_surface(self,surface):
         self.surface = surface
 
+    def load_h5file(self,filename,kind='cubic'):
+        x,y,z = self.read_surface_error_h5file(filename)
+        self.surface = interpolate.interp2d(x,y,z.T, kind=kind)
+
     def load_file(self,filename,kind='cubic'):
         x,y,z = self.read_surface_error_file(filename)
         self.surface = interpolate.interp2d(x,y,z.T, kind=kind)
+
+    @classmethod
+    def read_surface_error_h5file(cls, filename):
+        import h5py
+        f = h5py.File(filename, 'r')
+        x = f["/surface_file/X"][:]
+        y = f["/surface_file/Y"][:]
+        Z = f["/surface_file/Z"][:]
+        print(">>>>>>>>>>>>>>>>>",x.shape,y.shape,Z.shape)
+        f.close()
+        return x, y, Z.T.copy()
+
 
     #copied from shadowOui util/shadow_util
     @classmethod
@@ -312,7 +328,7 @@ if __name__ == "__main__":
     yy = x0[1] + v0[1] * t
     zz = x0[2] + v0[2] * t
 
-    # plot_surface_and_line(Z,x,y,zz,xx,yy)
+    plot_surface_and_line(Z,x,y,zz,xx,yy)
 
     mm = Mesh()
     mm.set_ray(x0,v0)

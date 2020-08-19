@@ -205,6 +205,11 @@ class Toroidal(SurfaceShape):
         self._min_radius = min_radius
         self._maj_radius = maj_radius
 
+        # support text containg name of variable, help text and unit. Will be stored in self._support_dictionary
+        self._set_support_text([
+                    ("min_radius"         , "Minor radius r   ", "m" ),
+                    ("maj_radius"         , "Major radius R (optical=R+r)", "m" ),
+            ] )
     def initialize_from_p_q(self, p=2.0, q=1.0, grazing_angle=0.003):
         self._maj_radius = Sphere.get_radius_from_p_q(p, q, grazing_angle)
         self._min_radius = SphericalCylinder.get_radius_from_p_q_sagittal(p, q, grazing_angle)
@@ -217,10 +222,10 @@ class Toroidal(SurfaceShape):
         #        R_MAJ	=   R_MAJ - R_MIN
         self._maj_radius -= self._min_radius
 
-class NumbericalMesh(SurfaceShape):
-    def __init__(self):
+class NumericalMesh(SurfaceShape):
+    def __init__(self, h5file=""):
         SurfaceShape.__init__(self, convexity=Convexity.NONE)
-
+        self._h5file = h5file
 
 #
 # subclasses for BoundaryShape

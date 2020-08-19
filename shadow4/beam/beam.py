@@ -6,8 +6,9 @@ import h5py
 import time
 import os
 
-from syned.beamline.shape import Rectangle, Ellipse
-from shadow4.syned.shape import TwoEllipses # TODO move to syned
+from shadow4.syned.shape import Rectangle, Ellipse, TwoEllipses
+# TODO from syned.beamline.shape import Rectangle, Ellipse, TwoEllipses
+
 
 # IMPORTANT: Column 11 (index 10) is wavenumber (cm^-1) as internally in Shadow
 
@@ -582,7 +583,6 @@ class Beam(object):
         TESTX = (x - x_min) * (x_max - x)
         TESTY = (y - y_min) * (y_max - y)
 
-        negative = True
         indices_out = numpy.where(numpy.logical_or(TESTX < 0.0, TESTY < 0.0))
 
         # if not negative:
@@ -688,11 +688,12 @@ class Beam(object):
 
 
     def apply_boundaries_syned(self, syned_boundary_object, flag_lost_value=-1):
-        print(">>>>> apply_boundaries_syned: ", syned_boundary_object)
+        print(">>>>> apply_boundaries_syned: ", syned_boundary_object, Rectangle)
         if isinstance(syned_boundary_object, type(None)):
             return
         elif isinstance(syned_boundary_object, Rectangle):
             x_left, x_right, y_bottom, y_top = syned_boundary_object.get_boundaries()
+            print(">>>>>>>>>>>>>>>>>>>>dimensions ",x_left, x_right, y_bottom, y_top)
             self.crop_rectangle(1, x_left, x_right, 2, y_bottom, y_top)
         elif isinstance(syned_boundary_object, Ellipse):
             a_axis_min, a_axis_max, b_axis_min, b_axis_max = syned_boundary_object.get_boundaries()
