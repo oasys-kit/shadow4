@@ -1,3 +1,11 @@
+#
+# This is just a trial for using in shadow4 only syned objects as inputs
+# The parameters that are not inside the standard syned objects are stored
+# in ad-hoc created syned-heritated objects (like InputSourceBM)
+#
+# It is not used for the moment
+#
+
 from syned.storage_ring.magnetic_structures.bending_magnet import BendingMagnet
 from syned.storage_ring.light_source import LightSource
 from syned.storage_ring.electron_beam import ElectronBeam

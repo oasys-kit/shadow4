@@ -51,7 +51,6 @@ PACKAGES = [
     "shadow4",
     "shadow4.beam",
     "shadow4.compatibility",
-    "shadow4.examples",
     "shadow4.io",
     "shadow4.sources.source_geometrical",
     "shadow4.sources.undulator",
