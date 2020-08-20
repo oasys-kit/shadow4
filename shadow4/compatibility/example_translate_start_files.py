@@ -66,6 +66,16 @@ def test_start00_to_bending_magnet(iwrite=0,run=False):
     print(bm.info())
 
     if run:
+        #
+        # shadow3
+        #
+
+        beam3 = Shadow.Beam()
+        beam3.genSource(oe0)
+
+        #
+        # shadow4
+        #
         print(bm.info())
 
         rays = bm.calculate_rays(F_COHER=oe0.F_COHER,NRAYS=oe0.NPOINT,SEED=oe0.ISTAR1,
@@ -74,10 +84,18 @@ def test_start00_to_bending_magnet(iwrite=0,run=False):
         from srxraylib.plot.gol import plot_scatter,set_qt
         set_qt()
 
-        plot_scatter(rays[:,0]*1e6,rays[:,2]*1e6,xtitle="X um",ytitle="Z um")
-        plot_scatter(rays[:,1],rays[:,0]*1e6,xtitle="Y m",ytitle="X um")
-        plot_scatter(rays[:,1],rays[:,2]*1e6,xtitle="Y m",ytitle="Z um")
-        plot_scatter(rays[:,3]*1e6,rays[:,5]*1e6,xtitle="X' urad",ytitle="Z' urad")
+
+        plot_scatter(rays[:, 0] * 1e6, rays[:, 2] * 1e6, title="shadow4", xtitle="X um", ytitle="Z um")
+        plot_scatter(beam3.rays[:, 0] * 1e6, beam3.rays[:, 2] * 1e6, title="shadow3", xtitle="X um", ytitle="Z um")
+
+        plot_scatter(rays[:, 1], rays[:, 0] * 1e6, title="shadow4", xtitle="Y m", ytitle="X um")
+        plot_scatter(beam3.rays[:, 1], beam3.rays[:, 0] * 1e6, title="shadow3", xtitle="Y m", ytitle="X um")
+
+        plot_scatter(rays[:, 1], rays[:, 2] * 1e6, title="shadow4", xtitle="Y m", ytitle="Z um")
+        plot_scatter(beam3.rays[:, 1], beam3.rays[:, 2] * 1e6, title="shadow3", xtitle="Y m", ytitle="Z um")
+
+        plot_scatter(rays[:, 3] * 1e6, rays[:, 5] * 1e6, title="shadow4", xtitle="X' urad", ytitle="Z' urad")
+        plot_scatter(beam3.rays[:, 3] * 1e6, beam3.rays[:, 5] * 1e6, title="shadow3", xtitle="X' urad", ytitle="Z' urad")
 
 
 

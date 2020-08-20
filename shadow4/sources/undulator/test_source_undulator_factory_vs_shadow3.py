@@ -10,7 +10,7 @@ __date__ = "12/01/2017"
 #
 #
 DO_PLOT = False  # switch on/off plots
-SHADOW3_BINARY = "/users/srio/OASYS1.1/shadow3/shadow3"
+SHADOW3_BINARY = "/users/srio/OASYS1.2/shadow3/shadow3"
 
 
 import unittest

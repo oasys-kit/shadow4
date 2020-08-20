@@ -7,7 +7,7 @@ from syned.storage_ring.electron_beam import ElectronBeam
 from syned.storage_ring.magnetic_structures.undulator import Undulator
 
 # from orangecontrib.shadow.util.undulator.source_undulator import SourceUndulator
-from minishadow.undulator.source_undulator import SourceUndulator
+from shadow4.sources.undulator.source_undulator import SourceUndulator
 
 from Shadow import Beam as Shadow3Beam
 

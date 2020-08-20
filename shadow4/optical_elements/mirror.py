@@ -29,15 +29,20 @@ class Mirror(object):
                 ElementCoordinates())
 
         else:
-           if (isinstance(beamline_element_syned._optical_element._surface_shape, Conic)) or \
-                   (isinstance(beamline_element_syned._optical_element._surface_shape, Toroidal)) or \
-                   (isinstance(beamline_element_syned._optical_element._surface_shape, NumericalMesh)):
-               pass
-           else:
-               print(">>>",beamline_element_syned._optical_element._surface_shape)
-               raise Exception("Only Conic, Toroid and NumericalMesh syned-surface-shapes are accepted by shadow4")
 
-           self._beamline_element_syned = beamline_element_syned
+            if not isinstance(beamline_element_syned._optical_element,SyMirror):
+                raise Exception("Please initialize shadow4 Mirror with syned Mirror")
+
+            if (isinstance(beamline_element_syned._optical_element._surface_shape, Conic)) or \
+                (isinstance(beamline_element_syned._optical_element._surface_shape, Toroidal)) or \
+                (isinstance(beamline_element_syned._optical_element._surface_shape, NumericalMesh)):
+                pass
+            else:
+                print(">>>",beamline_element_syned._optical_element._surface_shape)
+                raise Exception("Only Conic, Toroid and NumericalMesh syned-surface-shapes are accepted by shadow4")
+
+
+            self._beamline_element_syned = beamline_element_syned
 
     def info(self):
         if self._beamline_element_syned is not None:
@@ -158,7 +163,7 @@ class Mirror(object):
         self._beamline_element_syned.get_coordinates()._q = q
         self._beamline_element_syned.get_coordinates()._angle_radial = numpy.pi / 2 - theta_grazing
         if theta_azimuthal is not None:
-            self._beamline_element_syned.get_coordinates()._angle_azimuthal = numpy.pi - theta_azimuthal
+            self._beamline_element_syned.get_coordinates()._angle_azimuthal = theta_azimuthal
 
     def set_surface_plane(self):
         self._beamline_element_syned._optical_element._surface_shape = \

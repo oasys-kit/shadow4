@@ -19,7 +19,6 @@ def test_branch_1(do_plot=True):
     #
     # source
     #
-    # beam0 = Beam.initialize_as_pencil(N=500)
     source = SourceGaussian.initialize_from_keywords(number_of_rays=100000,
                  sigmaX=0.0,
                  sigmaY=0.0,
@@ -45,7 +44,6 @@ def test_branch_1(do_plot=True):
 
 
     # boundaries
-
     # boundary_shape = None
     rlen1 = 5e-05
     rlen2 = 5e-05
@@ -139,21 +137,11 @@ def test_branch_2(do_plot=True):
     #
 
     # surface shape
-
-    # surface_shape = Conic(conic_coefficients=[0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, -1.0, 0.0])
     surface_shape = Toroidal(min_radius=0.157068, maj_radius=358.124803-0.157068) # Plane() # SurfaceShape()
 
 
     # boundaries
-
-    # boundary_shape = None
-    rlen1 = 5e-05
-    rlen2 = 5e-05
-    rwidx1 = 2e-05
-    rwidx2 = 2e-05
     boundary_shape = None #Rectangle(x_left=-rwidx2,x_right=rwidx1,y_bottom=-rlen2,y_top=rlen1)
-    # boundary_shape = Rectangle(x_left=-1e-05, x_right=2e-05, y_bottom=-5e-04, y_top=7e-04)
-
 
     symirror1 = SyMirror(
                 name="M1",
@@ -215,13 +203,10 @@ def test_branch_3(do_plot=True):
 
     # surface shape
 
-    # surface_shape = Conic(conic_coefficients=[0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, -1.0, 0.0])
     surface_shape = NumericalMesh("/users/srio/Oasys/test_shadow4.hdf5")
 
 
     # boundaries
-
-    # boundary_shape = None
     rlen1 = 0.6
     rlen2 = 0.6
     rwidx1 = 0.05
@@ -292,14 +277,9 @@ def test_branch_4(do_plot=True):
     #
 
     # surface shape
-
     surface_shape = Conic(conic_coefficients=[0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, -1.0, 0.0])
-    # surface_shape = Toroidal(min_radius=5.0, maj_radius=2.0) # Plane() # SurfaceShape()
-
 
     # boundaries
-
-    # boundary_shape = None
     rlen1 = 5e-05
     rlen2 = 5e-05
     rwidx1 = 2e-05
@@ -344,18 +324,12 @@ def test_branch_4(do_plot=True):
 
 if __name__ == "__main__":
 
-    from shadow4.compatibility.beam3 import Beam3
-    from Shadow.ShadowTools import plotxy
+    # see corresponding Oasys workspace in shadow4/oasys_workspaces
+
     from srxraylib.plot.gol import set_qt
     set_qt()
 
-    # test_branch_1(do_plot=True)
-    # test_branch_2(do_plot=True)
-    # test_branch_3(do_plot=True) # mesh
-    test_branch_4(do_plot=True)  # prerefl
-
-    do_plot = True
-
-    #
-    #
-    #
+    test_branch_1(do_plot=False) # two plane mirrors
+    test_branch_2(do_plot=False) # toroid
+    test_branch_3(do_plot=False) # mesh
+    test_branch_4(do_plot=False) # prerefl

@@ -18,7 +18,7 @@ from orangecontrib.shadow.util.undulator.source_undulator_input_output import So
 import Shadow
 from srxraylib.plot.gol import plot,plot_image,plot_show
 
-from orangecontrib.shadow.util.undulator.test_source_undulator_factory import _calculate_shadow3_beam_using_preprocessors, _shadow3_commands, SHADOW3_BINARY
+from shadow4.sources.undulator.test_source_undulator_factory_vs_shadow3 import _calculate_shadow3_beam_using_preprocessors, _shadow3_commands, SHADOW3_BINARY
 
 #
 # switch on/off plots
