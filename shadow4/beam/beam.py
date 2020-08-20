@@ -499,12 +499,15 @@ class Beam(object):
             if resetY:
                 self.rays[:,1] = 0.0
 
+            #
+            # TODO: modify optical path
+            #
+            self.rays[:,12] += tof
+
         except AttributeError:
             print ('Beam.retrace: No rays')
 
-        #
-        # TODO: modify optical path
-        #
+
 
     def translation(self,qdist1):
         """
@@ -526,10 +529,10 @@ class Beam(object):
         #
 
 
-    def rotate(self,theta1,axis=1,rad=1):
+    def rotate(self,theta,axis=1,rad=1):
         """
 
-        :param theta1: the rotation angle in degrees (default=0)
+        :param theta: the rotation angle in degrees (default=0)
         :param axis: The axis number (Shadow's column) for the rotation
                     (i.e, 1:x (default), 2:y, 3:z)
         :param file:
@@ -537,8 +540,10 @@ class Beam(object):
         :return:
         """
 
-        if not rad:
-            theta1 = theta1 * numpy.pi / 180
+        if rad:
+            theta1 = theta
+        else:
+            theta1 = theta * numpy.pi / 180
 
         a1 = self.rays.copy()
 
@@ -564,11 +569,7 @@ class Beam(object):
 
             self.rays[:,newtoroti[0]] =  a1[:,newtoroti[0]] * costh + a1[:,newtoroti[1]] * sinth
             self.rays[:,newtoroti[1]] = -a1[:,newtoroti[0]] * sinth + a1[:,newtoroti[1]] * costh
-            self.rays[:,newaxisi]       =  a1[:,newaxisi]
-
-        #
-        # TODO: rotate electric vectors
-        #
+            self.rays[:,newaxisi]     =  a1[:,newaxisi]
 
 
     #
