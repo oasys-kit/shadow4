@@ -8,7 +8,7 @@ import os
 
 DO_PLOTS = True
 COMPARE_WITH_SHADOW3  = True
-SHADOW3_PATH = "/home/manuel/OASYS1.2/shadow3/shadow3"
+SHADOW3_PATH = "/users/srio/OASYS1.2/shadow3/shadow3"
 
 def test_xoppy_defauls():
 
@@ -62,7 +62,7 @@ def test_xoppy_defauls():
                  legend = ["shadow3 (pre_mlayer_scan)","shadow4 (MLayer)"])
 
         print(s3[:,1].shape,s3[:,2].shape,t.shape, rs[0].shape)
-        assert_almost_equal(s3[:,2], rs[0])
+        assert_almost_equal(s3[:,2], rs[0], 4)
 
 def test_aw1():
 

@@ -1,6 +1,9 @@
 import os
 from shadow4.physical_models.prerefl.prerefl import PreRefl
 
+SHADOW3_PATH = "/users/srio/OASYS1.2/shadow3/shadow3"
+
+
 prerefl_test_dot_inp = """prerefl_test
 Be5_30.dat
 10000
@@ -16,7 +19,7 @@ if __name__ == "__main__":
     f.close()
     print("File written to disk: prerefl_test.inp")
 
-    os.system("/home/manuel/OASYS1.2/shadow3/shadow3 < prerefl_test.inp")
+    os.system("%s < prerefl_test.inp" % SHADOW3_PATH)
 
 
     #
