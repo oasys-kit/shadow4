@@ -18,7 +18,7 @@ class LensIdeal(object):
             if isinstance(beamline_element_syned._optical_element, SyIdealLens):
                 self._beamline_element_syned = beamline_element_syned
             else:
-                raise Exception("Please initialize shadow4 IdealLens with syned IdealLems")
+                raise Exception("Please initialize shadow4 IdealLens with syned IdealLens")
 
     def initialize_from_keywors(self, name=None, focal_x=0.0, focal_z=0.0, p=0.0, q=0.0):
         self._beamline_element_syned._optical_element._focal_x = focal_x
