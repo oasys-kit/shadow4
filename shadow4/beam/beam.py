@@ -291,6 +291,34 @@ class Beam(object):
         w = self.get_column(23,nolost=nolost)
         return w.sum()
 
+    def get_good_range(self, icol, nolost=0):
+        """
+
+        :param icol: the column number (SHADOW convention, starting from 1)
+        :param nolost: lost rays flag (0=all, 1=good, 2=losses)
+        :return: [rmin,rmax] the selected range
+        """
+        col = self.get_column(icol, nolost=nolost)
+        if col.size == 0:
+            return [-1, 1]
+        rmin = min(col)
+        rmax = max(col)
+        if rmin > 0.0:
+            rmin = rmin * 0.95
+        else:
+            rmin = rmin * 1.05
+        if rmax < 0.0:
+            rmax = rmax * 0.95
+        else:
+            rmax = rmax * 1.05
+        if rmin == rmax:
+            rmin = rmin * 0.95
+            rmax = rmax * 1.05
+        if rmin == 0.0:
+            rmin = -1.0
+            rmax = 1.0
+        return [rmin, rmax]
+
     def histo2(self,col_h,col_v,nbins=25,ref=23, nbins_h=None, nbins_v=None, nolost=0,xrange=None,yrange=None,
              calculate_widths=1):
         """
