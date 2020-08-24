@@ -107,15 +107,14 @@ class Mirror(object):
 
         coating = self._beamline_element_syned.get_optical_element()._coating
         print(">>>>>>>>>>>>>>>>>> COATING: ", coating)
-        import os
         if coating is not None:
-            if os.path.isfile(coating):
+            try:
                 prerefl_file = coating
                 print(">>>>>>>>>>> PREREFL FILE", prerefl_file)
                 pr = PreRefl()
                 pr.read_preprocessor_file(prerefl_file)
                 print(pr.info())
-            else:
+            except:
                 raise Exception("the syned coating in mirror definition must contain the prerefl preprocessor file")
 
             v_out = beam.get_columns([4, 5, 6])

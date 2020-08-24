@@ -113,6 +113,12 @@ class PreRefl(object):
 
         return refraction_index
 
+    def get_attenuation_coefficient(self,energy1,verbose=False):
+        refraction_index = self.get_refraction_index(energy1,verbose=verbose)
+        wnum = 2 * numpy.pi * energy1 / tocm
+
+        return 2*refraction_index.imag*wnum
+
     def reflectivity_fresnel(self,photon_energy_ev=10000.0,grazing_angle_mrad=3.0,roughness_rms_A=0.0):
         """
         Calculates the reflectivity of an interface using Fresnel formulas.
