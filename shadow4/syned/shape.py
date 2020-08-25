@@ -351,6 +351,99 @@ class Circle(BoundaryShape):
     def get_center(self):
         return [self._x_center,self._y_center]
 
+class Polygon(BoundaryShape):
+    def __init__(self,x=[],y=[]):
+        super().__init__()
+
+        self._x = numpy.array(x)
+        self._y = numpy.array(y)
+        # support text containg name of variable, help text and unit. Will be stored in self._support_dictionary
+        self._set_support_text([
+                    ("x"            , "x vertices    ", "m" ),
+                    ("y"            , "y vertices    ", "m" ),
+            ] )
+
+    def get_boundaries(self):
+        return self._x, self._y
+
+    def set_boundaries(self, x, y):
+        self._x = numpy.array(x)
+        self._y = numpy.array(y)
+
+    def get_number_of_vertices(self):
+        n = numpy.array(self._x).size
+        if (numpy.abs(self._x[0] - self._x[-1]) < 1e-10)  and (numpy.abs(self._y[0] - self._y[-1]) < 1e-10):
+            # print(">>>>> same first and last point")
+            n -= 1
+        return n
+
+    def get_polygon(self):
+        polygon = []
+        for i in range(self.get_number_of_vertices()):
+            polygon.append([self._x[i], self._y[i]])
+
+        return polygon
+
+    def check_inside_vector(self, x0, y0):
+        # see https://stackoverflow.com/questions/36399381/whats-the-fastest-way-of-checking-if-a-point-is-inside-a-polygon-in-python
+        poly = self.get_polygon()
+        n = len(poly)
+        x = numpy.array(x0)
+        y = numpy.array(y0)
+
+        inside = numpy.zeros(x.size, numpy.bool_)
+        p2x = 0.0
+        p2y = 0.0
+        xints = 0.0
+        p1x, p1y = poly[0]
+
+        for i in range(n + 1):
+            p2x, p2y = poly[i % n]
+
+            idx = numpy.nonzero((y > min(p1y, p2y)) & (y <= max(p1y, p2y)) & (x <= max(p1x, p2x)))[0]
+            if len(idx > 0): # added intuitively by srio TODO: make some tests to compare with self.check_insize
+                if p1y != p2y:
+                    xints = (y[idx] - p1y) * (p2x - p1x) / (p2y - p1y) + p1x
+                if p1x == p2x:
+                    inside[idx] = ~inside[idx]
+                else:
+                    idxx = idx[x[idx] <= xints]
+                    inside[idxx] = ~inside[idxx]
+
+            p1x, p1y = p2x, p2y
+        return inside
+
+    def check_inside(self, x, y):
+        return [self.check_inside_one_point(xi, yi) for xi, yi in zip(x, y)]
+
+    def check_inside_one_point(self, x0, y0):
+        # see https://stackoverflow.com/questions/36399381/whats-the-fastest-way-of-checking-if-a-point-is-inside-a-polygon-in-python
+        poly = self.get_polygon()
+        x = x0
+        y = y0
+        n = len(poly)
+        inside = False
+        p2x = 0.0
+        p2y = 0.0
+        xints = 0.0
+        p1x, p1y = poly[0]
+        for i in range(n + 1):
+            p2x, p2y = poly[i % n]
+            if y > min(p1y, p2y):
+                if y <= max(p1y, p2y):
+                    if x <= max(p1x, p2x):
+                        if p1y != p2y:
+                            xints = (y - p1y) * (p2x - p1x) / (p2y - p1y) + p1x
+                        if p1x == p2x or x <= xints:
+                            inside = not inside
+            p1x, p1y = p2x, p2y
+
+        return inside
+
+    def check_outside(self, x0, y0):
+        inside = self.check_inside(x0, y0)
+        return ~inside
+
 
 class MultiplePatch(BoundaryShape):
     def __init__(self, patch_list=None):
@@ -398,6 +491,9 @@ class MultiplePatch(BoundaryShape):
 
     def append_ellipse(self,a_axis_min, a_axis_max, b_axis_min, b_axis_max):
         self.append_patch(Ellipse(a_axis_min, a_axis_max, b_axis_min, b_axis_max))
+
+    def append_polygon(self,x, y):
+        self.append_patch(Polygon(x, y))
 
     def get_patches(self):
         return self._patch_list
@@ -451,6 +547,9 @@ class DoubleCircle(MultiplePatch):
 
 if __name__=="__main__":
 
+    pass
+
+
     # ell = Ellipsoid()
     # ell.initialize_from_p_q(20, 10, 0.2618)
     #
@@ -473,19 +572,50 @@ if __name__=="__main__":
     #
     # patches.append_rectangle(-0.02,-0.01,-0.001,0.001)
     # patches.append_rectangle(0.01,0.02,-0.001,0.001)
+    # patches.append_polygon([-0.02,-0.02,0.02,0.02], [-0.02,0.02,0.02,-0.02])
     #
     # print(patches.get_number_of_patches(),patches.get_boundaries())
-    #
     # for patch in patches.get_patches():
     #     print(patch.info())
-    #
     # print("Patch 0 is: ",patches.get_name_of_patch(0))
     # print("Patch 1 is: ",patches.get_name_of_patch(1))
     # print(patches.get_boundaries())
 
 
-    double_rectangle = DoubleRectangle()
-    double_rectangle.set_boundaries(-0.02,-0.01,-0.001,0.001,0.01,0.02,-0.001,0.001)
-    print("Rectangle 0 is: ",double_rectangle.get_name_of_patch(0))
-    print("Rectangle 1 is: ",double_rectangle.get_name_of_patch(1))
-    print(double_rectangle.get_boundaries())
+
+
+    # double_rectangle = DoubleRectangle()
+    # double_rectangle.set_boundaries(-0.02,-0.01,-0.001,0.001,0.01,0.02,-0.001,0.001)
+    # print("Rectangle 0 is: ",double_rectangle.get_name_of_patch(0))
+    # print("Rectangle 1 is: ",double_rectangle.get_name_of_patch(1))
+    # print(double_rectangle.get_boundaries())
+
+
+    # angle = numpy.linspace(0, 2 * numpy.pi, 5)
+    # x = numpy.sin(angle) + 0.5
+    # y = numpy.cos(angle) + 0.5
+    # poly = Polygon(x=x, y=y)
+    # print(poly.info())
+    # print("vertices: ", poly.get_number_of_vertices())
+    # from srxraylib.plot.gol import plot,set_qt
+    # set_qt()
+    # plot(x,y)
+    # print(poly.get_polygon())
+    # print(poly.check_inside([0.5,0],[0.5,5]))
+    # print(poly.check_outside([0.5, 0], [0.5, 5]))
+
+
+
+    patches = MultiplePatch()
+    patches.append_polygon(numpy.array([-1,-1,1,1]),numpy.array([-1,1,1,-1]))
+    x = [-0.00166557,  0.12180897, -0.11252591, -0.12274196,  0.00586896, -0.12999401, -0.12552975, -0.0377907,  -0.01094828, -0.13689862]
+    y = [ 0.16279557, -0.00085991,  0.01349174, -0.01371226,  0.01480265, -0.04810334, 0.07198068, -0.03725407,  0.13301309, -0.00296213]
+    x = numpy.array(x)
+    y = numpy.array(y)
+    patch = patches.get_patch(0)
+    # # print(patch.check_inside(x,y))
+    for i in range(x.size):
+        tmp = patch.check_inside_one_point(x[i], y[i])
+        print(x[i], y[i], tmp )
+    print(patch.check_inside(x, y))
+    print(patch.check_inside_vector(x, y))

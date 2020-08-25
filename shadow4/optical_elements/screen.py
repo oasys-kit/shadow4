@@ -18,7 +18,7 @@ from shadow4.syned.absorbers.slit import Slit as SySlit                         
 
 from syned.beamline.beamline_element import BeamlineElement
 from syned.beamline.element_coordinates import ElementCoordinates
-from shadow4.syned.shape import Rectangle, Ellipse, TwoEllipses # TODO from syned.beamline.shape
+from shadow4.syned.shape import Rectangle, Ellipse, TwoEllipses, MultiplePatch # TODO from syned.beamline.shape
 
 from shadow4.physical_models.prerefl.prerefl import PreRefl
 
@@ -93,6 +93,26 @@ class Screen(object):
                 a_axis_min, a_axis_max, b_axis_min, b_axis_max = shape.get_boundaries()
                 beam.crop_ellipse(1, a_axis_min, a_axis_max, 3, b_axis_min, b_axis_max,
                                   negative=negative, flag_lost_value=flag_lost_value)
+            elif isinstance(shape, MultiplePatch):
+                x = beam.get_column(1)
+                y = beam.get_column(3)
+                INSIDE = numpy.zeros(x.size, numpy.bool_)
+                for i,patch in enumerate(shape.get_patches()):
+                    # print(">>> patch: ",patch.info())
+                    inside = patch.check_inside_vector(x, y)
+                    INSIDE = numpy.logical_or(INSIDE,inside)
+
+                # print(">>>>",x[0:10],y[0:10],inside[0:10])
+
+                flag = beam.get_column(10)
+                if negative:
+                    flag[numpy.where(INSIDE)] = flag_lost_value
+                else:
+                    flag[numpy.where(~INSIDE)] = flag_lost_value
+                beam.rays[:, 9] = flag
+
+                # print(">>>>> INSIDE: ",  INSIDE, numpy.where(~INSIDE))
+
             else:
                 raise Exception("Undefined slit shape")
 
