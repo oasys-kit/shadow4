@@ -593,7 +593,7 @@ class Beam(object):
             newaxis = axis + tstart[i] - 1
             newaxisi = newaxis - 1
             newtorot = torot + tstart[i] - 1
-            newtoroti = newtorot -1
+            newtoroti = newtorot - 1
 
             self.rays[:,newtoroti[0]] =  a1[:,newtoroti[0]] * costh + a1[:,newtoroti[1]] * sinth
             self.rays[:,newtoroti[1]] = -a1[:,newtoroti[0]] * sinth + a1[:,newtoroti[1]] * costh
@@ -782,12 +782,12 @@ class Beam(object):
 
     def apply_reflectivity_s(self, Rs):
         self.rays[:, 6] *= Rs
-        self.rays[:, 7] *= Rs
+        # self.rays[:, 7] *= Rs
         self.rays[:, 8] *= Rs
 
     def apply_reflectivity_p(self, Rp):
         self.rays[:, 15] *= Rp
-        self.rays[:, 16] *= Rp
+        # self.rays[:, 16] *= Rp
         self.rays[:, 17] *= Rp
 
     def apply_reflectivities(self, Rs, Rp):

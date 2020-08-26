@@ -66,7 +66,7 @@ class Sphere(SurfaceShape):
         return self._radius
 
     def initialize_from_p_q(self, p=2.0, q=1.0, grazing_angle=0.003):
-        self.self._radius = Sphere.get_radius_from_p_q(p, q, grazing_angle)
+        self._radius = Sphere.get_radius_from_p_q(p, q, grazing_angle)
 
     @classmethod
     def get_radius_from_p_q(cls, p=2.0, q=1.0, grazing_angle=0.003):
@@ -83,9 +83,18 @@ class SphericalCylinder(Sphere, Cylinder):
 
     def initialize_from_p_q(self, p=2.0, q=1.0, grazing_angle=0.003):
         if self._cylinder_direction == Direction.TANGENTIAL:
-            self._conic_coefficients[9] = -Sphere.get_radius_from_p_q(p, q, grazing_angle)**2
+            self._radius = Sphere.get_radius_from_p_q(p, q, grazing_angle)
         elif self._cylinder_direction == Direction.SAGITTAL:
-            self._conic_coefficients[9] = -SphericalCylinder.get_radius_from_p_q_sagittal(p, q, grazing_angle)**2
+            self._radius = SphericalCylinder.get_radius_from_p_q_sagittal(p, q, grazing_angle)
+
+    def set_direction_tangential(self):
+        self._cylinder_direction = Direction.TANGENTIAL
+
+    def set_direction_sagittal(self):
+        self._cylinder_direction = Direction.SAGITTAL
+
+    def get_direction(self):
+        return self._cylinder_direction
 
     @classmethod
     def get_radius_from_p_q_sagittal(cls, p=2.0, q=1.0, grazing_angle=0.003):

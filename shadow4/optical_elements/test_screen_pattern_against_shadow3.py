@@ -184,3 +184,7 @@ if __name__ == "__main__":
     if do_plot:
         beam2_3 = Beam3.initialize_from_shadow4_beam(beam2)
         plotxy(beam2_3,1,3,nbins=100,title="SHADOW4 BEAMSTOPPER", nolost=True)
+
+    print("col#   shadow4  shadow3")
+    for i in range(18):
+        print("col%d   %f  %f  " % (i+1, beam2.rays[10,i], beam3.rays[10,i]))

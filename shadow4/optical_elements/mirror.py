@@ -1,7 +1,9 @@
 import numpy
 
 from shadow4.syned.shape import Rectangle, Ellipse, TwoEllipses # TODO from syned.beamline.shape
-from shadow4.syned.shape import Toroidal, Conic, NumericalMesh # TODO from syned.beamline.shape
+from shadow4.syned.shape import Toroidal, Conic, NumericalMesh, Plane, Sphere, Ellipsoid, Paraboloid, Hyperboloid # TODO from syned.beamline.shape
+from shadow4.syned.shape import SphericalCylinder # TODO from syned.beamline.shape
+
 
 from syned.beamline.element_coordinates import ElementCoordinates
 from syned.beamline.beamline import BeamlineElement
@@ -30,19 +32,34 @@ class Mirror(object):
 
         else:
 
-            if not isinstance(beamline_element_syned._optical_element,SyMirror):
-                raise Exception("Please initialize shadow4 Mirror with syned Mirror")
-
-            if (isinstance(beamline_element_syned._optical_element._surface_shape, Conic)) or \
-                (isinstance(beamline_element_syned._optical_element._surface_shape, Toroidal)) or \
-                (isinstance(beamline_element_syned._optical_element._surface_shape, NumericalMesh)):
+            # if not isinstance(beamline_element_syned._optical_element,SyMirror):
+            #     raise Exception("Please initialize shadow4 Mirror with syned Mirror")
+            #
+            # if (isinstance(beamline_element_syned._optical_element._surface_shape, Conic)) or \
+            #     (isinstance(beamline_element_syned._optical_element._surface_shape, Toroidal)) or \
+            #     (isinstance(beamline_element_syned._optical_element._surface_shape, NumericalMesh)):
+            #     pass
+            # else:
+            #     print(">>>",beamline_element_syned._optical_element._surface_shape)
+            #     raise Exception("Only Conic, Toroid and NumericalMesh syned-surface-shapes are accepted by shadow4")
+            #
+            #
+            # self._beamline_element_syned = beamline_element_syned
+            if isinstance(beamline_element_syned._optical_element, SyMirror):
                 pass
             else:
-                print(">>>",beamline_element_syned._optical_element._surface_shape)
-                raise Exception("Only Conic, Toroid and NumericalMesh syned-surface-shapes are accepted by shadow4")
+                raise Exception("Please initialize shadow4 Mirror with syned Mirror")
+
+            ok = False
+            for obj in [Conic, Toroidal, NumericalMesh, Plane, Sphere, Ellipsoid, Paraboloid, Hyperboloid, SphericalCylinder]:
+                if isinstance(beamline_element_syned._optical_element._surface_shape, obj): ok = True
+            if ok:
+                self._beamline_element_syned = beamline_element_syned
+            else:
+                raise Exception(
+                    "Please initialize shadow4 Mirror with syned Mirror surface shape as Conic, Toroidal, NumericalMesh, Plane, Sphere, Ellipsoid, Paraboloid, Hyperboloid, SphericalCylinder")
 
 
-            self._beamline_element_syned = beamline_element_syned
 
     def info(self):
         if self._beamline_element_syned is not None:
@@ -74,12 +91,13 @@ class Mirror(object):
         if not isinstance(soe, OpticalElementsWithSurfaceShape): # undefined
             raise Exception("Undefined mirror")
         else:
-            if isinstance(self._beamline_element_syned.get_optical_element().get_surface_shape(),Conic):
+            surshape = self._beamline_element_syned.get_optical_element().get_surface_shape()
+            if isinstance(surshape,Conic):
                 print(">>>>> Conic mirror")
                 conic = self._beamline_element_syned.get_optical_element().get_surface_shape()
                 ccc = S4Conic.initialize_from_coefficients(conic._conic_coefficients)
                 mirr, normal = ccc.apply_specular_reflection_on_beam(beam)
-            elif isinstance(self._beamline_element_syned.get_optical_element().get_surface_shape(), Toroidal):
+            elif isinstance(surshape, Toroidal):
                 print(">>>>> Toroidal mirror",self._beamline_element_syned.get_optical_element().get_surface_shape()._min_radius,
                       self._beamline_element_syned.get_optical_element().get_surface_shape()._maj_radius)
                 toroid = S4Toroid()
@@ -87,11 +105,41 @@ class Mirror(object):
                     self._beamline_element_syned.get_optical_element().get_surface_shape()._maj_radius,
                     self._beamline_element_syned.get_optical_element().get_surface_shape()._min_radius,)
                 mirr, normal = toroid.apply_specular_reflection_on_beam(beam)
-            elif isinstance(self._beamline_element_syned.get_optical_element().get_surface_shape(), NumericalMesh):
+            elif isinstance(surshape, NumericalMesh):
                 print(">>>>> NumericalMesh mirror")
                 num_mesh = S4Mesh()
                 num_mesh.load_h5file(self._beamline_element_syned.get_optical_element().get_surface_shape()._h5file)
                 mirr,normal,t,x1,v1,x2,v2 = num_mesh.apply_specular_reflection_on_beam(beam)
+            elif isinstance(surshape, Plane):
+                print(">>>>> Plane mirror")
+                ccc = S4Conic.initialize_as_plane()
+                mirr, normal = ccc.apply_specular_reflection_on_beam(beam)
+            elif isinstance(surshape, SphericalCylinder):  # Note this check must come before Sphere as SphericalCylinder is Sphere
+                print(">>>>> SphericalCylinder mirror")
+                if surshape.get_direction() == 0:
+                    cylangle = 0.0
+                elif surshape.get_direction() == 1:
+                    cylangle = numpy.pi / 2
+                else:
+                    raise Exception("Undefined cylinder direction")
+
+                ccc = S4Conic.initialize_as_sphere_from_curvature_radius(surshape.get_radius(),cylindrical=True,cylangle=cylangle)
+                mirr, normal = ccc.apply_specular_reflection_on_beam(beam)
+
+            elif isinstance(surshape, Sphere):
+                print(">>>>> Sphere mirror")
+                ccc = S4Conic.initialize_as_sphere_from_curvature_radius(surshape.get_radius(),cylindrical=False,cylangle=0.0)
+                mirr, normal = ccc.apply_specular_reflection_on_beam(beam)
+
+            elif isinstance(surshape, Ellipsoid):
+                print(">>>>> Ellipsoid mirror",surshape)
+                raise Exception("Not enough information in Syned Ellipsoid object!!!")
+            elif isinstance(surshape, Paraboloid):
+                print(">>>>> Paraboloid mirror")
+                raise Exception("Not enough information in Syned Paraboloid object!!!")
+            elif isinstance(surshape, Hyperboloid):
+                print(">>>>> Hyperboloid mirror")
+                raise Exception("Not enough information in Syned Hyperboloid object!!!")
             else:
                 raise Exception("cannot trace this surface shape")
 

@@ -148,6 +148,7 @@ class Conic(object):
         x1 =   newbeam.get_columns([1,2,3]) # numpy.array(a3.getshcol([1,2,3]))
         v1 =   newbeam.get_columns([4,5,6]) # numpy.array(a3.getshcol([4,5,6]))
         flag = newbeam.get_column(10)        # numpy.array(a3.getshonecol(10))
+        optical_path = newbeam.get_column(13)
 
         t1,t2 = self.calculate_intercept(x1,v1)
         t, iflag = self.choose_solution(t1,t2,reference_distance=-newbeam.get_column(2).mean())
@@ -183,6 +184,7 @@ class Conic(object):
         newbeam.set_column(5, v2[1])
         newbeam.set_column(6, v2[2])
         newbeam.set_column(10, flag )
+        newbeam.set_column(13, optical_path + t)
 
         return newbeam, normal
 
@@ -468,52 +470,59 @@ class Conic(object):
 
     def set_ellipsoid_from_focal_distances(self, ssour, simag, theta_grazing, verbose=True):
 
-        theta = (numpy.pi/2) - theta_grazing
-        COSTHE = numpy.cos(theta)
-        SINTHE = numpy.sin(theta)
+        # theta = (numpy.pi/2) - theta_grazing
+        # COSTHE = numpy.cos(theta)
+        # SINTHE = numpy.sin(theta)
+        #
+        # AXMAJ = ( ssour + simag )/2
+        # AXMIN = numpy.sqrt( simag * ssour) * COSTHE
+        #
+        #
+        # AFOCI = numpy.sqrt( AXMAJ**2 - AXMIN**2 )
+        # ECCENT = AFOCI/AXMAJ
+        # # ;C
+        # # ;C The center is computed on the basis of the object and image positions
+        # # ;C
+        # YCEN  = (ssour - simag) * 0.5 / ECCENT
+        # ZCEN  = -numpy.sqrt( 1 - YCEN**2 / AXMAJ**2) * AXMIN
+        # # ;C
+        # # ;C Computes now the normal in the mirror center.
+        # # ;C
+        # RNCEN = numpy.zeros(3)
+        # RNCEN[1-1] =  0.0
+        # RNCEN[2-1] = -2 * YCEN / AXMAJ**2
+        # RNCEN[3-1] = -2 * ZCEN / AXMIN**2
+        # # ;CALL NORM(RNCEN,RNCEN)
+        # RNCEN = RNCEN / numpy.sqrt((RNCEN**2).sum())
+        # # ;C
+        # # ;C Computes the tangent versor in the mirror center.
+        # # ;C
+        # RTCEN = numpy.zeros(3)
+        # RTCEN[1-1] =  0.0
+        # RTCEN[2-1] =  RNCEN[3-1]
+        # RTCEN[3-1] = -RNCEN[2-1]
+        #
+        # if verbose:
+        #     txt = ""
+        #     txt += "p=%f, q=%f, theta_grazing=%f rad, theta_normal=%f rad\n" % (ssour, simag, theta_grazing, theta)
+        #     txt += 'Ellipsoid of revolution a=%f \n'%AXMAJ
+        #     txt += 'Ellipsoid of revolution b=%f \n'%AXMIN
+        #     txt += 'Ellipsoid of revolution c=sqrt(a^2-b^2)=%f \n'%AFOCI
+        #     txt += 'Ellipsoid of revolution focal distance c^2=%f \n'%(AFOCI**2)
+        #     txt += 'Ellipsoid of revolution excentricity: %f \n'%ECCENT
+        #     txt += 'Optical element center at: [0,%f,%f]\n'%(YCEN,ZCEN)
+        #     txt += 'Optical element normal: [%f,%f,%f]\n'%(RNCEN[0],RNCEN[1],RNCEN[2])
+        #     txt += 'Optical element tangent: [%f,%f,%f]\n'%(RTCEN[0],RTCEN[1],RTCEN[2])
+        #     print(txt)
 
-        AXMAJ = ( ssour + simag )/2
-        AXMIN = numpy.sqrt( simag * ssour) * COSTHE
+        tkt = self.calculate_ellipsoid_parameters_from_focal_distances(ssour, simag, theta_grazing, verbose=verbose)
 
-
-        AFOCI = numpy.sqrt( AXMAJ**2 - AXMIN**2 )
-        ECCENT = AFOCI/AXMAJ
-        # ;C
-        # ;C The center is computed on the basis of the object and image positions
-        # ;C
-        YCEN  = (ssour - simag) * 0.5 / ECCENT
-        ZCEN  = -numpy.sqrt( 1 - YCEN**2 / AXMAJ**2) * AXMIN
-        # ;C
-        # ;C Computes now the normal in the mirror center.
-        # ;C
-        RNCEN = numpy.zeros(3)
-        RNCEN[1-1] =  0.0
-        RNCEN[2-1] = -2 * YCEN / AXMAJ**2
-        RNCEN[3-1] = -2 * ZCEN / AXMIN**2
-        # ;CALL NORM(RNCEN,RNCEN)
-        RNCEN = RNCEN / numpy.sqrt((RNCEN**2).sum())
-        # ;C
-        # ;C Computes the tangent versor in the mirror center.
-        # ;C
-        RTCEN = numpy.zeros(3)
-        RTCEN[1-1] =  0.0
-        RTCEN[2-1] =  RNCEN[3-1]
-        RTCEN[3-1] = -RNCEN[2-1]
-
-        if verbose:
-            txt = ""
-            txt += "p=%f, q=%f, theta_grazing=%f rad, theta_normal=%f rad\n" % (ssour, simag, theta_grazing, theta)
-            txt += 'Ellipsoid of revolution a=%f \n'%AXMAJ
-            txt += 'Ellipsoid of revolution b=%f \n'%AXMIN
-            txt += 'Ellipsoid of revolution c=sqrt(a^2-b^2)=%f \n'%AFOCI
-            txt += 'Ellipsoid of revolution focal distance c^2=%f \n'%(AFOCI**2)
-            txt += 'Ellipsoid of revolution excentricity: %f \n'%ECCENT
-            txt += 'Optical element center at: [0,%f,%f]\n'%(YCEN,ZCEN)
-            txt += 'Optical element normal: [%f,%f,%f]\n'%(RNCEN[0],RNCEN[1],RNCEN[2])
-            txt += 'Optical element tangent: [%f,%f,%f]\n'%(RTCEN[0],RTCEN[1],RTCEN[2])
-            print(txt)
-
-
+        AXMAJ = tkt["AXMAJ"]
+        AXMIN = tkt["AXMIN"]
+        RTCEN = tkt["RTCEN"]
+        RNCEN = tkt["RNCEN"]
+        YCEN = tkt["YCEN"]
+        ZCEN = tkt["ZCEN"]
 
         # ;C Computes now the quadric coefficient with the mirror center
         # ;C located at (0,0,0) and normal along (0,0,1)
@@ -533,6 +542,58 @@ class Conic(object):
         self.ccc[8] = 2 * (B * YCEN * RNCEN[2-1] + C * ZCEN * RNCEN[3-1])
         self.ccc[9] = 0.0
 
+    def set_ellipsoid_from_external_parameters(self, AXMAJ, AXMIN, ELL_THE):
+
+
+        YCEN  = AXMAJ*AXMIN
+        YCEN  = YCEN/numpy.sqrt(AXMIN**2+AXMAJ**2*numpy.tan(ELL_THE)**2)
+        ZCEN  = YCEN*numpy.tan(ELL_THE)
+        ZCEN  = - numpy.abs(ZCEN)
+        if (numpy.cos(ELL_THE) < 0):
+            YCEN = - numpy.abs(YCEN)
+        else:
+            YCEN = numpy.abs(YCEN)
+
+
+        AFOCI = numpy.sqrt( AXMAJ**2 - AXMIN**2 )
+        # ECCENT = AFOCI/AXMAJ
+
+        # ;C
+        # ;C Computes now the normal in the mirror center.
+        # ;C
+        RNCEN = numpy.zeros(3)
+        RNCEN[1-1] =  0.0
+        RNCEN[2-1] = -2 * YCEN / AXMAJ**2
+        RNCEN[3-1] = -2 * ZCEN / AXMIN**2
+        # ;CALL NORM(RNCEN,RNCEN)
+        RNCEN = RNCEN / numpy.sqrt((RNCEN**2).sum())
+        # ;C
+        # ;C Computes the tangent versor in the mirror center.
+        # ;C
+        RTCEN = numpy.zeros(3)
+        RTCEN[1-1] =  0.0
+        RTCEN[2-1] =  RNCEN[3-1]
+        RTCEN[3-1] = -RNCEN[2-1]
+
+
+
+        # ;C Computes now the quadric coefficient with the mirror center
+        # ;C located at (0,0,0) and normal along (0,0,1)
+        # ;C
+
+        A = 1 / AXMIN ** 2
+        B = 1 / AXMAJ ** 2
+        C = A
+        self.ccc[0] = A
+        self.ccc[1] = B * RTCEN[2 - 1] ** 2 + C * RTCEN[3 - 1] ** 2
+        self.ccc[2] = B * RNCEN[2 - 1] ** 2 + C * RNCEN[3 - 1] ** 2
+        self.ccc[3] = 0.0
+        self.ccc[4] = 2 * (B * RNCEN[2 - 1] * RTCEN[2 - 1] + C * RNCEN[3 - 1] * RTCEN[3 - 1])
+        self.ccc[5] = 0.0
+        self.ccc[6] = 0.0
+        self.ccc[7] = 0.0
+        self.ccc[8] = 2 * (B * YCEN * RNCEN[2 - 1] + C * ZCEN * RNCEN[3 - 1])
+        self.ccc[9] = 0.0
 
     def set_paraboloid_from_focal_distances(self, SSOUR, SIMAG, theta_grazing, infinity_location="",
                                             verbose=True):
@@ -698,6 +759,74 @@ class Conic(object):
         self.ccc[7] = 0.0
         self.ccc[8] = 2 * (B * YCEN * RNCEN[2-1] + C * ZCEN * RNCEN[3-1])
         self.ccc[9] = 0.0
+
+
+
+    @classmethod
+    def calculate_ellipsoid_parameters_from_focal_distances(cls,ssour, simag, theta_grazing, verbose=True):
+        theta = (numpy.pi/2) - theta_grazing
+        COSTHE = numpy.cos(theta)
+        SINTHE = numpy.sin(theta)
+
+        AXMAJ = ( ssour + simag )/2
+        AXMIN = numpy.sqrt( simag * ssour) * COSTHE
+
+
+        AFOCI = numpy.sqrt( AXMAJ**2 - AXMIN**2 )
+        ECCENT = AFOCI/AXMAJ
+        # ;C
+        # ;C The center is computed on the basis of the object and image positions
+        # ;C
+        YCEN  = (ssour - simag) * 0.5 / ECCENT
+        ZCEN  = -numpy.sqrt( 1 - YCEN**2 / AXMAJ**2) * AXMIN
+        # ;C
+        # ;C Computes now the normal in the mirror center.
+        # ;C
+        RNCEN = numpy.zeros(3)
+        RNCEN[1-1] =  0.0
+        RNCEN[2-1] = -2 * YCEN / AXMAJ**2
+        RNCEN[3-1] = -2 * ZCEN / AXMIN**2
+        # ;CALL NORM(RNCEN,RNCEN)
+        RNCEN = RNCEN / numpy.sqrt((RNCEN**2).sum())
+        # ;C
+        # ;C Computes the tangent versor in the mirror center.
+        # ;C
+        RTCEN = numpy.zeros(3)
+        RTCEN[1-1] =  0.0
+        RTCEN[2-1] =  RNCEN[3-1]
+        RTCEN[3-1] = -RNCEN[2-1]
+
+        # new
+
+        ELL_THE = numpy.arctan( ZCEN / YCEN)
+
+        YCEN2  = AXMAJ*AXMIN
+        YCEN2  = YCEN2/numpy.sqrt(AXMIN**2+AXMAJ**2*numpy.tan(ELL_THE)**2)
+        ZCEN2  = YCEN2*numpy.tan(ELL_THE)
+        ZCEN2  = - numpy.abs(ZCEN2)
+        if (numpy.cos(ELL_THE) < 0):
+            YCEN2 = - numpy.abs(YCEN2)
+        else:
+            YCEN2 = numpy.abs(YCEN2)
+
+        print("YCEN2,ZCEN2: ",YCEN2,ZCEN2)
+
+        if verbose:
+            txt = ""
+            txt += "p=%f, q=%f, theta_grazing=%f rad, theta_normal=%f rad\n" % (ssour, simag, theta_grazing, theta)
+            txt += 'Ellipsoid of revolution a=%f \n'%AXMAJ
+            txt += 'Ellipsoid of revolution b=%f \n'%AXMIN
+            txt += 'Ellipsoid of revolution c=sqrt(a^2-b^2)=%f \n'%AFOCI
+            txt += 'Ellipsoid of revolution focal distance c^2=%f \n'%(AFOCI**2)
+            txt += 'Ellipsoid of revolution excentricity: %f \n'%ECCENT
+            txt += 'Optical element center at: [0,%f,%f]\n'%(YCEN,ZCEN)
+            txt += 'Optical element normal: [%f,%f,%f]\n'%(RNCEN[0],RNCEN[1],RNCEN[2])
+            txt += 'Optical element tangent: [%f,%f,%f]\n'%(RTCEN[0],RTCEN[1],RTCEN[2])
+            print(txt)
+        return {
+            "ssour":ssour, "simag":simag, "theta_grazing":theta_grazing, "theta":theta,
+            "AXMAJ":AXMAJ, "AXMIN":AXMIN, "ELL_THE":ELL_THE,
+            "AFOCI":AFOCI, "YCEN":YCEN, "ZCEN":ZCEN, "YCEN2":YCEN2, "ZCEN2":ZCEN2, "RNCEN":RNCEN, "RTCEN":RTCEN}
 
     #
     # info
@@ -878,14 +1007,16 @@ class Conic(object):
 
 
 if __name__ == "__main__":
+    from srxraylib.plot.gol import set_qt
+    set_qt()
 
     p = 13.73 + 13.599
     q = 2.64
     theta1 = 0.02181
     # ccc = Conic.initialize_as_sphere_from_focal_distances(p, q, theta1, cylindrical=0, cylangle=0.0, switch_convexity=0)
-    # ccc = Conic.initialize_as_ellipsoid_from_focal_distances(p, q, theta1, cylindrical=0, cylangle=0.0, switch_convexity=0)
+    ccc = Conic.initialize_as_ellipsoid_from_focal_distances(p, q, theta1, cylindrical=0, cylangle=0.0, switch_convexity=0)
     # ccc = Conic.initialize_as_paraboloid_from_focal_distances(p, q, theta1, cylindrical=0, cylangle=0.0, switch_convexity=0)
-    ccc = Conic.initialize_as_hyperboloid_from_focal_distances(p, q, theta1, cylindrical=0, cylangle=0.0, switch_convexity=0)
+    # ccc = Conic.initialize_as_hyperboloid_from_focal_distances(p, q, theta1, cylindrical=0, cylangle=0.0, switch_convexity=0)
     # print(ccc.info())
 
     y = numpy.linspace(-0.15,0.15,100)
@@ -905,4 +1036,19 @@ if __name__ == "__main__":
 
     from srxraylib.plot.gol import plot_image
     plot_image(Z,x,y)
+    print(ccc.info())
+    print("Ellipsoid parameters: ")
+    tkt = Conic.calculate_ellipsoid_parameters_from_focal_distances(p, q, theta1)
+
+    # using external parameters
+    ccc2 = Conic()
+    ccc2.set_ellipsoid_from_external_parameters(AXMAJ=tkt["AXMAJ"],AXMIN=tkt["AXMIN"],ELL_THE=tkt["ELL_THE"])
+    # for key in tkt.keys():
+    #     print(key,tkt[key])
+
+    for i in range(10):
+        print(ccc.get_coefficients()[i], ccc2.get_coefficients()[i])
+
+
+
 
