@@ -600,6 +600,7 @@ class Beam(object):
             self.rays[:,newaxisi]     =  a1[:,newaxisi]
 
 
+
     #
     # crop
     #
@@ -782,12 +783,12 @@ class Beam(object):
 
     def apply_reflectivity_s(self, Rs):
         self.rays[:, 6] *= Rs
-        # self.rays[:, 7] *= Rs
+        self.rays[:, 7] *= Rs
         self.rays[:, 8] *= Rs
 
     def apply_reflectivity_p(self, Rp):
         self.rays[:, 15] *= Rp
-        # self.rays[:, 16] *= Rp
+        self.rays[:, 16] *= Rp
         self.rays[:, 17] *= Rp
 
     def apply_reflectivities(self, Rs, Rp):

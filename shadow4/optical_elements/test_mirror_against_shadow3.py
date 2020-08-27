@@ -72,7 +72,7 @@ def run_shadow3():
     oe1.DUMMY = 100.0
     oe1.FHIT_C = 1
     oe1.FILE_REFL = b'/Users/srio/Oasys/SiC.dat'
-    oe1.FWRITE = 1
+    oe1.FWRITE = 0
     oe1.F_REFLEC = 0 #1
     oe1.RLEN1 = 5e-05
     oe1.RLEN2 = 5e-05
@@ -205,3 +205,11 @@ if __name__ == "__main__":
     print("col#   shadow4  shadow3  source")
     for i in range(18):
         print("col%d   %20.10f  %20.10f  %20.10f  " % (i+1, beam1.rays[10,i], beam3.rays[10,i], source3.rays[10,i]))
+
+
+    mirr3 = Beam3(N=beam0.rays.shape[0])
+    mirr3.load("mirr.01")
+
+    print("\ncol#   m-shadow4  m-shadow3  source")
+    for i in range(18):
+        print("col%d   %20.10f  %20.10f  %20.10f  " % (i+1, mirr1.rays[10,i], mirr3.rays[10,i], source3.rays[10,i]))
