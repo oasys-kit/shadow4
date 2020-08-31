@@ -6,6 +6,7 @@ from syned.beamline.optical_elements.mirrors.mirror import Mirror as SyMirror
 
 from shadow4.beam.beam import Beam
 from shadow4.sources.source_geometrical.gaussian import SourceGaussian
+from shadow4.sources.source_geometrical.source_geometrical import SourceGeometrical
 
 from shadow4.syned.shape import Rectangle, Ellipse, TwoEllipses # TODO from syned.beamline.shape
 from shadow4.syned.shape import Toroidal, Conic, NumericalMesh # TODO from syned.beamline.shape
@@ -232,16 +233,20 @@ if __name__ == "__main__":
     #                                                  sigmaXprime=0.0,
     #                                                  sigmaZprime=0.0, )
 
-    source = SourceGaussian.initialize_from_keywords(number_of_rays=100000,
-                 sigmaX=0.0,
-                 sigmaY=0.0,
-                 sigmaZ=0.0,
-                 sigmaXprime=1e-6,
-                 sigmaZprime=1e-6,)
 
 
-    beam0 = Beam()
-    beam0.genSource(source)
+    source = SourceGeometrical()
+    source.set_angular_distribution_gaussian(1e-6,1e-6)
+    beam0 = source.calculate_beam(N=100000, POL_DEG=1)
+
+    # source = SourceGaussian.initialize_from_keywords(number_of_rays=100000,
+    #              sigmaX=0.0,
+    #              sigmaY=0.0,
+    #              sigmaZ=0.0,
+    #              sigmaXprime=1e-6,
+    #              sigmaZprime=1e-6,)
+    # beam0 = Beam()
+    # beam0.genSource(source)
     print(beam0.info())
 
     beam0s3 = Beam3.initialize_from_shadow4_beam(beam0)

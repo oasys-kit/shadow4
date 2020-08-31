@@ -1,6 +1,8 @@
 import numpy
 import scipy.constants as codata
 
+from shadow4.beam.beam import Beam
+
 from shadow4.sources.source_geometrical.probability_distributions import Rectangle2D, Ellipse2D, Gaussian2D
 from shadow4.sources.source_geometrical.probability_distributions import Flat2D, Uniform2D, Conical2D
 
@@ -265,6 +267,10 @@ class SourceGeometrical(object):
         rays[:,11] = numpy.arange(N) + 1          # index
         return rays
 
+    def calculate_beam(self,N=5000,POL_DEG=1.0,POL_ANGLE=0.0,F_COHER=False):
+        rays = self.calculate_rays(N=N, POL_DEG=POL_DEG, POL_ANGLE=POL_ANGLE, F_COHER=F_COHER)
+        return Beam.initialize_from_array(rays)
+
     def calculate_rays(self,N=5000,POL_DEG=1.0,POL_ANGLE=0.0,F_COHER=False):
 
         rays = self._sample_rays_default(N)
@@ -450,9 +456,9 @@ class SourceGeometrical(object):
         for i in range(3):
             AP_VEC[:, i] *= AZ
 
+
         rays[:, 6:9] = A_VEC
         rays[:, 15:18] = AP_VEC
-
         #
         # ! C
         # ! C Now the phases of A_VEC and AP_VEC.
