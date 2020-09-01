@@ -30,25 +30,19 @@ class Empty(object):
         #
         # put beam in mirror reference system
         #
-        # print(">>> ",beam.rays[0, 6:9])
-        # print(">>>> rotate alpha1 [deg]: ",alpha1*180/numpy.pi)
+        # print(">>>>> alpha1: ", alpha1, alpha1 * 180 / numpy.pi)
         beam.rotate(alpha1, axis=2)
-        # print(">>> ", beam.rays[0, 6:9])
 
         # print(">>>> rotate theta_grazing1 [deg]: ", theta_grazing1*180/numpy.pi)
         beam.rotate(theta_grazing1, axis=1)
-        # print(">>> ", beam.rays[0, 6:9])
 
         # print(">>>> translate ",[0.0, -self._p * numpy.cos(theta_grazing1), self._p * numpy.sin(theta_grazing1)])
-        # WHY this is not needed?????????
-        # beam.translation([0.0, -self._p * numpy.cos(theta_grazing1), self._p * numpy.sin(theta_grazing1)])
-        # print(">>> ", beam.rays[0, 6:9])
+        beam.translation([0.0, -self._p * numpy.cos(theta_grazing1), self._p * numpy.sin(theta_grazing1)])
 
 
         #
         # oe does nothing
         #
-        # beam.retrace(self._p, resetY=False)
 
 
         #
@@ -56,14 +50,11 @@ class Empty(object):
         #
 
         beam_out = beam.duplicate()
-        # print(">>>> rotate theta_grazing2 deg: ", theta_grazing2*180/numpy.pi)
-        beam_out.rotate(theta_grazing2, axis=1)
+        # print(">>>> before imref", beam_out.rays.shape, beam_out.rays[:,0], beam_out.rays[:,1], beam_out.rays[:,2])
+        beam_out.change_to_image_reference_system(theta_grazing2, self._q)
 
         if undo_shadow_orientation_angle_rotation:
             beam_out.rotate(-alpha1, axis=2)
-
-        # print(">>>> retrace  ", self._q)
-        beam_out.retrace(self._p + self._q, resetY=True)
 
         return beam_out, beam
 

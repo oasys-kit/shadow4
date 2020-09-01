@@ -545,6 +545,7 @@ class Beam(object):
 
         """
 
+        print(">>>>translation: ", qdist1)
         if numpy.array(qdist1).size != 3:
             raise Exception("Input must be a vector [x,y,z]")
 
@@ -586,6 +587,8 @@ class Beam(object):
         costh = numpy.cos(theta1)
         sinth = numpy.sin(theta1)
 
+        print(">>>>> rotate axis %d sinth: %f  costh: %f" % (axis, sinth, costh))
+
         tstart = numpy.array([1,4,7,16])
 
         for i in range(len(tstart)):
@@ -599,8 +602,92 @@ class Beam(object):
             self.rays[:,newtoroti[1]] = -a1[:,newtoroti[0]] * sinth + a1[:,newtoroti[1]] * costh
             self.rays[:,newaxisi]     =  a1[:,newaxisi]
 
+    def change_to_image_reference_system(self, theta, T_IMAGE, rad=1):
+        """
+
+        :param theta: the rotation angle in degrees (default=0)
+        :param axis: The axis number (Shadow's column) for the rotation
+                    (i.e, 1:x (default), 2:y, 3:z)
+        :param file:
+        :param rad: set this flag when theta1 is in radiants
+        :return:
+        """
+
+        if rad:
+            theta1 = theta
+        else:
+            theta1 = theta * numpy.pi / 180
+
+        T_REFLECTION = numpy.pi / 2 - theta1
+
+        a1 = self.rays.copy()
+
+        print(">>>>> rotate_imref T_REFLECTION = ", T_REFLECTION, T_REFLECTION * 180 / numpy.pi)
+
+        nrays = self.rays.shape[0]
+        UXIM_x = numpy.ones(nrays)
+        UXIM_y = numpy.zeros(nrays)
+        UXIM_z = numpy.zeros(nrays)
+
+        VZIM_x = numpy.zeros(nrays)
+        VZIM_y = numpy.zeros(nrays) - numpy.cos(T_REFLECTION)
+        VZIM_z = numpy.zeros(nrays) + numpy.sin(T_REFLECTION)
+
+        VNIMAG_x = numpy.zeros(nrays)
+        VNIMAG_y = numpy.zeros(nrays) + numpy.sin(T_REFLECTION)
+        VNIMAG_z = numpy.zeros(nrays) + numpy.cos(T_REFLECTION)
+
+        print (">>>>> UXIM: ", UXIM_x[0], UXIM_y[0], UXIM_z[0])
+        print (">>>>> VNIMAG: ", VNIMAG_x[0], VNIMAG_y[0], VNIMAG_z[0])
+        print (">>>>> VZIM: ", VZIM_x[0], VZIM_y[0], VZIM_z[0])
 
 
+       # ABOVE = T_IMAGE - P_MIR(1) * C_STAR(1) - P_MIR(2) * C_STAR(2) - P_MIR(3) * C_STAR(3)
+       # BELOW = C_STAR(1) * V_OUT(1) + C_STAR(2) * V_OUT(2) + C_STAR(3) * V_OUT(3)
+
+        ABOVE = T_IMAGE - a1[:,0] * VNIMAG_x - a1[:,1] * VNIMAG_y - a1[:,2] * VNIMAG_z
+        BELOW = VNIMAG_x * a1[:,3] + VNIMAG_y * a1[:,4] + VNIMAG_z * a1[:,5]
+
+
+        # IF (BELOW.NE.0.0D0) THEN
+        #    DIST	=   ABOVE/BELOW
+        # ELSE
+        #    RAY(10,J)  = - 3.0D6
+        #    GO TO 100
+        # END IF
+
+        print(">>>>> BELOW == 0 ", numpy.where(BELOW == 0))
+        DIST = ABOVE / BELOW
+
+        print(">>> DIST: ", DIST)
+
+        # ! ** Computes now the intersections onto TRUE image plane.
+
+        a1[:, 0]  +=   DIST * a1[:, 3]
+        a1[:, 1]  +=   DIST * a1[:, 4]
+        a1[:, 2]  +=   DIST * a1[:, 5]
+        print(">>> PIMAG: ", a1[:, 0], a1[:, 1], a1[:, 2] )
+
+        #!  ** Rotate now the results in the STAR (or TRUE image) reference plane.
+        # ! ** Computes the projection of P_MIR onto the image plane versors.
+        #
+        RIMCEN_x = VNIMAG_x * T_IMAGE
+        RIMCEN_y = VNIMAG_y * T_IMAGE
+        RIMCEN_z = VNIMAG_z * T_IMAGE
+
+        a1[:, 0]  -=   RIMCEN_x
+        a1[:, 1]  -=   RIMCEN_y
+        a1[:, 2]  -=   RIMCEN_z
+
+        #! ** Computes now the new vectors for the beam in the U,V,N ref.
+        for i in [1,4,7,16]:
+            # dot product
+            self.rays[:, i - 1 + 0] = a1[:, i - 1 + 0] * UXIM_x   + a1[:, i - 1 + 1] * UXIM_y   + a1[:, i - 1 + 2] * UXIM_z
+            self.rays[:, i - 1 + 1] = a1[:, i - 1 + 0] * VNIMAG_x + a1[:, i - 1 + 1] * VNIMAG_y + a1[:, i - 1 + 2] * VNIMAG_z
+            self.rays[:, i - 1 + 2] = a1[:, i - 1 + 0] * VZIM_x   + a1[:, i - 1 + 1] * VZIM_y   + a1[:, i - 1 + 2] * VZIM_z
+
+        # optical path col 13
+        self.rays[:, 12] += numpy.abs(DIST)
     #
     # crop
     #
@@ -614,32 +701,6 @@ class Beam(object):
         TESTY = (y - y_min) * (y_max - y)
 
         indices_out = numpy.where(numpy.logical_or(TESTX < 0.0, TESTY < 0.0))
-
-        # if not negative:
-        #     window = numpy.ones_like(flag)
-        #     lower_window_x = numpy.where(x < x_min)
-        #     upper_window_x = numpy.where(x > x_max)
-        #     lower_window_y = numpy.where(y < y_min)
-        #     upper_window_y = numpy.where(y > y_max)
-        #
-        #     #
-        #     if len(lower_window_x) > 0: window[lower_window_x] = 0
-        #     if len(upper_window_x) > 0: window[upper_window_x] = 0
-        #     if len(lower_window_y) > 0: window[lower_window_y] = 0
-        #     if len(upper_window_y) > 0: window[upper_window_y] = 0
-        #
-        # else:
-        #     window = numpy.ones_like(flag)
-        #     window2 = numpy.ones_like(window)
-        #     window_x = numpy.where((x_min <= x) & (x <= x_max))
-        #     window_y = numpy.where((y_min <= y) & (y <= y_max))
-        #
-        #     if len(window_x) > 0: window[window_x] = 0.0
-        #     if len(window_y) > 0: window2[window_y] = 0.0
-        #
-        #     window += window2
-        #     window_good = numpy.where(window > 0)
-        #     if len(window_good) > 0: window[window_good] = 1.0
 
         if negative:
             window = numpy.zeros_like(flag)
@@ -1049,4 +1110,10 @@ class Beam(object):
 if __name__ == "__main__":
     # pass
 
-    print(Beam().column_short_names_with_column_number())
+    # print(Beam().column_short_names_with_column_number())
+    from numpy.testing import assert_equal
+    a = Beam.initialize_as_pencil(200)
+    a.rotate_imref(180 * numpy.pi / 180 )
+    assert_equal(a.get_column(4).mean(), 0.0)
+    assert_equal(a.get_column(5).mean(), 1.0)
+    assert_equal(a.get_column(6).mean(), 0.0)

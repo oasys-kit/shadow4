@@ -19,6 +19,7 @@ import Shadow
 from Shadow.ShadowTools import plotxy
 from shadow4.compatibility.beam3 import Beam3
 
+from numpy.testing import assert_almost_equal
 def syspositions(list1):
     """
     return a dictionary with the positions of the source, o.e. and images
@@ -226,39 +227,27 @@ class FakeOE():
 if __name__ == "__main__":
 
     do_plot=0
-    # source = SourceGaussian.initialize_from_keywords(number_of_rays=100,
-    #                                                  sigmaX=0.0,
-    #                                                  sigmaY=0.0,
-    #                                                  sigmaZ=0.0,
-    #                                                  sigmaXprime=0.0,
-    #                                                  sigmaZprime=0.0, )
+    do_assert = True
+    do_shadow3_fortran = True
 
-
-
+    N = 1000
     source = SourceGeometrical()
     source.set_angular_distribution_gaussian(1e-6,1e-6)
-    beam0 = source.calculate_beam(N=100000, POL_DEG=1)
-
-    # source = SourceGaussian.initialize_from_keywords(number_of_rays=100000,
-    #              sigmaX=0.0,
-    #              sigmaY=0.0,
-    #              sigmaZ=0.0,
-    #              sigmaXprime=1e-6,
-    #              sigmaZprime=1e-6,)
-    # beam0 = Beam()
-    # beam0.genSource(source)
+    beam0 = source.calculate_beam(N=N, POL_DEG=1)
     print(beam0.info())
 
+
     beam0s3 = Beam3.initialize_from_shadow4_beam(beam0)
+
     beam1s3 = Beam3.initialize_from_shadow4_beam(beam0)
 
     if do_plot:
         plotxy(beam0s3, 4, 6, title="Image 0", nbins=201)
 
 
-    alpha_deg = 20 #-90.0
-    theta1_deg = 10.0
-    theta2_deg = 170.0
+    alpha_deg =  20     # numpy.random.random() * 90  # 20
+    theta1_deg = 10.0   # numpy.random.random() * 180 # 10.0
+    theta2_deg = 170.0  # numpy.random.random() * 360 # 170.0
     p = 15.0
     q = 100.0
 
@@ -278,18 +267,46 @@ if __name__ == "__main__":
     oe1 = Shadow.OE()
     oe1.ALPHA = alpha_deg
     oe1.DUMMY = 100.0
-    oe1.FWRITE = 1
+    oe1.FWRITE = 0 # 1
     oe1.F_REFRAC = 2
     oe1.T_IMAGE = q
     oe1.T_INCIDENCE = theta1_deg
     oe1.T_REFLECTION = theta2_deg
     oe1.T_SOURCE = p
 
+    if do_shadow3_fortran:
+        import os
+        os.system("/bin/rm begin.dat start.01 star.01")
+
+        beam0s3.write("begin.dat")
+        oe1.write("start.01")
+        f = open("systemfile.dat","w")
+        f.write("start.01\n")
+        f.close()
+        f = open("shadow3.inp","w")
+        f.write("trace\nsystemfile\n0\nexit\n")
+        f.close()
+
+        os.system("/users/srio/OASYS1.2/shadow3/shadow3 < shadow3.inp")
+
+        beam1f = Beam3(N=N)
+        beam1f.load("star.01")
+
     beam1s3.traceOE(oe1,1)
 
-    print("col#   shadow4  shadow3")
+
+
+    print("alpha_deg, theta1_deg, theta2_deg = ",alpha_deg, theta1_deg, theta2_deg)
+    print("\ncol#   shadow4  shadow3 (shadow3_fortran) (source)")
     for i in range(18):
-        print("col%d   %f  %f  " % (i+1, beam1.rays[0,i], beam1s3.rays[0,i]))
+        if do_shadow3_fortran:
+            print("col%d   %f  %f  %f  %f " % (i + 1, beam1.rays[0, i], beam1s3.rays[0, i],
+                                               beam1f.rays[0, i], beam0s3.rays[0, i]))
+        else:
+            print("col%d   %f  %f  " % (i+1, beam1.rays[0,i], beam1s3.rays[0,i]))
+
+        if do_assert:
+            assert_almost_equal (beam1.rays[:,i], beam1s3.rays[:,i], 4)
 
 
     # a = syspositions([oe1])
