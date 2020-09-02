@@ -1,4 +1,7 @@
-
+"""
+This is a Gaussian source in both space and divergence coordinates.
+It is redundant with source_geometrical
+"""
 import numpy
 from shadow4.beam.beam import Beam
 
@@ -200,21 +203,6 @@ class SourceGaussian(object):
     #
     # interfaces
     #
-    def get_beam_shadow3(self,wavelength=1e-10):
-        """
-        Returns a shadow3 beam
-        :param wavelength: the photon wavelength in m
-        :return:
-        """
-        import Shadow
-        beam = Shadow.Beam(self.get_number_of_points())
-        beam.rays[:,0:6] = self.get_volume().T
-        beam.rays[:,6:18] = 0.0
-        beam.rays[:,6] = 1.0 # Es
-        beam.rays[:,9] = 1   # flag
-        beam.rays[:,10] = 2 * numpy.pi / (wavelength * 1e2) # wavenumber
-        beam.rays[:,11] = numpy.arange(self.get_number_of_points(),dtype=float) # index
-        return beam
 
     def get_beam(self,wavelength=1e-10):
         """
@@ -233,81 +221,4 @@ class SourceGaussian(object):
 
 
 if __name__ == "__main__":
-
-    # a = SourceGaussian.initialize_point_source(number_of_rays=10000,
-    #              sigmaXprime=3e-6,
-    #              sigmaZprime=1e-6,
-    #              real_space_center=[0.0,0.0,0.0],
-    #              direction_space_center=[0.0,0.0])
-    # print(a.info())
-    #
-    # x,y,z = a.get_arrays_real_space()
-    # print("x.shape:",x.shape)
-    # print("y.shape:",y.shape)
-    # print("z.shape:",z.shape)
-    #
-    # xp,zp = a.get_arrays_direction_space()
-    # print("xp.shape:",xp.shape)
-    # print("zp.shape:",zp.shape)
-    #
-    #
-    # VP = a.get_volume_divergences()
-    # print("VP",VP.shape,VP.size)
-    #
-    #
-    # Vx = a.get_volume_real_space()
-    # print("Vx: ",Vx.shape)
-    #
-    # V = a.get_volume()
-    # print("V: ",V.shape)
-    #
-    #
-    # beam_shadow3 = a.get_beam_shadow3()
-    # beam_shadow3.write("begin.dat")
-    #
-    # import Shadow
-    # Shadow.ShadowTools.plotxy(beam_shadow3,4,6)
-    #
-    #
-    #
-
-
-    # #
-    # #
-    # a = SourceGaussian.initialize_collimated_source(number_of_rays=10000,
-    #              sigmaX=1.0,
-    #              sigmaY=0.0,
-    #              sigmaZ=1.0,
-    #              real_space_center=[0.0,0.0,0.0],
-    #              direction_space_center=[0.0,0.0] )
-    #
-    # print(a.info())
-    # beam_shadow3 = a.get_beam_shadow3()
-    # import Shadow
-    # Shadow.ShadowTools.plotxy(beam_shadow3,1,3)
-    #
-    # beam = a.get_beam()
-    # from srxraylib.plot.gol import plot_scatter
-    # plot_scatter(beam.get_column(1),beam.get_column(3))
-    # print(beam.info())
-
-    #
-    #
-    a = SourceGaussian.initialize_from_keywords(number_of_rays=10000,
-                 sigmaX=0.0,
-                 sigmaY=1.0e-3,
-                 sigmaZ=0.0,
-                 sigmaXprime=0.0,
-                 sigmaZprime=0.0,
-                 real_space_center=[0.0,0.0,0.0],
-                 direction_space_center=[0.0,0.0] )
-
-    print(a.info())
-
-    beam = a.get_beam()
-    from srxraylib.plot.gol import plot_scatter, set_qt
-    set_qt()
-    plot_scatter(beam.get_column(2),beam.get_column(1))
-    print(beam.info())
-
-    print(isinstance(a,SourceGaussian ))
+    pass

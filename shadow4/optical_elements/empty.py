@@ -15,7 +15,7 @@ class Empty(object):
         self._p = p
         self._q = q
 
-    def trace_beam(self,beam1,undo_shadow_orientation_angle_rotation=False):
+    def trace_beam(self,beam1):
         beam = beam1.duplicate()
 
         theta_grazing1 = numpy.pi / 2 - self._angle_radial
@@ -50,11 +50,8 @@ class Empty(object):
         #
 
         beam_out = beam.duplicate()
-        # print(">>>> before imref", beam_out.rays.shape, beam_out.rays[:,0], beam_out.rays[:,1], beam_out.rays[:,2])
         beam_out.change_to_image_reference_system(theta_grazing2, self._q)
 
-        if undo_shadow_orientation_angle_rotation:
-            beam_out.rotate(-alpha1, axis=2)
 
         return beam_out, beam
 

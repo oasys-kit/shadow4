@@ -727,8 +727,6 @@ class Beam(object):
         costh = numpy.cos(theta1)
         sinth = numpy.sin(theta1)
 
-        print(">>>>> rotate axis %d sinth: %f  costh: %f" % (axis, sinth, costh))
-
         tstart = numpy.array([1,4,7,16])
 
         for i in range(len(tstart)):
@@ -1141,7 +1139,7 @@ class Beam(object):
                 self.rays = beam_result.rays
             return beam_result
         except:
-            raise Exception("shadow4 class used a soptical element must implement the trace_beam method")
+            raise Exception("shadow4 class used a optical element must implement the trace_beam method")
     #
     # histograms
     #

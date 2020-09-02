@@ -5,7 +5,7 @@ from syned.beamline.element_coordinates import ElementCoordinates
 from syned.beamline.optical_elements.mirrors.mirror import Mirror as SyMirror
 
 from shadow4.beam.beam import Beam
-from shadow4.sources.source_geometrical.gaussian import SourceGaussian
+from shadow4.sources.source_geometrical.source_gaussian import SourceGaussian
 from shadow4.sources.source_geometrical.source_geometrical import SourceGeometrical
 
 from shadow4.syned.shape import Rectangle, Ellipse, TwoEllipses # TODO from syned.beamline.shape

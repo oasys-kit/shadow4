@@ -5,7 +5,7 @@ from syned.beamline.element_coordinates import ElementCoordinates
 from syned.beamline.optical_elements.mirrors.mirror import Mirror as SyMirror
 
 from shadow4.beam.beam import Beam
-from shadow4.sources.source_geometrical.gaussian import SourceGaussian
+from shadow4.sources.source_geometrical.source_gaussian import SourceGaussian
 
 from shadow4.syned.shape import Rectangle, Ellipse, TwoEllipses # TODO from syned.beamline.shape
 from shadow4.syned.shape import Toroidal, Conic, NumericalMesh # TODO from syned.beamline.shape
@@ -19,7 +19,7 @@ from shadow4.compatibility.beam3 import Beam3
 from Shadow.ShadowTools import plotxy
 
 
-def test_branch_1(do_plot=True):
+def example_branch_1(do_plot=True):
     #
     # source
     #
@@ -121,7 +121,7 @@ def test_branch_1(do_plot=True):
         mirr2s3 = Beam3.initialize_from_shadow4_beam(mirr2)
         plotxy(mirr2s3, 2, 1, title="Footprint 2", nbins=101, nolost=1)
 
-def test_branch_2(do_plot=True):
+def example_branch_2(do_plot=True):
     source = SourceGaussian.initialize_from_keywords(number_of_rays=100000,
                  sigmaX=0.0,
                  sigmaY=0.0,
@@ -182,7 +182,7 @@ def test_branch_2(do_plot=True):
         mirr1s3 = Beam3.initialize_from_shadow4_beam(mirr1)
         plotxy(mirr1s3, 2, 1, title="Footprint 1", nbins=101, nolost=1)
 
-def test_branch_3(do_plot=True):
+def example_branch_3(surface_shape_file, do_plot=True):
     #
     # source
     #
@@ -207,7 +207,7 @@ def test_branch_3(do_plot=True):
 
     # surface shape
 
-    surface_shape = NumericalMesh("%s/test_shadow4.hdf5" % OASYS_HOME)
+    surface_shape = NumericalMesh(surface_shape_file)
 
 
     # boundaries
@@ -254,7 +254,7 @@ def test_branch_3(do_plot=True):
         plotxy(mirr1s3, 2, 1, title="Footprint 1", nbins=101, nolost=1)
 
 
-def test_branch_4(do_plot=True):
+def example_branch_4(do_plot=True):
 
 
     #
@@ -294,7 +294,7 @@ def test_branch_4(do_plot=True):
                 name="M1",
                 surface_shape=surface_shape,
                 boundary_shape=boundary_shape,
-                coating="%s/SiC.dat" % OASYS_HOME,
+                coating="SiC.dat",
                 coating_thickness=None)
 
     coordinates_syned = ElementCoordinates(p = 10.0,
@@ -325,7 +325,7 @@ def test_branch_4(do_plot=True):
         mirr1s3 = Beam3.initialize_from_shadow4_beam(mirr1)
         plotxy(mirr1s3, 2, 1, title="Footprint 1", nbins=101, nolost=1)
 
-def test_branch_5(surface_type, do_plot=True):
+def example_branch_5(surface_type, do_plot=True):
     #
     # source
     #
@@ -420,12 +420,17 @@ if __name__ == "__main__":
     from srxraylib.plot.gol import set_qt
     set_qt()
 
-    OASYS_HOME = "/Users/srio/Oasys/"
+    do_plot = False
 
-    # test_branch_1(do_plot=False) # two plane mirrors
-    # test_branch_2(do_plot=False) # toroid
-    # test_branch_3(do_plot=False) # mesh
-    # test_branch_4(do_plot=False) # prerefl
+    example_branch_1(do_plot=do_plot) # two plane mirrors
+    example_branch_2(do_plot=do_plot) # toroid
+    example_branch_3("../../oasys_workspaces/test_shadow4.hdf5",do_plot=do_plot) # mesh
 
-    for myconicshape in ["plane", "sphere", "spherical_cylinder_tangential", "spherical_cylinder_sagittal","ellipsoid"]:
-        test_branch_5(myconicshape,do_plot=True) # conic mirrors
+    from shadow4.physical_models.prerefl.prerefl import PreRefl
+    PreRefl.prerefl(interactive=False, SYMBOL="SiC", DENSITY=3.217, FILE="SiC.dat", E_MIN=100.0, E_MAX=20000.0, E_STEP=100.0)
+    example_branch_4(do_plot=do_plot) # prerefl
+
+    for myconicshape in ["plane", "sphere", "spherical_cylinder_tangential", "spherical_cylinder_sagittal"]:
+        example_branch_5(myconicshape,do_plot=do_plot) # conic mirrors
+
+    # TODO: "ellipsoid", "hyperboloid", "paraboloid"

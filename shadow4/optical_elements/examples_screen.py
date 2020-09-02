@@ -1,7 +1,7 @@
 
 import numpy
 from shadow4.beam.beam import Beam
-from shadow4.sources.source_geometrical.gaussian import SourceGaussian
+from shadow4.sources.source_geometrical.source_gaussian import SourceGaussian
 from shadow4.optical_elements.screen import Screen
 
 
@@ -170,7 +170,7 @@ def test_filter(do_plot=True):
     boundary_shape = None # Rectangle(x_left=-0.5e-6, x_right=0.5e-6, y_bottom=-0.5e-6, y_top=0.5e-6)
 
     syfilter1 = SyFilter(name="Undefined",boundary_shape=boundary_shape,
-                         material="/Users/srio/Oasys/Be.dat",
+                         material="Be.dat",
                          thickness=10e-6
                          )
 
@@ -211,7 +211,7 @@ def test_holed_filter(do_plot=True):
     boundary_shape = Rectangle(x_left=-0.5e-6, x_right=0.5e-6, y_bottom=-0.5e-6, y_top=0.5e-6)
 
     syfilter1 = SyHoledFilter(name="Undefined",boundary_shape=boundary_shape,
-                         material="/Users/srio/Oasys/Be.dat",
+                         material="Be.dat",
                          thickness=10e-6
                          )
 
@@ -243,5 +243,9 @@ if __name__ == "__main__":
     test_screen(do_plot=True)
     test_slit(do_plot=True)
     test_beam_stopper(do_plot=True)
+
+    # from Shadow.ShadowPreprocessorsXraylib import prerefl
+    from shadow4.physical_models.prerefl.prerefl import PreRefl
+    PreRefl.prerefl(interactive=False, SYMBOL="Be", DENSITY=1.848, FILE="Be.dat", E_MIN=100.0, E_MAX=20000.0, E_STEP=100.0)
     test_filter(do_plot=True)
     test_holed_filter(do_plot=True)

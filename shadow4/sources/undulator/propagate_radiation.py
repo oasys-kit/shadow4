@@ -1,3 +1,7 @@
+"""
+TODO: remove this file
+"""
+
 from wofry.propagator.wavefront1D.generic_wavefront import GenericWavefront1D
 from srxraylib.plot.gol import plot
 

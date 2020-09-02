@@ -167,6 +167,91 @@ class PreRefl(object):
 
         return rs*debyewaller, rp*debyewaller, runp*debyewaller
 
+    #
+    # this is copied (ans sligtly ceaned) from shadow3 python preprocessors
+    #
+    @classmethod
+    def prerefl(cls, interactive=True, SYMBOL="SiC", DENSITY=3.217, FILE="prerefl.dat", E_MIN=100.0, E_MAX=20000.0,
+                E_STEP=100.0):
+        """
+         Preprocessor for mirrors - python+xraylib version
+
+         -"""
+
+        # retrieve physical constants needed
+        import scipy
+        import xraylib
+
+        import scipy.constants as codata
+
+        tocm = codata.h * codata.c / codata.e * 1e2
+
+        if interactive:
+            # input section
+            print("prerefl: Preprocessor for mirrors - python+xraylib version")
+            iMaterial = input("Enter material expression (symbol,formula): ")
+            density = input("Density [ g/cm3 ] ?")
+            density = float(density)
+
+            estart = input("Enter starting photon energy: ")
+            estart = float(estart)
+
+            efinal = input("Enter end photon energy: ")
+            efinal = float(efinal)
+
+            estep = input("Enter step photon energy:")
+            estep = float(estep)
+
+            out_file = input("Output file : ")
+        else:
+            iMaterial = SYMBOL
+            density = DENSITY
+            estart = E_MIN
+            efinal = E_MAX
+            estep = E_STEP
+            out_file = FILE
+
+        twopi = numpy.pi * 2
+        npoint = int((efinal - estart) / estep + 1)
+        depth0 = density / 2.0
+        qmin = estart / tocm * twopi
+        qmax = efinal / tocm * twopi
+        qstep = estep / tocm * twopi
+
+        f = open(out_file, 'wt')
+        f.write(("%20.11e " * 4 + "\n") % tuple([qmin, qmax, qstep, depth0]))
+        f.write("%i \n" % int(npoint))
+        for i in range(npoint):
+            energy = (estart + estep * i) * 1e-3
+            tmp = 2e0 * (1e0 - xraylib.Refractive_Index_Re(iMaterial, energy, density))
+            f.write("%e \n" % tmp)
+        for i in range(npoint):
+            energy = (estart + estep * i) * 1e-3
+            tmp2 = 2e0 * (xraylib.Refractive_Index_Im(iMaterial, energy, density))
+            f.write("%e \n" % tmp2)
+        print("File written to disk: %s" % out_file)
+        f.close()
+
+        # test (not needed)
+        itest = 0
+        if itest:
+            cdtest = xraylib.CompoundParser(iMaterial)
+            print("    ", iMaterial, " contains %i atoms and %i elements" % (cdtest['nAtomsAll'], cdtest['nElements']))
+            for i in range(cdtest['nElements']):
+                print("    Element %i: %lf %%" % (cdtest['Elements'][i], cdtest['massFractions'][i] * 100.0))
+            print(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>")
+            print(qmin, qmax, qstep, depth0)
+            print(npoint)
+            for i in range(npoint):
+                energy = (estart + estep * i) * 1e-3
+                qq = qmin + qstep * i
+                print(energy, qq, \
+                      2e0 * (1e0 - xraylib.Refractive_Index_Re(iMaterial, energy, density)), \
+                      2e0 * (xraylib.Refractive_Index_Im(iMaterial, energy, density)))
+            print(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>")
+
+        return None
+
 
 if __name__ == "__main__":
 

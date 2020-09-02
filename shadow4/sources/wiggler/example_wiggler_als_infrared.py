@@ -130,6 +130,6 @@ if __name__ == "__main__":
     plot_scatter(rays[:,1],rays[:,2]*1e6,xtitle="Y m",ytitle="Z um")
     plot_scatter(rays[:,3]*1e6,rays[:,5]*1e6,xtitle="X' urad",ytitle="Z' urad")
 
-    Beam.initialize_from_array(rays).write("begin.h5")
+    Beam.initialize_from_array(rays).write_h5("begin.h5")
 
 

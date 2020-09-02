@@ -65,7 +65,7 @@ class Mirror(object):
         if self._beamline_element_syned is not None:
             return (self._beamline_element_syned.info())
 
-    def trace_beam(self,beam_in,undo_shadow_orientation_angle_rotation=False):
+    def trace_beam(self,beam_in,flag_lost_value=-1):
 
         p = self._beamline_element_syned.get_coordinates().p()
         q = self._beamline_element_syned.get_coordinates().q()
@@ -146,7 +146,8 @@ class Mirror(object):
         #
         # apply mirror boundaries
         #
-        mirr.apply_boundaries_syned(self._beamline_element_syned.get_optical_element().get_boundary_shape())
+        mirr.apply_boundaries_syned(self._beamline_element_syned.get_optical_element().get_boundary_shape(),
+                                    flag_lost_value=flag_lost_value)
 
         #
         # apply mirror reflectivity
@@ -193,12 +194,7 @@ class Mirror(object):
         #
 
         beam_out = mirr.duplicate()
-        beam_out.rotate(theta_grazing1, axis=1)
-        # do not undo alpha rotation: newbeam.rotate(-alpha, axis=2)
-        if undo_shadow_orientation_angle_rotation:
-            beam_out.rotate(-alpha1, axis=2)
-
-        beam_out.retrace(q, resetY=True)
+        beam_out.change_to_image_reference_system(theta_grazing1, q)
 
         return beam_out, mirr
 

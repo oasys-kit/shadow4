@@ -27,10 +27,7 @@ def run_python_preprocessors(e_min=1000.0,e_max=10000.0 ):
     shift_betax_flag = 0
     shift_betax_value = 0.0
 
-     # 5000.0
-     # 100000.0
-
-    # ("Calculate electron trajectory"
+    # "Calculate electron trajectory"
     (traj, pars) = srfunc.wiggler_trajectory(b_from=0,
                                              inData=inData,
                                              nPer=nPer,
@@ -38,7 +35,7 @@ def run_python_preprocessors(e_min=1000.0,e_max=10000.0 ):
                                              ener_gev=ener_gev,
                                              per=per,
                                              kValue=kValue,
-                                             trajFile="tmp.traj",
+                                             trajFile=trajFile,
                                              shift_x_flag=shift_x_flag,
                                              shift_x_value=shift_x_value,
                                              shift_betax_flag=shift_betax_flag,
@@ -135,11 +132,6 @@ def run_shadow3_source(ener_gev=6.04,use_emittances=True,EMIN=10000.0,EMAX=11000
 def compare_rays_with_shadow3_beam(raysnew,beam,do_plot=True,do_assert=False):
 
     import Shadow
-    # Shadow.ShadowTools.plotxy(beam,1,3,nbins=101,nolost=1,title="Real space")
-
-    # a = Shadow.Beam()
-    # a.load("begin.dat")
-    # rays = a.rays
 
     rays = beam.rays
 
@@ -179,7 +171,6 @@ def compare_rays_with_shadow3_beam(raysnew,beam,do_plot=True,do_assert=False):
 
 if __name__ == "__main__":
     import Shadow
-    import os
 
     e_min = 5000.0 # 70490.0 #
     e_max = 100000.0 # 70510.0 #
@@ -192,11 +183,8 @@ if __name__ == "__main__":
     #
     # current way
     #
-    # os.system("rm begin.dat start.00 xshwig.sha")
-    # os.system("pwd")
     run_python_preprocessors(e_min=e_min,e_max=e_max)
     beam_shadow3 = run_shadow3_source(ener_gev=6.04,EMIN=e_min,EMAX=e_max,NRAYS=NRAYS,use_emittances=use_emittances)
-    # Shadow.ShadowTools.histo1("begin.dat",11)
 
     #
     # new way
@@ -241,16 +229,11 @@ if __name__ == "__main__":
                     emin=e_min,emax=e_max,ng_e=10, ng_j=nTrajPoints)
 
 
-    # sourcewiggler.set_energy_monochromatic(5000.0)
-
     print(sourcewiggler.info())
-
-    # sourcewiggler.calculate_radiation()
 
     rays = sourcewiggler.calculate_rays(NRAYS=NRAYS)
 
     compare_rays_with_shadow3_beam(rays,beam_shadow3,do_plot=False,do_assert=True)
-
 
 
     #

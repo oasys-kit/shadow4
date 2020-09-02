@@ -1,3 +1,6 @@
+"""
+TODO: remove this file
+"""
 #
 # This is just a trial for using in shadow4 only syned objects as inputs
 # The parameters that are not inside the standard syned objects are stored

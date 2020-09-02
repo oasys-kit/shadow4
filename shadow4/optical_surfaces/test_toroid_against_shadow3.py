@@ -9,7 +9,7 @@ import Shadow
 from shadow4.compatibility.beam3 import Beam3
 
 #
-# minishadow
+# shadow4
 #
 from shadow4.beam.beam import Beam
 from shadow4.optical_surfaces.toroid import Toroid

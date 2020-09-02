@@ -1,7 +1,7 @@
 
 import numpy
 from shadow4.beam.beam import Beam
-from shadow4.sources.source_geometrical.gaussian import SourceGaussian
+from shadow4.sources.source_geometrical.source_gaussian import SourceGaussian
 from shadow4.optical_elements.lens_ideal import LensIdeal, LensSuperIdeal
 
 
@@ -20,14 +20,14 @@ def get_sigmas_radiation(photon_energy,undulator_length):
     return 1e6*2.740/4/numpy.pi*numpy.sqrt(lambdan*undulator_length),1e6*0.69*numpy.sqrt(lambdan/undulator_length)
 
 
-def test_with_collimated_beam(do_plot=True):
+def test_with_collimated_beam(do_plot=True,interface='new'):
 
     #
     # collimated source
     #
     src = SourceGaussian.initialize_collimated_source(number_of_rays=10000,sigmaX=1e-6,sigmaZ=1e-6)
 
-    interface = 'old' # 'new'
+
 
     if interface == 'new':
         beam = src.get_beam()
@@ -312,6 +312,6 @@ def test_id16ni(do_plot=True):
     if do_plot: print("Demagnification:(HISTO) H:%g V:%g (theoretical: %g,%g) "%(f2dot35*SX/(f2dot35*1e6*tkt['fwhm_h']),SZ/(1e6*tkt['fwhm_v']),demagX[0]*demagX[1],demagZ))
 
 if __name__ == "__main__":
-    test_with_collimated_beam(do_plot=False)
+    test_with_collimated_beam(do_plot=False,interface='new')
     test_with_divergent_beam(do_plot=False)
     test_id16ni(do_plot=False)

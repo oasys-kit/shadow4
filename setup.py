@@ -3,6 +3,7 @@
 #
 # Copyright (c) 2016 European Synchrotron Radiation Facility
 # Copyright (c) 2019 Lawrence Berkeley National Laboratory
+# Copyright (c) 2020 European Synchrotron Radiation Facility
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -41,7 +42,7 @@
 #     pip install <name>
 #
 
-__authors__ = ["M Sanchez del Rio - ESRF ISDD Advanced Analysis and Modelling - LBNL "]
+__authors__ = ["M Sanchez del Rio - ESRF - LBNL - ESRF "]
 __license__ = "MIT"
 __date__ = "2016-2020"
 
@@ -73,7 +74,7 @@ INSTALL_REQUIRES = (
 
 
 setup(name='shadow4',
-      version='0.0.17',
+      version='0.1.0',
       description='shadow implementation in python',
       author='Manuel Sanchez del Rio',
       author_email='srio@lbl.gov, srio@esrf.eu',

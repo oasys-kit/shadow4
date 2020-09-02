@@ -24,6 +24,7 @@ from shadow4.syned.shape import Rectangle, Ellipse, TwoEllipses # TODO from syne
 
 from shadow4.optical_elements.mirror import Mirror
 
+from numpy.testing import assert_almost_equal
 
 def run_shadow3():
     #
@@ -117,7 +118,8 @@ if __name__ == "__main__":
 
     from srxraylib.plot.gol import set_qt
     set_qt()
-    do_plot = True
+    do_plot = False
+    do_assert = True
 
     OASYS_HOME = "/Users/srio/Oasys/"
 
@@ -205,7 +207,8 @@ if __name__ == "__main__":
     print("col#   shadow4  shadow3  source")
     for i in range(18):
         print("col%d   %20.10f  %20.10f  %20.10f  " % (i+1, beam1.rays[10,i], beam3.rays[10,i], source3.rays[10,i]))
-
+        if do_assert:
+            assert_almost_equal (beam1.rays[:,i], beam3.rays[:,i], 4)
 
     mirr3 = Beam3(N=beam0.rays.shape[0])
     mirr3.load("mirr.01")
@@ -213,3 +216,5 @@ if __name__ == "__main__":
     print("\ncol#   m-shadow4  m-shadow3  source")
     for i in range(18):
         print("col%d   %20.10f  %20.10f  %20.10f  " % (i+1, mirr1.rays[10,i], mirr3.rays[10,i], source3.rays[10,i]))
+        if do_assert:
+            assert_almost_equal (mirr1.rays[:,i], mirr3.rays[:,i], 4)

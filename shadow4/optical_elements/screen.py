@@ -59,7 +59,7 @@ class Screen(object):
         p,q = self.get_positions()
 
         if p != 0.0:
-            beam.retrace(p + q, resetY=True)
+            beam.retrace(p, resetY=True)
 
         if isinstance(self._beamline_element_syned._optical_element, SyScreen):
             apply_crop = False

@@ -6,9 +6,10 @@ from numpy.testing import assert_almost_equal
 
 import os
 
+from shadow4.compatibility.global_definitions import SHADOW3_BINARY
 DO_PLOTS = True
 COMPARE_WITH_SHADOW3  = True
-SHADOW3_PATH = "/users/srio/OASYS1.2/shadow3/shadow3"
+
 
 def test_xoppy_defauls():
 
@@ -53,7 +54,7 @@ def test_xoppy_defauls():
         f.write("pre_mlayer_scan\npre_mlayer.dat\n1\n600\n8050\n0.0\n6.0\nexit\n")
         f.close()
 
-        os.system(SHADOW3_PATH+" < shadow3.inp")
+        os.system(SHADOW3_BINARY+" < shadow3.inp")
 
         s3 = numpy.loadtxt("pre_mlayer_scan.dat",skiprows=5)
         print(s3.shape)
@@ -111,7 +112,7 @@ def test_aw1():
         f.write("pre_mlayer_scan\npre_mlayer.dat\n300\n1\n300.0\n500.0\n45.0\nexit\n")
         f.close()
 
-        os.system(SHADOW3_PATH+" < shadow3.inp")
+        os.system(SHADOW3_BINARY+" < shadow3.inp")
 
         s3 = numpy.loadtxt("pre_mlayer_scan.dat",skiprows=5)
         print(s3.shape)

@@ -10,4 +10,7 @@ TODO: right now Mesh is an independent optical surface. In shadow3 the numeric m
     (slope errors, etc.) are added to a mathematical surface (conic, toroid). It is
     necessary to implement this functionality.
 
+TODO: Toroid need acceleration
+TODO: Mesh need acceleration
+
 

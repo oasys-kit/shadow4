@@ -1,3 +1,7 @@
+"""
+TODO: delete this file
+"""
+
 import numpy
 from srxraylib.sources.srfunc import  sync_f
 from srxraylib.plot.gol import plot

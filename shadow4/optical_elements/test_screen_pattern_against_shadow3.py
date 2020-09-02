@@ -138,8 +138,11 @@ def run_shadow3():
 if __name__ == "__main__":
 
     from srxraylib.plot.gol import set_qt
+    from numpy.testing import assert_almost_equal
+
     set_qt()
     do_plot = True
+    do_assert = True
 
     patches = write_grid_pattern()
 
@@ -178,7 +181,7 @@ if __name__ == "__main__":
     # trace
     #
 
-    beam2 = slit1.trace_beam(beam)
+    beam2 = slit1.trace_beam(beam, flag_lost_value=-101)
 
     #
     if do_plot:
@@ -187,4 +190,10 @@ if __name__ == "__main__":
 
     print("col#   shadow4  shadow3")
     for i in range(18):
-        print("col%d   %f  %f  " % (i+1, beam2.rays[10,i], beam3.rays[10,i]))
+        if i in [0,1,2,12]:
+            factor = 1e2
+        else:
+            factor = 1.0
+        print("col%d   %f  %f  " % (i+1, factor * beam2.rays[10,i], beam3.rays[10,i]))
+        if do_assert:
+            assert_almost_equal (factor * beam2.rays[:,i], beam3.rays[:,i], 4)
