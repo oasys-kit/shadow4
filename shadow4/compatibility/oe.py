@@ -1,8 +1,8 @@
-__author__ = 'srio'
-
-import json
+"""
+python implementation of shadow3 OE object
+"""
 import numpy
-from gfile import GFile
+from shadow4.compatibility.gfile import GFile
 
 
 class OE(object):
@@ -398,9 +398,13 @@ class OE(object):
         # self.THICK[6] = 110.0
 
 if __name__ == "__main__":
+    # write start.01 file with shadow4
+    import Shadow
+    oe_shadow3 = Shadow.OE()
+    oe_shadow3.write("start.01")
 
+    # read it with compatibility tools
     oe1 = OE()
-
     oe1.load(filename="start.01")
 
     print(dir(oe1))
@@ -410,7 +414,7 @@ if __name__ == "__main__":
     print(">>>>>ISTAR1",oe1.ISTAR1 )
     print(">>>>>THICK",oe1.THICK )
 
-    assert(oe1.THICK[6] == 110.0)
+    assert(oe1.THICK[6] == oe_shadow3.THICK[6])
 
 
 

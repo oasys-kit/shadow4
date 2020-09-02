@@ -1,3 +1,6 @@
+"""
+Tools to compare beams from shadow3 and Shadow4
+"""
 import numpy
 from srxraylib.plot.gol import plot_scatter
 import Shadow

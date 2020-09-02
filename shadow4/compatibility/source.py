@@ -1,3 +1,6 @@
+"""
+python implementation of shadow3 Source object
+"""
 from shadow4.compatibility.gfile import GFile
 
 class Source(object):
@@ -121,14 +124,18 @@ class Source(object):
 
 
 if __name__ == "__main__":
+    # write source with shadow3
+    import Shadow
+    oe0_shadow3 = Shadow.Source()
+    oe0_shadow3.write("start.00")
 
+    # read with cshadow4 compatibility tools
     oe0 = Source()
-
     oe0.load(filename="start.00")
 
     print(dir(oe0))
 
-    assert(oe0.FDISTR == 3)
+    assert(oe0.FDISTR == oe0_shadow3.FDISTR)
 
 
 

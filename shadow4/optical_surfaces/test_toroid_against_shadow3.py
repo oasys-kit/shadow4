@@ -168,19 +168,27 @@ def compare_results(do_plot=True,do_assert=True):
         Shadow.ShadowTools.plotxy("star.01",1,3,nbins=101,nolost=1,title="Image (SHADOW)")
 
 
+
+    print("Comparing files mirr.01 and minimirr.01")
+    minimirr = Shadow.Beam()
+    minimirr.load("minimirr.01")
+    mirr     = Shadow.Beam()
+    mirr.load("mirr.01")
+    print("\n\n column    shadow4-mirror    shadow3-mirror")
+    for i in range(6):
+        print("%d  %f  %f" % (i + 1, minimirr.rays[0, i], mirr.rays[0, i]))
     if do_assert:
-        print("Comparing files mirr.01 and minimirr.01")
-        minimirr = Shadow.Beam()
-        minimirr.load("minimirr.01")
-        mirr     = Shadow.Beam()
-        mirr.load("mirr.01")
         assert_almost_equal(minimirr.rays[:,0:6],mirr.rays[:,0:6],2)
 
-        print("Comparing files star.01 and ministar.01")
-        ministar = Shadow.Beam()
-        ministar.load("ministar.01")
-        star     = Shadow.Beam()
-        star.load("star.01")
+    print("Comparing files star.01 and ministar.01")
+    ministar = Shadow.Beam()
+    ministar.load("ministar.01")
+    star     = Shadow.Beam()
+    star.load("star.01")
+    print("\n\n column    shadow4-star    shadow3-star")
+    for i in range(6):
+        print("%d  %f  %f" % (i + 1, ministar.rays[0, i], star.rays[0, i]))
+    if do_assert:
         assert_almost_equal(ministar.rays[:,0:6],star.rays[:,0:6],2)
 
 
@@ -238,7 +246,7 @@ def minishadow_run_toroid_mirror():
     # #
     # # reflect beam in the mirror surface and dump mirr.01
     # #
-    newbeam = t.apply_specular_reflection_on_beam(newbeam)
+    newbeam, tmp = t.apply_specular_reflection_on_beam(newbeam)
     # newbeam.dump_shadow3_file('minimirr.01')
     Beam3.initialize_from_shadow4_beam(newbeam).write('minimirr.01')
     #

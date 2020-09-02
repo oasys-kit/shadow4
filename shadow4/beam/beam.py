@@ -1335,7 +1335,6 @@ class Beam(object):
             rays = numpy.zeros( (x.size,18))
             for i in range(18):
                 column_name = column_names[i]
-                print(">>>>>","%s/%s/%s"%(simulation_name,beam_name,column_name))
                 rays[:,i] = (f["%s/%s/%s"%(simulation_name,beam_name,column_name)])[:]
         except:
             f.close()

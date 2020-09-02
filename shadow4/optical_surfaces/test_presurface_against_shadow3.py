@@ -6,7 +6,6 @@ import platform
 from numpy.testing import assert_equal, assert_almost_equal
 
 import Shadow
-# from Shadow.ShadowPreprocessorsXraylib import bragg
 
 #
 # minishadow
@@ -283,20 +282,28 @@ def compare_results(do_plot=True,do_assert=True):
         Shadow.ShadowTools.plotxy("star.01",1,3,nbins=101,nolost=1,title="Image (SHADOW)",ref=0)
 
 
-    if do_assert:
-        print("Comparing files mirr.01 and minimirr.01")
-        minimirr = Shadow.Beam()
-        minimirr.load("minimirr.01")
-        mirr     = Shadow.Beam()
-        mirr.load("mirr.01")
-        assert_almost_equal(minimirr.rays[:,0:6],mirr.rays[:,0:6],2)
 
-        print("Comparing files star.01 and ministar.01")
-        ministar = Shadow.Beam()
-        ministar.load("ministar.01")
-        star     = Shadow.Beam()
-        star.load("star.01")
-        assert_almost_equal(ministar.rays[:,0:6],star.rays[:,0:6],2)
+    print("Comparing files mirr.01 and minimirr.01")
+    minimirr = Shadow.Beam()
+    minimirr.load("minimirr.01")
+    mirr     = Shadow.Beam()
+    mirr.load("mirr.01")
+    print("\n\n column    shadow4-mirror    shadow3-mirror")
+    for i in range(6):
+        print("%d  %f  %f" % (i+1, minimirr.rays[0,i],mirr.rays[0,i]))
+        if do_assert:
+            assert_almost_equal(minimirr.rays[:,i],mirr.rays[:,i],2)
+
+    print("Comparing files star.01 and ministar.01")
+    ministar = Shadow.Beam()
+    ministar.load("ministar.01")
+    star     = Shadow.Beam()
+    star.load("star.01")
+    print("\n\n column    shadow4-star    shadow3-star")
+    for i in range(6):
+        print("%d  %f  %f" % (i+1, ministar.rays[0,i],star.rays[0,i]))
+        if do_assert:
+            assert_almost_equal(ministar.rays[:,1],star.rays[:,1],2)
 
 
 
@@ -340,9 +347,10 @@ def minishadow_run_mesh_mirror():
     # # reflect beam in the mirror surface and dump mirr.01
     # #
 
-    newbeam,t,x1,v1,x2,v2 = mm.apply_specular_reflection_on_beam(newbeam)
+    newbeam, normal, t, x1, v1, x2, v2 = mm.apply_specular_reflection_on_beam(newbeam)
 
-    newbeam.dump_shadow3_file('minimirr.01')
+    from shadow4.compatibility.beam3 import Beam3
+    Beam3.initialize_from_shadow4_beam(newbeam).write('minimirr.01')
 
     # #
     # # put beam in lab frame and compute image
@@ -350,13 +358,17 @@ def minishadow_run_mesh_mirror():
     newbeam.rotate(theta_grazing,axis=1)
     # TODO what about alpha?
     newbeam.retrace(q,resetY=True)
-    newbeam.dump_shadow3_file('ministar.01')
+    Beam3.initialize_from_shadow4_beam(newbeam).write('ministar.01')
 
 if __name__ == "__main__":
 
     create_start_files()
     create_gaussian_bump(do_plot=False)
-    # write_bragg_preprocessor_file()
+
+    import Shadow
+    from Shadow.ShadowPreprocessorsXraylib import bragg
+    write_bragg_preprocessor_file()
+
     minishadow_run_mesh_mirror()
     compare_results(do_plot=True,do_assert=True)
 

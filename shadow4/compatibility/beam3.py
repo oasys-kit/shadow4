@@ -1,7 +1,9 @@
-
+"""
+Superclass of shadow3 beam that allows easy conversion from shadow4 beam into shadow3 beam.
+Useful for plotting shadow4 results with old shadow3 plotxy, histo1, etc.
+"""
 
 import numpy
-from numpy.testing import assert_almost_equal
 
 from Shadow import Beam as Beam_shadow3
 from shadow4.beam.beam import Beam as Beam_shadow4
@@ -14,7 +16,7 @@ class Beam3(Beam_shadow3):
 
     @classmethod
     def initialize_from_shadow4_beam(cls,beam):
-        if not isinstance(beam,Beam_shadow4):
+        if not isinstance(beam, Beam_shadow4):
             raise Exception("Bad input. It must be a shadow4 beam")
 
         b3 = Beam3(N=beam.get_number_of_rays())
@@ -31,28 +33,9 @@ class Beam3(Beam_shadow3):
 
     @classmethod
     def load_h5(cls,filename,simulation_name="run001",beam_name="begin"):
-
-        import h5py
-
-        f = h5py.File(filename, 'r')
-
-        column_names = Beam_shadow4.column_names()
-
-        try:
-            x = (f["%s/%s/x"%(simulation_name,beam_name)])[:]
-
-            rays = numpy.zeros( (x.size,18))
-            for i,column_name in enumerate(column_names):
-                rays[:,i] = (f["%s/%s/%s"%(simulation_name,beam_name,column_name)])[:]
-
-        except:
-            f.close()
-            raise Exception("Cannot find data in %s:/%s/%s"%(filename,simulation_name,beam_name))
-
-        f.close()
-
-        b3 = Beam3(N=x.size)
-        b3.rays = rays
+        b4 = Beam_shadow4.load_h5(filename, simulation_name=simulation_name, beam_name=beam_name)
+        b3 = Beam3(N=b4.rays.shape[0])
+        b3.rays = b4.rays.copy()
 
         return b3
 
@@ -116,8 +99,8 @@ if __name__ == "__main__":
     #
     # test reader
     #
-
-    a = Beam3.load_h5("../examples/begin.h5")
+    b4.write_h5("begin.h5")
+    a = Beam3.load_h5("begin.h5")
 
     Shadow.ShadowTools.plotxy(a,1,3,title="imported from h5 (shadow4)")
 

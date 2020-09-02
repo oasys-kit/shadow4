@@ -281,7 +281,7 @@ def minishadow_run_conic_mirror(shadow3_beam_source,shadow3_beam,oe0,oe1):
     #
     # reflect beam in the mirror surface and dump mirr.01
     #
-    newbeam = ccc.apply_specular_reflection_on_beam(newbeam)
+    newbeam, tmp = ccc.apply_specular_reflection_on_beam(newbeam)
     Beam3.initialize_from_shadow4_beam(newbeam).write('minimirr.01')
 
     #
@@ -303,4 +303,4 @@ if __name__ == "__main__":
     # run shadow4
     #
     minishadow_run_conic_mirror(shadow3_beam_source,shadow3_beam,oe0,oe1)
-    compare_results()
+    # compare_results()

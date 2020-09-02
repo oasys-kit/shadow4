@@ -1,3 +1,6 @@
+"""
+python implementation of tools for access start.xx "gfiles"
+"""
 __author__ = 'srio'
 
 import json

@@ -1,3 +1,8 @@
+"""
+Tools to translate shadow3 input objects into shadow4 objects
+
+Currently implemented: bending magnet
+"""
 from syned.storage_ring.electron_beam import ElectronBeam
 from syned.storage_ring.magnetic_structures.bending_magnet import BendingMagnet
 import Shadow

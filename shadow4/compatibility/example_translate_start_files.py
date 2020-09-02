@@ -1,4 +1,6 @@
-
+"""
+Example to automatic convert shadow3 to shadow4 inputs for a bending magnet
+"""
 
 from syned.storage_ring.magnetic_structures.bending_magnet import BendingMagnet
 import Shadow
