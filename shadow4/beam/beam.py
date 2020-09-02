@@ -13,6 +13,9 @@ from shadow4.syned.shape import Rectangle, Ellipse, TwoEllipses
 # IMPORTANT: Column 11 (index 10) is wavenumber (cm^-1) as internally in Shadow
 
 class Beam(object):
+    """
+
+    """
 
     def __init__(self, N=1000, array=None):
         """
@@ -33,8 +36,13 @@ class Beam(object):
     def initialize_from_array(cls, array):
         """
 
-        :param array:
-        :return:
+        Parameters
+        ----------
+        array
+
+        Returns
+        -------
+
         """
         if array.shape[1] != 18:
             raise Exception("Bad array shape: must be (npoints,18)")
@@ -44,8 +52,13 @@ class Beam(object):
     def initialize_as_pencil(cls, N=1000):
         """
 
-        :param array:
-        :return:
+        Parameters
+        ----------
+        N
+
+        Returns
+        -------
+
         """
         beam = Beam(N)
         beam.set_column(5,1.0) # Vy
@@ -58,6 +71,12 @@ class Beam(object):
 
 
     def duplicate(self):
+        """
+
+        Returns
+        -------
+
+        """
         return Beam.initialize_from_array(self.rays.copy())
 
     #
@@ -67,15 +86,23 @@ class Beam(object):
     def get_rays(self):
         """
 
-        :return: numpy array (npoints,18)
+        Returns
+        -------
+        numpy array (npoints,18)
         """
+
         return self.rays.copy()
 
     def get_number_of_rays(self,nolost=0):
         """
 
-        :param nolost: flag (default=0)
-        :return: number of rays
+        Parameters
+        ----------
+        nolost: flag (default=0)
+
+        Returns
+        -------
+        number of rays
         """
 
         try:
@@ -96,18 +123,40 @@ class Beam(object):
 
     def get_photon_energy_eV(self,nolost=0):
         """
-        returns the array with photon energy
 
-        :param nolost: 0: all rays  1: good rays, 2: bad rays
-        :return: array
+        Parameters
+        ----------
+        nolost: 0: all rays  1: good rays, 2: bad rays
+
+        Returns
+        -------
+        array
         """
+
         A2EV = 2.0*numpy.pi/(codata.h*codata.c/codata.e*1e2)
         return self.get_column(11,nolost=nolost) / A2EV
 
     def get_photon_wavelength(self):
+        """
+
+        Returns
+        -------
+
+        """
         return 2*numpy.pi/self.get_column(11) * 1e-2
 
     def get_intensity(self,nolost=0,polarization=0):
+        """
+
+        Parameters
+        ----------
+        nolost
+        polarization
+
+        Returns
+        -------
+
+        """
         if polarization == 0:
             w = self.get_column(23,nolost=nolost)
         elif polarization == 1:
@@ -118,6 +167,10 @@ class Beam(object):
 
     def get_column(self,column,nolost=0):
         """
+
+        Parameters
+        ----------
+        column
             Possible choice for column are:
              1   X spatial coordinate [user's unit]
              2   Y spatial coordinate [user's unit]
@@ -160,8 +213,12 @@ class Beam(object):
             38   Angle-Z with Y: |arcsin(Z') - mean(arcsin(Z'))|
 
             -11: column 26
-        :param column:
-        :return: a copy of the arrays
+
+        nolost
+
+        Returns
+        -------
+        a copy of the arrays
         """
 
         if column == -11: column = 26
@@ -262,6 +319,17 @@ class Beam(object):
             return out[f].copy()
 
     def get_columns(self,columns,nolost=0):
+        """
+
+        Parameters
+        ----------
+        columns
+        nolost
+
+        Returns
+        -------
+
+        """
         ret = []
         if isinstance(columns, int): return self.get_column(columns,nolost=nolost)
         for c in columns:
@@ -271,13 +339,18 @@ class Beam(object):
 
 
     def get_standard_deviation(self,col, nolost=1, ref=0):
-        '''
+        """
         returns the standard deviation of one viariable in the beam
-        :param col: variable (shadow column number)
-        :param nolost: 0 = use all rays, 1=good only, 2= lost only
-        :param ref: 0 = no weight, 1=weight with intensity (col23)
-        :return:
-        '''
+        Parameters
+        ----------
+        col: variable (shadow column number)
+        nolost: 0 = use all rays, 1=good only, 2= lost only
+        ref: 0 = no weight, 1=weight with intensity (col23)
+
+        Returns
+        -------
+
+        """
         x = self.get_column(col,nolost=nolost)
         if ref == 0:
             return x.std()
@@ -288,16 +361,32 @@ class Beam(object):
             return(numpy.sqrt(variance))
 
     def intensity(self,nolost=0):
+        """
+
+        Parameters
+        ----------
+        nolost
+
+        Returns
+        -------
+
+        """
         w = self.get_column(23,nolost=nolost)
         return w.sum()
 
     def get_good_range(self, icol, nolost=0):
         """
 
-        :param icol: the column number (SHADOW convention, starting from 1)
-        :param nolost: lost rays flag (0=all, 1=good, 2=losses)
-        :return: [rmin,rmax] the selected range
+        Parameters
+        ----------
+        icol: the column number (SHADOW convention, starting from 1)
+        nolost: lost rays flag (0=all, 1=good, 2=losses)
+
+        Returns
+        -------
+        [rmin,rmax] the selected range
         """
+
         col = self.get_column(icol, nolost=nolost)
         if col.size == 0:
             return [-1, 1]
@@ -325,20 +414,27 @@ class Beam(object):
         performs 2d histogram to prepare data for a plotxy plot
         It uses histogram2d for calculations
         Note that this Shadow.Beam.histo2 was previously called Shadow.Beam.plotxy
-        :param col_h: the horizontal column
-        :param col_v: the vertical column
-        :param nbins: number of bins
-        :param ref      :
+
+        Parameters
+        ----------
+        col_h: the horizontal column
+        col_v: the vertical column
+        nbins: number of bins
+        ref:
                    0, None, "no", "NO" or "No":   only count the rays
                    23, "Yes", "YES" or "yes":     weight with intensity (look at col=23 |E|^2 total intensity)
                    other value: use that column as weight
-        :param nbins_h: number of bins in H
-        :param nbins_v: number of bins in V
-        :param nolost: 0 or None: all rays, 1=good rays, 2=only losses
-        :param xrange: range for H
-        :param yrange: range for V
-        :param calculate_widths: 0=No, 1=calculate FWHM (default), 2=Calculate FWHM and FW at 25% and 75% if Maximum
-        :return: a dictionary with all data needed for plot
+        nbins_h: number of bins in H
+        nbins_v: number of bins in V
+        nolost: 0 or None: all rays, 1=good rays, 2=only losses
+        xrange: range for H
+        yrange: range for V
+        calculate_widths: 0=No, 1=calculate FWHM (default), 2=Calculate FWHM and FW at 25% and 75% if Maximum
+
+        Returns
+        -------
+
+        a dictionary with all data needed for plot
         """
 
 
@@ -463,17 +559,44 @@ class Beam(object):
 
     def set_column(self,column,value):
         """
-        :param column:
-        :param value:
-        :return:
+
+        Parameters
+        ----------
+        column
+        value
+
+        Returns
+        -------
+
         """
+
         self.rays[:,column-1] = value
 
     def set_photon_energy_eV(self,energy_eV):
+        """
+
+        Parameters
+        ----------
+        energy_eV
+
+        Returns
+        -------
+
+        """
         A2EV = 2.0*numpy.pi/(codata.h*codata.c/codata.e*1e2)
         self.rays[:,10] = energy_eV * A2EV
 
     def set_photon_wavelength(self,wavelength):
+        """
+
+        Parameters
+        ----------
+        wavelength
+
+        Returns
+        -------
+
+        """
         self.rays[:,10] =  2*numpy.pi/(wavelength * 1e2)
 
 
@@ -483,7 +606,9 @@ class Beam(object):
     def info(self):
         """
 
-        :return:
+        Returns
+        -------
+
         """
 
         try:
@@ -513,10 +638,16 @@ class Beam(object):
     def retrace(self,dist,resetY=False):
         """
 
-        :param dist:
-        :param resetY:
-        :return:
+        Parameters
+        ----------
+        dist
+        resetY
+
+        Returns
+        -------
+
         """
+
         a0 = self.rays
         try:
             tof = (-a0[:,1] + dist)/a0[:,4]
@@ -540,8 +671,12 @@ class Beam(object):
     def translation(self,qdist1):
         """
 
-        :param qdist1: translation vector
-        :return:
+        Parameters
+        ----------
+        qdist1: translation vector
+
+        Returns
+        -------
 
         """
 
@@ -558,16 +693,21 @@ class Beam(object):
         #
 
 
-    def rotate(self,theta,axis=1,rad=1):
+    def rotate(self,theta,axis=1,rad=True):
         """
 
-        :param theta: the rotation angle in degrees (default=0)
-        :param axis: The axis number (Shadow's column) for the rotation
+        Parameters
+        ----------
+        theta: the rotation angle in degrees or radiants (default=0)
+        axis: The axis number (Shadow's column) for the rotation
                     (i.e, 1:x (default), 2:y, 3:z)
-        :param file:
-        :param rad: set this flag when theta1 is in radiants
-        :return:
+        rad: set True if theta1 is in radiants (default)
+
+        Returns
+        -------
+
         """
+
 
         if rad:
             theta1 = theta
@@ -602,15 +742,20 @@ class Beam(object):
             self.rays[:,newtoroti[1]] = -a1[:,newtoroti[0]] * sinth + a1[:,newtoroti[1]] * costh
             self.rays[:,newaxisi]     =  a1[:,newaxisi]
 
-    def change_to_image_reference_system(self, theta, T_IMAGE, rad=1):
+    def change_to_image_reference_system(self, theta, T_IMAGE, rad=True):
         """
+        Implements the propagation from the mirror reference frame to the screen (image) reference.
+        Mimics IMREF and IMAGE1 subrutines in shadow3
 
-        :param theta: the rotation angle in degrees (default=0)
-        :param axis: The axis number (Shadow's column) for the rotation
-                    (i.e, 1:x (default), 2:y, 3:z)
-        :param file:
-        :param rad: set this flag when theta1 is in radiants
-        :return:
+        Parameters
+        ----------
+        theta: the grazing angle in rad or deg
+        T_IMAGE: the distance o.e. to image
+        rad: True is angle is in rad
+
+        Returns
+        -------
+
         """
 
         if rad:
@@ -637,11 +782,6 @@ class Beam(object):
         VNIMAG_y = numpy.zeros(nrays) + numpy.sin(T_REFLECTION)
         VNIMAG_z = numpy.zeros(nrays) + numpy.cos(T_REFLECTION)
 
-        print (">>>>> UXIM: ", UXIM_x[0], UXIM_y[0], UXIM_z[0])
-        print (">>>>> VNIMAG: ", VNIMAG_x[0], VNIMAG_y[0], VNIMAG_z[0])
-        print (">>>>> VZIM: ", VZIM_x[0], VZIM_y[0], VZIM_z[0])
-
-
        # ABOVE = T_IMAGE - P_MIR(1) * C_STAR(1) - P_MIR(2) * C_STAR(2) - P_MIR(3) * C_STAR(3)
        # BELOW = C_STAR(1) * V_OUT(1) + C_STAR(2) * V_OUT(2) + C_STAR(3) * V_OUT(3)
 
@@ -656,20 +796,20 @@ class Beam(object):
         #    GO TO 100
         # END IF
 
-        print(">>>>> BELOW == 0 ", numpy.where(BELOW == 0))
         DIST = ABOVE / BELOW
 
-        print(">>> DIST: ", DIST)
+        failure = numpy.argwhere(BELOW == 0)
+        if len(failure) > 0:
+            a1[failure, 9] = -3.0e-6
 
         # ! ** Computes now the intersections onto TRUE image plane.
 
         a1[:, 0]  +=   DIST * a1[:, 3]
         a1[:, 1]  +=   DIST * a1[:, 4]
         a1[:, 2]  +=   DIST * a1[:, 5]
-        print(">>> PIMAG: ", a1[:, 0], a1[:, 1], a1[:, 2] )
 
         #!  ** Rotate now the results in the STAR (or TRUE image) reference plane.
-        # ! ** Computes the projection of P_MIR onto the image plane versors.
+        #!  ** Computes the projection of P_MIR onto the image plane versors.
         #
         RIMCEN_x = VNIMAG_x * T_IMAGE
         RIMCEN_y = VNIMAG_y * T_IMAGE
@@ -680,7 +820,7 @@ class Beam(object):
         a1[:, 2]  -=   RIMCEN_z
 
         #! ** Computes now the new vectors for the beam in the U,V,N ref.
-        for i in [1,4,7,16]:
+        for i in [1,4,7,16]: # position, direction, Es, Ep
             # dot product
             self.rays[:, i - 1 + 0] = a1[:, i - 1 + 0] * UXIM_x   + a1[:, i - 1 + 1] * UXIM_y   + a1[:, i - 1 + 2] * UXIM_z
             self.rays[:, i - 1 + 1] = a1[:, i - 1 + 0] * VNIMAG_x + a1[:, i - 1 + 1] * VNIMAG_y + a1[:, i - 1 + 2] * VNIMAG_z
@@ -692,6 +832,23 @@ class Beam(object):
     # crop
     #
     def crop_rectangle(self, x_col, x_min, x_max, y_col, y_min, y_max, negative=False, flag_lost_value=-1):
+        """
+
+        Parameters
+        ----------
+        x_col
+        x_min
+        x_max
+        y_col
+        y_min
+        y_max
+        negative
+        flag_lost_value
+
+        Returns
+        -------
+
+        """
 
         x = self.get_column(x_col)
         y = self.get_column(y_col)
@@ -715,6 +872,23 @@ class Beam(object):
         return window
 
     def crop_ellipse(self, x_col, a1, a2, y_col, b1, b2, negative=False, flag_lost_value=-1):
+        """
+
+        Parameters
+        ----------
+        x_col
+        a1
+        a2
+        y_col
+        b1
+        b2
+        negative
+        flag_lost_value
+
+        Returns
+        -------
+
+        """
 
         x =   self.get_column(x_col)
         y = self.get_column(y_col)
@@ -745,6 +919,27 @@ class Beam(object):
 
     def crop_ellipse_with_hole(self, x_col, a1, a2, a3, a4,
                                     y_col, b1, b2, b3, b4, negative=False, flag_lost_value=-1):
+        """
+
+        Parameters
+        ----------
+        x_col
+        a1
+        a2
+        a3
+        a4
+        y_col
+        b1
+        b2
+        b3
+        b4
+        negative
+        flag_lost_value
+
+        Returns
+        -------
+
+        """
 
         x =   self.get_column(x_col)
         y = self.get_column(y_col)
@@ -779,47 +974,64 @@ class Beam(object):
 
 
     def apply_boundaries_syned(self, syned_boundary_object, flag_lost_value=-1):
+        """
+
+        Parameters
+        ----------
+        syned_boundary_object
+        flag_lost_value
+
+        Returns
+        -------
+
+        """
         print(">>>>> apply_boundaries_syned: ", syned_boundary_object, Rectangle)
         if isinstance(syned_boundary_object, type(None)):
             return
         elif isinstance(syned_boundary_object, Rectangle):
             x_left, x_right, y_bottom, y_top = syned_boundary_object.get_boundaries()
             print(">>>>>>>>>>>>>>>>>>>>dimensions ",x_left, x_right, y_bottom, y_top)
-            self.crop_rectangle(1, x_left, x_right, 2, y_bottom, y_top)
+            self.crop_rectangle(1, x_left, x_right, 2, y_bottom, y_top, flag_lost_value=flag_lost_value)
         elif isinstance(syned_boundary_object, Ellipse):
             a_axis_min, a_axis_max, b_axis_min, b_axis_max = syned_boundary_object.get_boundaries()
-            self.crop_ellipse(1, a_axis_min, a_axis_max, 2, b_axis_min, b_axis_max)
+            self.crop_ellipse(1, a_axis_min, a_axis_max, 2, b_axis_min, b_axis_max, flag_lost_value=flag_lost_value)
         elif isinstance(syned_boundary_object, TwoEllipses):
             a1_axis_min, a1_axis_max, b1_axis_min, b1_axis_max, \
                 a2_axis_min, a2_axis_max, b2_axis_min, b2_axis_max = syned_boundary_object.get_boundaries()
             self.crop_ellipse_with_hole(1, a1_axis_min, a1_axis_max, a2_axis_min, a2_axis_max,
-                                        2, b1_axis_min, b1_axis_max, b2_axis_min, b2_axis_max,)
+                                        2, b1_axis_min, b1_axis_max, b2_axis_min, b2_axis_max,
+                                        flag_lost_value=flag_lost_value)
         else:
             raise Exception("Not good mirror boundary")
 
-    def apply_boundaries_shadow(self, fhit_c=0, fshape=1, rlen1=0.0, rlen2=0.0, rwidx1=0.0, rwidx2=0.0, flag_lost_value=-1):
-
+    def apply_boundaries_shadow(self, fhit_c=0, fshape=1, rlen1=0.0, rlen2=0.0, rwidx1=0.0, rwidx2=0.0,
+                                flag_lost_value=-1):
         """
-        fhit_c	= 0 - flag: mirror dimensions finite: yes (1), no(0).
 
-        fshape	= 0 - for fhit_c=1:
+        Parameters
+        ----------
+        fhit_c: 0 - flag: mirror dimensions finite: yes (1), no(0).
+        fshape: 0 - for fhit_c=1:
                 mirror shape rectangular (1)
                 full ellipse (2)
                 ellipse with hole (3).
-
-        rlen1	=  0.0
+        rlen1: 0.0
                 fshape=1: mirror half length +Y.
                  fshape=3: internal minor axis (Y).
-        rlen2	=  0.0
+        rlen2: 0.0
                 fshape=1: mirror half length -Y.
                 fshape=2,3: external outline minor
-
-        rwidx1	=  0.0
+        rwidx1: 0.0
                 fshape=1: mirror half width +X.
                 fshape=3: internal major axis (X).
-        rwidx2	=  0.0
+        rwidx2: 0.0
                 fshape=1: mirror half width -X.
                 fshape=2,3: external outline major axis (X).
+        flag_lost_value:
+
+        Returns
+        -------
+
         """
 
         if fhit_c == 0:
@@ -843,65 +1055,49 @@ class Beam(object):
 
 
     def apply_reflectivity_s(self, Rs):
+        """
+
+        Parameters
+        ----------
+        Rs
+
+        Returns
+        -------
+
+        """
         self.rays[:, 6] *= Rs
         self.rays[:, 7] *= Rs
         self.rays[:, 8] *= Rs
 
     def apply_reflectivity_p(self, Rp):
+        """
+
+        Parameters
+        ----------
+        Rp
+
+        Returns
+        -------
+
+        """
         self.rays[:, 15] *= Rp
         self.rays[:, 16] *= Rp
         self.rays[:, 17] *= Rp
 
     def apply_reflectivities(self, Rs, Rp):
+        """
+
+        Parameters
+        ----------
+        Rs
+        Rp
+
+        Returns
+        -------
+
+        """
         self.apply_reflectivity_s(Rs)
         self.apply_reflectivity_p(Rp)
-
-    #
-    # file i/o
-    #
-
-    # def get_shadow3_beam(self):
-    #     #TODO this dump uses now shadow3. To be removed after checking or write using fully python
-    #     import Shadow
-    #     beam_shadow3 = Shadow.Beam(N=self.get_number_of_rays())
-    #     beam_shadow3.rays = self.get_rays().copy()
-    #     return beam_shadow3
-    #
-    #     # beam_shadow3.write(file)
-    #     # print("File %s written to disk. "%file)
-    #
-    # def dump_shadow3_file(self,file):
-    #     #TODO this dump uses now shadow3. To be removed after checking or write using fully python
-    #     beam3 = self.get_shadow3_beam()
-    #     beam3.write(file)
-    #     print("File %s written to disk. "%file)
-
-
-    #
-    #  interfaces like in shadow3
-    #
-
-
-
-    #
-    # file i/o
-    #
-
-    # def get_shadow3_beam(self):
-    #     #TODO this dump uses now shadow3. To be removed after checking or write using fully python
-    #     import Shadow
-    #     beam_shadow3 = Shadow.Beam(N=self.get_number_of_rays())
-    #     beam_shadow3.rays = self.get_rays().copy()
-    #     return beam_shadow3
-    #
-    #     # beam_shadow3.write(file)
-    #     # print("File %s written to disk. "%file)
-    #
-    # def dump_shadow3_file(self,file):
-    #     #TODO this dump uses now shadow3. To be removed after checking or write using fully python
-    #     beam3 = self.get_shadow3_beam()
-    #     beam3.write(file)
-    #     print("File %s written to disk. "%file)
 
 
     #
@@ -909,16 +1105,43 @@ class Beam(object):
     #
 
     def genSource(self,source_object):
-        tmp = source_object.get_beam()
-        self.rays = tmp.get_rays()
-        return tmp
+        """
+
+        Parameters
+        ----------
+        source_object
+
+        Returns
+        -------
+
+        """
+        try:
+            tmp = source_object.get_beam()
+            self.rays = tmp.get_rays()
+            return tmp
+        except:
+            raise Exception("shadow4 source class must implement get_rays method")
 
     def traceOE(self,oe_object,n,overwrite=True):
-        beam_result = oe_object.trace_beam(self)
-        if overwrite:
-            self.rays = beam_result.rays
-        return beam_result
+        """
 
+        Parameters
+        ----------
+        oe_object
+        n
+        overwrite
+
+        Returns
+        -------
+
+        """
+        try:
+            beam_result = oe_object.trace_beam(self)
+            if overwrite:
+                self.rays = beam_result.rays
+            return beam_result
+        except:
+            raise Exception("shadow4 class used a soptical element must implement the trace_beam method")
     #
     # histograms
     #
@@ -926,6 +1149,12 @@ class Beam(object):
 
     @classmethod
     def column_names(cls):
+        """
+
+        Returns
+        -------
+
+        """
         return [
                         "X spatial coordinate [user's unit]",
                         "Y spatial coordinate [user's unit]",
@@ -969,6 +1198,12 @@ class Beam(object):
 
     @classmethod
     def column_short_names(cls):
+        """
+
+        Returns
+        -------
+
+        """
         return [
                         "x","y","z",
                         "v_x", "v_y", "v_z",
@@ -1000,12 +1235,31 @@ class Beam(object):
 
     @classmethod
     def column_short_names_with_column_number(cls):
+        """
+
+        Returns
+        -------
+
+        """
         names = cls.column_short_names()
         for i in range(len(names)):
             names[i] = "col%02d %s" % (i+1, names[i])
         return names
 
-    def write(self,filename,overwrite=True,simulation_name="run001",beam_name="begin"):
+    def write_h5(self,filename,overwrite=True,simulation_name="run001",beam_name="begin"):
+        """
+
+        Parameters
+        ----------
+        filename
+        overwrite
+        simulation_name
+        beam_name
+
+        Returns
+        -------
+
+        """
 
         if overwrite:
             try:
@@ -1055,9 +1309,20 @@ class Beam(object):
         print("File written/updated: %s"%filename)
 
     @classmethod
-    def load(cls,filename,simulation_name="run001",beam_name="begin"):
+    def load_h5(cls,filename,simulation_name="run001",beam_name="begin"):
+        """
 
-        import h5py
+        Parameters
+        ----------
+        filename
+        simulation_name
+        beam_name
+
+        Returns
+        -------
+
+        """
+
 
         f = h5py.File(filename, 'r')
 
@@ -1081,6 +1346,16 @@ class Beam(object):
         return Beam.initialize_from_array(rays)
 
     def identical(self,beam2):
+        """
+
+        Parameters
+        ----------
+        beam2
+
+        Returns
+        -------
+
+        """
         try:
             assert_almost_equal(self.rays,beam2.rays)
             return True
@@ -1088,6 +1363,16 @@ class Beam(object):
             return False
 
     def difference(self,beam2):
+        """
+
+        Parameters
+        ----------
+        beam2
+
+        Returns
+        -------
+
+        """
         raysnew = beam2.rays
         fact  = 1.0
         for i in range(18):
@@ -1108,12 +1393,4 @@ class Beam(object):
 
 
 if __name__ == "__main__":
-    # pass
-
-    # print(Beam().column_short_names_with_column_number())
-    from numpy.testing import assert_equal
-    a = Beam.initialize_as_pencil(200)
-    a.rotate_imref(180 * numpy.pi / 180 )
-    assert_equal(a.get_column(4).mean(), 0.0)
-    assert_equal(a.get_column(5).mean(), 1.0)
-    assert_equal(a.get_column(6).mean(), 0.0)
+    pass

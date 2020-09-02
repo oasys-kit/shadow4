@@ -112,11 +112,11 @@ class TestBeam(unittest.TestCase):
         a.rays[:, 0] = numpy.random.rand(200)
         a.rays[:, 2] = numpy.random.rand(200)
 
-        a.write("tmp.h5", simulation_name="run1", beam_name="begin", overwrite=True)
-        a.write("tmp.h5", simulation_name="run1", beam_name="star01", overwrite=False)
-        a.write("tmp.h5", simulation_name="run2", beam_name="begin", overwrite=False)
+        a.write_h5("tmp.h5", simulation_name="run1", beam_name="begin", overwrite=True)
+        a.write_h5("tmp.h5", simulation_name="run1", beam_name="star01", overwrite=False)
+        a.write_h5("tmp.h5", simulation_name="run2", beam_name="begin", overwrite=False)
 
-        b = Beam.load("tmp.h5",simulation_name="run2", beam_name="begin")
+        b = Beam.load_h5("tmp.h5",simulation_name="run2", beam_name="begin")
 
         print("a is equal to b ? ", a.identical(b))
         assert(a.identical(b))

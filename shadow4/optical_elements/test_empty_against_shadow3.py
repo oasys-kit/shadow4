@@ -20,6 +20,10 @@ from Shadow.ShadowTools import plotxy
 from shadow4.compatibility.beam3 import Beam3
 
 from numpy.testing import assert_almost_equal
+
+SHADOW3_BINARY = "/users/srio/OASYS1.2/shadow3/shadow3"
+
+
 def syspositions(list1):
     """
     return a dictionary with the positions of the source, o.e. and images
@@ -224,13 +228,18 @@ def syspositions(list1):
 class FakeOE():
     pass
 
-if __name__ == "__main__":
+def test_empty_element( do_plot=0,
+                        do_assert = True,
+                        do_shadow3_fortran = True,
+                        N = 1000,
+                        alpha_deg  = None, # 20,    # None=rondomize
+                        theta1_deg = None, # 10.0,  # None=rondomize
+                        theta2_deg = None, # 170.0,  # None=rondomize
+                        p          = None, # 15.0,  # None=rondomize
+                        q          = None, # 100.0  # None=rondomize,
+                        ):
 
-    do_plot=0
-    do_assert = True
-    do_shadow3_fortran = True
 
-    N = 1000
     source = SourceGeometrical()
     source.set_angular_distribution_gaussian(1e-6,1e-6)
     beam0 = source.calculate_beam(N=N, POL_DEG=1)
@@ -241,15 +250,18 @@ if __name__ == "__main__":
 
     beam1s3 = Beam3.initialize_from_shadow4_beam(beam0)
 
-    if do_plot:
-        plotxy(beam0s3, 4, 6, title="Image 0", nbins=201)
 
+    # alpha_deg =  20     # numpy.random.random() * 90  # 20
+    # theta1_deg = 10.0   # numpy.random.random() * 180 # 10.0
+    # theta2_deg = 170.0  # numpy.random.random() * 360 # 170.0
+    # p = 15.0
+    # q = 100.0
 
-    alpha_deg =  20     # numpy.random.random() * 90  # 20
-    theta1_deg = 10.0   # numpy.random.random() * 180 # 10.0
-    theta2_deg = 170.0  # numpy.random.random() * 360 # 170.0
-    p = 15.0
-    q = 100.0
+    if alpha_deg is None: alpha_deg = numpy.random.random() * 360.0
+    if theta1_deg is None: theta1_deg = numpy.random.random() * 90.0
+    if theta2_deg is None: theta2_deg = numpy.random.random() * 180.0
+    if p is None: p = numpy.random.random() * 100.0
+    if q is None: q = numpy.random.random() * 100.0
 
 
     #
@@ -287,16 +299,19 @@ if __name__ == "__main__":
         f.write("trace\nsystemfile\n0\nexit\n")
         f.close()
 
-        os.system("/users/srio/OASYS1.2/shadow3/shadow3 < shadow3.inp")
+        os.system("%s < shadow3.inp" % SHADOW3_BINARY)
 
         beam1f = Beam3(N=N)
         beam1f.load("star.01")
 
     beam1s3.traceOE(oe1,1)
 
-
+    if do_plot:
+        plotxy(beam1, 4, 6, title="Image shadow4", nbins=201)
+        plotxy(beam1s3, 4, 6, title="Image shadow3", nbins=201)
 
     print("alpha_deg, theta1_deg, theta2_deg = ",alpha_deg, theta1_deg, theta2_deg)
+    print("p, q = ", p, q)
     print("\ncol#   shadow4  shadow3 (shadow3_fortran) (source)")
     for i in range(18):
         if do_shadow3_fortran:
@@ -309,47 +324,27 @@ if __name__ == "__main__":
             assert_almost_equal (beam1.rays[:,i], beam1s3.rays[:,i], 4)
 
 
-    # a = syspositions([oe1])
-    #
-    #
-    # #
-    # #
-    # #
-    #
-    #
-    # fake_oe = FakeOE()
-    # fake_oe.T_INCIDENCE = theta1_deg * numpy.pi / 180
-    # fake_oe.T_REFLECTION = theta2_deg * numpy.pi / 180
-    # fake_oe.ALPHA = alpha_deg
-    # fake_oe.T_SOURCE = p
-    # fake_oe.T_IMAGE = q
-    # fake_oe.IDUMMY = 100.0
-    #
-    # aa = syspositions([fake_oe])
+if __name__ == "__main__":
 
-    #
-    #
-    #
-    # f = open("optax.01",'r')
-    # central = numpy.zeros((8*3))
-    # tmp = f.read()
-    # f.close()
-    #
-    # f = open("optax_more.01",'w')
-    # f.write(tmp)
-    # f.write("\n\n")
-    #
-    # print(len(a["CENTRAL"]))
-    # for i in range(8):
-    #     i0 = i * 3
-    #     f.write("%g  %g  %g \n" % (a["CENTRAL"][0+1+i0], a["CENTRAL"][1+1+i0], a["CENTRAL"][2+1+i0]))
-    #
-    # f.write("\n\n")
-    # print(len(aa["CENTRAL"]))
-    # for i in range(8):
-    #     i0 = i * 3
-    #     f.write("%g  %g  %g \n" % (aa["CENTRAL"][0+1+i0], aa["CENTRAL"][1+1+i0], aa["CENTRAL"][2+1+i0]))
-    #
-    # f.close()
-    # print("File optax_more.01 written to disk.")
+    # a first test with plots
+    test_empty_element(do_plot=False,
+                        do_assert = True,
+                        do_shadow3_fortran = True,
+                        N = 1000,
+                        alpha_deg=20,
+                        theta1_deg = 10.0,
+                        theta2_deg = 170.0,
+                        p = 15.0,
+                        q = 100.0)
 
+    # 10 random tests
+    for i in range(10):
+        test_empty_element(do_plot=0,
+                            do_assert = True,
+                            do_shadow3_fortran = True,
+                            N = 1000,
+                            alpha_deg=None,
+                            theta1_deg = None,
+                            theta2_deg = None,
+                            p = None,
+                            q = None)
