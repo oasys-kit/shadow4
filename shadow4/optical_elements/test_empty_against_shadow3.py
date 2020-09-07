@@ -267,8 +267,14 @@ def test_empty_element( do_plot=0,
     #
     # shadow4
     #
-    empty_oe = Empty(name="Empty", angle_radial=theta1_deg*numpy.pi/180,
-                     angle_radial_ref=theta2_deg*numpy.pi/180,
+
+    # empty_oe = Empty(name="Empty", angle_radial=theta1_deg*numpy.pi/180,
+    #                  angle_radial_ref=theta2_deg*numpy.pi/180,
+    #                  angle_azimuthal=alpha_deg*numpy.pi/180, p=p, q=q)
+
+    empty_oe = Empty()
+    empty_oe.set_positions(angle_radial=theta1_deg*numpy.pi/180,
+                     angle_radial_out=theta2_deg*numpy.pi/180,
                      angle_azimuthal=alpha_deg*numpy.pi/180, p=p, q=q)
 
     beam1, mirr1 = empty_oe.trace_beam(beam0)
