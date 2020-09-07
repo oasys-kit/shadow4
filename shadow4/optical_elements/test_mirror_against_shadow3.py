@@ -164,7 +164,7 @@ if __name__ == "__main__":
     #
     # run
     #
-    beam1, mirr1 = mirror1.trace_beam(beam0)
+    beam1, mirr1 = mirror1.trace_beam(beam0, flag_lost_value=-11000.0)
     print(mirr1.info())
 
     #
@@ -204,11 +204,7 @@ if __name__ == "__main__":
     #     beam2_3 = Beam3.initialize_from_shadow4_beam(beam2)
     #     plotxy(beam2_3,1,3,nbins=100,title="SHADOW4 BEAMSTOPPER", nolost=True)
     #
-    print("col#   shadow4  shadow3  source")
-    for i in range(18):
-        print("col%d   %20.10f  %20.10f  %20.10f  " % (i+1, beam1.rays[10,i], beam3.rays[10,i], source3.rays[10,i]))
-        if do_assert:
-            assert_almost_equal (beam1.rays[:,i], beam3.rays[:,i], 4)
+
 
     mirr3 = Beam3(N=beam0.rays.shape[0])
     mirr3.load("mirr.01")
@@ -217,4 +213,10 @@ if __name__ == "__main__":
     for i in range(18):
         print("col%d   %20.10f  %20.10f  %20.10f  " % (i+1, mirr1.rays[10,i], mirr3.rays[10,i], source3.rays[10,i]))
         if do_assert:
-            assert_almost_equal (mirr1.rays[:,i], mirr3.rays[:,i], 4)
+            assert_almost_equal (mirr1.rays[:,i], mirr3.rays[:,i], 1)
+
+    print("\ncol#   shadow4  shadow3  source")
+    for i in range(18):
+        print("col%d   %20.10f  %20.10f  %20.10f  " % (i+1, beam1.rays[10,i], beam3.rays[10,i], source3.rays[10,i]))
+        if do_assert:
+            assert_almost_equal (beam1.rays[:,i], beam3.rays[:,i], 1)
