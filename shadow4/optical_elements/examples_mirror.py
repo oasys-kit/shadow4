@@ -302,7 +302,7 @@ def example_branch_4(do_plot=True):
                 name="M1",
                 surface_shape=surface_shape,
                 boundary_shape=boundary_shape,
-                coating="SiC.dat",
+                coating=None, # "SiC.dat",
                 coating_thickness=None)
 
     coordinates_syned = ElementCoordinates(p = 10.0,
@@ -314,7 +314,8 @@ def example_branch_4(do_plot=True):
     #
     # shadow definitions
     #
-    mirror1 = Mirror(beamline_element_syned=beamline_element_syned)
+    mirror1 = Mirror(beamline_element_syned=beamline_element_syned,
+                     f_reflec=1, f_refl=0, file_refl="SiC.dat")
     print(mirror1.info())
 
     #
@@ -444,18 +445,18 @@ if __name__ == "__main__":
 
     do_plot = False
 
-    example_branch_1(do_plot=do_plot) # two plane mirrors
-    example_branch_2(do_plot=do_plot) # toroid
-    example_branch_3("../../oasys_workspaces/test_shadow4.hdf5",do_plot=do_plot) # mesh
+    # example_branch_1(do_plot=do_plot) # two plane mirrors
+    # example_branch_2(do_plot=do_plot) # toroid
+    # example_branch_3("../../oasys_workspaces/test_shadow4.hdf5",do_plot=do_plot) # mesh
 
     from shadow4.physical_models.prerefl.prerefl import PreRefl
     PreRefl.prerefl(interactive=False, SYMBOL="SiC", DENSITY=3.217, FILE="SiC.dat", E_MIN=100.0, E_MAX=20000.0, E_STEP=100.0)
     example_branch_4(do_plot=do_plot) # prerefl
 
-    for myconicshape in ["plane", \
-                         "sphere", "spherical_cylinder_tangential", "spherical_cylinder_sagittal", \
-                         "ellipsoid", "elliptical_cylinder", \
-                         "hyperboloid","hyperbolic_cylinder",\
-                         "paraboloid","parabolic_cylinder"]:
-        example_branch_5(myconicshape,do_plot=do_plot) # conic mirrors
+    # for myconicshape in ["plane", \
+    #                      "sphere", "spherical_cylinder_tangential", "spherical_cylinder_sagittal", \
+    #                      "ellipsoid", "elliptical_cylinder", \
+    #                      "hyperboloid","hyperbolic_cylinder",\
+    #                      "paraboloid","parabolic_cylinder"]:
+    #     example_branch_5(myconicshape,do_plot=do_plot) # conic mirrors
 
