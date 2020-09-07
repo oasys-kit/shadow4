@@ -8,7 +8,7 @@ from shadow4.beam.beam import Beam
 from shadow4.sources.source_geometrical.source_gaussian import SourceGaussian
 
 from shadow4.syned.shape import Rectangle, Ellipse, TwoEllipses # TODO from syned.beamline.shape
-from shadow4.syned.shape import Toroidal, Conic, NumericalMesh # TODO from syned.beamline.shape
+from shadow4.syned.shape import Toroidal, Conic, SurfaceData # TODO from syned.beamline.shape
 from shadow4.syned.shape import Plane, Sphere, Ellipsoid, Paraboloid, Hyperboloid # TODO from syned.beamline.shape
 from shadow4.syned.shape import SphericalCylinder # TODO from syned.beamline.shape
 
@@ -207,8 +207,16 @@ def example_branch_3(surface_shape_file, do_plot=True):
 
     # surface shape
 
-    surface_shape = NumericalMesh(surface_shape_file)
+    # surface_shape = NumericalMesh(surface_shape_file)
 
+    import h5py
+    f = h5py.File(surface_shape_file, 'r')
+    x = f["/surface_file/X"][:]
+    y = f["/surface_file/Y"][:]
+    Z = f["/surface_file/Z"][:]
+    f.close()
+
+    surface_shape = SurfaceData(xx=x, yy=y, zz=Z, surface_data_file=surface_shape_file)
 
     # boundaries
     rlen1 = 0.6

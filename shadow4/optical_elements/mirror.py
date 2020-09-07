@@ -1,7 +1,7 @@
 import numpy
 
 from shadow4.syned.shape import Rectangle, Ellipse, TwoEllipses # TODO from syned.beamline.shape
-from shadow4.syned.shape import Toroidal, Conic, NumericalMesh, Plane, Sphere, Ellipsoid, Paraboloid, Hyperboloid # TODO from syned.beamline.shape
+from shadow4.syned.shape import Toroidal, Conic, SurfaceData, Plane, Sphere, Ellipsoid, Paraboloid, Hyperboloid # TODO from syned.beamline.shape
 from shadow4.syned.shape import SphericalCylinder # TODO from syned.beamline.shape
 
 
@@ -32,32 +32,19 @@ class Mirror(object):
 
         else:
 
-            # if not isinstance(beamline_element_syned._optical_element,SyMirror):
-            #     raise Exception("Please initialize shadow4 Mirror with syned Mirror")
-            #
-            # if (isinstance(beamline_element_syned._optical_element._surface_shape, Conic)) or \
-            #     (isinstance(beamline_element_syned._optical_element._surface_shape, Toroidal)) or \
-            #     (isinstance(beamline_element_syned._optical_element._surface_shape, NumericalMesh)):
-            #     pass
-            # else:
-            #     print(">>>",beamline_element_syned._optical_element._surface_shape)
-            #     raise Exception("Only Conic, Toroid and NumericalMesh syned-surface-shapes are accepted by shadow4")
-            #
-            #
-            # self._beamline_element_syned = beamline_element_syned
             if isinstance(beamline_element_syned._optical_element, SyMirror):
                 pass
             else:
                 raise Exception("Please initialize shadow4 Mirror with syned Mirror")
 
             ok = False
-            for obj in [Conic, Toroidal, NumericalMesh, Plane, Sphere, Ellipsoid, Paraboloid, Hyperboloid, SphericalCylinder]:
+            for obj in [Conic, Toroidal, SurfaceData, Plane, Sphere, Ellipsoid, Paraboloid, Hyperboloid, SphericalCylinder]:
                 if isinstance(beamline_element_syned._optical_element._surface_shape, obj): ok = True
             if ok:
                 self._beamline_element_syned = beamline_element_syned
             else:
                 raise Exception(
-                    "Please initialize shadow4 Mirror with syned Mirror surface shape as Conic, Toroidal, NumericalMesh, Plane, Sphere, Ellipsoid, Paraboloid, Hyperboloid, SphericalCylinder")
+                    "Please initialize shadow4 Mirror with syned Mirror surface shape as Conic, Toroidal, SurfaceData, Plane, Sphere, Ellipsoid, Paraboloid, Hyperboloid, SphericalCylinder")
 
 
 
@@ -105,10 +92,11 @@ class Mirror(object):
                     self._beamline_element_syned.get_optical_element().get_surface_shape()._maj_radius,
                     self._beamline_element_syned.get_optical_element().get_surface_shape()._min_radius,)
                 mirr, normal = toroid.apply_specular_reflection_on_beam(beam)
-            elif isinstance(surshape, NumericalMesh):
-                print(">>>>> NumericalMesh mirror")
+            elif isinstance(surshape, SurfaceData):
+                print(">>>>> SurfaceData mirror")
                 num_mesh = S4Mesh()
-                num_mesh.load_h5file(self._beamline_element_syned.get_optical_element().get_surface_shape()._h5file)
+                # num_mesh.load_h5file(self._beamline_element_syned.get_optical_element().get_surface_shape().surface_data_file)
+                num_mesh.load_surface_data(self._beamline_element_syned.get_optical_element().get_surface_shape())
                 mirr,normal,t,x1,v1,x2,v2 = num_mesh.apply_specular_reflection_on_beam(beam)
             elif isinstance(surshape, Plane):
                 print(">>>>> Plane mirror")

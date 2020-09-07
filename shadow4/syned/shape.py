@@ -102,14 +102,22 @@ class SphericalCylinder(Sphere, Cylinder):
         return (2*p*q/(p+q))*numpy.sin(grazing_angle)
 
 class Ellipsoid(SurfaceShape):
-    def __init__(self, min_axis=0.0, maj_axis=0.0, convexity=Convexity.UPWARD):
+    """
+    Ellipsoid: Revolution ellipsoid (rotation around major axis).
+    It is defined with three parameters: axes of the ellipse and an additional parameter
+    defining the position of the origin of the mirror. This additional parameter can be "p", "x0", "y0"
+    or the angle beta from the ellipsoid center (tan(beta)=y0/x0). For simplicity, we store "p" in syned.
+    """
+    def __init__(self, min_axis=0.0, maj_axis=0.0, convexity=Convexity.UPWARD, p=None):
         SurfaceShape.__init__(self, convexity)
 
         self._min_axis = min_axis
         self._maj_axis = maj_axis
+        self._p = p
 
     def initialize_from_p_q(self, p=2.0, q=1.0, grazing_angle=0.003):
         self._min_axis, self._maj_axis = Ellipsoid.get_axis_from_p_q(p, q, grazing_angle)
+        self._p = p
 
     def get_p_q(self, grazing_angle=0.003):
         return Ellipsoid.get_p_q_from_axis(self._min_axis, self._maj_axis, grazing_angle)
@@ -153,12 +161,27 @@ class EllipticalCylinder(Ellipsoid, Cylinder):
         return super().get_p_q(grazing_angle)
 
 class Paraboloid(SurfaceShape):
+    """
+    Paraboloid: Revolution paraboloid (rotation around symmetry axis).
+    It is defined with three parameters: the parabola_parameter and two more parameters
+    defining the position of the origin of the mirror.
+    The parabola_parameter = 2 * focal_distance = - 0.5 * ccc_9 / ccc_2
+    The additional parameter can be the focal distances
+    ("p" or "q", one is infinity), "x0", "y0" or the grazing angle.
+    Here, we selected the at_infinity and the finite focal distance p or q or distance from
+    the mirror pole to focus (pole to focus).
+
+    """
     def __init__(self, 
                  parabola_parameter=0.0, 
-                 convexity=Convexity.UPWARD):
+                 convexity=Convexity.UPWARD,
+                 at_infinity=Side.SOURCE,
+                 pole_to_focus=None):
         SurfaceShape.__init__(self, convexity)
 
         self._parabola_parameter = parabola_parameter
+        self._at_infinity = at_infinity
+        self._pole_to_focus = pole_to_focus
 
     def initialize_from_p_q(self, p=2.0, q=1.0, grazing_angle=0.003, at_infinity=Side.SOURCE):
         self._parabola_parameter = Paraboloid.get_parabola_parameter_from_p_q(p, q, grazing_angle, at_infinity)
@@ -186,11 +209,18 @@ class ParabolicCylinder(Paraboloid, Cylinder):
         return super().initialize_from_p_q(p, q, grazing_angle, at_infinity)
 
 class Hyperboloid(SurfaceShape):
-    def __init__(self, min_axis=0.0, maj_axis=0.0, convexity=Convexity.UPWARD):
+    """
+    Hyperboloid: Revolution hyperboloid (two sheets: rotation around major axis).
+    It is defined with three parameters: axes of the hyperbola and an additional parameter
+    defining the position of the origin of the mirror. This additional parameter can be "p", "x0", "y0"
+    or the angle beta from the ellipsoid center (tan(beta)=y0/x0). For simplicity, we store "p" in syned.
+    """
+    def __init__(self, min_axis=0.0, maj_axis=0.0, convexity=Convexity.UPWARD, p=None):
         SurfaceShape.__init__(self, convexity)
 
         self._min_axis = min_axis
         self._maj_axis = maj_axis
+        self._p = p
 
     def initialize_from_p_q(self, p=2.0, q=1.0, grazing_angle=0.003):
         raise NotImplementedError("TBD")
@@ -207,6 +237,7 @@ class HyperbolicCylinder(Hyperboloid, Cylinder):
         Hyperboloid.__init__(self, min_axis, maj_axis, convexity)
         Cylinder.__init__(self, cylinder_direction)
 
+# TODO: consider rename to Toroid?
 class Toroidal(SurfaceShape):
     def __init__(self, min_radius=0.0, maj_radius=0.0):
         SurfaceShape.__init__(self, convexity=Convexity.NONE)
@@ -231,10 +262,24 @@ class Toroidal(SurfaceShape):
         #        R_MAJ	=   R_MAJ - R_MIN
         self._maj_radius -= self._min_radius
 
+#TODO: remove
 class NumericalMesh(SurfaceShape):
     def __init__(self, h5file=""):
         SurfaceShape.__init__(self, convexity=Convexity.NONE)
         self._h5file = h5file
+
+# This is exactly the same as OasysSurfaceData
+# TODO: consider moving this definition from oasys1 to syned
+class SurfaceData(object):
+    def __init__(self,
+                 xx=None,
+                 yy=None,
+                 zz=None,
+                 surface_data_file=None):
+        self.xx = xx
+        self.yy = yy
+        self.zz = zz
+        self.surface_data_file=surface_data_file
 
 #
 # subclasses for BoundaryShape

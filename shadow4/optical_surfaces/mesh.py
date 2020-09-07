@@ -99,6 +99,12 @@ class Mesh(object):
         x,y,z = self.read_surface_error_h5file(filename)
         self.surface = interpolate.interp2d(x,y,z.T, kind=kind)
 
+    def load_surface_data(self, surface_data_object, kind='cubic'):
+        self.surface = interpolate.interp2d(surface_data_object.xx, surface_data_object.yy, surface_data_object.zz, kind=kind)
+
+    def load_surface_data_arrays(self,x,y,Z,kind='cubic'):
+        self.surface = interpolate.interp2d(x,y,Z.T, kind=kind)
+
     def load_file(self,filename,kind='cubic'):
         x,y,z = self.read_surface_error_file(filename)
         self.surface = interpolate.interp2d(x,y,z.T, kind=kind)
@@ -110,7 +116,6 @@ class Mesh(object):
         x = f["/surface_file/X"][:]
         y = f["/surface_file/Y"][:]
         Z = f["/surface_file/Z"][:]
-        print(">>>>>>>>>>>>>>>>>",x.shape,y.shape,Z.shape)
         f.close()
         return x, y, Z.T.copy()
 
