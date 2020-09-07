@@ -2,7 +2,7 @@ import numpy
 
 from shadow4.syned.shape import Rectangle, Ellipse, TwoEllipses # TODO from syned.beamline.shape
 from shadow4.syned.shape import Toroidal, Conic, SurfaceData, Plane, Sphere, Ellipsoid, Paraboloid, Hyperboloid # TODO from syned.beamline.shape
-from shadow4.syned.shape import SphericalCylinder # TODO from syned.beamline.shape
+from shadow4.syned.shape import SphericalCylinder, EllipticalCylinder, HyperbolicCylinder # TODO from syned.beamline.shape
 
 
 from syned.beamline.element_coordinates import ElementCoordinates
@@ -119,15 +119,44 @@ class Mirror(object):
                 ccc = S4Conic.initialize_as_sphere_from_curvature_radius(surshape.get_radius(),cylindrical=False,cylangle=0.0)
                 mirr, normal = ccc.apply_specular_reflection_on_beam(beam)
 
+            elif isinstance(surshape, EllipticalCylinder):
+                print(">>>>> EllipticalCylinder mirror",surshape)
+                ccc = S4Conic.initialize_as_ellipsoid_from_focal_distances(surshape.get_p(),surshape.get_q(),
+                            surshape.get_grazing_angle(), cylindrical=0, cylangle=0.0, switch_convexity=0)
+                mirr, normal = ccc.apply_specular_reflection_on_beam(beam)
+
             elif isinstance(surshape, Ellipsoid):
                 print(">>>>> Ellipsoid mirror",surshape)
-                raise Exception("Not enough information in Syned Ellipsoid object!!!")
-            elif isinstance(surshape, Paraboloid):
-                print(">>>>> Paraboloid mirror")
-                raise Exception("Not enough information in Syned Paraboloid object!!!")
+                ccc = S4Conic.initialize_as_ellipsoid_from_focal_distances(surshape.get_p(),surshape.get_q(),
+                            surshape.get_grazing_angle(), cylindrical=0, cylangle=0.0, switch_convexity=0)
+                mirr, normal = ccc.apply_specular_reflection_on_beam(beam)
+
+            elif isinstance(surshape, HyperbolicCylinder):
+                print(">>>>> HyperbolicCylinder mirror",surshape)
+                ccc = S4Conic.initialize_as_hyperboloid_from_focal_distances(surshape.get_p(),surshape.get_q(),
+                            surshape.get_grazing_angle(), cylindrical=1, cylangle=0.0, switch_convexity=0)
+                mirr, normal = ccc.apply_specular_reflection_on_beam(beam)
+
             elif isinstance(surshape, Hyperboloid):
-                print(">>>>> Hyperboloid mirror")
-                raise Exception("Not enough information in Syned Hyperboloid object!!!")
+                print(">>>>> Hyperboloid mirror",surshape)
+                ccc = S4Conic.initialize_as_hyperboloid_from_focal_distances(surshape.get_p(),surshape.get_q(),
+                            surshape.get_grazing_angle(), cylindrical=0, cylangle=0.0, switch_convexity=0)
+                mirr, normal = ccc.apply_specular_reflection_on_beam(beam)
+
+
+            elif isinstance(surshape, Paraboloid):
+                print(">>>>> Paraboloid mirror",surshape)
+                if surshape.get_at_infinity == 0:
+                    p = 1e10
+                    q = surshape.get_pole_to_focus()
+                else:
+                    q = 1e10
+                    p = surshape.get_pole_to_focus()
+
+                ccc = S4Conic.initialize_as_paraboloid_from_focal_distances(p,q,
+                            surshape.get_grazing_angle(), cylindrical=0, cylangle=0.0, switch_convexity=0)
+                mirr, normal = ccc.apply_specular_reflection_on_beam(beam)
+
             else:
                 raise Exception("cannot trace this surface shape")
 

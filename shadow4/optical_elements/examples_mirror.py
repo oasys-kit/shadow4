@@ -10,7 +10,7 @@ from shadow4.sources.source_geometrical.source_gaussian import SourceGaussian
 from shadow4.syned.shape import Rectangle, Ellipse, TwoEllipses # TODO from syned.beamline.shape
 from shadow4.syned.shape import Toroidal, Conic, SurfaceData # TODO from syned.beamline.shape
 from shadow4.syned.shape import Plane, Sphere, Ellipsoid, Paraboloid, Hyperboloid # TODO from syned.beamline.shape
-from shadow4.syned.shape import SphericalCylinder # TODO from syned.beamline.shape
+from shadow4.syned.shape import SphericalCylinder, EllipticalCylinder, HyperbolicCylinder, ParabolicCylinder # TODO from syned.beamline.shape
 
 
 from shadow4.optical_elements.mirror import Mirror
@@ -371,11 +371,25 @@ def example_branch_5(surface_type, do_plot=True):
         surface_shape.initialize_from_p_q(10.0, 10.0, grazing_angle=(90.0 - 88.8) * numpy.pi / 180)
     elif surface_type == "ellipsoid":
         surface_shape = Ellipsoid()
-        #TODO: this is to be discussed in the future: the ellipsoid is only defined by the major and minor axes, which
-        #is not enough to characterise the mirror surface. We need a third parameter that could be the incident
-        #angle, or p. We cannot retrieve in shadow the ellipsoidal surface with only the axes, we need another
-        #parameter. Shadow uses the subtended angle from the ellipsoid center to the mirror pole ELL_THE
-        surface_shape.initialize_from_p_q(10.0, 10.0, grazing_angle=(90.0 - 88.8) * numpy.pi / 180)
+        surface_shape.initialize_from_p_q(p=20.0,q=10.0,grazing_angle=0.003)
+    elif surface_type == "elliptical_cylinder":
+        surface_shape = EllipticalCylinder()
+        surface_shape.initialize_from_p_q(p=20.0,q=10.0,grazing_angle=0.003)
+    elif surface_type == "hyperboloid":
+        surface_shape = Hyperboloid()
+        surface_shape.initialize_from_p_q(p=20.0,q=10.0,grazing_angle=0.003)
+    elif surface_type == "hyperbolic_cylinder":
+        surface_shape = HyperbolicCylinder()
+        surface_shape.initialize_from_p_q(p=20.0,q=10.0,grazing_angle=0.003)
+
+    elif surface_type == "parabolic_cylinder":
+        surface_shape = ParabolicCylinder()
+        surface_shape.initialize_from_p_q(p=20.0,q=10.0,grazing_angle=0.003)
+
+    elif surface_type == "paraboloid":
+        surface_shape = Paraboloid()
+        surface_shape.initialize_from_p_q(p=20.0,q=10.0,grazing_angle=0.003)
+
     elif surface_type == "conic":
         surface_shape = Conic(conic_coefficients=[0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, -1.0, 0.0])
     else:
@@ -438,7 +452,10 @@ if __name__ == "__main__":
     PreRefl.prerefl(interactive=False, SYMBOL="SiC", DENSITY=3.217, FILE="SiC.dat", E_MIN=100.0, E_MAX=20000.0, E_STEP=100.0)
     example_branch_4(do_plot=do_plot) # prerefl
 
-    for myconicshape in ["plane", "sphere", "spherical_cylinder_tangential", "spherical_cylinder_sagittal"]:
+    for myconicshape in ["plane", \
+                         "sphere", "spherical_cylinder_tangential", "spherical_cylinder_sagittal", \
+                         "ellipsoid", "elliptical_cylinder", \
+                         "hyperboloid","hyperbolic_cylinder",\
+                         "paraboloid","parabolic_cylinder"]:
         example_branch_5(myconicshape,do_plot=do_plot) # conic mirrors
 
-    # TODO: "ellipsoid", "hyperboloid", "paraboloid"

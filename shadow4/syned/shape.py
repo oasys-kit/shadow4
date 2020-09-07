@@ -139,6 +139,55 @@ class Ellipsoid(SurfaceShape):
 
         return p, q
 
+
+    # semiaxes etc
+    def get_a(self):
+        return 0.5 * self._maj_axis
+
+    def get_b(self):
+        return 0.5 * self._min_axis
+
+    def get_c(self):
+        return numpy.sqrt(self.get_a()**2 - self.get_b()**2)
+
+    def get_p(self):
+        if self._p is None:
+            raise Exception("undefined p arm")
+        else:
+            return self._p
+
+    def get_q(self):
+        return 2 * self.get_a() - self.get_p()
+
+    def get_eccentricity(self):
+        return self.get_c / self.get_a()
+
+    def get_grazing_angle(self):
+        return numpy.arcsin( self.get_b() / numpy.sqrt(self.get_p() * self.get_q()))
+
+    def get_mirror_center(self):
+        coor_along_axis_maj = (self.get_p()**2 - self.get_q()**1) / (4 * self.get_c())
+        coor_along_axis_min = self.get_b * numpy.sqrt(1 - (coor_along_axis_maj / self.get_a())**2)
+        return coor_along_axis_maj, coor_along_axis_min
+
+    def get_angle_pole_from_origin(self):
+        x1, x2 = self.get_mirror_center()
+        return numpy.arctan(x2 / x1)
+
+    def initialize_from_shadow_parameters(self, axmaj=2.0, axmin=1.0, ell_the=0.003,
+                                          convexity=Convexity.UPWARD, ):
+
+        tanbeta2 = numpy.tan(ell_the) ** 2
+        y = axmaj * axmin / numpy.sqrt(axmin ** 2 + axmaj ** 2 * tanbeta2)
+        z = y * numpy.tan(ell_the)
+        c = numpy.sqrt(axmaj ** 2 - axmin ** 2)
+        p = numpy.sqrt( (y + c)**2 + z**2)
+        self.__init__(min_axis=0.5 * axmaj,
+                      maj_axis=0.5 * axmin,
+                      convexity=convexity,
+                      p=p)
+
+
 class EllipticalCylinder(Ellipsoid, Cylinder):
     def __init__(self, 
                  min_axis=0.0, 
@@ -185,6 +234,11 @@ class Paraboloid(SurfaceShape):
 
     def initialize_from_p_q(self, p=2.0, q=1.0, grazing_angle=0.003, at_infinity=Side.SOURCE):
         self._parabola_parameter = Paraboloid.get_parabola_parameter_from_p_q(p, q, grazing_angle, at_infinity)
+        self._at_infinity = at_infinity
+        if at_infinity == Side.SOURCE:
+            self._pole_to_focus = q
+        elif at_infinity == Side.IMAGE:
+            self._pole_to_focus = p
 
     @classmethod
     def get_parabola_parameter_from_p_q(cls, p=2.0, q=1.0, grazing_angle=0.003, at_infinity=Side.SOURCE):
@@ -192,6 +246,18 @@ class Paraboloid(SurfaceShape):
             return 2*p*(numpy.sin(grazing_angle))**2
         elif at_infinity == Side.SOURCE:
             return 2*q*(numpy.sin(grazing_angle))**2
+
+    def get_parabola_parameter(self):
+        return self._parabola_parameter
+
+    def get_at_infinity(self):
+        return self._at_infinity
+
+    def get_pole_to_focus(self):
+        return self._pole_to_focus
+
+    def get_grazing_angle(self):
+        return numpy.arcsin( self.get_parabola_parameter() / (2 * self.get_pole_to_focus()))
 
 
 class ParabolicCylinder(Paraboloid, Cylinder):
@@ -223,10 +289,47 @@ class Hyperboloid(SurfaceShape):
         self._p = p
 
     def initialize_from_p_q(self, p=2.0, q=1.0, grazing_angle=0.003):
-        raise NotImplementedError("TBD")
+        self._min_axis, self._maj_axis = Hyperboloid.get_axis_from_p_q(p, q, grazing_angle)
+        self._p = p
+
+    @classmethod
+    def get_axis_from_p_q(cls, p=2.0, q=1.0, grazing_angle=0.003, branch_sign=+1):
+
+        min_axis = 2*numpy.sqrt(p*q)*numpy.sin(grazing_angle)
+        maj_axis = (p - q) * branch_sign
+
+        return min_axis, maj_axis
 
     def get_p_q(self, grazing_angle=0.003):
         raise NotImplementedError("TBD")
+
+
+    # semiaxes etc
+    def get_a(self):
+        return 0.5 * self._maj_axis
+
+    def get_b(self):
+        return 0.5 * self._min_axis
+
+    def get_c(self):
+        return numpy.sqrt(self.get_a()**2 + self.get_b()**2)
+
+    def get_p(self):
+        if self._p is None:
+            raise Exception("undefined p arm")
+        else:
+            return self._p
+
+    def get_q(self):
+        return self.get_p() - 2 * self.get_a()
+
+    def get_eccentricity(self):
+        return self.get_c / self.get_a()
+
+    def get_grazing_angle(self):
+        return numpy.arcsin( self.get_b() / numpy.sqrt(self.get_p() * self.get_q()))
+
+
 
 class HyperbolicCylinder(Hyperboloid, Cylinder):
     def __init__(self, 
@@ -262,15 +365,11 @@ class Toroidal(SurfaceShape):
         #        R_MAJ	=   R_MAJ - R_MIN
         self._maj_radius -= self._min_radius
 
-#TODO: remove
-class NumericalMesh(SurfaceShape):
-    def __init__(self, h5file=""):
-        SurfaceShape.__init__(self, convexity=Convexity.NONE)
-        self._h5file = h5file
 
 # This is exactly the same as OasysSurfaceData
 # TODO: consider moving this definition from oasys1 to syned
-class SurfaceData(object):
+# class OasysSurfaceData(object):
+class SurfaceData(SurfaceShape):
     def __init__(self,
                  xx=None,
                  yy=None,
@@ -339,6 +438,7 @@ class Ellipse(BoundaryShape):
 
     def get_axis(self):
         return numpy.abs(self._a_axis_max - self._a_axis_min), numpy.abs(self._b_axis_max - self._b_axis_min)
+
 
 class TwoEllipses(BoundaryShape):
     def __init__(self,
@@ -606,12 +706,24 @@ if __name__=="__main__":
 
     # ell = Ellipsoid()
     # ell.initialize_from_p_q(20, 10, 0.2618)
+    # print ("ellipse axes: ",ell._min_axis/2, ell._maj_axis/2)
     #
-    # print (ell._min_axis/2, ell._maj_axis/2)
     #
     # ell = Ellipsoid(min_axis=ell._min_axis, maj_axis=ell._maj_axis)
-    #
-    # print(ell.get_p_q(0.2618))
+    # print("for grazing angle 0.2618, ellipse p,q = ",ell.get_p_q(0.2618))
+
+
+    ell = Ellipsoid()
+    p = 20
+    q = 10
+    theta_graz = 0.2618
+    ell.initialize_from_p_q(p, q, theta_graz)
+    print ("ellipse p, q: ",ell.get_p(), ell.get_q())
+    print("ellipse grazing_angle: ", ell.get_grazing_angle())
+    assert (numpy.abs(p - ell.get_p()) < 1e-10 )
+    assert (numpy.abs(q - ell.get_q()) < 1e-10)
+    assert (numpy.abs(theta_graz - ell.get_grazing_angle()) < 1e-10)
+
 
 
     # circle = Circle(3.0)
@@ -660,16 +772,16 @@ if __name__=="__main__":
 
 
 
-    patches = MultiplePatch()
-    patches.append_polygon(numpy.array([-1,-1,1,1]),numpy.array([-1,1,1,-1]))
-    x = [-0.00166557,  0.12180897, -0.11252591, -0.12274196,  0.00586896, -0.12999401, -0.12552975, -0.0377907,  -0.01094828, -0.13689862]
-    y = [ 0.16279557, -0.00085991,  0.01349174, -0.01371226,  0.01480265, -0.04810334, 0.07198068, -0.03725407,  0.13301309, -0.00296213]
-    x = numpy.array(x)
-    y = numpy.array(y)
-    patch = patches.get_patch(0)
-    # # print(patch.check_inside(x,y))
-    for i in range(x.size):
-        tmp = patch.check_inside_one_point(x[i], y[i])
-        print(x[i], y[i], tmp )
-    print(patch.check_inside(x, y))
-    print(patch.check_inside_vector(x, y))
+    # patches = MultiplePatch()
+    # patches.append_polygon(numpy.array([-1,-1,1,1]),numpy.array([-1,1,1,-1]))
+    # x = [-0.00166557,  0.12180897, -0.11252591, -0.12274196,  0.00586896, -0.12999401, -0.12552975, -0.0377907,  -0.01094828, -0.13689862]
+    # y = [ 0.16279557, -0.00085991,  0.01349174, -0.01371226,  0.01480265, -0.04810334, 0.07198068, -0.03725407,  0.13301309, -0.00296213]
+    # x = numpy.array(x)
+    # y = numpy.array(y)
+    # patch = patches.get_patch(0)
+    # # # print(patch.check_inside(x,y))
+    # for i in range(x.size):
+    #     tmp = patch.check_inside_one_point(x[i], y[i])
+    #     print(x[i], y[i], tmp )
+    # print(patch.check_inside(x, y))
+    # print(patch.check_inside_vector(x, y))
