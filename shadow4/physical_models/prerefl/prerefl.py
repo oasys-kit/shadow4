@@ -119,7 +119,8 @@ class PreRefl(object):
 
         return 2*refraction_index.imag*wnum
 
-    def reflectivity_fresnel(self,photon_energy_ev=10000.0,grazing_angle_mrad=3.0,roughness_rms_A=0.0):
+    def reflectivity_fresnel(self,photon_energy_ev=10000.0,grazing_angle_mrad=3.0,
+                             roughness_rms_A=0.0, method=2):
         """
         Calculates the reflectivity of an interface using Fresnel formulas.
 
@@ -128,44 +129,125 @@ class PreRefl(object):
         :param grazing_angle_mrad: scalar with grazing angle in mrad
         :param roughness_rms_A: scalar with roughness rms in Angstroms
         :param photon_energy_ev: scalar or array with photon energies in eV
+        :param method: 0=Born&Wolf, 1=Parratt, 2=shadow3
         :return: (rs,rp,runp) the s-polarized, p-pol and unpolarized reflectivities
         """
-        # ;
-        # ; calculation of reflectivity (piece of code adapted from shadow/abrefc)
-        # ;
-        #
-        refraction_index = self.get_refraction_index(photon_energy_ev)
 
-        theta1 = grazing_angle_mrad * 1e-3     # in rad
+
+        rs, rp = self.reflectivity_amplitudes_fresnel(photon_energy_ev=photon_energy_ev,
+                                                      grazing_angle_mrad=grazing_angle_mrad,
+                                                      roughness_rms_A=roughness_rms_A,
+                                                      method=method)
+        # refraction_index = self.get_refraction_index(photon_energy_ev)
+        #
+        # theta1 = grazing_angle_mrad * 1e-3     # in rad
+        # rough1 = roughness_rms_A
+        #
+        # # ; epsi = 1 - alpha - i gamma
+        # # alpha = 2.0D0*k*f1
+        # # gamma = 2.0D0*k*f2
+        #
+        # alpha = 2 * (1.0 - refraction_index.real)
+        # gamma = 2 * refraction_index.imag
+        #
+        # rho = (numpy.sin(theta1))**2 - alpha
+        # rho += numpy.sqrt((numpy.sin(theta1)**2 - alpha)**2 + gamma**2)
+        # rho = numpy.sqrt(rho / 2)
+        #
+        # rs1 = 4 * (rho**2) * (numpy.sin(theta1) - rho)**2 + gamma**2
+        # rs2 = 4 * (rho**2) * (numpy.sin(theta1) + rho)**2 + gamma**2
+        # rs = rs1 / rs2
+        #
+        # ratio1 = 4 * rho**2 * (rho * numpy.sin(theta1) - numpy.cos(theta1)**2)**2 + gamma**2 * numpy.sin(theta1)**2
+        # ratio2 = 4 * rho**2 * (rho * numpy.sin(theta1) + numpy.cos(theta1)**2)**2 + gamma**2 * numpy.sin(theta1)**2
+        # ratio = ratio1 / ratio2
+        #
+        # rp = rs * ratio
+        # runp = 0.5 * (rs + rp)
+        #
+        # wavelength_m = codata.h * codata.c / codata.e / photon_energy_ev
+        #
+        # debyewaller = numpy.exp( -(4.0 * numpy.pi * numpy.sin(theta1) * rough1 / (wavelength_m * 1e10))**2 )
+        #
+        # return rs*debyewaller, rp*debyewaller, runp*debyewaller
+        return numpy.abs(rs)**2, numpy.abs(rp)**2, numpy.abs(0.5 * (rs + rp))**2,
+
+    def reflectivity_amplitudes_fresnel(self, photon_energy_ev=10000.0, grazing_angle_mrad=3.0, roughness_rms_A=0.0,
+                                        method=2 # 0=born & wold, 1=parratt, 2=shadow3
+                                        ):
+
+        refraction_index_1 = 1.0
+        refraction_index_2 = self.get_refraction_index(photon_energy_ev)
+
+        theta1g = grazing_angle_mrad * 1e-3     # in rad
+        theta1 = numpy.pi / 2 - theta1g
         rough1 = roughness_rms_A
 
-        # ; epsi = 1 - alpha - i gamma
-        # alpha = 2.0D0*k*f1
-        # gamma = 2.0D0*k*f2
+        sin_theta1 = numpy.sin(theta1)
+        cos_theta1 = numpy.sqrt(1 - sin_theta1**2, dtype=numpy.complex)
 
-        alpha = 2 * (1.0 - refraction_index.real)
-        gamma = 2 * refraction_index.imag
+        sin_theta2 = refraction_index_1 * sin_theta1 / refraction_index_2
+        cos_theta2 = numpy.sqrt(1 - sin_theta2**2, dtype=numpy.complex)
 
-        rho = (numpy.sin(theta1))**2 - alpha
-        rho += numpy.sqrt((numpy.sin(theta1)**2 - alpha)**2 + gamma**2)
-        rho = numpy.sqrt(rho / 2)
 
-        rs1 = 4 * (rho**2) * (numpy.sin(theta1) - rho)**2 + gamma**2
-        rs2 = 4 * (rho**2) * (numpy.sin(theta1) + rho)**2 + gamma**2
-        rs = rs1 / rs2
+        if method == 0: # born & wolf
+            rs1 = refraction_index_2 * cos_theta1 - refraction_index_1 * cos_theta2
+            rs2 = refraction_index_2 * cos_theta1 + refraction_index_1 * cos_theta2
+            rs = rs1 / rs2
 
-        ratio1 = 4 * rho**2 * (rho * numpy.sin(theta1) - numpy.cos(theta1)**2)**2 + gamma**2 * numpy.sin(theta1)**2
-        ratio2 = 4 * rho**2 * (rho * numpy.sin(theta1) + numpy.cos(theta1)**2)**2 + gamma**2 * numpy.sin(theta1)**2
-        ratio = ratio1 / ratio2
+            rp1 = refraction_index_1 * cos_theta1 - refraction_index_2 * cos_theta2
+            rp2 = refraction_index_1 * cos_theta1 + refraction_index_2 * cos_theta2
+            rp = rp1 / rp2
 
-        rp = rs * ratio
-        runp = 0.5 * (rs + rp)
+        elif method == 1: # parratt
+            phi = theta1g
+            delta1 = 1.0 - numpy.real(refraction_index_1)
+            beta1 = numpy.imag(refraction_index_1)
+            delta2 = 1.0 - numpy.real(refraction_index_2)
+            beta2 = numpy.imag(refraction_index_2)
+            f1 = numpy.sqrt(phi ** 2 - 2 * delta1 - 2 * 1j * beta1, dtype=numpy.complex)
+            f2 = numpy.sqrt(phi ** 2 - 2 * delta2 - 2 * 1j * beta2, dtype=numpy.complex)
+            rs = (f1 - f2) / (f1 + f2)
+            rp = rs
+
+        elif method == 2:
+            # ; epsi = 1 - alpha - i gamma
+            # alpha = 2.0D0*k*f1
+            # gamma = 2.0D0*k*f2
+
+            alpha = 2 * (1.0 - refraction_index_2.real)
+            gamma = 2 * refraction_index_2.imag
+
+            rho = (numpy.sin(theta1g)) ** 2 - alpha
+            rho += numpy.sqrt((numpy.sin(theta1g) ** 2 - alpha) ** 2 + gamma ** 2)
+            rho = numpy.sqrt(rho / 2)
+
+            rs1 = 4 * (rho ** 2) * (numpy.sin(theta1g) - rho) ** 2 + gamma ** 2
+            rs2 = 4 * (rho ** 2) * (numpy.sin(theta1g) + rho) ** 2 + gamma ** 2
+            rs = rs1 / rs2
+
+            ratio1 = 4 * rho ** 2 * (rho * numpy.sin(theta1g) - numpy.cos(theta1g) ** 2) ** 2 + gamma ** 2 * numpy.sin(
+                theta1g) ** 2
+            ratio2 = 4 * rho ** 2 * (rho * numpy.sin(theta1g) + numpy.cos(theta1g) ** 2) ** 2 + gamma ** 2 * numpy.sin(
+                theta1g) ** 2
+            ratio = ratio1 / ratio2
+
+            rp = rs * ratio
+
+            rs = numpy.sqrt(rs, dtype=numpy.complex)
+            rp = numpy.sqrt(rp, dtype = numpy.complex)
+
+
 
         wavelength_m = codata.h * codata.c / codata.e / photon_energy_ev
 
-        debyewaller = numpy.exp( -(4.0 * numpy.pi * numpy.sin(theta1) * rough1 / (wavelength_m * 1e10))**2 )
+        debyewaller = numpy.exp( -(4.0 * numpy.pi * numpy.sin(theta1g) * rough1 / (wavelength_m * 1e10))**2 )
 
-        return rs*debyewaller, rp*debyewaller, runp*debyewaller
+        # runp = 0.5 * (rs + rp)
+        # return numpy.abs(rs)**2 * debyewaller, numpy.abs(rp)**2 * debyewaller, numpy.abs(runp)**2 * debyewaller
+
+        return rs * numpy.sqrt(debyewaller), rp * numpy.sqrt(debyewaller)
+
 
     #
     # this is copied (ans sligtly ceaned) from shadow3 python preprocessors
@@ -262,9 +344,15 @@ if __name__ == "__main__":
     #
 
 
+    prerefl_file = "Be5_30.dat"
+    PreRefl.prerefl(interactive=False, SYMBOL="Be", DENSITY=1.848, FILE=prerefl_file,
+                    E_MIN=5000.0, E_MAX=30000.0, E_STEP=100.0)
+
+
+
     a = PreRefl()
 
-    prerefl_file = "Be5_30.dat"
+
     a.read_preprocessor_file(prerefl_file)
 
     refraction_index = a.get_refraction_index(10000.0,verbose=True)
@@ -278,6 +366,9 @@ if __name__ == "__main__":
     a = PreRefl()
 
     prerefl_file = "Rh5_50.dat"
+    PreRefl.prerefl(interactive=False, SYMBOL="Be", DENSITY=1.848, FILE=prerefl_file,
+                    E_MIN=5000.0, E_MAX=50000.0, E_STEP=100.0)
+
     a.read_preprocessor_file(prerefl_file)
 
     Energy = numpy.linspace(5000.0,40000.0,100)
@@ -290,17 +381,24 @@ if __name__ == "__main__":
     #
     # scalar inputs
     #
+    process_phase = False
+    method = 2
 
     for ii,ee in enumerate(Energy):
-
-        rs, rp, rav = a.reflectivity_fresnel(grazing_angle_mrad=3.0,photon_energy_ev=ee,roughness_rms_A=0.0)
-
-        RS0[ii] = rs
-
-        rs, rp, rav = a.reflectivity_fresnel(grazing_angle_mrad=3.0,photon_energy_ev=ee,roughness_rms_A=5.0)
-
-        RS5[ii] = rs
-
+        if process_phase:
+            ss, pp = a.reflectivity_amplitudes_fresnel(grazing_angle_mrad=3.0, photon_energy_ev=ee,
+                                                       roughness_rms_A=0.0, method=method)
+            RS0[ii] = numpy.abs(ss)**2
+            ss, pp = a.reflectivity_amplitudes_fresnel(grazing_angle_mrad=3.0, photon_energy_ev=ee,
+                                                       roughness_rms_A=5.0, method=method)
+            RS5[ii] = numpy.abs(ss)**2
+        else:
+            rs, rp, rav = a.reflectivity_fresnel(grazing_angle_mrad=3.0,photon_energy_ev=ee,
+                                                 roughness_rms_A=0.0, method=method)
+            RS0[ii] = rs
+            rs, rp, rav = a.reflectivity_fresnel(grazing_angle_mrad=3.0,photon_energy_ev=ee,
+                                                 roughness_rms_A=5.0, method=method)
+            RS5[ii] = rs
 
     plot(Energy,RS0,Energy,RS5,ylog=True,legend=["no roughness","5A RMS roughness"],title="scalar inputs")
 
@@ -309,8 +407,18 @@ if __name__ == "__main__":
     # array inputs
 
     Grazing_angle = numpy.ones_like(Energy) * 3.0
-    rs0, rp0, rav0 = a.reflectivity_fresnel(grazing_angle_mrad=Grazing_angle, photon_energy_ev=Energy, roughness_rms_A=0.0)
-    rs1, rp1, rav1 = a.reflectivity_fresnel(grazing_angle_mrad=Grazing_angle, photon_energy_ev=Energy, roughness_rms_A=5.0)
 
-    plot(Energy, rs0, Energy, rs1, ylog=True, legend=["no roughness", "5A RMS roughness"],title="array inputs")
+    if process_phase:
+        rs0, rp0 = a.reflectivity_amplitudes_fresnel(grazing_angle_mrad=Grazing_angle, photon_energy_ev=Energy,
+                                                     roughness_rms_A=0.0)
+        rs1, rp1 = a.reflectivity_amplitudes_fresnel(grazing_angle_mrad=Grazing_angle, photon_energy_ev=Energy,
+                                                     roughness_rms_A=5.0)
+
+        plot(Energy, numpy.abs(rs0)**2, Energy, numpy.abs(rs1)**2, ylog=True, legend=["no roughness", "5A RMS roughness"], title="array inputs")
+
+    else:
+        rs0, rp0, rav0 = a.reflectivity_fresnel(grazing_angle_mrad=Grazing_angle, photon_energy_ev=Energy, roughness_rms_A=0.0)
+        rs1, rp1, rav1 = a.reflectivity_fresnel(grazing_angle_mrad=Grazing_angle, photon_energy_ev=Energy, roughness_rms_A=5.0)
+
+        plot(Energy, rs0, Energy, rs1, ylog=True, legend=["no roughness", "5A RMS roughness"],title="array inputs")
 

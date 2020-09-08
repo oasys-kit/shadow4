@@ -262,7 +262,7 @@ def example_branch_3(surface_shape_file, do_plot=True):
         plotxy(mirr1s3, 2, 1, title="Footprint 1", nbins=101, nolost=1)
 
 
-def example_branch_4(do_plot=True):
+def example_branch_4(do_plot=True, f_refl=0):
 
 
     #
@@ -276,6 +276,7 @@ def example_branch_4(do_plot=True):
                  sigmaXprime=1e-6,
                  sigmaZprime=1e-6,)
     beam0 = Beam()
+    numpy.random.seed(123456)
     beam0.genSource(source)
     beam0.set_photon_wavelength(5e-10)
     print(beam0.info())
@@ -314,8 +315,27 @@ def example_branch_4(do_plot=True):
     #
     # shadow definitions
     #
-    mirror1 = Mirror(beamline_element_syned=beamline_element_syned,
-                     f_reflec=1, f_refl=0, file_refl="SiC.dat")
+    if f_refl == 0: # prerefl
+        from shadow4.physical_models.prerefl.prerefl import PreRefl
+        PreRefl.prerefl(interactive=False, SYMBOL="SiC", DENSITY=3.217, FILE="SiC.dat",
+                        E_MIN=100.0, E_MAX=20000.0, E_STEP=100.0)
+        mirror1 = Mirror(beamline_element_syned=beamline_element_syned,
+                         f_reflec=1, f_refl=f_refl, file_refl="SiC.dat")
+    elif f_refl == 1: # refraction index
+        import xraylib
+        refraction_index = xraylib.Refractive_Index("SiC", 2.4797, 3.217)
+        mirror1 = Mirror(beamline_element_syned=beamline_element_syned,
+                         f_reflec=1, f_refl=f_refl, file_refl="", refraction_index=refraction_index)
+    elif f_refl == 2:  # user file: 1D  vs angle
+        mirror1 = Mirror(beamline_element_syned=beamline_element_syned,
+                         f_reflec=1, f_refl=f_refl, file_refl="../../oasys_workspaces/xoppy_f1f2_139980555361648.dat")
+    elif f_refl == 3:  # user file 1D vs energy
+        mirror1 = Mirror(beamline_element_syned=beamline_element_syned,
+                         f_reflec=1, f_refl=f_refl, file_refl="../../oasys_workspaces/xoppy_f1f2_139981943656272.dat")
+    elif f_refl == 4:  # user file
+        mirror1 = Mirror(beamline_element_syned=beamline_element_syned,
+                         f_reflec=1, f_refl=f_refl, file_refl="../../oasys_workspaces/xoppy_f1f2_139980938100080.dat")
+
     print(mirror1.info())
 
     #
@@ -449,9 +469,11 @@ if __name__ == "__main__":
     # example_branch_2(do_plot=do_plot) # toroid
     # example_branch_3("../../oasys_workspaces/test_shadow4.hdf5",do_plot=do_plot) # mesh
 
-    from shadow4.physical_models.prerefl.prerefl import PreRefl
-    PreRefl.prerefl(interactive=False, SYMBOL="SiC", DENSITY=3.217, FILE="SiC.dat", E_MIN=100.0, E_MAX=20000.0, E_STEP=100.0)
-    example_branch_4(do_plot=do_plot) # prerefl
+    example_branch_4(do_plot=do_plot,f_refl=0) # prerefl
+    example_branch_4(do_plot=do_plot, f_refl=1)  # refraction index
+    example_branch_4(do_plot=do_plot, f_refl=2)  # user file 1D, angle[mrad], reflectivity
+    example_branch_4(do_plot=do_plot, f_refl=3)  # user file 1D, angle[mrad], reflectivity
+    example_branch_4(do_plot=do_plot, f_refl=4)  # user file 2D, energy [eV], angle[mrad], reflectivity
 
     # for myconicshape in ["plane", \
     #                      "sphere", "spherical_cylinder_tangential", "spherical_cylinder_sagittal", \

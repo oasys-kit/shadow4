@@ -21,21 +21,41 @@ class Mirror(object):
 
     def __init__(self, beamline_element_syned=None,
                  f_reflec=0, # reflectivity of surface: 0=no reflectivity, 1=full polarization
-                 f_refl=0,   # 0=prerefl file, 1=electric susceptibility
+                 f_refl=0,   # 0=prerefl file
+                             # 1=electric susceptibility
                              # 2=user defined file (1D reflectivity vs angle)
                              # 3=user defined file (1D reflectivity vs energy)
                              # 4=user defined file (2D reflectivity vs energy and angle)
-                file_refl="", # preprocessor file
+                file_refl="", # preprocessor file fir f_refl=0,2,3,4
+                refraction_index=1.0, # refraction index (complex) for f_refl=1
                  ):
+        """
+
+        Parameters
+        ----------
+        beamline_element_syned
+        f_reflec
+                reflectivity of surface: 0=no reflectivity, 1=full polarization
+        f_refl
+                0=prerefl file
+                1=electric susceptibility
+                2=user defined file (1D angle in mrad, reflectivity)
+                3=user defined file (1D energy in eV, reflectivity)
+                4=user defined file (2D energy in eV, angle in mrad, reflectivity)
+        file_refl
+                name if user defined file
+        refraction_index
+                complex scalar with refraction index n (for f_refl=1)
+        """
 
         self._f_reflec = f_reflec
         self._f_refl = f_refl
         self._file_refl = file_refl
 
-
+        self._refraction_index = refraction_index
 
         if f_reflec not in [0,1]: raise NotImplementedError
-        if f_refl not in [0]: raise NotImplementedError
+        if f_refl not in [0,1,2,3,4]: raise NotImplementedError
 
 
 
@@ -190,8 +210,6 @@ class Mirror(object):
         # TODO: add phase
         #
 
-        coating = self._beamline_element_syned.get_optical_element()._coating
-        print(">>>>>>>>>>>>>>>>>> COATING: ", coating)
         if self._f_reflec == 0:
             pass
         elif self._f_reflec == 1: # full polarization
@@ -208,7 +226,6 @@ class Mirror(object):
 
             if self._f_refl == 0: # prerefl
                 prerefl_file = self._file_refl
-                print(">>>>>>>>>>> PREREFL FILE", prerefl_file)
                 pr = PreRefl()
                 pr.read_preprocessor_file(prerefl_file)
                 print(pr.info())
@@ -218,130 +235,85 @@ class Mirror(object):
                                                      roughness_rms_A=0.0)
 
             elif self._f_refl == 1:  # alpha, gamma, electric susceptibilities
-                raise Exception("Not implemented f_refl == 1")
-                # ! C
-                # ! C Computes the optical coefficients.
-                # ! C
-                # COS_REF =  SQRT(1.0D0 - SIN_REF**2)
-                # RHO  =   SIN_REF**2 - ALFA
-                # RHO  =   RHO + SQRT ((SIN_REF**2 - ALFA)**2 + gamma1**2)
-                # RHO  =   SQRT(RHO/2)
-                # ! C
-                # ! C Computes now the reflectivities
-                # ! C
-                # RS1  =   4*(RHO**2)*(ABS(SIN_REF)-RHO)**2 + gamma1**2
-                # RS2  =   4*(RHO**2)*(ABS(SIN_REF)+RHO)**2 + gamma1**2
-                # R_S  =   RS1/RS2
-                # ! C
-                # ! C Computes now the polarization ratio
-                # ! C
-                # RATIO1  =   4*RHO**2*(RHO*ABS(SIN_REF)-COS_REF**2)**2 + &
-                # gamma1**2*SIN_REF**2
-                # RATIO2  =   4*RHO**2*(RHO*ABS(SIN_REF)+COS_REF**2)**2 + &
-                # gamma1**2*SIN_REF**2
-                # RATIO  =   RATIO1/RATIO2
-                # ! C
-                # ! C The reflectivity for p light will be
-                # ! C
-                # R_P  =   R_S*RATIO
-                # R_S  =   SQRT(R_S)
-                # R_P  =   SQRT(R_P)
+                Rs, Rp, Ru = self.reflectivity_fresnel(self._refraction_index , grazing_angle_mrad=grazing_angle_mrad)
 
-            elif self._f_refl == 2:  # user angle
-                raise Exception("Not implemented f_refl == 2")
+            elif self._f_refl == 2:  # user angle, mrad ref
+                # raise Exception("Not implemented f_refl == 2")
 
-               # if self.user_defined_file_type == 0: # angle vs refl.
-               #      values = numpy.loadtxt(os.path.abspath(os.path.curdir + "/angle." +
-               #                                             ("0" + str(input_beam._oe_number) if (input_beam._oe_number < 10) else
-               #                                              str(input_beam._oe_number))))
-               #
-               #      beam_incident_angles = 90.0 - values[:, 1]
-               #
-               #      values = numpy.loadtxt(os.path.abspath(self.file_reflectivity) if self.file_reflectivity.startswith('/') else
-               #                             os.path.abspath(os.path.curdir + "/" + self.file_reflectivity))
-               #
-               #      mirror_grazing_angles = values[:, 0]
-               #      mirror_reflectivities = values[:, 1]
-               #
-               #      if mirror_grazing_angles[-1] < mirror_grazing_angles[0]: # XOPPY MLayer gives angles in descendent order
-               #          mirror_grazing_angles = values[:, 0][::-1]
-               #          mirror_reflectivities = values[:, 1][::-1]
-               #
-               #      if self.user_defined_angle_units == 0: mirror_grazing_angles = numpy.degrees(1e-3*mirror_grazing_angles) # mrad to deg
-               #
-               #      interpolated_weight_s = numpy.sqrt(numpy.interp(beam_incident_angles,
-               #                                                      mirror_grazing_angles,
-               #                                                      mirror_reflectivities,
-               #                                                      left=mirror_reflectivities[0],
-               #                                                      right=mirror_reflectivities[-1]))
-               #      interpolated_weight_p = interpolated_weight_s
+                # values = numpy.loadtxt(self._file_refl)
+                #
+                # beam_incident_angles = 90.0 - values[:, 1]
+
+                values = numpy.loadtxt(self._file_refl)
+
+                mirror_grazing_angles = values[:, 0]
+                mirror_reflectivities = values[:, 1]
+
+                if mirror_grazing_angles[-1] < mirror_grazing_angles[0]: # XOPPY MLayer gives angles in descendent order
+                    mirror_grazing_angles = values[:, 0][::-1]
+                    mirror_reflectivities = values[:, 1][::-1]
+
+                # mirror_grazing_angles = numpy.degrees(1e-3*mirror_grazing_angles) # mrad to deg
+
+                Rs = numpy.interp(grazing_angle_mrad,
+                                                    mirror_grazing_angles,
+                                                    mirror_reflectivities,
+                                                    left=mirror_reflectivities[0],
+                                                    right=mirror_reflectivities[-1])
+                Rp = Rs
+
 
             elif self._f_refl == 3:  # user energy
-                raise Exception("Not implemented f_refl == 3")
 
-                # elif self.user_defined_file_type == 1: # Energy vs Refl.
-                #     beam_energies = ShadowPhysics.getEnergyFromShadowK(input_beam._beam.rays[:, 10])
-                #
-                #     values = numpy.loadtxt(os.path.abspath(os.path.abspath(self.file_reflectivity)  if self.file_reflectivity.startswith('/') else
-                #                                            os.path.abspath(os.path.curdir + "/" + self.file_reflectivity)))
-                #
-                #     mirror_energies = values[:, 0]
-                #     mirror_reflectivities = values[:, 1]
-                #
-                #     if self.user_defined_energy_units == 1: mirror_energies *= 1e3 # KeV to eV
-                #
-                #     interpolated_weight_s = numpy.sqrt(numpy.interp(beam_energies,
-                #                                                     mirror_energies,
-                #                                                     mirror_reflectivities,
-                #                                                     left=mirror_reflectivities[0],
-                #                                                     right=mirror_reflectivities[-1]))
-                #     interpolated_weight_p = interpolated_weight_s
+                beam_energies = beam.get_photon_energy_eV()
+
+                values = numpy.loadtxt(self._file_refl)
+
+                mirror_energies = values[:, 0]
+                mirror_reflectivities = values[:, 1]
+
+                Rs = numpy.interp(beam_energies,
+                                                mirror_energies,
+                                                mirror_reflectivities,
+                                                left=mirror_reflectivities[0],
+                                                right=mirror_reflectivities[-1])
+                Rp = Rs
 
             elif self._f_refl == 4:  # user 2D
-                raise Exception("Not implemented f_refl == 4")
+                values = numpy.loadtxt(self._file_refl)
 
-                # elif self.user_defined_file_type == 2: # 2D Energy vs Angle vs Reflectivity
-                #     values = numpy.loadtxt(os.path.abspath(os.path.curdir + "/angle." +
-                #                                            ("0" + str(input_beam._oe_number) if (input_beam._oe_number < 10) else
-                #                                             str(input_beam._oe_number))))
-                #
-                #     beam_incident_angles = 90.0 - values[:, 1]
-                #
-                #     beam_energies = ShadowPhysics.getEnergyFromShadowK(input_beam._beam.rays[:, 10])
-                #
-                #     values = numpy.loadtxt(os.path.abspath(os.path.abspath(self.file_reflectivity)  if self.file_reflectivity.startswith('/') else
-                #                                            os.path.abspath(os.path.curdir + "/" + self.file_reflectivity)))
-                #
-                #     mirror_energies       = values[:, 0]
-                #     mirror_grazing_angles = values[:, 1]
-                #     mirror_energies         = numpy.unique(mirror_energies)
-                #     mirror_grazing_angles   = numpy.unique(mirror_grazing_angles)
-                #     if self.user_defined_angle_units  == 0: mirror_grazing_angles = numpy.degrees(1e-3*mirror_grazing_angles)
-                #     if self.user_defined_energy_units == 1: mirror_energies *= 1e3 # KeV to eV
-                #
-                #     def get_interpolator_weight_2D(mirror_energies, mirror_grazing_angles, mirror_reflectivities):
-                #         mirror_reflectivities = numpy.reshape(mirror_reflectivities, (mirror_energies.shape[0], mirror_grazing_angles.shape[0]))
-                #
-                #         interpolator = RectBivariateSpline(mirror_energies, mirror_grazing_angles, mirror_reflectivities, kx=2, ky=2)
-                #
-                #         interpolated_weight = numpy.zeros(beam_energies.shape[0])
-                #         for energy, angle, i in zip(beam_energies, beam_incident_angles, range(interpolated_weight.shape[0])):
-                #             interpolated_weight[i] = numpy.sqrt(interpolator(energy, angle))
-                #         interpolated_weight[numpy.where(numpy.isnan(interpolated_weight))] = 0.0
-                #
-                #         return interpolated_weight
-                #
-                #     if values.shape[1] == 3:
-                #         mirror_reflectivities = values[:, 2]
-                #
-                #         interpolated_weight_s = get_interpolator_weight_2D(mirror_energies, mirror_grazing_angles, mirror_reflectivities)
-                #         interpolated_weight_p = interpolated_weight_s
-                #     elif values.shape[1] == 4:
-                #         mirror_reflectivities_s = values[:, 2]
-                #         mirror_reflectivities_p = values[:, 3]
-                #
-                #         interpolated_weight_s = get_interpolator_weight_2D(mirror_energies, mirror_grazing_angles, mirror_reflectivities_s)
-                #         interpolated_weight_p = get_interpolator_weight_2D(mirror_energies, mirror_grazing_angles, mirror_reflectivities_p)
+                beam_energies = beam.get_photon_energy_eV()
+
+                mirror_energies       = values[:, 0]
+                mirror_grazing_angles = values[:, 1]
+                mirror_energies         = numpy.unique(mirror_energies)
+                mirror_grazing_angles   = numpy.unique(mirror_grazing_angles)
+                # if self.user_defined_angle_units  == 0: mirror_grazing_angles = numpy.degrees(1e-3*mirror_grazing_angles)
+                # if self.user_defined_energy_units == 1: mirror_energies *= 1e3 # KeV to eV
+
+                def get_interpolator_weight_2D(mirror_energies, mirror_grazing_angles, mirror_reflectivities):
+                    mirror_reflectivities = numpy.reshape(mirror_reflectivities, (mirror_energies.shape[0], mirror_grazing_angles.shape[0]))
+                    from scipy.interpolate import  RectBivariateSpline
+                    interpolator = RectBivariateSpline(mirror_energies, mirror_grazing_angles, mirror_reflectivities, kx=2, ky=2)
+
+                    interpolated_weight = numpy.zeros(beam_energies.shape[0])
+                    for energy, angle, i in zip(beam_energies, grazing_angle_mrad, range(interpolated_weight.shape[0])):
+                        interpolated_weight[i] = interpolator(energy, angle)
+                    interpolated_weight[numpy.where(numpy.isnan(interpolated_weight))] = 0.0
+
+                    return interpolated_weight
+
+                if values.shape[1] == 3:
+                    mirror_reflectivities = values[:, 2]
+
+                    Rs = get_interpolator_weight_2D(mirror_energies, mirror_grazing_angles, mirror_reflectivities)
+                    Rp = Rs
+                elif values.shape[1] == 4:
+                    mirror_reflectivities_s = values[:, 2]
+                    mirror_reflectivities_p = values[:, 3]
+
+                    Rs = get_interpolator_weight_2D(mirror_energies, mirror_grazing_angles, mirror_reflectivities_s)
+                    Rp = get_interpolator_weight_2D(mirror_energies, mirror_grazing_angles, mirror_reflectivities_p)
 
             else:
                 raise Exception("Not implemented source of mirror reflectivity")
@@ -387,7 +359,34 @@ class Mirror(object):
         self._beamline_element_syned._optical_element._boundary_shape = \
             Rectangle(x_left=x_left, x_right=x_right, y_bottom=y_bottom, y_top=y_top)
 
+    @classmethod
+    def reflectivity_fresnel(cls,refraction_index, grazing_angle_mrad=3.0, debyewaller=1.0):
+        theta1 = grazing_angle_mrad * 1e-3     # in rad
 
+        alpha = 2 * (1.0 - refraction_index.real)
+        gamma = 2 * refraction_index.imag
+
+        rho = (numpy.sin(theta1))**2 - alpha
+        rho += numpy.sqrt((numpy.sin(theta1)**2 - alpha)**2 + gamma**2)
+        rho = numpy.sqrt(rho / 2)
+
+        rs1 = 4 * (rho**2) * (numpy.sin(theta1) - rho)**2 + gamma**2
+        rs2 = 4 * (rho**2) * (numpy.sin(theta1) + rho)**2 + gamma**2
+        rs = rs1 / rs2
+
+        ratio1 = 4 * rho**2 * (rho * numpy.sin(theta1) - numpy.cos(theta1)**2)**2 + gamma**2 * numpy.sin(theta1)**2
+        ratio2 = 4 * rho**2 * (rho * numpy.sin(theta1) + numpy.cos(theta1)**2)**2 + gamma**2 * numpy.sin(theta1)**2
+        ratio = ratio1 / ratio2
+
+        rp = rs * ratio
+        runp = 0.5 * (rs + rp)
+
+        # import scipy.constants as codata
+        # wavelength_m = codata.h * codata.c / codata.e / photon_energy_ev
+        # rough1 = roughness_rms_A
+        # debyewaller = numpy.exp( -(4.0 * numpy.pi * numpy.sin(theta1) * rough1 / (wavelength_m * 1e10))**2 )
+
+        return rs*debyewaller, rp*debyewaller, runp*debyewaller
 
 if __name__ == "__main__":
     pass
