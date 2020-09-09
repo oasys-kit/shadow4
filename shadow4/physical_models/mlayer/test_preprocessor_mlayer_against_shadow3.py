@@ -7,7 +7,8 @@ from numpy.testing import assert_almost_equal
 import os
 
 from shadow4.compatibility.global_definitions import SHADOW3_BINARY
-DO_PLOTS = True
+
+DO_PLOTS = False
 COMPARE_WITH_SHADOW3  = True
 
 
@@ -224,7 +225,7 @@ def test_no_preprocessor():
         f.write("pre_mlayer_scan\npre_mlayer.dat\n1\n600\n8050\n0.0\n6.0\nexit\n")
         f.close()
 
-        os.system(SHADOW3_PATH+" < shadow3.inp")
+        os.system(SHADOW3_BINARY+" < shadow3.inp")
 
         s3 = numpy.loadtxt("pre_mlayer_scan.dat",skiprows=5)
         print(s3.shape)
@@ -260,30 +261,29 @@ def test_xoppy():
     myscan = 0
     from srxraylib.plot.gol import plot, plot_image
 
-    if myscan == 0:  # angle scan
-        plot(t, rs[0], xtitle="angle [deg]", ytitle="Reflectivity-s", title="")
-    elif myscan == 1:  # energy scan
-        plot(e, rs[:, 0], xtitle="Photon energy [eV]", ytitle="Reflectivity-s", title="")
-    elif myscan == 2:  # double scan
-        plot_image(rs, e, t, xtitle="Photon energy [eV]", ytitle="Grazing angle [deg]", title="Reflectivity-s",
-                   aspect="auto")
+    if DO_PLOTS:
+        if myscan == 0:  # angle scan
+            plot(t, rs[0], xtitle="angle [deg]", ytitle="Reflectivity-s", title="")
+        elif myscan == 1:  # energy scan
+            plot(e, rs[:, 0], xtitle="Photon energy [eV]", ytitle="Reflectivity-s", title="")
+        elif myscan == 2:  # double scan
+            plot_image(rs, e, t, xtitle="Photon energy [eV]", ytitle="Grazing angle [deg]", title="Reflectivity-s",
+                       aspect="auto")
 
 
 if __name__ == "__main__":
+    DO_PLOTS = False
 
-    #
-    # test_xoppy_defauls()
-    #
     from srxraylib.plot.gol import set_qt
     set_qt()
 
     test_xoppy_defauls()
 
-    # test_aw1()
-    # #
-    # test_substrate()
-    #
-    # test_no_preprocessor()
-    #
-    # test_xoppy()
+    test_aw1()
+
+    test_substrate()
+
+    test_no_preprocessor()
+
+    test_xoppy()
 
