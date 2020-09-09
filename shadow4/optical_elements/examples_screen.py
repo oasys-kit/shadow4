@@ -30,7 +30,7 @@ def get_sigmas_radiation(photon_energy,undulator_length):
     return 1e6*2.740/4/numpy.pi*numpy.sqrt(lambdan*undulator_length),1e6*0.69*numpy.sqrt(lambdan/undulator_length)
 
 
-def test_screen(do_plot=True):
+def example_screen(do_plot=True):
 
     #
     # collimated source
@@ -80,7 +80,7 @@ def test_screen(do_plot=True):
         plotxy(beam3,1,3,nbins=100,title="SCREEN")
 
 
-def test_slit(do_plot=True):
+def example_slit(do_plot=True):
 
     src = SourceGaussian.initialize_collimated_source(number_of_rays=10000,sigmaX=1e-6,sigmaZ=1e-6)
     beam = src.get_beam()
@@ -118,7 +118,7 @@ def test_slit(do_plot=True):
 
 
 
-def test_beam_stopper(do_plot=True):
+def example_beam_stopper(do_plot=True):
 
     src = SourceGaussian.initialize_collimated_source(number_of_rays=10000,sigmaX=1e-6,sigmaZ=1e-6)
     beam = src.get_beam()
@@ -155,7 +155,7 @@ def test_beam_stopper(do_plot=True):
         plotxy(beam3,1,3,nbins=100,title="BEAM STOPPER", nolost=True)
 
 
-def test_filter(do_plot=True):
+def example_filter(do_plot=True):
 
     src = SourceGaussian.initialize_collimated_source(number_of_rays=10000,sigmaX=1e-6,sigmaZ=1e-6)
     beam = src.get_beam()
@@ -170,7 +170,7 @@ def test_filter(do_plot=True):
     boundary_shape = None # Rectangle(x_left=-0.5e-6, x_right=0.5e-6, y_bottom=-0.5e-6, y_top=0.5e-6)
 
     syfilter1 = SyFilter(name="Undefined",boundary_shape=boundary_shape,
-                         material="Be.dat",
+                         material="",
                          thickness=10e-6
                          )
 
@@ -178,7 +178,11 @@ def test_filter(do_plot=True):
 
     beamline_element_syned = BeamlineElement(optical_element=syfilter1, coordinates=coordinates_syned)
 
-    filter1 = Screen(beamline_element_syned=beamline_element_syned)
+    # from Shadow.ShadowPreprocessorsXraylib import prerefl
+    from shadow4.physical_models.prerefl.prerefl import PreRefl
+    PreRefl.prerefl(interactive=False, SYMBOL="Be", DENSITY=1.848, FILE="Be.dat", E_MIN=100.0, E_MAX=20000.0, E_STEP=100.0)
+
+    filter1 = Screen(beamline_element_syned=beamline_element_syned, i_abs=True, file_abs="Be.dat", thick=10e-6)
 
     print(filter1.info())
 
@@ -194,9 +198,9 @@ def test_filter(do_plot=True):
         beam3 = Beam3.initialize_from_shadow4_beam(beam2)
         plotxy(beam3,1,3,nbins=100,title="FILTER", nolost=True)
 
+    print("Intensity: ", beam2.intensity())
 
-
-def test_holed_filter(do_plot=True):
+def example_holed_filter(do_plot=True):
 
     src = SourceGaussian.initialize_collimated_source(number_of_rays=10000,sigmaX=1e-6,sigmaZ=1e-6)
     beam = src.get_beam()
@@ -240,12 +244,10 @@ if __name__ == "__main__":
     from srxraylib.plot.gol import set_qt
     set_qt()
 
-    test_screen(do_plot=True)
-    test_slit(do_plot=True)
-    test_beam_stopper(do_plot=True)
+    example_screen(do_plot=True)
+    example_slit(do_plot=True)
+    example_beam_stopper(do_plot=True)
 
-    # from Shadow.ShadowPreprocessorsXraylib import prerefl
-    from shadow4.physical_models.prerefl.prerefl import PreRefl
-    PreRefl.prerefl(interactive=False, SYMBOL="Be", DENSITY=1.848, FILE="Be.dat", E_MIN=100.0, E_MAX=20000.0, E_STEP=100.0)
-    test_filter(do_plot=True)
-    test_holed_filter(do_plot=True)
+
+    example_filter(do_plot=True)
+    example_holed_filter(do_plot=True)

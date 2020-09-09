@@ -23,7 +23,16 @@ from shadow4.syned.shape import Rectangle, Ellipse, TwoEllipses, MultiplePatch #
 from shadow4.physical_models.prerefl.prerefl import PreRefl
 
 class Screen(object):
-    def __init__(self, beamline_element_syned = None):
+    def __init__(self, beamline_element_syned = None,
+                 i_abs=False, # include absorption
+                 thick=0.0, # thickness of the absorber (in SI)
+                 file_abs="", # if i_abs=True, the material file (from prerefl)
+                ):
+
+        self._i_abs = i_abs
+        self._thick = thick
+        self._file_abs = file_abs
+
         if beamline_element_syned is None:
             self._beamline_element_syned = BeamlineElement(
                 SyScreen(name="Undefined"),
@@ -63,23 +72,18 @@ class Screen(object):
 
         if isinstance(self._beamline_element_syned._optical_element, SyScreen):
             apply_crop = False
-            apply_attenuation = False
         elif isinstance(self._beamline_element_syned._optical_element, SySlit):
             apply_crop = True
             negative = False
-            apply_attenuation = False
         elif isinstance(self._beamline_element_syned._optical_element, SyBeamStopper):
             apply_crop = True
             negative = True
-            apply_attenuation = False
         elif isinstance(self._beamline_element_syned._optical_element, SyFilter):
             apply_crop = True
             negative = False
-            apply_attenuation = True
         elif isinstance(self._beamline_element_syned._optical_element, SyHoledFilter):
             apply_crop = True
             negative = True
-            apply_attenuation = True
 
         if apply_crop:
             shape = self._beamline_element_syned._optical_element.get_boundary_shape()
@@ -117,18 +121,19 @@ class Screen(object):
                 raise Exception("Undefined slit shape")
 
 
-        if apply_attenuation:
-            material = self._beamline_element_syned._optical_element.get_material()
-            thickness = self._beamline_element_syned._optical_element.get_thickness()
+        if self._i_abs:
 
-            if material is not None:
+            thickness = self._thick
+            # the thickness in Filter syned is ignored. TODO: discuss it it could overwrite
+            # thickness = self._beamline_element_syned._optical_element.get_thickness()
+
+            if self._file_abs != "":
                 try:
-                    prerefl_file = material
                     pr = PreRefl()
-                    pr.read_preprocessor_file(prerefl_file)
+                    pr.read_preprocessor_file(self._file_abs)
                     print(pr.info())
                 except:
-                    raise Exception("the syned material in filter definition must contain the prerefl preprocessor file")
+                    raise Exception("Failed to load preprocessor (prerefl) file %s " % self._file_abs)
 
                 energy = beam.get_column(26)
                 # tmp = pr.get_attenuation_coefficient(energy[0],verbose=1)
