@@ -67,12 +67,6 @@ def example_branch_1(do_plot=True):
     #     a1_axis_min=-rwidx1 / 2, a1_axis_max=rwidx1 / 2, b1_axis_min=-rlen1 / 2, b1_axis_max=rlen1 / 2,
     #     a2_axis_min=-rwidx2 / 2, a2_axis_max=rwidx2 / 2, b2_axis_min=-rlen2 / 2, b2_axis_max=rlen2 / 2)
 
-    symirror1 = SyMirror(
-                name="M1",
-                surface_shape=surface_shape,
-                boundary_shape=boundary_shape,
-                coating=None,
-                coating_thickness=None)
 
     coordinates_syned = ElementCoordinates(p = 10.0,
                                            q = 6.0,
@@ -81,7 +75,10 @@ def example_branch_1(do_plot=True):
     #
     # shadow definitions
     #
-    mirror1 = Mirror(optical_element_syned=symirror1, element_coordinates_syned=coordinates_syned)
+    mirror1 = Mirror( name="M1",
+                surface_shape_syned=surface_shape,
+                boundary_shape_syned=boundary_shape,
+                element_coordinates_syned=coordinates_syned)
     print(mirror1.info())
 
     #
@@ -144,12 +141,6 @@ def example_branch_2(do_plot=True):
     # boundaries
     boundary_shape = None #Rectangle(x_left=-rwidx2,x_right=rwidx1,y_bottom=-rlen2,y_top=rlen1)
 
-    symirror1 = SyMirror(
-                name="M1",
-                surface_shape=surface_shape,
-                boundary_shape=boundary_shape,
-                coating=None,
-                coating_thickness=None)
 
     coordinates_syned = ElementCoordinates(p = 10.0,
                                            q = 6.0,
@@ -158,7 +149,10 @@ def example_branch_2(do_plot=True):
     #
     # shadow definitions
     #
-    mirror1 = Mirror(optical_element_syned=symirror1, element_coordinates_syned=coordinates_syned)
+    mirror1 = Mirror(name="M1",
+                surface_shape_syned=surface_shape,
+                boundary_shape_syned=boundary_shape,
+                element_coordinates_syned=coordinates_syned)
     print(mirror1.info())
 
     #
@@ -218,15 +212,8 @@ def example_branch_3(surface_shape_file, do_plot=True):
     rlen2 = 0.6
     rwidx1 = 0.05
     rwidx2 = 0.05
+
     boundary_shape = Rectangle(x_left=-rwidx2,x_right=rwidx1,y_bottom=-rlen2,y_top=rlen1)
-
-
-    symirror1 = SyMirror(
-                name="M1",
-                surface_shape=surface_shape,
-                boundary_shape=boundary_shape,
-                coating=None,
-                coating_thickness=None)
 
     coordinates_syned = ElementCoordinates(p = 100.0,
                                            q = 1000.0,
@@ -235,7 +222,10 @@ def example_branch_3(surface_shape_file, do_plot=True):
     #
     # shadow definitions
     #
-    mirror1 = Mirror(optical_element_syned=symirror1, element_coordinates_syned=coordinates_syned)
+    mirror1 = Mirror(name="M1",
+                surface_shape_syned=surface_shape,
+                boundary_shape_syned=boundary_shape,
+                element_coordinates_syned=coordinates_syned)
     print(mirror1.info())
 
     #
@@ -292,13 +282,6 @@ def example_branch_4(do_plot=True, f_refl=0):
     rwidx2 = 2e-05
     boundary_shape = Rectangle(x_left=-rwidx2,x_right=rwidx1,y_bottom=-rlen2,y_top=rlen1)
 
-    symirror1 = SyMirror(
-                name="M1",
-                surface_shape=surface_shape,
-                boundary_shape=boundary_shape,
-                coating=None, # "SiC.dat",
-                coating_thickness=None)
-
     coordinates_syned = ElementCoordinates(p = 10.0,
                                            q = 6.0,
                                            angle_radial = 88.8 * numpy.pi / 180,)
@@ -311,22 +294,37 @@ def example_branch_4(do_plot=True, f_refl=0):
         from shadow4.physical_models.prerefl.prerefl import PreRefl
         PreRefl.prerefl(interactive=False, SYMBOL="SiC", DENSITY=3.217, FILE="SiC.dat",
                         E_MIN=100.0, E_MAX=20000.0, E_STEP=100.0)
-        mirror1 = Mirror(optical_element_syned=symirror1, element_coordinates_syned=coordinates_syned,
-                         f_reflec=1, f_refl=f_refl, file_refl="SiC.dat")
+        mirror1 = Mirror(name="M1",
+                        surface_shape_syned=surface_shape,
+                        boundary_shape_syned=boundary_shape,
+                        element_coordinates_syned=coordinates_syned,
+                        f_reflec=1, f_refl=f_refl, file_refl="SiC.dat")
     elif f_refl == 1: # refraction index
         import xraylib
         refraction_index = xraylib.Refractive_Index("SiC", 2.4797, 3.217)
-        mirror1 = Mirror(optical_element_syned=symirror1, element_coordinates_syned=coordinates_syned,
-                         f_reflec=1, f_refl=f_refl, file_refl="", refraction_index=refraction_index)
+        mirror1 = Mirror(name="M1",
+                        surface_shape_syned=surface_shape,
+                        boundary_shape_syned=boundary_shape,
+                        element_coordinates_syned=coordinates_syned,
+                        f_reflec=1, f_refl=f_refl, file_refl="", refraction_index=refraction_index)
     elif f_refl == 2:  # user file: 1D  vs angle
-        mirror1 = Mirror(optical_element_syned=symirror1, element_coordinates_syned=coordinates_syned,
-                         f_reflec=1, f_refl=f_refl, file_refl="../../oasys_workspaces/xoppy_f1f2_139980555361648.dat")
+        mirror1 = Mirror(name="M1",
+                        surface_shape_syned=surface_shape,
+                        boundary_shape_syned=boundary_shape,
+                        element_coordinates_syned=coordinates_syned,
+                        f_reflec=1, f_refl=f_refl, file_refl="../../oasys_workspaces/xoppy_f1f2_139980555361648.dat")
     elif f_refl == 3:  # user file 1D vs energy
-        mirror1 = Mirror(optical_element_syned=symirror1, element_coordinates_syned=coordinates_syned,
-                         f_reflec=1, f_refl=f_refl, file_refl="../../oasys_workspaces/xoppy_f1f2_139981943656272.dat")
+        mirror1 = Mirror(name="M1",
+                        surface_shape_syned=surface_shape,
+                        boundary_shape_syned=boundary_shape,
+                        element_coordinates_syned=coordinates_syned,
+                        f_reflec=1, f_refl=f_refl, file_refl="../../oasys_workspaces/xoppy_f1f2_139981943656272.dat")
     elif f_refl == 4:  # user file
-        mirror1 = Mirror(optical_element_syned=symirror1, element_coordinates_syned=coordinates_syned,
-                         f_reflec=1, f_refl=f_refl, file_refl="../../oasys_workspaces/xoppy_f1f2_139980938100080.dat")
+        mirror1 = Mirror(name="M1",
+                        surface_shape_syned=surface_shape,
+                        boundary_shape_syned=boundary_shape,
+                        element_coordinates_syned=coordinates_syned,
+                        f_reflec=1, f_refl=f_refl, file_refl="../../oasys_workspaces/xoppy_f1f2_139980938100080.dat")
 
     print(mirror1.info())
 
@@ -373,7 +371,6 @@ def example_branch_5(surface_type, do_plot=True):
     elif surface_type == "sphere":
         surface_shape = Sphere()
         surface_shape.initialize_from_p_q(10.0, 10.0, grazing_angle=(90.0 - 88.8) * numpy.pi / 180)
-        print(">>><<<<>>><<<", surface_shape.info())
     elif surface_type == "spherical_cylinder_tangential":
         surface_shape = SphericalCylinder()
         surface_shape.set_direction_tangential()
@@ -412,12 +409,6 @@ def example_branch_5(surface_type, do_plot=True):
     # boundaries
     boundary_shape = None
 
-    symirror1 = SyMirror(
-                name="M1",
-                surface_shape=surface_shape,
-                boundary_shape=boundary_shape,
-                coating=None,
-                coating_thickness=None)
 
     coordinates_syned = ElementCoordinates(p = 10.0,
                                            q = 10.0,
@@ -426,7 +417,10 @@ def example_branch_5(surface_type, do_plot=True):
     #
     # shadow definitions
     #
-    mirror1 = Mirror(optical_element_syned=symirror1, element_coordinates_syned=coordinates_syned)
+    mirror1 = Mirror(name="M1",
+                surface_shape_syned=surface_shape,
+                boundary_shape_syned=boundary_shape,
+                element_coordinates_syned=coordinates_syned)
 
     #
     # run

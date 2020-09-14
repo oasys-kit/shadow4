@@ -12,7 +12,7 @@ from syned.beamline.element_coordinates import ElementCoordinates
 from shadow4.syned.shape import Plane, Sphere, Ellipsoid, Paraboloid, Hyperboloid # TODO from syned.beamline.shape
 
 from shadow4.beam.beam import Beam
-from shadow4.optical_elements.screen import Screen
+
 
 from Shadow.ShadowTools import plotxy
 from shadow4.compatibility.beam3 import Beam3
@@ -107,10 +107,6 @@ def run_shadow3():
         oe1.write("end.01")
         beam.write("star.01")
 
-    # Shadow.ShadowTools.plotxy(beam, 1, 3, nbins=101, nolost=1, title="Real space")
-    # Shadow.ShadowTools.plotxy(beam,1,4,nbins=101,nolost=1,title="Phase space X")
-    # Shadow.ShadowTools.plotxy(beam,3,6,nbins=101,nolost=1,title="Phase space Z")
-
     return source, beam, oe1
 
 if __name__ == "__main__":
@@ -153,11 +149,13 @@ if __name__ == "__main__":
                                            angle_radial = 88.8 * numpy.pi / 180,)
 
 
-
     #
     # shadow definitions
     #
-    mirror1 = Mirror(optical_element_syned=symirror1, element_coordinates_syned=coordinates_syned)
+    mirror1 = Mirror(name="M1",
+                surface_shape_syned=surface_shape,
+                boundary_shape_syned=boundary_shape,
+                element_coordinates_syned=coordinates_syned)
     print(mirror1.info())
 
     #
@@ -174,33 +172,6 @@ if __name__ == "__main__":
         plotxy(beam3, 1, 3, title="Image 1 shadow3", nbins=101, nolost=1)
         beam1s3 = Beam3.initialize_from_shadow4_beam(beam1)
         plotxy(beam1s3, 1, 3, title="Image 1 shadow4", nbins=101, nolost=1)
-        # mirr1s3 = Beam3.initialize_from_shadow4_beam(mirr1)
-        # plotxy(mirr1s3, 2, 1, title="Footprint 1", nbins=101, nolost=1)
-
-
-    #
-    #
-    # sy1 = SyBeamStopper(name="Undefined",boundary_shape=patches)   # this is beamstopper
-    # # sy1 = SySlit(name="Undefined", boundary_shape=patches)         # this is slit (negative)
-    #
-    # coordinates_syned = ElementCoordinates(p=322.971*1e-2, q=5.0*1e-2)
-    #
-    # slit1 = Screen(optical_element_syned=sy1, element_coordinates_syned=coordinates_syned)
-    #
-    # print(slit1.info())
-    #
-    #
-    # #
-    # # trace
-    # #
-    #
-    # beam2 = slit1.trace_beam(beam)
-    #
-    # #
-    # if do_plot:
-    #     beam2_3 = Beam3.initialize_from_shadow4_beam(beam2)
-    #     plotxy(beam2_3,1,3,nbins=100,title="SHADOW4 BEAMSTOPPER", nolost=True)
-    #
 
 
     mirr3 = Beam3(N=beam0.rays.shape[0])
