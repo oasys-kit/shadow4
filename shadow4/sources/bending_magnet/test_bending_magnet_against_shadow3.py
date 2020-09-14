@@ -1,9 +1,9 @@
 import Shadow
 import numpy
 
-from shadow4.sources.bending_magnet.source_bending_magnet import SourceBendingMagnet
+from shadow4.sources.bending_magnet.bending_magnet import BendingMagnet
 from syned.storage_ring.electron_beam import ElectronBeam
-from syned.storage_ring.magnetic_structures.bending_magnet import BendingMagnet
+from syned.storage_ring.magnetic_structures.bending_magnet import BendingMagnet as SynedBendingMagnet
 
 def run_bm_shadow3(iwrite=0):
     #
@@ -156,7 +156,7 @@ if __name__ == "__main__":
                                        moment_ypyp=(3.8e-09/0.0036)**2,
                                        )
 
-    syned_bending_magnet = BendingMagnet(radius=25.1772,magnetic_field=0.8,length=25.1772*0.001)
+    # syned_bending_magnet = SynedBendingMagnet(radius=25.1772,magnetic_field=0.8,length=25.1772*0.001)
 
     emin = 5000.0                # Photon energy scan from energy (in eV)
     emax = 100000.0              # Photon energy scan to energy (in eV)
@@ -166,8 +166,9 @@ if __name__ == "__main__":
 
 
 
-    bm = SourceBendingMagnet(syned_electron_beam=syned_electron_beam,
-                 syned_bending_magnet=syned_bending_magnet,
+    bm = BendingMagnet(
+                 radius=25.1772,magnetic_field=0.8,length=25.1772*0.001,
+                 syned_electron_beam=syned_electron_beam,
                  emin=emin,               # Photon energy scan from energy (in eV)
                  emax=emax,               # Photon energy scan to energy (in eV)
                  ng_e=ng_e,               # Photon energy scan number of points

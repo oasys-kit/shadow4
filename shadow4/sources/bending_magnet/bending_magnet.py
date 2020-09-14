@@ -16,7 +16,7 @@ import scipy.constants as codata
 from scipy import interpolate
 from scipy.interpolate import interp1d,interp2d
 
-from syned.storage_ring.magnetic_structures.bending_magnet import BendingMagnet
+from syned.storage_ring.magnetic_structures.bending_magnet import BendingMagnet as SynedBendingMagnet
 from syned.storage_ring.electron_beam import ElectronBeam
 
 from srxraylib.sources.srfunc import sync_ene, sync_ang
@@ -24,10 +24,12 @@ from srxraylib.sources.srfunc import sync_ene, sync_ang
 # from srxraylib.plot.gol import plot,plot_scatter,plot_image
 
 
-class SourceBendingMagnet(object):
-    def __init__(self,name="",
+class BendingMagnet(SynedBendingMagnet):
+    def __init__(self,
+                 name="",
+                 radius=1.0, magnetic_field=1.0, length=1.0, # syned BM
                  syned_electron_beam=None,
-                 syned_bending_magnet=None,
+                 # syned_bending_magnet=None,
                  emin=10000.0,               # Photon energy scan from energy (in eV)
                  emax=11000.0,               # Photon energy scan to energy (in eV)
                  ng_e=11,                    # Photon energy scan number of points
@@ -35,17 +37,18 @@ class SourceBendingMagnet(object):
                  flag_emittance=0,           # when sampling rays: Use emittance (0=No, 1=Yes)
                  ):
 
+        super().__init__(radius=radius, magnetic_field=magnetic_field, length=length)
         # # Machine
         if syned_electron_beam is None:
             self.syned_electron_beam = ElectronBeam()
         else:
             self.syned_electron_beam = syned_electron_beam
 
-        # # Undulator
-        if syned_bending_magnet is None:
-            self.syned_bending_magnet = BendingMagnet(radius,magnetic_field,length)
-        else:
-            self.syned_bending_magnet = syned_bending_magnet
+        # # # Undulator
+        # if syned_bending_magnet is None:
+        #     self.syned_bending_magnet = BendingMagnet(radius,magnetic_field,length)
+        # else:
+        #     self.syned_bending_magnet = syned_bending_magnet
 
         # Photon energy scan
         self._EMIN            = emin   # Photon energy scan from energy (in eV)
@@ -80,9 +83,9 @@ class SourceBendingMagnet(object):
             txt += "        Electron sigmaX': %f urad\n"%(1e6*sigmas[1])
             txt += "        Electron sigmaZ': %f urad\n"%(1e6*sigmas[3])
         txt += "Input Bending Magnet parameters: \n"
-        txt += "        radius: %f m\n"%self.syned_bending_magnet._radius
-        txt += "        magnetic field: %f T\n"%self.syned_bending_magnet._magnetic_field
-        txt += "        length: %f m\n"%self.syned_bending_magnet._length
+        txt += "        radius: %f m\n"%self._radius
+        txt += "        magnetic field: %f T\n"%self._magnetic_field
+        txt += "        length: %f m\n"%self._length
 
 
         txt += "-----------------------------------------------------\n"
@@ -164,23 +167,23 @@ class SourceBendingMagnet(object):
 
         rays = numpy.zeros((NRAYS,18))
 
-        RAD_MIN= numpy.abs(self.syned_bending_magnet._radius)
-        RAD_MAX= numpy.abs(self.syned_bending_magnet._radius)
+        RAD_MIN= numpy.abs(self._radius)
+        RAD_MAX= numpy.abs(self._radius)
 
         # r_aladdin	=  bending magnet radius in units of length used for source size, CCW rings negative.
 
-        r_aladdin = self.syned_bending_magnet._radius
+        r_aladdin = self._radius
 
         if r_aladdin < 0:
             POL_ANGLE = -90.0 * numpy.pi / 2
         else:
             POL_ANGLE = 90.0 * numpy.pi / 2
 
-        HDIV1 = 0.5 * self.syned_bending_magnet.horizontal_divergence()
+        HDIV1 = 0.5 * self.horizontal_divergence()
         HDIV2 = HDIV1
 
         gamma = self.syned_electron_beam.gamma()
-        critical_energy = self.syned_bending_magnet.get_critical_energy(self.syned_electron_beam.energy())
+        critical_energy = self.get_critical_energy(self.syned_electron_beam.energy())
 
         if psi_interval_in_units_one_over_gamma is None:
             c = numpy.array([-0.3600382, 0.11188709])  # see file fit_psi_interval.py
@@ -206,7 +209,7 @@ class SourceBendingMagnet(object):
                     self.syned_electron_beam.energy(),
                     self.syned_electron_beam.current(),
                     (HDIV1 + HDIV2) * 1e3,
-                    self.syned_bending_magnet._radius,  # not needed anyway
+                    self._radius,  # not needed anyway
                     self._EMIN,
                     critical_energy,
                     self._EMIN/critical_energy,
@@ -219,7 +222,7 @@ class SourceBendingMagnet(object):
                                             e_gev=self.syned_electron_beam.energy(),
                                             i_a=self.syned_electron_beam.current(),
                                             hdiv_mrad=(HDIV1+HDIV2)*1e3,
-                                            r_m=self.syned_bending_magnet._radius,#not needed anyway
+                                            r_m=self._radius,#not needed anyway
                                             energy=self._EMIN,
                                             ec_ev=critical_energy)
 
@@ -233,7 +236,7 @@ class SourceBendingMagnet(object):
                                             e_gev=self.syned_electron_beam.energy(),
                                             i_a=self.syned_electron_beam.current(),
                                             hdiv_mrad=(HDIV1+HDIV2)*1e3,
-                                            r_m=self.syned_bending_magnet._radius,#not needed anyway
+                                            r_m=self._radius,#not needed anyway
                                             energy=self._EMIN,
                                             ec_ev=critical_energy)
 
@@ -266,7 +269,7 @@ class SourceBendingMagnet(object):
                 print(">>> sync_ene: calculating energy distribution")
 
             fm_s = sync_ene(4,photon_energy_array,
-                          ec_ev=self.syned_bending_magnet.get_critical_energy(self.syned_electron_beam.energy()),
+                          ec_ev=self.get_critical_energy(self.syned_electron_beam.energy()),
                           e_gev=self.syned_electron_beam.energy(),
                           i_a=self.syned_electron_beam.current(),
                           hdiv_mrad=1,
@@ -276,7 +279,7 @@ class SourceBendingMagnet(object):
                           polarization=1)
 
             fm_p = sync_ene(4,photon_energy_array,
-                          ec_ev=self.syned_bending_magnet.get_critical_energy(self.syned_electron_beam.energy()),
+                          ec_ev=self.get_critical_energy(self.syned_electron_beam.energy()),
                           e_gev=self.syned_electron_beam.energy(),
                           i_a=self.syned_electron_beam.current(),
                           hdiv_mrad=1,
@@ -651,7 +654,7 @@ if __name__ == "__main__":
                                        moment_ypyp=(3.8e-09/0.0036)**2,
                                        )
 
-    syned_bending_magnet = BendingMagnet(radius=25.1772,magnetic_field=0.8,length=25.1772*0.001)
+    # syned_bending_magnet = BendingMagnet(radius=25.1772,magnetic_field=0.8,length=25.1772*0.001)
 
     emin = 5000.0                # Photon energy scan from energy (in eV)
     emax = 100000.0              # Photon energy scan to energy (in eV)
@@ -661,8 +664,10 @@ if __name__ == "__main__":
 
 
 
-    bm = SourceBendingMagnet(syned_electron_beam=syned_electron_beam,
-                 syned_bending_magnet=syned_bending_magnet,
+    bm = BendingMagnet(
+                 radius=25.1772, magnetic_field=0.8, length=25.1772 * 0.001,
+                 syned_electron_beam=syned_electron_beam,
+                 # syned_bending_magnet=syned_bending_magnet,
                  emin=emin,               # Photon energy scan from energy (in eV)
                  emax=emax,               # Photon energy scan to energy (in eV)
                  ng_e=ng_e,                    # Photon energy scan number of points

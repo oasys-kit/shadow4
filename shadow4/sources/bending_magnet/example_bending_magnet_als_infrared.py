@@ -1,8 +1,9 @@
 
 from syned.storage_ring.electron_beam import ElectronBeam
-from syned.storage_ring.magnetic_structures.bending_magnet import BendingMagnet
+from syned.storage_ring.magnetic_structures.bending_magnet import BendingMagnet as SynedBendingMagnet
 
-from shadow4.sources.bending_magnet.source_bending_magnet import SourceBendingMagnet
+from shadow4.sources.bending_magnet.bending_magnet import BendingMagnet
+# from shadow4.sources.bending_magnet.bending_magnet_light_source import BendingMagnetLightSource
 
 
 
@@ -21,7 +22,7 @@ if __name__ == "__main__":
 
     # syned_bending_magnet = BendingMagnet(radius=-5.0,magnetic_field=-1.26754,length=5.0*0.069)
 
-    syned_bending_magnet = BendingMagnet.initialize_from_magnetic_field_divergence_and_electron_energy(
+    syned_bending_magnet = SynedBendingMagnet.initialize_from_magnetic_field_divergence_and_electron_energy(
         magnetic_field=-1.26754,divergence=69e-3,electron_energy_in_GeV=1.9)
     #
     # syned_bending_magnet = BendingMagnet.initialize_from_magnetic_radius_divergence_and_electron_energy(
@@ -36,8 +37,12 @@ if __name__ == "__main__":
 
 
 
-    bm = SourceBendingMagnet(syned_electron_beam=syned_electron_beam,
-                 syned_bending_magnet=syned_bending_magnet,
+    bm = BendingMagnet(
+                 radius=syned_bending_magnet._radius,
+                 magnetic_field=syned_bending_magnet._magnetic_field,
+                 length=syned_bending_magnet._length,
+                 syned_electron_beam=syned_electron_beam,
+                 # syned_bending_magnet=syned_bending_magnet,
                  emin=emin,               # Photon energy scan from energy (in eV)
                  emax=emax,               # Photon energy scan to energy (in eV)
                  ng_e=ng_e,                    # Photon energy scan number of points
@@ -46,6 +51,9 @@ if __name__ == "__main__":
                 )
 
     print(bm.info())
+
+    # ls =BendingMagnetLightSource(electron_beam=syned_electron_beam,
+    #                              magnetic_structure=bm)
 
     rays = bm.calculate_rays(F_COHER=0,NRAYS=5000,SEED=123456,EPSI_DX=0.0,EPSI_DZ=0.0,verbose=False)
 
