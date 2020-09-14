@@ -1,6 +1,5 @@
 import numpy
 
-from syned.beamline.beamline import BeamlineElement
 from syned.beamline.element_coordinates import ElementCoordinates
 from syned.beamline.optical_elements.mirrors.mirror import Mirror as SyMirror
 
@@ -79,12 +78,10 @@ def example_branch_1(do_plot=True):
                                            q = 6.0,
                                            angle_radial = 88.8 * numpy.pi / 180,)
 
-    beamline_element_syned = BeamlineElement(optical_element=symirror1, coordinates=coordinates_syned)
-
     #
     # shadow definitions
     #
-    mirror1 = Mirror(beamline_element_syned=beamline_element_syned)
+    mirror1 = Mirror(optical_element_syned=symirror1, element_coordinates_syned=coordinates_syned)
     print(mirror1.info())
 
     #
@@ -158,12 +155,10 @@ def example_branch_2(do_plot=True):
                                            q = 6.0,
                                            angle_radial = 88.8 * numpy.pi / 180,)
 
-    beamline_element_syned = BeamlineElement(optical_element=symirror1, coordinates=coordinates_syned)
-
     #
     # shadow definitions
     #
-    mirror1 = Mirror(beamline_element_syned=beamline_element_syned)
+    mirror1 = Mirror(optical_element_syned=symirror1, element_coordinates_syned=coordinates_syned)
     print(mirror1.info())
 
     #
@@ -237,12 +232,10 @@ def example_branch_3(surface_shape_file, do_plot=True):
                                            q = 1000.0,
                                            angle_radial = 88.8 * numpy.pi / 180,)
 
-    beamline_element_syned = BeamlineElement(optical_element=symirror1, coordinates=coordinates_syned)
-
     #
     # shadow definitions
     #
-    mirror1 = Mirror(beamline_element_syned=beamline_element_syned)
+    mirror1 = Mirror(optical_element_syned=symirror1, element_coordinates_syned=coordinates_syned)
     print(mirror1.info())
 
     #
@@ -310,7 +303,6 @@ def example_branch_4(do_plot=True, f_refl=0):
                                            q = 6.0,
                                            angle_radial = 88.8 * numpy.pi / 180,)
 
-    beamline_element_syned = BeamlineElement(optical_element=symirror1, coordinates=coordinates_syned)
 
     #
     # shadow definitions
@@ -319,21 +311,21 @@ def example_branch_4(do_plot=True, f_refl=0):
         from shadow4.physical_models.prerefl.prerefl import PreRefl
         PreRefl.prerefl(interactive=False, SYMBOL="SiC", DENSITY=3.217, FILE="SiC.dat",
                         E_MIN=100.0, E_MAX=20000.0, E_STEP=100.0)
-        mirror1 = Mirror(beamline_element_syned=beamline_element_syned,
+        mirror1 = Mirror(optical_element_syned=symirror1, element_coordinates_syned=coordinates_syned,
                          f_reflec=1, f_refl=f_refl, file_refl="SiC.dat")
     elif f_refl == 1: # refraction index
         import xraylib
         refraction_index = xraylib.Refractive_Index("SiC", 2.4797, 3.217)
-        mirror1 = Mirror(beamline_element_syned=beamline_element_syned,
+        mirror1 = Mirror(optical_element_syned=symirror1, element_coordinates_syned=coordinates_syned,
                          f_reflec=1, f_refl=f_refl, file_refl="", refraction_index=refraction_index)
     elif f_refl == 2:  # user file: 1D  vs angle
-        mirror1 = Mirror(beamline_element_syned=beamline_element_syned,
+        mirror1 = Mirror(optical_element_syned=symirror1, element_coordinates_syned=coordinates_syned,
                          f_reflec=1, f_refl=f_refl, file_refl="../../oasys_workspaces/xoppy_f1f2_139980555361648.dat")
     elif f_refl == 3:  # user file 1D vs energy
-        mirror1 = Mirror(beamline_element_syned=beamline_element_syned,
+        mirror1 = Mirror(optical_element_syned=symirror1, element_coordinates_syned=coordinates_syned,
                          f_reflec=1, f_refl=f_refl, file_refl="../../oasys_workspaces/xoppy_f1f2_139981943656272.dat")
     elif f_refl == 4:  # user file
-        mirror1 = Mirror(beamline_element_syned=beamline_element_syned,
+        mirror1 = Mirror(optical_element_syned=symirror1, element_coordinates_syned=coordinates_syned,
                          f_reflec=1, f_refl=f_refl, file_refl="../../oasys_workspaces/xoppy_f1f2_139980938100080.dat")
 
     print(mirror1.info())
@@ -431,12 +423,10 @@ def example_branch_5(surface_type, do_plot=True):
                                            q = 10.0,
                                            angle_radial = 88.8 * numpy.pi / 180,)
 
-    beamline_element_syned = BeamlineElement(optical_element=symirror1, coordinates=coordinates_syned)
-
     #
     # shadow definitions
     #
-    mirror1 = Mirror(beamline_element_syned=beamline_element_syned)
+    mirror1 = Mirror(optical_element_syned=symirror1, element_coordinates_syned=coordinates_syned)
 
     #
     # run

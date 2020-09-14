@@ -5,7 +5,6 @@
 
 import numpy
 
-from syned.beamline.beamline import BeamlineElement
 from syned.beamline.optical_elements.mirrors.mirror import Mirror as SyMirror
 
 from syned.beamline.element_coordinates import ElementCoordinates
@@ -153,12 +152,12 @@ if __name__ == "__main__":
                                            q = 6.0,
                                            angle_radial = 88.8 * numpy.pi / 180,)
 
-    beamline_element_syned = BeamlineElement(optical_element=symirror1, coordinates=coordinates_syned)
+
 
     #
     # shadow definitions
     #
-    mirror1 = Mirror(beamline_element_syned=beamline_element_syned)
+    mirror1 = Mirror(optical_element_syned=symirror1, element_coordinates_syned=coordinates_syned)
     print(mirror1.info())
 
     #
@@ -186,9 +185,7 @@ if __name__ == "__main__":
     #
     # coordinates_syned = ElementCoordinates(p=322.971*1e-2, q=5.0*1e-2)
     #
-    # beamline_element_syned = BeamlineElement(optical_element=sy1, coordinates=coordinates_syned)
-    #
-    # slit1 = Screen(beamline_element_syned=beamline_element_syned)
+    # slit1 = Screen(optical_element_syned=sy1, element_coordinates_syned=coordinates_syned)
     #
     # print(slit1.info())
     #
