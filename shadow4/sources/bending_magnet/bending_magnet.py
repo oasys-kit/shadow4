@@ -1,16 +1,7 @@
-__authors__ = ["M Sanchez del Rio - ESRF ISDD Advanced Analysis and Modelling"]
-__license__ = "MIT"
-__date__ = "30-08-2018"
-
-"""
-
-
-"""
-
-
 import numpy
 
 from srxraylib.util.inverse_method_sampler import Sampler1D, Sampler2D
+from srxraylib.sources.srfunc import sync_ene, sync_ang
 
 import scipy.constants as codata
 from scipy import interpolate
@@ -19,17 +10,9 @@ from scipy.interpolate import interp1d,interp2d
 from syned.storage_ring.magnetic_structures.bending_magnet import BendingMagnet as SynedBendingMagnet
 from syned.storage_ring.electron_beam import ElectronBeam
 
-from srxraylib.sources.srfunc import sync_ene, sync_ang
-
-# from srxraylib.plot.gol import plot,plot_scatter,plot_image
-
-
 class BendingMagnet(SynedBendingMagnet):
     def __init__(self,
-                 name="",
                  radius=1.0, magnetic_field=1.0, length=1.0, # syned BM
-                 syned_electron_beam=None,
-                 # syned_bending_magnet=None,
                  emin=10000.0,               # Photon energy scan from energy (in eV)
                  emax=11000.0,               # Photon energy scan to energy (in eV)
                  ng_e=11,                    # Photon energy scan number of points
@@ -38,17 +21,6 @@ class BendingMagnet(SynedBendingMagnet):
                  ):
 
         super().__init__(radius=radius, magnetic_field=magnetic_field, length=length)
-        # # Machine
-        if syned_electron_beam is None:
-            self.syned_electron_beam = ElectronBeam()
-        else:
-            self.syned_electron_beam = syned_electron_beam
-
-        # # # Undulator
-        # if syned_bending_magnet is None:
-        #     self.syned_bending_magnet = BendingMagnet(radius,magnetic_field,length)
-        # else:
-        #     self.syned_bending_magnet = syned_bending_magnet
 
         # Photon energy scan
         self._EMIN            = emin   # Photon energy scan from energy (in eV)
@@ -59,41 +31,10 @@ class BendingMagnet(SynedBendingMagnet):
 
         self._FLAG_EMITTANCE  =  flag_emittance # Yes  # Use emittance (0=No, 1=Yes) #todo kw in calculate rays
 
-
     def info(self,debug=False):
-        """
-        gets text info
 
-        :param debug: if True, list the undulator variables (Default: debug=True)
-        :return:
-        """
-        # list all non-empty keywords
         txt = ""
 
-
-        txt += "-----------------------------------------------------\n"
-
-        txt += "Input Electron parameters: \n"
-        txt += "        Electron energy: %f geV\n"%self.syned_electron_beam.energy()
-        txt += "        Electron current: %f A\n"%self.syned_electron_beam.current()
-        if self._FLAG_EMITTANCE:
-            sigmas = self.syned_electron_beam.get_sigmas_all()
-            txt += "        Electron sigmaX: %g [um]\n"%(1e6*sigmas[0])
-            txt += "        Electron sigmaZ: %g [um]\n"%(1e6*sigmas[2])
-            txt += "        Electron sigmaX': %f urad\n"%(1e6*sigmas[1])
-            txt += "        Electron sigmaZ': %f urad\n"%(1e6*sigmas[3])
-        txt += "Input Bending Magnet parameters: \n"
-        txt += "        radius: %f m\n"%self._radius
-        txt += "        magnetic field: %f T\n"%self._magnetic_field
-        txt += "        length: %f m\n"%self._length
-
-
-        txt += "-----------------------------------------------------\n"
-
-        txt += "Lorentz factor (gamma): %f\n"%self.syned_electron_beam.gamma()
-        txt += "Electron velocity: %.12f c units\n"%(numpy.sqrt(1.0 - 1.0 / self.syned_electron_beam.gamma() ** 2))
-
-        #
         txt += "-----------------------------------------------------\n"
         txt += "Grids: \n"
         if self._NG_E == 1:
@@ -147,7 +88,8 @@ class BendingMagnet(SynedBendingMagnet):
             return True
         return False
 
-    def calculate_rays(self, F_COHER=0, NRAYS=5000, SEED=123456,
+    def calculate_rays(self, syned_electron_beam,
+                       F_COHER=0, NRAYS=5000, SEED=123456,
                        EPSI_DX=0.0, EPSI_DZ=0.0,
                        psi_interval_in_units_one_over_gamma=None,
                        psi_interval_number_of_points=1001,
@@ -163,7 +105,7 @@ class BendingMagnet(SynedBendingMagnet):
             numpy.random.seed(SEED)
 
 
-        sigmas = self.syned_electron_beam.get_sigmas_all()
+        sigmas = syned_electron_beam.get_sigmas_all()
 
         rays = numpy.zeros((NRAYS,18))
 
@@ -182,8 +124,8 @@ class BendingMagnet(SynedBendingMagnet):
         HDIV1 = 0.5 * self.horizontal_divergence()
         HDIV2 = HDIV1
 
-        gamma = self.syned_electron_beam.gamma()
-        critical_energy = self.get_critical_energy(self.syned_electron_beam.energy())
+        gamma = syned_electron_beam.gamma()
+        critical_energy = self.get_critical_energy(syned_electron_beam.energy())
 
         if psi_interval_in_units_one_over_gamma is None:
             c = numpy.array([-0.3600382, 0.11188709])  # see file fit_psi_interval.py
@@ -206,8 +148,8 @@ class BendingMagnet(SynedBendingMagnet):
             if verbose:
                 print(">>> calculate_rays: is monochromatic")
                 print(">>> calculate_rays: sync_ang (s) E=%f GeV, I=%f A, D=%f mrad, R=%f m, PhE=%f eV, Ec=%f eV, PhE/Ec=%f "% ( \
-                    self.syned_electron_beam.energy(),
-                    self.syned_electron_beam.current(),
+                    syned_electron_beam.energy(),
+                    syned_electron_beam.current(),
                     (HDIV1 + HDIV2) * 1e3,
                     self._radius,  # not needed anyway
                     self._EMIN,
@@ -219,8 +161,8 @@ class BendingMagnet(SynedBendingMagnet):
             angular_distribution_s = sync_ang(1,#Flux at a given photon energy
                                             angle_array_mrad,
                                             polarization=1,#1 Parallel (l2=1, l3=0, in Sokolov&Ternov notation)
-                                            e_gev=self.syned_electron_beam.energy(),
-                                            i_a=self.syned_electron_beam.current(),
+                                            e_gev=syned_electron_beam.energy(),
+                                            i_a=syned_electron_beam.current(),
                                             hdiv_mrad=(HDIV1+HDIV2)*1e3,
                                             r_m=self._radius,#not needed anyway
                                             energy=self._EMIN,
@@ -233,8 +175,8 @@ class BendingMagnet(SynedBendingMagnet):
             angular_distribution_p = sync_ang(1,#Flux at a given photon energy
                                             angle_array_mrad,
                                             polarization=2,#1 Parallel (l2=1, l3=0, in Sokolov&Ternov notation)
-                                            e_gev=self.syned_electron_beam.energy(),
-                                            i_a=self.syned_electron_beam.current(),
+                                            e_gev=syned_electron_beam.energy(),
+                                            i_a=syned_electron_beam.current(),
                                             hdiv_mrad=(HDIV1+HDIV2)*1e3,
                                             r_m=self._radius,#not needed anyway
                                             energy=self._EMIN,
@@ -269,9 +211,9 @@ class BendingMagnet(SynedBendingMagnet):
                 print(">>> sync_ene: calculating energy distribution")
 
             fm_s = sync_ene(4,photon_energy_array,
-                          ec_ev=self.get_critical_energy(self.syned_electron_beam.energy()),
-                          e_gev=self.syned_electron_beam.energy(),
-                          i_a=self.syned_electron_beam.current(),
+                          ec_ev=self.get_critical_energy(syned_electron_beam.energy()),
+                          e_gev=syned_electron_beam.energy(),
+                          i_a=syned_electron_beam.current(),
                           hdiv_mrad=1,
                           psi_min=angle_array_mrad.min(),
                           psi_max=angle_array_mrad.max(),
@@ -279,9 +221,9 @@ class BendingMagnet(SynedBendingMagnet):
                           polarization=1)
 
             fm_p = sync_ene(4,photon_energy_array,
-                          ec_ev=self.get_critical_energy(self.syned_electron_beam.energy()),
-                          e_gev=self.syned_electron_beam.energy(),
-                          i_a=self.syned_electron_beam.current(),
+                          ec_ev=self.get_critical_energy(syned_electron_beam.energy()),
+                          e_gev=syned_electron_beam.energy(),
+                          i_a=syned_electron_beam.current(),
                           hdiv_mrad=1,
                           psi_min=angle_array_mrad.min(),
                           psi_max=angle_array_mrad.max(),
@@ -326,7 +268,7 @@ class BendingMagnet(SynedBendingMagnet):
 
 
             if self._FLAG_EMITTANCE:
-                sigma_x, sigma_xp, sigma_z, sigma_zp = self.syned_electron_beam.get_sigmas_all()
+                sigma_x, sigma_xp, sigma_z, sigma_zp = syned_electron_beam.get_sigmas_all()
 
                 # ! calculation of the electrom beam moments at the current position
                 # ! (sX,sZ) = (epsi_wx,epsi_ez):
@@ -666,7 +608,7 @@ if __name__ == "__main__":
 
     bm = BendingMagnet(
                  radius=25.1772, magnetic_field=0.8, length=25.1772 * 0.001,
-                 syned_electron_beam=syned_electron_beam,
+                 # syned_electron_beam=syned_electron_beam,
                  # syned_bending_magnet=syned_bending_magnet,
                  emin=emin,               # Photon energy scan from energy (in eV)
                  emax=emax,               # Photon energy scan to energy (in eV)
@@ -675,9 +617,9 @@ if __name__ == "__main__":
                  flag_emittance=flag_emittance,           # when sampling rays: Use emittance (0=No, 1=Yes)
                 )
 
-    print(bm.info())
+    print(bm.info(syned_electron_beam))
 
-    rays = bm.calculate_rays(F_COHER=0,NRAYS=5000,SEED=123456,EPSI_DX=0.0,EPSI_DZ=0.0)
+    rays = bm.calculate_rays(syned_electron_beam, F_COHER=0,NRAYS=5000,SEED=123456,EPSI_DX=0.0,EPSI_DZ=0.0)
 
 
     plot_scatter(rays[:,0]*1e6,rays[:,2]*1e6,xtitle="X um",ytitle="Z um")

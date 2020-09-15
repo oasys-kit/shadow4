@@ -2,6 +2,7 @@ import Shadow
 import numpy
 
 from shadow4.sources.bending_magnet.bending_magnet import BendingMagnet
+from shadow4.sources.bending_magnet.bending_magnet_light_source import BendingMagnetLightSource
 from syned.storage_ring.electron_beam import ElectronBeam
 from syned.storage_ring.magnetic_structures.bending_magnet import BendingMagnet as SynedBendingMagnet
 
@@ -73,6 +74,11 @@ def run_bm_shadow3(iwrite=0):
     # Shadow.ShadowTools.plotxy(beam,3,6,nbins=101,nolost=1,title="Phase space Z")
 
     return beam, oe0
+
+def compare_beam_with_shadow3_beam(beamnew,beam,user_unit_to_m=1.0,do_plot=True,do_assert=False):
+    compare_rays_with_shadow3_beam(beamnew.rays,beam,
+                                   user_unit_to_m=user_unit_to_m,
+                                   do_plot=do_plot,do_assert=do_assert)
 
 def compare_rays_with_shadow3_beam(raysnew,beam,user_unit_to_m=1.0,do_plot=True,do_assert=False):
 
@@ -168,7 +174,7 @@ if __name__ == "__main__":
 
     bm = BendingMagnet(
                  radius=25.1772,magnetic_field=0.8,length=25.1772*0.001,
-                 syned_electron_beam=syned_electron_beam,
+                 # syned_electron_beam=syned_electron_beam,
                  emin=emin,               # Photon energy scan from energy (in eV)
                  emax=emax,               # Photon energy scan to energy (in eV)
                  ng_e=ng_e,               # Photon energy scan number of points
@@ -176,9 +182,16 @@ if __name__ == "__main__":
                  flag_emittance=flag_emittance,   # when sampling rays: Use emittance (0=No, 1=Yes)
                 )
 
-    print(bm.info())
+    # print(bm.info())
 
-    rays = bm.calculate_rays(F_COHER=0,NRAYS=5000,SEED=123456,
-                       EPSI_DX=0.0,EPSI_DZ=0.0)
+    # rays = bm.calculate_rays(syned_electron_beam, F_COHER=0,NRAYS=5000,SEED=123456,
+    #                    EPSI_DX=0.0,EPSI_DZ=0.0)
+    # compare_rays_with_shadow3_beam(rays,beam=shadow3_beam,user_unit_to_m=0.01,do_assert=True,do_plot=False)
 
-    compare_rays_with_shadow3_beam(rays,beam=shadow3_beam,user_unit_to_m=0.01,do_assert=True,do_plot=False)
+    ls = BendingMagnetLightSource(electron_beam=syned_electron_beam,bending_magnet_magnetic_structure=bm)
+
+    print(ls.info())
+
+    beam = ls.get_beam(F_COHER=0,NRAYS=5000,SEED=123456,EPSI_DX=0.0,EPSI_DZ=0.0)
+
+    compare_beam_with_shadow3_beam(beam,beam=shadow3_beam,user_unit_to_m=0.01,do_assert=True,do_plot=False)
