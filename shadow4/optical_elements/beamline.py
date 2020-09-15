@@ -17,14 +17,26 @@ class Beamline(SynedBeamline):
         text_code  =  "# to be implemented "
         return text_code
 
+    def info(self):
+        return "Beamline info: to be implemented"
+
+    def run_beamline(self):
+        raise NotImplementedError()
+
 
 
 if __name__ == "__main__":
     from shadow4.optical_elements.mirror import Mirror
+    from syned.beamline.beamline_element import BeamlineElement
+    from syned.beamline.element_coordinates import ElementCoordinates
 
     m1 = Mirror()
     m2 = Mirror()
 
-    bl = Beamline(beamline_elements_list=[m1,m2])
+    e1 = BeamlineElement(m1, ElementCoordinates())
+    e2 = BeamlineElement(m2, ElementCoordinates())
+
+
+    bl = Beamline(beamline_elements_list=[e1,e2])
 
 
