@@ -1,4 +1,4 @@
-class LightSource(object):
+class S4LightSource(object):
 
     def __init__(self):
         pass
@@ -9,5 +9,5 @@ class LightSource(object):
     def info(self):
         raise NotImplementedError()
 
-    def get_beam(self, beam=None):
+    def get_beam(self, **params):
         raise NotImplementedError()

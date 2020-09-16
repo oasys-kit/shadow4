@@ -1,8 +1,8 @@
 import Shadow
 import numpy
 
-from shadow4.sources.bending_magnet.bending_magnet import BendingMagnet
-from shadow4.sources.bending_magnet.bending_magnet_light_source import BendingMagnetLightSource
+from shadow4.sources.bending_magnet.s4_bending_magnet import S4BendingMagnet
+from shadow4.sources.bending_magnet.s4_bending_magnet_light_source import S4BendingMagnetLightSource
 from syned.storage_ring.electron_beam import ElectronBeam
 from syned.storage_ring.magnetic_structures.bending_magnet import BendingMagnet as SynedBendingMagnet
 
@@ -171,10 +171,8 @@ if __name__ == "__main__":
     flag_emittance = 1           # when sampling rays: Use emittance (0=No, 1=Yes)
 
 
-
-    bm = BendingMagnet(
-                 radius=25.1772,magnetic_field=0.8,length=25.1772*0.001,
-                 # syned_electron_beam=syned_electron_beam,
+    bm = S4BendingMagnet(
+                 radius=25.1772, magnetic_field=0.8, length=25.1772*0.001,
                  emin=emin,               # Photon energy scan from energy (in eV)
                  emax=emax,               # Photon energy scan to energy (in eV)
                  ng_e=ng_e,               # Photon energy scan number of points
@@ -188,7 +186,7 @@ if __name__ == "__main__":
     #                    EPSI_DX=0.0,EPSI_DZ=0.0)
     # compare_rays_with_shadow3_beam(rays,beam=shadow3_beam,user_unit_to_m=0.01,do_assert=True,do_plot=False)
 
-    ls = BendingMagnetLightSource(electron_beam=syned_electron_beam,bending_magnet_magnetic_structure=bm)
+    ls = S4BendingMagnetLightSource(electron_beam=syned_electron_beam,bending_magnet_magnetic_structure=bm)
 
     print(ls.info())
 

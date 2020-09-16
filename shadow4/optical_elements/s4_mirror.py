@@ -6,7 +6,6 @@ from shadow4.syned.shape import SphericalCylinder, EllipticalCylinder, Hyperboli
 
 
 from syned.beamline.element_coordinates import ElementCoordinates
-from syned.beamline.beamline import BeamlineElement
 
 from syned.beamline.optical_elements.mirrors.mirror import Mirror as SynedMirror
 
@@ -15,35 +14,34 @@ from shadow4.optical_surfaces.toroid import Toroid as S4Toroid
 from shadow4.optical_surfaces.mesh import Mesh as S4Mesh
 from shadow4.physical_models.prerefl.prerefl import PreRefl
 
-from shadow4.optical_elements.optical_element import OpticalElement
+from shadow4.optical_elements.s4_optical_element import S4OpticalElement
 
 from syned.beamline.shape import SurfaceShape
 
-class Mirror(SynedMirror, OpticalElement):
+class S4Mirror(SynedMirror, S4OpticalElement):
 
     def __init__(self,
                  name="Undefined",
-                 boundary_shape_syned=None,
-                 element_coordinates_syned=None,
-                 surface_shape_syned=None,
+                 boundary_shape=None,
+                 surface_shape=None,
                  # inputs related to mirror reflectivity
-                 f_reflec=0, # reflectivity of surface: 0=no reflectivity, 1=full polarization
-                 f_refl=0,   # 0=prerefl file
-                             # 1=electric susceptibility
-                             # 2=user defined file (1D reflectivity vs angle)
-                             # 3=user defined file (1D reflectivity vs energy)
-                             # 4=user defined file (2D reflectivity vs energy and angle)
-                file_refl="", # preprocessor file fir f_refl=0,2,3,4
-                refraction_index=1.0, # refraction index (complex) for f_refl=1
+                 f_reflec=0,  # reflectivity of surface: 0=no reflectivity, 1=full polarization
+                 f_refl=0,  # 0=prerefl file
+                 # 1=electric susceptibility
+                 # 2=user defined file (1D reflectivity vs angle)
+                 # 3=user defined file (1D reflectivity vs energy)
+                 # 4=user defined file (2D reflectivity vs energy and angle)
+                 file_refl="",  # preprocessor file fir f_refl=0,2,3,4
+                 refraction_index=1.0,  # refraction index (complex) for f_refl=1
                  ):
         """
 
         Parameters
         ----------
         name
-        boundary_shape_syned
+        boundary_shape
         element_coordinates_syned
-        surface_shape_syned
+        surface_shape
         f_reflec
                 reflectivity of surface: 0=no reflectivity, 1=full polarization
         f_refl
@@ -60,18 +58,12 @@ class Mirror(SynedMirror, OpticalElement):
 
 
         SynedMirror.__init__(self,
-                    name=name,
-                    surface_shape=surface_shape_syned,
-                    boundary_shape=boundary_shape_syned,
-                    coating=None,           # not used
-                    coating_thickness=None, #not used
-                    )
-
-
-        if element_coordinates_syned is None:
-            self._element_coordinates_syned = ElementCoordinates()
-        else:
-            self._element_coordinates_syned = element_coordinates_syned
+                             name=name,
+                             surface_shape=surface_shape,
+                             boundary_shape=boundary_shape,
+                             coating=None,  # not used
+                             coating_thickness=None,  #not used
+                             )
 
 
         # reflectivity
@@ -80,13 +72,39 @@ class Mirror(SynedMirror, OpticalElement):
         self._file_refl = file_refl
         self._refraction_index = refraction_index
 
+    def info(self):
+        info_mirror = "Specific attributes: TODO"
 
-    def trace_beam(self,beam_in, flag_lost_value=-1):
+        return super(S4Mirror, self).info() + "\n" + info_mirror
 
-        p = self._element_coordinates_syned.p()
-        q = self._element_coordinates_syned.q()
-        theta_grazing1 = numpy.pi / 2 - self._element_coordinates_syned.angle_radial()
-        alpha1 = self._element_coordinates_syned.angle_azimuthal()
+    def set_surface_conic(self, conic_coefficients=[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,-1.0,0.0]):
+        self.set_surface_shape = (
+            Conic(conic_coefficients=conic_coefficients)
+            )
+
+    def set_surface_toroid(self, min_radius=0.0, maj_radius=0.0):
+        self.set_surface_shape(
+            Toroidal(min_radius=min_radius, maj_radius=maj_radius)
+        )
+
+    def set_boundaries_rectangle(self, x_left=-1e3, x_right=1e3, y_bottom=-1e3, y_top=1e3):
+        self._boundary_shape = \
+            Rectangle(x_left=x_left, x_right=x_right, y_bottom=y_bottom, y_top=y_top)
+
+
+from shadow4.optical_elements.s4_beamline_element import S4BeamlineElement
+
+class S4MirrorElement(S4BeamlineElement):
+    
+    def __init__(self, optical_element=S4Mirror(), coordinates=ElementCoordinates()):
+        super().__init__(optical_element, coordinates)
+    
+    def trace_beam(self, beam_in, flag_lost_value=-1):
+
+        p = self.get_coordinates().p()
+        q = self.get_coordinates().q()
+        theta_grazing1 = numpy.pi / 2 - self.get_coordinates().angle_radial()
+        alpha1 = self.get_coordinates().angle_azimuthal()
 
         #
         beam = beam_in.duplicate()
@@ -101,31 +119,28 @@ class Mirror(SynedMirror, OpticalElement):
         #
         # reflect beam in the mirror surface
         #
-        soe = self #._optical_element_syned
+        soe = self.get_optical_element() #._optical_element_syned
 
         v_in = beam.get_columns([4,5,6])
         if not isinstance(soe, SynedMirror): # undefined
             raise Exception("Undefined mirror")
         else:
-            surshape = self.get_surface_shape()
-            if isinstance(surshape,Conic):
+            surshape = soe.get_surface_shape()
+            
+            if isinstance(surshape, Conic):
                 print(">>>>> Conic mirror")
-                conic = self.get_surface_shape()
-                ccc = S4Conic.initialize_from_coefficients(conic._conic_coefficients)
+                ccc = S4Conic.initialize_from_coefficients(surshape._conic_coefficients)
                 mirr, normal = ccc.apply_specular_reflection_on_beam(beam)
             elif isinstance(surshape, Toroidal):
-                print(">>>>> Toroidal mirror",self.get_surface_shape()._min_radius,
-                      self.get_surface_shape()._maj_radius)
+                print(">>>>> Toroidal mirror",surshape._min_radius, surshape._maj_radius)
                 toroid = S4Toroid()
-                toroid.set_toroid_radii( \
-                    self.get_surface_shape()._maj_radius,
-                    self.get_surface_shape()._min_radius,)
+                toroid.set_toroid_radii(surshape._maj_radius, surshape._min_radius,)
                 mirr, normal = toroid.apply_specular_reflection_on_beam(beam)
             elif isinstance(surshape, SurfaceData):
                 print(">>>>> SurfaceData mirror")
                 num_mesh = S4Mesh()
-                # num_mesh.load_h5file(self.get_surface_shape().surface_data_file)
-                num_mesh.load_surface_data(self.get_surface_shape())
+                # num_mesh.load_h5file(surshape.surface_data_file)
+                num_mesh.load_surface_data(surshape)
                 mirr,normal,t,x1,v1,x2,v2 = num_mesh.apply_specular_reflection_on_beam(beam)
             elif isinstance(surshape, Plane):
                 print(">>>>> Plane mirror")
@@ -182,8 +197,7 @@ class Mirror(SynedMirror, OpticalElement):
                     q = 1e10
                     p = surshape.get_pole_to_focus()
 
-                ccc = S4Conic.initialize_as_paraboloid_from_focal_distances(p,q,
-                            surshape.get_grazing_angle(), cylindrical=0, cylangle=0.0, switch_convexity=0)
+                ccc = S4Conic.initialize_as_paraboloid_from_focal_distances(p,q, surshape.get_grazing_angle(), cylindrical=0, cylangle=0.0, switch_convexity=0)
                 mirr, normal = ccc.apply_specular_reflection_on_beam(beam)
 
             else:
@@ -193,17 +207,16 @@ class Mirror(SynedMirror, OpticalElement):
         #
         # apply mirror boundaries
         #
-        mirr.apply_boundaries_syned(self.get_boundary_shape(),
-                                    flag_lost_value=flag_lost_value)
+        mirr.apply_boundaries_syned(soe.get_boundary_shape(), flag_lost_value=flag_lost_value)
 
         #
         # apply mirror reflectivity
         # TODO: add phase
         #
 
-        if self._f_reflec == 0:
+        if soe._f_reflec == 0:
             pass
-        elif self._f_reflec == 1: # full polarization
+        elif soe._f_reflec == 1: # full polarization
             v_out = beam.get_columns([4, 5, 6])
             angle_in = numpy.arccos( v_in[0,:] * normal[0,:] +
                                      v_in[1,:] * normal[1,:] +
@@ -215,8 +228,8 @@ class Mirror(SynedMirror, OpticalElement):
 
             grazing_angle_mrad = 1e3 * (numpy.pi / 2 - angle_in)
 
-            if self._f_refl == 0: # prerefl
-                prerefl_file = self._file_refl
+            if soe._f_refl == 0: # prerefl
+                prerefl_file = soe._file_refl
                 pr = PreRefl()
                 pr.read_preprocessor_file(prerefl_file)
                 print(pr.info())
@@ -225,17 +238,17 @@ class Mirror(SynedMirror, OpticalElement):
                                                      photon_energy_ev=beam.get_column(-11),
                                                      roughness_rms_A=0.0)
 
-            elif self._f_refl == 1:  # alpha, gamma, electric susceptibilities
-                Rs, Rp, Ru = self.reflectivity_fresnel(self._refraction_index , grazing_angle_mrad=grazing_angle_mrad)
+            elif soe._f_refl == 1:  # alpha, gamma, electric susceptibilities
+                Rs, Rp, Ru = self.reflectivity_fresnel(soe._refraction_index , grazing_angle_mrad=grazing_angle_mrad)
 
-            elif self._f_refl == 2:  # user angle, mrad ref
+            elif soe._f_refl == 2:  # user angle, mrad ref
                 # raise Exception("Not implemented f_refl == 2")
 
                 # values = numpy.loadtxt(self._file_refl)
                 #
                 # beam_incident_angles = 90.0 - values[:, 1]
 
-                values = numpy.loadtxt(self._file_refl)
+                values = numpy.loadtxt(soe._file_refl)
 
                 mirror_grazing_angles = values[:, 0]
                 mirror_reflectivities = values[:, 1]
@@ -247,31 +260,31 @@ class Mirror(SynedMirror, OpticalElement):
                 # mirror_grazing_angles = numpy.degrees(1e-3*mirror_grazing_angles) # mrad to deg
 
                 Rs = numpy.interp(grazing_angle_mrad,
-                                                    mirror_grazing_angles,
-                                                    mirror_reflectivities,
-                                                    left=mirror_reflectivities[0],
-                                                    right=mirror_reflectivities[-1])
+                                  mirror_grazing_angles,
+                                  mirror_reflectivities,
+                                  left=mirror_reflectivities[0],
+                                  right=mirror_reflectivities[-1])
                 Rp = Rs
 
 
-            elif self._f_refl == 3:  # user energy
+            elif soe._f_refl == 3:  # user energy
 
                 beam_energies = beam.get_photon_energy_eV()
 
-                values = numpy.loadtxt(self._file_refl)
+                values = numpy.loadtxt(soe._file_refl)
 
                 mirror_energies = values[:, 0]
                 mirror_reflectivities = values[:, 1]
 
                 Rs = numpy.interp(beam_energies,
-                                                mirror_energies,
-                                                mirror_reflectivities,
-                                                left=mirror_reflectivities[0],
-                                                right=mirror_reflectivities[-1])
+                                  mirror_energies,
+                                  mirror_reflectivities,
+                                  left=mirror_reflectivities[0],
+                                  right=mirror_reflectivities[-1])
                 Rp = Rs
 
-            elif self._f_refl == 4:  # user 2D
-                values = numpy.loadtxt(self._file_refl)
+            elif soe._f_refl == 4:  # user 2D
+                values = numpy.loadtxt(soe._file_refl)
 
                 beam_energies = beam.get_photon_energy_eV()
 
@@ -330,29 +343,13 @@ class Mirror(SynedMirror, OpticalElement):
     # i/o utilities
     #
     def set_positions(self, p, q, theta_grazing, theta_azimuthal=None):
-        self._element_coordinates_syned._p = p
-        self._element_coordinates_syned._q = q
-        self._element_coordinates_syned._angle_radial = numpy.pi / 2 - theta_grazing
-        if theta_azimuthal is not None:
-            self._element_coordinates_syned._angle_azimuthal = theta_azimuthal
-
-
-    def set_surface_conic(self, conic_coefficients=[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,-1.0,0.0]):
-        self.set_surface_shape = (
-            Conic(conic_coefficients=conic_coefficients)
-            )
-
-    def set_surface_toroid(self, min_radius=0.0, maj_radius=0.0):
-        self.set_surface_shape(
-            Toroidal(min_radius=min_radius, maj_radius=maj_radius)
-        )
-
-    def set_boundaries_rectangle(self, x_left=-1e3, x_right=1e3, y_bottom=-1e3, y_top=1e3):
-        self._boundary_shape = \
-            Rectangle(x_left=x_left, x_right=x_right, y_bottom=y_bottom, y_top=y_top)
+        self.get_coordinates()._p = p
+        self.get_coordinates()._q = q
+        self.get_coordinates()._angle_radial = numpy.pi / 2 - theta_grazing
+        if theta_azimuthal is not None: self.get_coordinates()._angle_azimuthal = theta_azimuthal
 
     @classmethod
-    def reflectivity_fresnel(cls,refraction_index, grazing_angle_mrad=3.0, debyewaller=1.0):
+    def reflectivity_fresnel(cls, refraction_index, grazing_angle_mrad=3.0, debyewaller=1.0):
         theta1 = grazing_angle_mrad * 1e-3     # in rad
 
         alpha = 2 * (1.0 - refraction_index.real)

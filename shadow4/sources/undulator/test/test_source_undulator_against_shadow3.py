@@ -18,7 +18,7 @@ from orangecontrib.shadow.util.undulator.source_undulator_input_output import So
 import Shadow
 from srxraylib.plot.gol import plot,plot_image,plot_show
 
-from shadow4.sources.undulator.test_source_undulator_factory_against_shadow3 import _calculate_shadow3_beam_using_preprocessors, _shadow3_commands, SHADOW3_BINARY
+from shadow4.sources.undulator.test.test_source_undulator_factory_against_shadow3 import _calculate_shadow3_beam_using_preprocessors, _shadow3_commands, SHADOW3_BINARY
 
 #
 # switch on/off plots
@@ -206,7 +206,7 @@ class TestSourceUndulator(unittest.TestCase):
                 print(u.info())
                 # beam = u.calculate_shadow3_beam(user_unit_to_m=1e-2,SEED=36255,NRAYS=h["NRAYS"],)
 
-                rays = u.calculate_rays(user_unit_to_m=1e-2,SEED=36255,NRAYS=h["NRAYS"])
+                rays = u.__calculate_rays(user_unit_to_m=1e-2, SEED=36255, NRAYS=h["NRAYS"])
                 beam = Shadow.Beam(N=rays.shape[0])
                 beam.rays = rays
                 beam.write("begin.dat")

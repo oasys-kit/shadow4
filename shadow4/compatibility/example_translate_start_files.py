@@ -80,8 +80,8 @@ def test_start00_to_bending_magnet(iwrite=0,run=False):
         #
         print(bm.info())
 
-        rays = bm.calculate_rays(F_COHER=oe0.F_COHER,NRAYS=oe0.NPOINT,SEED=oe0.ISTAR1,
-                                 EPSI_DX=oe0.EPSI_DX,EPSI_DZ=oe0.EPSI_DZ,verbose=False)
+        rays = bm.__calculate_rays(F_COHER=oe0.F_COHER, NRAYS=oe0.NPOINT, SEED=oe0.ISTAR1,
+                                   EPSI_DX=oe0.EPSI_DX, EPSI_DZ=oe0.EPSI_DZ, verbose=False)
 
         from srxraylib.plot.gol import plot_scatter,set_qt
         set_qt()
