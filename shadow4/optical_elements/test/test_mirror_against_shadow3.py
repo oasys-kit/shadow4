@@ -21,7 +21,7 @@ from shadow4.syned.shape import MultiplePatch
 
 from shadow4.syned.shape import Rectangle, Ellipse, TwoEllipses # TODO from syned.beamline.shape
 
-from shadow4.optical_elements.mirror import Mirror
+from shadow4.optical_elements.s4_mirror import S4Mirror, S4MirrorElement
 
 from numpy.testing import assert_almost_equal
 
@@ -152,17 +152,18 @@ if __name__ == "__main__":
     #
     # shadow definitions
     #
-    mirror1 = Mirror(name="M1",
-                surface_shape_syned=surface_shape,
-                boundary_shape_syned=boundary_shape,
-                element_coordinates_syned=coordinates_syned)
+    mirror1 = S4Mirror(name="M1",
+                surface_shape=surface_shape,
+                boundary_shape=boundary_shape)
+                # element_coordinates_syned=coordinates_syned)
     print(mirror1.info())
 
+    mirror1e = S4MirrorElement(optical_element=mirror1, coordinates=coordinates_syned)
     #
     # run
     #
-    beam1, mirr1 = mirror1.trace_beam(beam0, flag_lost_value=-11000.0)
-    print(mirr1.info())
+    beam1, mirr1 = mirror1e.trace_beam(beam0, flag_lost_value=-11000.0)
+    print(mirror1e.info())
 
     #
     # check
