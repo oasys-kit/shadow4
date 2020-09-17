@@ -9,10 +9,10 @@ from shadow4.sources.source_geometrical.source_gaussian import SourceGaussian
 from shadow4.sources.source_geometrical.source_geometrical import SourceGeometrical
 
 from shadow4.syned.shape import Rectangle, Ellipse, TwoEllipses # TODO from syned.beamline.shape
-from shadow4.syned.shape import Toroidal, Conic, NumericalMesh # TODO from syned.beamline.shape
+from shadow4.syned.shape import Toroidal, Conic # TODO from syned.beamline.shape
 
 
-from shadow4.optical_elements.empty import Empty
+from shadow4.optical_elements.s4_empty import S4Empty, S4EmptyElement
 
 
 import Shadow
@@ -268,16 +268,16 @@ def test_empty_element( do_plot=0,
     # shadow4
     #
 
-    # empty_oe = Empty(name="Empty", angle_radial=theta1_deg*numpy.pi/180,
+    # empty_oe = S4Empty(name="Empty", angle_radial=theta1_deg*numpy.pi/180,
     #                  angle_radial_ref=theta2_deg*numpy.pi/180,
     #                  angle_azimuthal=alpha_deg*numpy.pi/180, p=p, q=q)
 
-    empty_oe = Empty()
-    empty_oe.set_positions(angle_radial=theta1_deg*numpy.pi/180,
+    empty = S4EmptyElement()
+    empty.set_positions(angle_radial=theta1_deg*numpy.pi/180,
                      angle_radial_out=theta2_deg*numpy.pi/180,
                      angle_azimuthal=alpha_deg*numpy.pi/180, p=p, q=q)
 
-    beam1, mirr1 = empty_oe.trace_beam(beam0)
+    beam1, mirr1 = empty.trace_beam(beam0)
 
     #
     # shadow3
