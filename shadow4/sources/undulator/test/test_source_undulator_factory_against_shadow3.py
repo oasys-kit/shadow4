@@ -19,7 +19,6 @@ import json
 import os
 
 # CODE TO TEST
-# from SourceUndulator import SourceUndulator
 from orangecontrib.shadow.util.undulator.source_undulator_factory import SourceUndulatorFactory
 from orangecontrib.shadow.util.undulator.source_undulator_factory_pysru import SourceUndulatorFactoryPysru
 from orangecontrib.shadow.util.undulator.source_undulator_factory_srw import SourceUndulatorFactorySrw

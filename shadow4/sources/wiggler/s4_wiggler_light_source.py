@@ -10,35 +10,25 @@ Fully replaces and upgrades the shadow3 wiggler model.
 
 The radiation is calculating using sr-xraylib
 
-
-Usage:
-
-sw = SourceWiggler()        # use keywords to define parameters. It uses syned for electron beam and wiggler
-rays = sw.calculate_rays()    # sample rays. Result is a numpy.array of shape (NRAYS,18), exactly the same as in shadow3
-
-
 """
-
 
 import numpy
 
-from srxraylib.util.inverse_method_sampler import Sampler1D
-from srxraylib.plot.gol import plot_scatter
-import scipy.constants as codata
-
-from syned.storage_ring.magnetic_structures.wiggler import Wiggler
-from shadow4.syned.magnetic_structure_1D_field import MagneticStructure1DField
-
+from syned.storage_ring.light_source import LightSource
 from syned.storage_ring.electron_beam import ElectronBeam
 
-
+from srxraylib.util.inverse_method_sampler import Sampler1D
 from srxraylib.sources.srfunc import wiggler_trajectory, wiggler_spectrum, wiggler_cdf, sync_f
 
 import scipy
 from scipy.interpolate import interp1d
+import scipy.constants as codata
 
+from shadow4.sources.s4_light_source import S4LightSource
+from shadow4.sources.wiggler.s4_wiggler import S4Wiggler
+from shadow4.beam.beam import Beam
 
-# This is similar than sync_f in srxraylib but faster
+# This is similar to sync_f in srxraylib but faster
 def sync_f_sigma_and_pi(rAngle, rEnergy):
     r""" angular dependency of synchrotron radiation emission
 
@@ -104,272 +94,102 @@ def sync_f_sigma_and_pi(rAngle, rEnergy):
     return efe_sigma**2,efe_pi**2
 
 
+class S4WigglerLightSource(LightSource, S4LightSource):
 
-class SourceWiggler(object):
-    def __init__(self,name="",
-                 syned_electron_beam=None,
-                 syned_wiggler=None,
-                 emin=10000.0,               # Photon energy scan from energy (in eV)
-                 emax=11000.0,               # Photon energy scan to energy (in eV)
-                 ng_e=11,                    # Photon energy scan number of points
-                 ng_j=20,                    # Number of points in electron trajectory (per period) for internal calculation only
-                 flag_emittance=0,           # when sampling rays: Use emittance (0=No, 1=Yes)
-                 ):
-
-        # # Machine
-        if syned_electron_beam is None:
-            self.syned_electron_beam = ElectronBeam()
-        else:
-            self.syned_electron_beam = syned_electron_beam
-
-        # # Undulator
-        if syned_wiggler is None:
-            self.syned_wiggler = Wiggler()
-        else:
-            self.syned_wiggler = syned_wiggler
-
-        # Photon energy scan
-        self._EMIN            = emin   # Photon energy scan from energy (in eV)
-        self._EMAX            = emax   # Photon energy scan to energy (in eV)
-        self._NG_E            = ng_e   # Photon energy scan number of points
-
-        self._NG_J            = ng_j       # Number of points in electron trajectory (per period)
-
-        self._FLAG_EMITTANCE  =  flag_emittance # Yes  # Use emittance (0=No, 1=Yes)
-
-        # electron initial conditions for electron trahjectory calculations
-        self.set_electron_initial_conditions()
+    def __init__(self, name="Undefined", electron_beam=None, wiggler_magnetic_structure=None):
+        super().__init__(name,
+                         electron_beam=electron_beam if not electron_beam is None else ElectronBeam(),
+                         magnetic_structure=wiggler_magnetic_structure if not wiggler_magnetic_structure is None else S4Wiggler())
 
         # results of calculations
+        self.__result_trajectory = None
+        self.__result_parameters = None
+        self.__result_cdf = None
 
-        self._result_trajectory = None
-        self._result_parameters = None
-        self._result_cdf = None
 
+    def get_beam(self, user_unit_to_m=1.0,F_COHER=0,NRAYS=5000,SEED=123456,EPSI_DX=0.0,EPSI_DZ=0.0,
+                       psi_interval_in_units_one_over_gamma=None,
+                       psi_interval_number_of_points=1001,
+                       verbose=True):
+
+        return Beam.initialize_from_array(self.__calculate_rays(
+            user_unit_to_m=user_unit_to_m,
+            F_COHER=F_COHER,
+            NRAYS=NRAYS,
+            SEED=SEED,
+            EPSI_DX=EPSI_DX,
+            EPSI_DZ=EPSI_DZ,
+            psi_interval_in_units_one_over_gamma=psi_interval_in_units_one_over_gamma,
+            psi_interval_number_of_points=psi_interval_number_of_points,
+            verbose=verbose))
 
     def info(self,debug=False):
-        """
-        gets text info
+        electron_beam = self.get_electron_beam()
+        magnetic_structure = self.get_magnetic_structure()
 
-        :param debug: if True, list the undulator variables (Default: debug=True)
-        :return:
-        """
-        # list all non-empty keywords
         txt = ""
-
-
         txt += "-----------------------------------------------------\n"
 
         txt += "Input Electron parameters: \n"
-        txt += "        Electron energy: %f geV\n"%self.syned_electron_beam._energy_in_GeV
-        txt += "        Electron current: %f A\n"%self.syned_electron_beam._current
-        if self._FLAG_EMITTANCE:
-            sigmas = self.syned_electron_beam.get_sigmas_all()
+        txt += "        Electron energy: %f geV\n"%electron_beam.energy()
+        txt += "        Electron current: %f A\n"%electron_beam.current()
+        if magnetic_structure._FLAG_EMITTANCE:
+            sigmas = electron_beam.get_sigmas_all()
             txt += "        Electron sigmaX: %g [um]\n"%(1e6*sigmas[0])
             txt += "        Electron sigmaZ: %g [um]\n"%(1e6*sigmas[2])
             txt += "        Electron sigmaX': %f urad\n"%(1e6*sigmas[1])
             txt += "        Electron sigmaZ': %f urad\n"%(1e6*sigmas[3])
 
-        if isinstance(self.syned_wiggler,Wiggler):  # conventional wiggler
-            txt += "Input Wiggler parameters: \n"
-            txt += "        period: %f m\n"%self.syned_wiggler.period_length()
-            txt += "        number of periods: %d\n"%self.syned_wiggler.number_of_periods()
-            txt += "        K-value: %f\n"%self.syned_wiggler.K_vertical()
+        txt += "Lorentz factor (gamma): %f\n"%electron_beam.gamma()
 
-            txt += "-----------------------------------------------------\n"
+        txt2 = magnetic_structure.info()
+        return (txt + "\n\n" + txt2)
 
-            txt += "Lorentz factor (gamma): %f\n"%self.syned_electron_beam.gamma()
-            txt += "Electron velocity: %.12f c units\n"%(numpy.sqrt(1.0 - 1.0 / self.syned_electron_beam.gamma() ** 2))
-            txt += "Undulator length: %f m\n"%(self.syned_wiggler.period_length()*self.syned_wiggler.number_of_periods())
-            K_to_B = (2.0 * numpy.pi / self.syned_wiggler.period_length()) * codata.m_e * codata.c / codata.e
+    def to_python_code(self):
+        return "# to be implemented..."
 
-            txt += "Wiggler peak magnetic field: %f T\n"%(K_to_B*self.syned_wiggler.K_vertical())
+    def __calculate_radiation(self):
 
-        if isinstance(self.syned_wiggler,MagneticStructure1DField):  # conventional wiggler
-            txt += "Input Wiggler parameters: \n"
-            txt += "        from external magnetic field \n"
-            txt += self.syned_wiggler.info()
+        wiggler = self.get_magnetic_structure()
+        syned_electron_beam = self.get_electron_beam()
 
-
-        # txt += "Resonances: \n"
-        # txt += "        harmonic number [n]                   %10d %10d %10d \n"%(1,3,5)
-        # txt += "        wavelength [A]:                       %10.6f %10.6f %10.6f   \n"%(\
-        #                                                         1e10*self.syned_undulator.resonance_wavelength(self.syned_electron_beam.gamma(),harmonic=1),
-        #                                                         1e10*self.syned_undulator.resonance_wavelength(self.syned_electron_beam.gamma(),harmonic=3),
-        #                                                         1e10*self.syned_undulator.resonance_wavelength(self.syned_electron_beam.gamma(),harmonic=5))
-        # txt += "        energy [eV]   :                       %10.3f %10.3f %10.3f   \n"%(\
-        #                                                         self.syned_undulator.resonance_energy(self.syned_electron_beam.gamma(),harmonic=1),
-        #                                                         self.syned_undulator.resonance_energy(self.syned_electron_beam.gamma(),harmonic=3),
-        #                                                         self.syned_undulator.resonance_energy(self.syned_electron_beam.gamma(),harmonic=5))
-        # txt += "        frequency [Hz]:                       %10.3g %10.3g %10.3g   \n"%(\
-        #                                                         1e10*self.syned_undulator.resonance_frequency(self.syned_electron_beam.gamma(),harmonic=1),
-        #                                                         1e10*self.syned_undulator.resonance_frequency(self.syned_electron_beam.gamma(),harmonic=3),
-        #                                                         1e10*self.syned_undulator.resonance_frequency(self.syned_electron_beam.gamma(),harmonic=5))
-        # txt += "        central cone 'half' width [urad]:     %10.6f %10.6f %10.6f   \n"%(\
-        #                                                         1e6*self.syned_undulator.gaussian_central_cone_aperture(self.syned_electron_beam.gamma(),1),
-        #                                                         1e6*self.syned_undulator.gaussian_central_cone_aperture(self.syned_electron_beam.gamma(),3),
-        #                                                         1e6*self.syned_undulator.gaussian_central_cone_aperture(self.syned_electron_beam.gamma(),5))
-        # txt += "        first ring at [urad]:                 %10.6f %10.6f %10.6f   \n"%(\
-        #                                                         1e6*self.get_resonance_ring(1,1),
-        #                                                         1e6*self.get_resonance_ring(3,1),
-        #                                                         1e6*self.get_resonance_ring(5,1))
-        #
-        txt += "-----------------------------------------------------\n"
-        txt += "Grids: \n"
-        if self._NG_E == 1:
-            txt += "        photon energy %f eV\n"%(self._EMIN)
-        else:
-            txt += "        photon energy from %10.3f eV to %10.3f eV\n"%(self._EMIN,self._EMAX)
-        txt += "        number of energy points: %d\n"%(self._NG_E)
-        txt += "        number of points for the trajectory: %d\n"%(self._NG_J)
-        # txt += "        maximum elevation angle: %f urad\n"%(1e6*self._MAXANGLE)
-        # txt += "        number of angular elevation points: %d\n"%(self._NG_T)
-        # txt += "        number of angular azimuthal points: %d\n"%(self._NG_P)
-        # # txt += "        number of rays: %d\n"%(self.NRAYS)
-        # # txt += "        random seed: %d\n"%(self.SEED)
-        # txt += "-----------------------------------------------------\n"
-        #
-        # txt += "calculation code: %s\n"%self.code_undul_phot
-        # if self._result_radiation is None:
-        #     txt += "radiation: NOT YET CALCULATED\n"
-        # else:
-        #     txt += "radiation: CALCULATED\n"
-        # txt += "Sampling: \n"
-        # if self._FLAG_SIZE == 0:
-        #     flag = "point"
-        # elif self._FLAG_SIZE == 1:
-        #     flag = "Gaussian"
-        # txt += "        sampling flag: %d (%s)\n"%(self._FLAG_SIZE,flag)
-
-        txt += "-----------------------------------------------------\n"
-        return txt
-
-
-    def set_energy_monochromatic(self,emin):
-        """
-        Sets a single energy line for the source (monochromatic)
-        :param emin: the energy in eV
-        :return:
-        """
-        self._EMIN = emin
-        self._EMAX = emin
-        self._NG_E = 1
-
-
-    def set_energy_box(self,emin,emax,npoints=None):
-        """
-        Sets a box for photon energy distribution for the source
-        :param emin:  Photon energy scan from energy (in eV)
-        :param emax:  Photon energy scan to energy (in eV)
-        :param npoints:  Photon energy scan number of points (optinal, if not set no changes)
-        :return:
-        """
-
-        self._EMIN = emin
-        self._EMAX = emax
-        if npoints != None:
-            self._NG_E = npoints
-
-
-    def set_electron_initial_conditions(self,shift_x_flag=0,shift_x_value=0.0,shift_betax_flag=0,shift_betax_value=0.0):
-        self.shift_x_flag      = shift_x_flag
-        self.shift_x_value     = shift_x_value
-        self.shift_betax_flag  = shift_betax_flag
-        self.shift_betax_value = shift_betax_value
-
-    def set_electron_initial_conditions_by_label(self,
-                                        position_label="no_shift", # values are: no_shift, half_excursion, minimum, maximum, value_at_zero, user_value
-                                        velocity_label="no_shift", # values are: no_shift, half_excursion, minimum, maximum, value_at_zero, user_value
-                                        position_value=0.0,
-                                        velocity_value=0.0,
-                                        ):
-        self.shift_x_value = 0.0
-        self.shift_betax_value = 0.0
-
-        if position_label == "no_shift":
-            self.shift_x_flag = 0
-        elif position_label == "half_excursion":
-            self.shift_x_flag = 1
-        elif position_label == "minimum":
-            self.shift_x_flag = 2
-        elif position_label == "maximum":
-            self.shift_x_flag = 3
-        elif position_label == "value_at_zero":
-            self.shift_x_flag = 4
-        elif position_label == "user_value":
-            self.shift_x_flag = 5
-            self.position_value = position_value
-        else:
-            raise Exception("Invalid value for keyword position_label")
-
-        if velocity_label == "no_shift":
-            self.shift_betax_flag = 0
-        elif velocity_label == "half_excursion":
-            self.shift_betax_flag = 1
-        elif velocity_label == "minimum":
-            self.shift_betax_flag = 2
-        elif velocity_label == "maximum":
-            self.shift_betax_flag = 3
-        elif velocity_label == "value_at_zero":
-            self.shift_betax_flag = 4
-        elif velocity_label == "user_value":
-            self.shift_betax_flag = 5
-            self.shift_betax_value = velocity_value
-        else:
-            raise Exception("Invalid value for keyword velocity_label")
-
-    def get_energy_box(self):
-        """
-        Gets the limits of photon energy distribution for the source
-        :return: emin,emax,number_of_points
-        """
-        return self._EMIN,self._EMAX,self._NG_E
-
-
-    def calculate_radiation(self):
-
-
-        if isinstance(self.syned_wiggler,Wiggler):
+        if wiggler._magnetic_field_periodic == 1:
 
             (traj, pars) = wiggler_trajectory(b_from=0,
                                                      inData="",
-                                                     nPer=self.syned_wiggler.number_of_periods(),
-                                                     nTrajPoints=self._NG_J,
-                                                     ener_gev=self.syned_electron_beam._energy_in_GeV,
-                                                     per=self.syned_wiggler.period_length(),
-                                                     kValue=self.syned_wiggler.K_vertical(),
+                                                     nPer=wiggler.number_of_periods(),
+                                                     nTrajPoints=wiggler._NG_J,
+                                                     ener_gev=syned_electron_beam._energy_in_GeV,
+                                                     per=wiggler.period_length(),
+                                                     kValue=wiggler.K_vertical(),
                                                      trajFile="",)
 
-        elif isinstance(self.syned_wiggler,MagneticStructure1DField):
+        elif wiggler._magnetic_field_periodic == 0:
 
             print(">>>>>>>>>>>>>>>>>>>>>>",
-                "shift_x_flag =      ",self.shift_x_flag,
-                "shift_x_value =     ",self.shift_x_value,
-                "shift_betax_flag =  ",self.shift_betax_flag,
-                "shift_betax_value = ",self.shift_betax_value
+                "shift_x_flag =      ",wiggler._shift_x_flag,
+                "shift_x_value =     ",wiggler._shift_x_value,
+                "shift_betax_flag =  ",wiggler._shift_betax_flag,
+                "shift_betax_value = ",wiggler._shift_betax_value
                   )
 
 
-
-
-            inData = numpy.vstack((self.syned_wiggler.get_abscissas(),self.syned_wiggler.get_magnetic_field())).T
-
             (traj, pars) = wiggler_trajectory(b_from=1,
-                                                     inData=inData,
+                                                     inData=wiggler._file_with_magnetic_field,
                                                      nPer=1,
-                                                     nTrajPoints=self._NG_J,
-                                                     ener_gev=self.syned_electron_beam._energy_in_GeV,
+                                                     nTrajPoints=wiggler._NG_J,
+                                                     ener_gev=syned_electron_beam._energy_in_GeV,
                                                      # per=self.syned_wiggler.period_length(),
                                                      # kValue=self.syned_wiggler.K_vertical(),
                                                      trajFile="",
-                                                     shift_x_flag       = self.shift_x_flag     ,
-                                                     shift_x_value      = self.shift_x_value    ,
-                                                     shift_betax_flag   = self.shift_betax_flag ,
-                                                     shift_betax_value  = self.shift_betax_value,)
+                                                     shift_x_flag       = wiggler._shift_x_flag     ,
+                                                     shift_x_value      = wiggler._shift_x_value    ,
+                                                     shift_betax_flag   = wiggler._shift_betax_flag ,
+                                                     shift_betax_value  = wiggler._shift_betax_value,)
 
 
-        self._result_trajectory = traj
-        self._result_parameters = pars
+        self.__result_trajectory = traj
+        self.__result_parameters = pars
 
         # print(">>>>>>>>>> traj pars: ",traj.shape,pars)
         #
@@ -393,16 +213,16 @@ class SourceWiggler(object):
         # calculate cdf and write file for Shadow/Source
         #
 
-        print(">>>>>>>>>>>>>>>>>>>>  self._EMIN,self._EMAX,self._NG_E",self._EMIN,self._EMAX,self._NG_E)
-        self._result_cdf = wiggler_cdf(self._result_trajectory,
-                           enerMin=self._EMIN,
-                           enerMax=self._EMAX,
-                           enerPoints=self._NG_E,
-                           outFile="tmp.cdf",
-                           elliptical=False)
+        print(">>>>>>>>>>>>>>>>>>>>  wiggler._EMIN,wiggler._EMAX,wiggler._NG_E",wiggler._EMIN,wiggler._EMAX,wiggler._NG_E)
+        self.__result_cdf = wiggler_cdf(self.__result_trajectory,
+                                        enerMin=wiggler._EMIN,
+                                        enerMax=wiggler._EMAX,
+                                        enerPoints=wiggler._NG_E,
+                                        outFile="tmp.cdf",
+                                        elliptical=False)
 
 
-    def calculate_rays(self,user_unit_to_m=1.0,F_COHER=0,NRAYS=5000,SEED=123456,EPSI_DX=0.0,EPSI_DZ=0.0,
+    def __calculate_rays(self,user_unit_to_m=1.0,F_COHER=0,NRAYS=5000,SEED=123456,EPSI_DX=0.0,EPSI_DZ=0.0,
                        psi_interval_in_units_one_over_gamma=None,
                        psi_interval_number_of_points=1001,
                        verbose=True):
@@ -413,13 +233,16 @@ class SourceWiggler(object):
         :return: rays, a numpy.array((npoits,18))
         """
 
-        if self._result_cdf is None:
-            self.calculate_radiation()
+        if self.__result_cdf is None:
+            self.__calculate_radiation()
 
         if verbose:
             print(">>>   Results of calculate_radiation")
-            print(">>>       trajectory.shape: ",self._result_trajectory.shape)
-            print(">>>       cdf: ", self._result_cdf.keys())
+            print(">>>       trajectory.shape: ", self.__result_trajectory.shape)
+            print(">>>       cdf: ", self.__result_cdf.keys())
+
+        wiggler = self.get_magnetic_structure()
+        syned_electron_beam = self.get_electron_beam()
 
 
         sampled_photon_energy,sampled_theta,sampled_phi = self._sample_photon_energy_theta_and_phi(NRAYS)
@@ -431,7 +254,7 @@ class SourceWiggler(object):
             numpy.random.seed(SEED)
 
 
-        sigmas = self.syned_electron_beam.get_sigmas_all()
+        sigmas = syned_electron_beam.get_sigmas_all()
 
         rays = numpy.zeros((NRAYS,18))
 
@@ -440,11 +263,11 @@ class SourceWiggler(object):
         #
 
         #
-        if self._FLAG_EMITTANCE:
+        if wiggler._FLAG_EMITTANCE:
             if numpy.array(numpy.abs(sigmas)).sum() == 0:
-                self._FLAG_EMITTANCE = False
+                wiggler._FLAG_EMITTANCE = False
 
-        if self._FLAG_EMITTANCE:
+        if wiggler._FLAG_EMITTANCE:
             x_electron = numpy.random.normal(loc=0.0,scale=sigmas[0],size=NRAYS)
             y_electron = 0.0
             z_electron = numpy.random.normal(loc=0.0,scale=sigmas[2],size=NRAYS)
@@ -462,12 +285,12 @@ class SourceWiggler(object):
         # traj[6,ii] = curv[i]
         # traj[7,ii] = bz[i]
 
-        PATH_STEP = self._result_cdf["step"]
-        X_TRAJ = self._result_cdf["x"]
-        Y_TRAJ = self._result_cdf["y"]
-        SEEDIN = self._result_cdf["cdf"]
-        ANGLE  = self._result_cdf["angle"]
-        CURV   = self._result_cdf["curv"]
+        PATH_STEP = self.__result_cdf["step"]
+        X_TRAJ = self.__result_cdf["x"]
+        Y_TRAJ = self.__result_cdf["y"]
+        SEEDIN = self.__result_cdf["cdf"]
+        ANGLE  = self.__result_cdf["angle"]
+        CURV   = self.__result_cdf["curv"]
         EPSI_PATH = numpy.arange(CURV.size) * PATH_STEP # self._result_trajectory[7,:]
 
 
@@ -517,11 +340,11 @@ class SourceWiggler(object):
         # FSOUR  = 3
         # FDISTR  = 4
 
-        ws_ev,ws_f,tmp =  wiggler_spectrum(self._result_trajectory,
-                                    enerMin=self._EMIN, enerMax=self._EMAX, nPoints=500,
-                                    # per=self.syned_wiggler.period_length(),
-                                    electronCurrent=self.syned_electron_beam._current,
-                                    outFile="", elliptical=False)
+        ws_ev,ws_f,tmp =  wiggler_spectrum(self.__result_trajectory,
+                                           enerMin=wiggler._EMIN, enerMax=wiggler._EMAX, nPoints=500,
+                                           # per=self.syned_wiggler.period_length(),
+                                           electronCurrent=syned_electron_beam._current,
+                                           outFile="", elliptical=False)
 
         ws_flux_per_ev = ws_f / (ws_ev*1e-3)
         samplerE = Sampler1D(ws_flux_per_ev,ws_ev)
@@ -531,21 +354,21 @@ class SourceWiggler(object):
 
         ###############################################
 
-        gamma = self.syned_electron_beam.gamma()
+        gamma = syned_electron_beam.gamma()
         m2ev = codata.c * codata.h / codata.e
         TOANGS = m2ev * 1e10
 
 
         #####################################################
 
-        RAD_MIN = 1.0 / numpy.abs(self._result_cdf["curv"]).max()
+        RAD_MIN = 1.0 / numpy.abs(self.__result_cdf["curv"]).max()
 
         critical_energy = TOANGS * 3.0 * numpy.power(gamma, 3) / 4.0 / numpy.pi / 1.0e10 * (1.0 / RAD_MIN)
 
         if psi_interval_in_units_one_over_gamma is None:
             c = numpy.array([-0.3600382, 0.11188709])  # see file fit_psi_interval.py
             # x = numpy.log10(self._EMIN / critical_energy)
-            x = numpy.log10(self._EMIN / (4 * critical_energy)) # the wiggler that does not have an unique
+            x = numpy.log10(wiggler._EMIN / (4 * critical_energy)) # the wiggler that does not have an unique
                                                                 # Ec. To be safe, I use 4 times the
                                                                 # Ec vale to make the interval wider than for the BM
             y_fit = c[1] + c[0] * x
@@ -686,11 +509,11 @@ class SourceWiggler(object):
             # endif
             #
 
-            if self._FLAG_EMITTANCE:
+            if wiggler._FLAG_EMITTANCE:
                 #     CALL BINORMAL (rSigmaX, rSigmaXp, rhoX, XXX, E_BEAM(1), istar1)
                 #     [  c11  c12  ]     [  sigma1^2           rho*sigma1*sigma2   ]
                 #     [  c21  c22  ]  =  [  rho*sigma1*sigma2  sigma2^2            ]
-                sigmaX,sigmaXp,sigmaZ,sigmaZp = self.syned_electron_beam.get_sigmas_all()
+                sigmaX,sigmaXp,sigmaZ,sigmaZp = syned_electron_beam.get_sigmas_all()
 
                 epsi_wX = sigmaX * sigmaXp
                 rSigmaX = numpy.sqrt( (epsi_wX**2) * (sigmaXp**2) + sigmaX**2 )
@@ -846,8 +669,8 @@ class SourceWiggler(object):
                     numpy.power(eene,2)*a8*self.syned_electron_beam._current*hdiv_mrad * \
                     numpy.power(self.syned_electron_beam._energy_in_GeV,2)
             else:
-                fm_s , fm_p = sync_f_sigma_and_pi(a*1e-3*self.syned_electron_beam.gamma(),eene)
-                cte = eene ** 2 * a8 * self.syned_electron_beam._current * hdiv_mrad * self.syned_electron_beam._energy_in_GeV ** 2
+                fm_s , fm_p = sync_f_sigma_and_pi(a*1e-3*syned_electron_beam.gamma(),eene)
+                cte = eene ** 2 * a8 * syned_electron_beam._current * hdiv_mrad * syned_electron_beam._energy_in_GeV ** 2
                 fm_s *= cte
                 fm_p *= cte
 
@@ -1055,8 +878,7 @@ class SourceWiggler(object):
 
 
 if __name__ == "__main__":
-
-    from srxraylib.plot.gol import set_qt
+    from srxraylib.plot.gol import plot_scatter, set_qt
     set_qt()
 
     e_min = 5000.0 # 70490.0 #
@@ -1083,13 +905,11 @@ if __name__ == "__main__":
     shift_betax_value = 0.0
 
 
-    sw = SourceWiggler()
+
 
     #
     # syned
     #
-    syned_wiggler = Wiggler(K_vertical=kValue,K_horizontal=0.0,period_length=per,number_of_periods=nPer)
-
 
     syned_electron_beam = ElectronBeam(energy_in_GeV=6.04,
                  energy_spread = 0.0,
@@ -1102,17 +922,23 @@ if __name__ == "__main__":
                  moment_yyp=0.0,
                  moment_ypyp=(4e-6)**2 )
 
-    sourcewiggler = SourceWiggler(name="test",syned_electron_beam=syned_electron_beam,
-                    syned_wiggler=syned_wiggler,
-                    flag_emittance=use_emittances,
-                    emin=e_min,emax=e_max,ng_e=10, ng_j=nTrajPoints)
+
+    w = S4Wiggler(K_vertical=kValue,period_length=per,number_of_periods=nPer,
+                                flag_emittance=use_emittances,
+                                emin=e_min, emax=e_max,ng_e=10, ng_j=nTrajPoints)
 
 
 
-    print(sourcewiggler.info())
+    # print(w.info())
+
+    ls = S4WigglerLightSource(name="Undefined", electron_beam=syned_electron_beam, wiggler_magnetic_structure=w)
+
+    print(ls.info())
 
 
-    rays = sourcewiggler.calculate_rays(NRAYS=NRAYS)
+    beam = ls.get_beam(NRAYS=NRAYS)
+
+    rays = beam.rays
 
     plot_scatter(rays[:,1],rays[:,0],title="trajectory",show=False)
     plot_scatter(rays[:,0],rays[:,2],title="real space",show=False)

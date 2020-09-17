@@ -60,7 +60,7 @@ if __name__ == "__main__":
         radiation_interpolated,photon_energy, vx,vz = sourceundulator.get_radiation_interpolated_cartesian()
         plot_image(radiation_interpolated[0],vx,vz,aspect='auto',title="intensity interpolated in cartesian grid",xtitle="vx",ytitle="vy")
 
-        polarization = sourceundulator._result_radiation["polarization"]
+        polarization = sourceundulator.__result_radiation["polarization"]
         plot_image(polarization[0],1e6*theta,phi,aspect='auto',title="polarization",xtitle="theta [urad]",ytitle="phi [rad]")
 
 
@@ -68,7 +68,7 @@ if __name__ == "__main__":
 
     print(sourceundulator.info())
 
-    for k in sourceundulator._result_radiation.keys():
+    for k in sourceundulator.__result_radiation.keys():
         print(k)
 
     #
@@ -104,6 +104,6 @@ if __name__ == "__main__":
     x_photon = rays[:,0]
     z_photon = rays[:,2]
     R = numpy.sqrt(x_photon**2 + z_photon**2)
-    print(">> s_phot, Std R", sourceundulator._result_photon_size_sigma, numpy.sqrt( (R**2).sum() / (R.size-1) ))
-    print(">> s_phot, Std X", sourceundulator._result_photon_size_sigma, numpy.sqrt( (x_photon**2).sum() / (x_photon.size-1) ))
-    print(">> s_phot, Std Z", sourceundulator._result_photon_size_sigma, numpy.sqrt( (z_photon**2).sum() / (z_photon.size-1) ))
+    print(">> s_phot, Std R", sourceundulator.__result_photon_size_sigma, numpy.sqrt((R ** 2).sum() / (R.size - 1)))
+    print(">> s_phot, Std X", sourceundulator.__result_photon_size_sigma, numpy.sqrt((x_photon ** 2).sum() / (x_photon.size - 1)))
+    print(">> s_phot, Std Z", sourceundulator.__result_photon_size_sigma, numpy.sqrt((z_photon ** 2).sum() / (z_photon.size - 1)))

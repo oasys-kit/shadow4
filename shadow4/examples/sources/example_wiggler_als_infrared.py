@@ -3,13 +3,10 @@ import numpy
 
 from srxraylib.plot.gol import plot,plot_scatter, set_qt
 
-from shadow4.syned.magnetic_structure_1D_field import MagneticStructure1DField
-
 from syned.storage_ring.electron_beam import ElectronBeam
 
-from shadow4.sources.wiggler.source_wiggler import SourceWiggler
-
-from shadow4.beam.beam import Beam
+from shadow4.sources.wiggler.s4_wiggler import S4Wiggler
+from shadow4.sources.wiggler.s4_wiggler_light_source import S4WigglerLightSource
 
 from scipy.ndimage import gaussian_filter1d
 
@@ -74,8 +71,6 @@ if __name__ == "__main__":
     shift_betax_value = 0.0
 
 
-    sw = SourceWiggler()
-
     #
     # syned
     #
@@ -88,14 +83,10 @@ if __name__ == "__main__":
                                        moment_ypyp=(30e-12 / 31e-6)**2,
                                        )
 
-    # conventional wiggler
-    # syned_wiggler = Wiggler(K_vertical=kValue,K_horizontal=0.0,period_length=per,number_of_periods=nPer)
-
     # B from file
-
     filename = "BM_multi.b"
     create_file_with_magnetic_field(filename)
-    syned_wiggler = MagneticStructure1DField.initialize_from_file(filename)
+    # syned_wiggler = MagneticStructure1DField.initialize_from_file(filename)
     # syned_wiggler.add_spatial_shift(-0.478)
     # syned_wiggler.flip_B()
 
@@ -106,30 +97,32 @@ if __name__ == "__main__":
     else:
         ng_e = 10
 
-    sourcewiggler = SourceWiggler(name="test",
-                    syned_electron_beam=syned_electron_beam,
-                    syned_wiggler=syned_wiggler,
+    sourcewiggler = S4Wiggler(
+                    magnetic_field_periodic=0,
+                    file_with_magnetic_field=filename,
                     flag_emittance=use_emittances,
                     emin=e_min,
                     emax=e_max,
                     ng_e=ng_e,
                     ng_j=nTrajPoints)
-
-
     sourcewiggler.set_electron_initial_conditions_by_label(position_label="value_at_zero",
                                                            velocity_label="value_at_zero")
 
+    ls = S4WigglerLightSource(name="", electron_beam=syned_electron_beam, wiggler_magnetic_structure=sourcewiggler)
 
-    print(sourcewiggler.info())
 
 
-    rays = sourcewiggler.calculate_rays(NRAYS=NRAYS)
+    print(ls.info())
+
+
+    beam = ls.get_beam(NRAYS=NRAYS)
+    rays = beam.rays
 
     plot_scatter(rays[:,0]*1e6,rays[:,2]*1e6,xtitle="X um",ytitle="Z um")
     plot_scatter(rays[:,1],rays[:,0]*1e6,xtitle="Y m",ytitle="X um")
     plot_scatter(rays[:,1],rays[:,2]*1e6,xtitle="Y m",ytitle="Z um")
     plot_scatter(rays[:,3]*1e6,rays[:,5]*1e6,xtitle="X' urad",ytitle="Z' urad")
 
-    Beam.initialize_from_array(rays).write_h5("begin.h5")
+    # Beam.initialize_from_array(rays).write_h5("begin.h5")
 
 

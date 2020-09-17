@@ -19,13 +19,13 @@ __date__ = "12/01/2017"
 #
 
 # needed by srw
+
+import array
+
 try:
-    import srwlib as sl
-    import array
+    import oasys_srw.srwlib as sl
 except:
-    print("Failed to import SRW")
-
-
+    import srwlib as sl
 
 
 import numpy

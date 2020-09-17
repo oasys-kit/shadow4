@@ -94,8 +94,9 @@ from shadow4.optical_elements.s4_beamline_element import S4BeamlineElement
 
 class S4MirrorElement(S4BeamlineElement):
     
-    def __init__(self, optical_element=S4Mirror(), coordinates=ElementCoordinates()):
-        super().__init__(optical_element, coordinates)
+    def __init__(self, optical_element=None, coordinates=None):
+        super().__init__(optical_element if optical_element is not None else S4Mirror(),
+                         coordinates if coordinates is not None else ElementCoordinates())
     
     def trace_beam(self, beam_in, flag_lost_value=-1):
 

@@ -1,40 +1,41 @@
 import numpy
-from syned.beamline.optical_elements.ideal_elements.screen import Screen as SyScreen
+from syned.beamline.optical_elements.ideal_elements.screen import Screen as SynedScreen
 from syned.beamline.beamline_element import BeamlineElement
 from shadow4.syned.element_coordinates import ElementCoordinates # TODO from syned.beamline.element_coordinates
 
-class Empty(object):
+from shadow4.optical_elements.s4_optical_element import S4OpticalElement
 
-    def __init__(self, beamline_element_syned = None):
-        if beamline_element_syned is None:
-            self._beamline_element_syned = BeamlineElement(
-                SyScreen(name="Undefined"),
-                ElementCoordinates(p=0.0, q=0.0, angle_radial=0.0, angle_radial_out=numpy.pi, angle_azimuthal=0.0))
-        else:
-            ok = False
-            for obj in [SyScreen]:
-                if isinstance(beamline_element_syned._optical_element, obj): ok = True
-            if ok:
-                self._beamline_element_syned = beamline_element_syned
-            else:
-                raise Exception("Please initialize shadow4 Empty with syned Screen")
+from shadow4.optical_elements.s4_beamline_element import S4BeamlineElement
+
+
+class S4Empty(SynedScreen, S4OpticalElement):
+    def __init__(self, name="Undefined"):
+        super().__init__(name=name)
+
+
+class S4EmptyElement(S4BeamlineElement):
+
+    def __init__(self, optical_element=None, coordinates=None):
+        super().__init__(optical_element if optical_element is not None else S4Empty(),
+                         coordinates if coordinates is not None else ElementCoordinates())
 
     def set_positions(self, p=0.0, q=0.0, angle_radial=0.0, angle_radial_out=numpy.pi, angle_azimuthal=0.0):
-        self._beamline_element_syned.get_coordinates()._p = p
-        self._beamline_element_syned.get_coordinates()._q = q
-        self._beamline_element_syned.get_coordinates()._angle_radial = angle_radial
-        self._beamline_element_syned.get_coordinates()._angle_radial_out = angle_radial_out
-        self._beamline_element_syned.get_coordinates()._angle_azimuthal = angle_azimuthal
+
+        self.get_coordinates()._p = p
+        self.get_coordinates()._q = q
+        self.get_coordinates()._angle_radial = angle_radial
+        self.get_coordinates()._angle_radial_out = angle_radial_out
+        self.get_coordinates()._angle_azimuthal = angle_azimuthal
 
     def get_positions(self):
-        return self._beamline_element_syned.get_coordinates()._p, \
-            self._beamline_element_syned.get_coordinates()._q, \
-            self._beamline_element_syned.get_coordinates()._angle_radial, \
-            self._beamline_element_syned.get_coordinates()._angle_radial_out, \
-            self._beamline_element_syned.get_coordinates()._angle_azimuthal
+        coordinates = self.get_coordinates()
+        return coordinates.p(), \
+            coordinates.q(), \
+            coordinates.angle_radial(), \
+            coordinates.angle_radial_out(), \
+            coordinates.angle_azimuthal()
 
     def trace_beam(self,beam1):
-        beam = beam1.duplicate()
 
         p, q, angle_radial, angle_radial_out, angle_azimuthal = self.get_positions()
 

@@ -20,13 +20,11 @@ from srxraylib.sources import srfunc
 
 # shadow4
 from syned.storage_ring.electron_beam import ElectronBeam
-from shadow4.syned.magnetic_structure_1D_field import MagneticStructure1DField
-from shadow4.sources.wiggler.source_wiggler import SourceWiggler
+from shadow4.sources.wiggler.s4_wiggler import S4Wiggler
+from shadow4.sources.wiggler.s4_wiggler_light_source import S4WigglerLightSource
 from shadow4.beam.beam import Beam
 from shadow4.compatibility.beam3 import Beam3
 
-
-from srxraylib.plot.gol import plot_scatter
 
 def none_conv(result):
     """Just in case of a None result, to prevent script crashing"""
@@ -137,7 +135,7 @@ def run_shadow4(photon_energy, n_rays=5e5, emittance=True):
 
 
     # wiggler: B from file
-    syned_wiggler = MagneticStructure1DField.initialize_from_file("Bz_Alba_rev3.dat")
+    # syned_wiggler = MagneticStructure1DField.initialize_from_file("Bz_Alba_rev3.dat")
 
 
     if e_min == e_max:
@@ -145,9 +143,9 @@ def run_shadow4(photon_energy, n_rays=5e5, emittance=True):
     else:
         ng_e = 10
 
-    sourcewiggler = SourceWiggler(name="alba",
-                    syned_electron_beam=syned_electron_beam,
-                    syned_wiggler=syned_wiggler,
+    sourcewiggler = S4Wiggler(
+                    magnetic_field_periodic=0,
+                    file_with_magnetic_field="Bz_Alba_rev3.dat",
                     flag_emittance=use_emittances,
                     emin=e_min,
                     emax=e_max,
@@ -163,12 +161,11 @@ def run_shadow4(photon_energy, n_rays=5e5, emittance=True):
                                                   shift_betax_flag=shift_betax_flag,
                                                   shift_betax_value=shift_betax_value)
 
+    ls = S4WigglerLightSource(name="", electron_beam=syned_electron_beam, wiggler_magnetic_structure=sourcewiggler)
+    print(ls.info())
 
-    print(sourcewiggler.info())
+    beam = ls.get_beam(NRAYS=NRAYS)
 
-    rays = sourcewiggler.calculate_rays(NRAYS=NRAYS)
-
-    beam = Beam.initialize_from_array(rays)
     return beam
 
 
