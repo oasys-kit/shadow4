@@ -2,7 +2,6 @@ import numpy
 
 
 from syned.storage_ring.magnetic_structures.bending_magnet import BendingMagnet
-from syned.storage_ring.electron_beam import ElectronBeam
 
 class S4BendingMagnet(BendingMagnet):
     def __init__(self,
