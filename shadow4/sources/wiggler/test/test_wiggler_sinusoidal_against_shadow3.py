@@ -4,10 +4,10 @@ import numpy
 
 from srxraylib.plot.gol import plot, plot_scatter, plot_image
 
-from syned.storage_ring.magnetic_structures.wiggler import Wiggler
 from syned.storage_ring.electron_beam import ElectronBeam
 
-from shadow4.sources.wiggler.source_wiggler import SourceWiggler
+from shadow4.sources.wiggler.s4_wiggler import S4Wiggler
+from shadow4.sources.wiggler.s4_wiggler_light_source import S4WigglerLightSource
 
 def run_python_preprocessors(e_min=1000.0,e_max=10000.0 ):
 
@@ -205,12 +205,11 @@ if __name__ == "__main__":
     shift_betax_value = 0.0
 
 
-    sw = SourceWiggler()
 
     #
     # syned
     #
-    syned_wiggler = Wiggler(K_vertical=kValue,K_horizontal=0.0,period_length=per,number_of_periods=nPer)
+    # syned_wiggler = Wiggler(K_vertical=kValue,K_horizontal=0.0,period_length=per,number_of_periods=nPer)
 
     syned_electron_beam = ElectronBeam(energy_in_GeV=6.04,
                  energy_spread = 0.0,
@@ -223,17 +222,18 @@ if __name__ == "__main__":
                  moment_yyp=0.0,
                  moment_ypyp=(4e-6)**2 )
 
-    sourcewiggler = SourceWiggler(name="test",syned_electron_beam=syned_electron_beam,
-                    syned_wiggler=syned_wiggler,
+    w = S4Wiggler(K_vertical=kValue,period_length=per,number_of_periods=nPer,
                     flag_emittance=use_emittances,
                     emin=e_min,emax=e_max,ng_e=10, ng_j=nTrajPoints)
 
 
-    print(sourcewiggler.info())
+    print(w.info())
 
-    rays = sourcewiggler.calculate_rays(NRAYS=NRAYS)
+    ls = S4WigglerLightSource(name="Untitled", electron_beam=syned_electron_beam, wiggler_magnetic_structure=w)
 
-    compare_rays_with_shadow3_beam(rays,beam_shadow3,do_plot=False,do_assert=True)
+    beam = ls.get_beam(NRAYS=NRAYS)
+
+    compare_rays_with_shadow3_beam(beam.rays,beam_shadow3,do_plot=False,do_assert=True)
 
 
     #
@@ -241,7 +241,7 @@ if __name__ == "__main__":
     #
 
     from numpy.testing import assert_almost_equal
-    from shadow4.sources.wiggler.source_wiggler import sync_f_sigma_and_pi
+    from shadow4.sources.wiggler.s4_wiggler_light_source import sync_f_sigma_and_pi
     from srxraylib.sources.srfunc import sync_f
     rAngle = numpy.array([1,2,3,4])
     rEnergy = 1.3

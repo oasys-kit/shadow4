@@ -40,6 +40,10 @@ class S4BendingMagnet(BendingMagnet):
 
 
         txt += "-----------------------------------------------------\n"
+
+
+        return super(S4BendingMagnet, self).info() + "\n" + txt
+
         return txt
 
 
