@@ -12,13 +12,19 @@ import unittest
 import numpy
 
 from numpy.testing import assert_almost_equal
-from orangecontrib.shadow.util.undulator.source_undulator import SourceUndulator
+from shadow4.sources.undulator.s4_undulator import S4Undulator
+from shadow4.sources.undulator.s4_undulator_light_source import S4UndulatorLightSource
+from shadow4.compatibility.beam3 import Beam3
+from shadow4.sources.undulator.test.test_source_undulator_factory_against_shadow3 import \
+    _calculate_shadow3_beam_using_preprocessors, _shadow3_commands
+
+
+
 from orangecontrib.shadow.util.undulator.source_undulator_input_output import SourceUndulatorInputOutput
 
 import Shadow
 from srxraylib.plot.gol import plot,plot_image,plot_show
 
-from shadow4.sources.undulator.test.test_source_undulator_factory_against_shadow3 import _calculate_shadow3_beam_using_preprocessors, _shadow3_commands, SHADOW3_BINARY
 
 #
 # switch on/off plots
@@ -183,7 +189,7 @@ class TestSourceUndulator(unittest.TestCase):
                 # syned
                 #
 
-                su = Undulator.initialize_as_vertical_undulator(K=h["K"],period_length=h["LAMBDAU"],periods_number=h["NPERIODS"])
+                # su = Undulator.initialize_as_vertical_undulator(K=h["K"],period_length=h["LAMBDAU"],periods_number=h["NPERIODS"])
 
                 ebeam = ElectronBeam(energy_in_GeV = h["E_ENERGY"],
                              energy_spread         = h["E_ENERGY_SPREAD"],
@@ -197,18 +203,17 @@ class TestSourceUndulator(unittest.TestCase):
                              moment_ypyp           = (h["EZ"]/h["SZ"])**2,
                                      )
 
-                u = SourceUndulator(name="test",syned_electron_beam=ebeam,syned_undulator=su,
+                u = S4Undulator(K_vertical=h["K"],period_length=h["LAMBDAU"],number_of_periods=h["NPERIODS"],
                                 flag_emittance=int(h["_FLAG_EMITTANCE(1)"]),flag_size=0,
                                 emin=h["_EMIN"],emax=h["_EMAX"],ng_e=h["_NG_E"],
                                 maxangle=h["_MAXANGLE"],ng_t=h["_NG_T"],ng_p=h["_NG_P"],
                                 code_undul_phot="internal")
 
-                print(u.info())
-                # beam = u.calculate_shadow3_beam(user_unit_to_m=1e-2,SEED=36255,NRAYS=h["NRAYS"],)
+                ls = S4UndulatorLightSource(name="", electron_beam=ebeam, undulator_magnetic_structure=u)
+                print(ls.info())
 
-                rays = u.__calculate_rays(user_unit_to_m=1e-2, SEED=36255, NRAYS=h["NRAYS"])
-                beam = Shadow.Beam(N=rays.shape[0])
-                beam.rays = rays
+                beam_shadow4 = ls.get_beam(user_unit_to_m=1e-2, SEED=36255, NRAYS=h["NRAYS"])
+                beam = Beam3.initialize_from_shadow4_beam(beam_shadow4)
                 beam.write("begin.dat")
 
 
