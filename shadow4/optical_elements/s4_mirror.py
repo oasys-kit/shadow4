@@ -343,10 +343,9 @@ class S4MirrorElement(S4BeamlineElement):
     #
     # i/o utilities
     #
-    def set_positions(self, p, q, theta_grazing, theta_azimuthal=None):
-        self.get_coordinates()._p = p
-        self.get_coordinates()._q = q
-        self.get_coordinates()._angle_radial = numpy.pi / 2 - theta_grazing
+    def set_grazing_angle(self, theta_grazing, theta_azimuthal=None):
+        self.get_coordinates()._angle_radial     = numpy.pi / 2 - theta_grazing
+        self.get_coordinates()._angle_radial_out = numpy.pi / 2 - theta_grazing
         if theta_azimuthal is not None: self.get_coordinates()._angle_azimuthal = theta_azimuthal
 
     @classmethod

@@ -1,7 +1,6 @@
 import numpy
 
 from syned.beamline.element_coordinates import ElementCoordinates
-from syned.beamline.optical_elements.mirrors.mirror import Mirror as SyMirror
 
 from shadow4.beam.beam import Beam
 from shadow4.sources.source_geometrical.source_gaussian import SourceGaussian
@@ -105,7 +104,8 @@ def example_branch_1(do_plot=True):
     mirror2 = S4MirrorElement()
     mirror2.get_optical_element().set_surface_conic([0,0,0,0,0,0,0,0,-1,0])
     mirror2.get_optical_element().set_boundaries_rectangle(-100e-6,100e-6,-150e-6,150e-6)
-    mirror2.set_positions(10,100,3e-3)
+    mirror2.set_p_and_q(p=10,q=100)
+    mirror2.set_grazing_angle(theta_grazing=3e-3)
 
     print(mirror2.info())
     #

@@ -2,13 +2,14 @@
 import numpy
 from shadow4.beam.beam import Beam
 from shadow4.sources.source_geometrical.source_gaussian import SourceGaussian
-from shadow4.optical_elements.lens_ideal import LensIdeal, LensSuperIdeal
+from shadow4.optical_elements.s4_lens_ideal import S4LensIdeal, S4LensIdealElement
+from shadow4.optical_elements.s4_lens_ideal import S4LensSuperIdeal, S4LensSuperIdealElement
 
 
 from shadow4.compatibility.beam3 import Beam3
 from Shadow.ShadowTools import plotxy
 
-from syned.beamline.optical_elements.ideal_elements.lens import IdealLens as SyIdelLens
+# from syned.beamline.optical_elements.ideal_elements.lens import IdealLens as SyIdelLens
 from syned.beamline.element_coordinates import ElementCoordinates
 from syned.beamline.beamline_element import BeamlineElement
 
@@ -45,21 +46,20 @@ def test_with_collimated_beam(do_plot=True,interface='new'):
     # lens definition
     #
 
-    sylens1 = SyIdelLens(name="Undefined", focal_x=10.0, focal_y=10.0)
 
-    coordinates_syned = ElementCoordinates(p=100.0, q=10.0)
 
-    beamline_element_syned = BeamlineElement(optical_element=sylens1, coordinates=coordinates_syned)
+    lens1e = S4LensIdealElement(optical_element=S4LensIdeal(name="Undefined", focal_x=10.0, focal_y=10.0),
+                                coordinates=ElementCoordinates(p=100.0, q=10.0))
 
-    lens1 = LensIdeal(beamline_element_syned=beamline_element_syned)
+    # lens1 = LensIdeal(beamline_element_syned=beamline_element_syned)
 
-    print(lens1.info())
+    print(lens1e.info())
 
     #
     # trace
     #
     if interface == 'new':
-        beam2 = lens1.trace_beam(beam)
+        beam2 = lens1e.trace_beam(beam)
     elif interface == 'old':
         beam2 = beam.traceOE(lens1, 1, overwrite=False)
 
@@ -102,10 +102,12 @@ def test_with_divergent_beam_super_ideal(do_plot=True):
     p = 10.0
     q = 10.0
 
-    lens1 = LensSuperIdeal("test1",focal_p_x=p,focal_p_z=p,focal_q_x=q,focal_q_z=q,p=p,q=q)
+    lens1e = S4LensSuperIdealElement(
+                        optical_element=S4LensSuperIdeal(name="test1", focal_p_x=p,focal_p_y=p,focal_q_x=q,focal_q_y=q),
+                        coordinates=ElementCoordinates(p=p, q=q))
 
 
-    beam2 = lens1.trace_beam(beam)
+    beam2 = lens1e.trace_beam(beam)
 
     X = beam2.get_column(1)
     Y = beam2.get_column(3)
@@ -157,12 +159,12 @@ def test_with_divergent_beam(do_plot=True):
     p = 10.0
     q = 10.0
     F = 1.0 / (1/p + 1/q)
-    sylens1 = SyIdelLens(name="Undefined", focal_x=F, focal_y=F)
-    coordinates_syned = ElementCoordinates(p=p, q=q)
-    beamline_element_syned = BeamlineElement(optical_element=sylens1, coordinates=coordinates_syned)
-    lens1 = LensIdeal(beamline_element_syned=beamline_element_syned)
-    print(lens1.info())
-    beam2 = lens1.trace_beam(beam)
+
+    lens1e = S4LensIdealElement(optical_element=S4LensIdeal(name="Undefined", focal_x=F, focal_y=F),
+                                coordinates=ElementCoordinates(p=p, q=q))
+
+    print(lens1e.info())
+    beam2 = lens1e.trace_beam(beam)
 
 
     X = beam2.get_column(1)
@@ -234,20 +236,14 @@ def test_id16ni(do_plot=True):
     q = 11.70
     F = 1/(1/p+1/q)
 
-    sylens1 = SyIdelLens(name="ML", focal_x=F, focal_y=0)
-    coordinates_syned = ElementCoordinates(p=p, q=q)
-    beamline_element_syned = BeamlineElement(optical_element=sylens1, coordinates=coordinates_syned)
-    lens1 = LensIdeal(beamline_element_syned=beamline_element_syned)
-    print(lens1.info())
-    beam = lens1.trace_beam(beam)
+
+    lens1e = S4LensIdealElement(optical_element=S4LensIdeal(name="ML", focal_x=F, focal_y=F),
+                                coordinates=ElementCoordinates(p=p, q=q))
+
+    beam = lens1e.trace_beam(beam)
 
 
-    # lens1 = LensIdeal("ML",focal_x=F,focal_z=0,p=p,q=q)
-    # # lens1 = LensSuperIdeal("ML",focal_p_x=p,focal_q_x=q,focal_p_z=0,focal_q_z=0,p=p,q=q)
-    # beam.traceOE(lens1,1,overwrite=True)
-    #
-    # # plotxy(beam.get_shadow3_beam(),1,4,nbins=100,title="H phase space")
-    # # plotxy(beam.get_shadow3_beam(),3,6,nbins=100,title="V phase space")
+
 
     FX, FZ = (1e6*beam.get_standard_deviation(1),1e6*beam.get_standard_deviation(3))
     print("----------------- Secondary source---------------------")
@@ -261,40 +257,31 @@ def test_id16ni(do_plot=True):
     p = 144.90
     q = 0.025
     F = 1.0/(1/184.90+1/0.10)
-    sylens2 = SyIdelLens(name="KBV", focal_x=0, focal_y=F)
-    coordinates_syned = ElementCoordinates(p=p, q=q)
-    beamline_element_syned = BeamlineElement(optical_element=sylens2, coordinates=coordinates_syned)
-    lens2 = LensIdeal(beamline_element_syned=beamline_element_syned)
-    print(lens2.info())
-    beam = lens2.trace_beam(beam)
+
+    lens2e = S4LensIdealElement(optical_element=S4LensIdeal(name="KBV", focal_x=0, focal_y=F),
+                                coordinates=ElementCoordinates(p=p, q=q))
 
 
-    #
-    # lens2 = LensIdeal("KBV",focal_x=0,focal_z=F,p=p,q=q)
-    # # lens2 = LensSuperIdeal("KBV",focal_p_x=0,focal_q_x=0,focal_p_z=184.90,focal_q_z=0.10,p=p,q=q)
-    # beam.traceOE(lens2,1,overwrite=True)
+    print(lens2e.info())
+    beam = lens2e.trace_beam(beam)
+
+
 
     # second KB mirror
     p = 0.025
     q = 0.05
     F = 1.0/(1/144.95+1/0.05)
 
-    sylens3 = SyIdelLens(name="KBH", focal_x=F, focal_y=0)
-    coordinates_syned = ElementCoordinates(p=p, q=q)
-    beamline_element_syned = BeamlineElement(optical_element=sylens3, coordinates=coordinates_syned)
-    lens3 = LensIdeal(beamline_element_syned=beamline_element_syned)
-    print(lens3.info())
-    beam = lens3.trace_beam(beam)
+    lens3e = S4LensIdealElement(optical_element=S4LensIdeal(name="KBH", focal_x=F, focal_y=0),
+                                coordinates=ElementCoordinates(p=p, q=q))
+
+    print(lens3e.info())
+    beam = lens3e.trace_beam(beam)
 
 
-    # lens3 = LensIdeal("KBH",focal_x=F,focal_z=0,p=p,q=q)
-
-
-    # lens3 = LensSuperIdeal("KBH",focal_p_x=144.95,focal_q_x=0.05,focal_p_z=0,focal_q_z=0,p=p,q=q)
-    # beam.traceOE(lens3,1,overwrite=True)
     #
     #
-    # #
+    #
     beam3 = Beam3.initialize_from_shadow4_beam(beam)
     if do_plot:
         tkt = plotxy(beam3,1,3,nbins=300,xrange=[-0.0000005,0.0000005],yrange=[-0.0000005,0.0000005],title="FOCAL PLANE")
@@ -315,3 +302,4 @@ if __name__ == "__main__":
     test_with_collimated_beam(do_plot=False,interface='new')
     test_with_divergent_beam(do_plot=False)
     test_id16ni(do_plot=False)
+    test_with_divergent_beam_super_ideal(do_plot=False)

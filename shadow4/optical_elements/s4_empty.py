@@ -20,20 +20,8 @@ class S4EmptyElement(S4BeamlineElement):
                          coordinates if coordinates is not None else ElementCoordinates())
 
     def set_positions(self, p=0.0, q=0.0, angle_radial=0.0, angle_radial_out=numpy.pi, angle_azimuthal=0.0):
+        super().set_positions(p=p, q=q, angle_radial=angle_radial, angle_radial_out=angle_radial_out, angle_azimuthal=angle_azimuthal)
 
-        self.get_coordinates()._p = p
-        self.get_coordinates()._q = q
-        self.get_coordinates()._angle_radial = angle_radial
-        self.get_coordinates()._angle_radial_out = angle_radial_out
-        self.get_coordinates()._angle_azimuthal = angle_azimuthal
-
-    def get_positions(self):
-        coordinates = self.get_coordinates()
-        return coordinates.p(), \
-            coordinates.q(), \
-            coordinates.angle_radial(), \
-            coordinates.angle_radial_out(), \
-            coordinates.angle_azimuthal()
 
     def trace_beam(self,beam1):
 
