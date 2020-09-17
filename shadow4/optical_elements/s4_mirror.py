@@ -7,7 +7,7 @@ from shadow4.syned.shape import SphericalCylinder, EllipticalCylinder, Hyperboli
 
 from syned.beamline.element_coordinates import ElementCoordinates
 
-from syned.beamline.optical_elements.mirrors.mirror import Mirror as SynedMirror
+from syned.beamline.optical_elements.mirrors.mirror import Mirror
 
 from shadow4.optical_surfaces.conic import Conic as S4Conic
 from shadow4.optical_surfaces.toroid import Toroid as S4Toroid
@@ -16,9 +16,7 @@ from shadow4.physical_models.prerefl.prerefl import PreRefl
 
 from shadow4.optical_elements.s4_optical_element import S4OpticalElement
 
-from syned.beamline.shape import SurfaceShape
-
-class S4Mirror(SynedMirror, S4OpticalElement):
+class S4Mirror(Mirror, S4OpticalElement):
 
     def __init__(self,
                  name="Undefined",
@@ -57,13 +55,13 @@ class S4Mirror(SynedMirror, S4OpticalElement):
         """
 
 
-        SynedMirror.__init__(self,
-                             name=name,
-                             surface_shape=surface_shape,
-                             boundary_shape=boundary_shape,
-                             coating=None,  # not used
-                             coating_thickness=None,  #not used
-                             )
+        Mirror.__init__(self,
+                        name=name,
+                        surface_shape=surface_shape,
+                        boundary_shape=boundary_shape,
+                        coating=None,  # not used
+                        coating_thickness=None,  #not used
+                        )
 
 
         # reflectivity
@@ -122,7 +120,7 @@ class S4MirrorElement(S4BeamlineElement):
         soe = self.get_optical_element() #._optical_element_syned
 
         v_in = beam.get_columns([4,5,6])
-        if not isinstance(soe, SynedMirror): # undefined
+        if not isinstance(soe, Mirror): # undefined
             raise Exception("Undefined mirror")
         else:
             surshape = soe.get_surface_shape()
@@ -186,7 +184,6 @@ class S4MirrorElement(S4BeamlineElement):
                 ccc = S4Conic.initialize_as_hyperboloid_from_focal_distances(surshape.get_p(),surshape.get_q(),
                             surshape.get_grazing_angle(), cylindrical=0, cylangle=0.0, switch_convexity=0)
                 mirr, normal = ccc.apply_specular_reflection_on_beam(beam)
-
 
             elif isinstance(surshape, Paraboloid):
                 print(">>>>> Paraboloid mirror",surshape)
