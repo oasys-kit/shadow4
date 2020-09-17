@@ -370,7 +370,7 @@ class SourceUndulatorInputOutput(object):
             return
 
         if isinstance(undul_phot_input,str):
-            undul_phot_dict = load_file_undul_phot(undul_phot_input)
+            undul_phot_dict = SourceUndulatorInputOutput.load_file_undul_phot(undul_phot_input)
             title += undul_phot_input
         else:
             undul_phot_dict = undul_phot_input
@@ -398,7 +398,7 @@ class SourceUndulatorInputOutput(object):
             return
 
         if isinstance(undul_cdf_input,str):
-            undul_cdf_dict = load_file_undul_cdf(undul_cdf_input)
+            undul_cdf_dict = SourceUndulatorInputOutput.load_file_undul_cdf(undul_cdf_input)
         else:
             undul_cdf_dict = undul_cdf_input
 
