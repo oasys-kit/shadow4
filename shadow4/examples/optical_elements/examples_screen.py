@@ -4,9 +4,7 @@ import numpy
 from shadow4.sources.source_geometrical.source_gaussian import SourceGaussian
 from shadow4.optical_elements.s4_screen import S4Screen, S4ScreenElement
 
-
-from shadow4.compatibility.beam3 import Beam3
-from Shadow.ShadowTools import plotxy
+from shadow4.tools.graphics import plotxy
 
 from syned.beamline.element_coordinates import ElementCoordinates
 
@@ -50,8 +48,7 @@ def example_screen(do_plot=True):
 
     #
     if do_plot:
-        beam3 = Beam3.initialize_from_shadow4_beam(beam2)
-        plotxy(beam3,1,3,nbins=100,title="SCREEN")
+        plotxy(beam2,1,3,nbins=100,title="SCREEN")
 
 
 def example_slit(do_plot=True):
@@ -81,8 +78,7 @@ def example_slit(do_plot=True):
 
     #
     if do_plot:
-        beam3 = Beam3.initialize_from_shadow4_beam(beam2)
-        plotxy(beam3,1,3,nbins=100,title="SLIT", nolost=True)
+        plotxy(beam2,1,3,nbins=100,title="SLIT", nolost=True)
 
 
 
@@ -113,8 +109,7 @@ def example_beam_stopper(do_plot=True):
 
     #
     if do_plot:
-        beam3 = Beam3.initialize_from_shadow4_beam(beam2)
-        plotxy(beam3,1,3,nbins=100,title="BEAM STOPPER", nolost=True)
+        plotxy(beam2,1,3,nbins=100,title="BEAM STOPPER", nolost=True)
 
 
 def example_filter(do_plot=True):
@@ -148,8 +143,7 @@ def example_filter(do_plot=True):
 
     #
     if do_plot:
-        beam3 = Beam3.initialize_from_shadow4_beam(beam2)
-        plotxy(beam3,1,3,nbins=100,title="FILTER", nolost=True)
+        plotxy(beam2,1,3,nbins=100,title="FILTER", nolost=True)
 
     print("Intensity: ", beam2.intensity())
 
@@ -181,8 +175,7 @@ def example_holed_filter(do_plot=True):
 
     #
     if do_plot:
-        beam3 = Beam3.initialize_from_shadow4_beam(beam2)
-        plotxy(beam3,1,3,nbins=100,title="HOLED FILTER", nolost=True)
+        plotxy(beam2,1,3,nbins=100,title="HOLED FILTER", nolost=True)
 
 
 if __name__ == "__main__":

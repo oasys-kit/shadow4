@@ -13,9 +13,9 @@ from shadow4.syned.shape import SphericalCylinder, EllipticalCylinder, Hyperboli
 
 from shadow4.optical_elements.s4_mirror import S4Mirror, S4MirrorElement
 
-from shadow4.compatibility.beam3 import Beam3
-from Shadow.ShadowTools import plotxy
+from shadow4.tools.graphics import plotxy, histo1
 
+from shadow4.physical_models.prerefl.prerefl import PreRefl
 
 def example_branch_1(do_plot=True):
     #
@@ -32,8 +32,7 @@ def example_branch_1(do_plot=True):
     print(beam0.info())
 
     if do_plot:
-        beam0s3 = Beam3.initialize_from_shadow4_beam(beam0)
-        plotxy(beam0s3, 4, 6, title="Image 0", nbins=201)
+        plotxy(beam0, 4, 6, title="Image 0", nbins=201)
 
     #
     # syned definitopns
@@ -92,16 +91,16 @@ def example_branch_1(do_plot=True):
     #
 
     if do_plot:
-        beam1s3 = Beam3.initialize_from_shadow4_beam(beam1)
-        plotxy(beam1s3, 1, 3, title="Image 1", nbins=101, nolost=1)
-        mirr1s3 = Beam3.initialize_from_shadow4_beam(mirr1)
-        plotxy(mirr1s3, 2, 1, title="Footprint 1", nbins=101, nolost=1)
+        plotxy(beam1, 1, 3, title="Image 1", nbins=101, nolost=1)
+        plotxy(mirr1, 2, 1, title="Footprint 1", nbins=101, nolost=1)
 
     #
     # M2
     #
     
     mirror2 = S4MirrorElement()
+
+
     mirror2.get_optical_element().set_surface_conic([0,0,0,0,0,0,0,0,-1,0])
     mirror2.get_optical_element().set_boundaries_rectangle(-100e-6,100e-6,-150e-6,150e-6)
     mirror2.set_p_and_q(p=10,q=100)
@@ -112,10 +111,8 @@ def example_branch_1(do_plot=True):
     #
     if do_plot:
         beam2, mirr2 = mirror2.trace_beam(beam1)
-        beam2s3 = Beam3.initialize_from_shadow4_beam(beam2)
-        plotxy(beam2s3, 1, 3, title="Image 2", nbins=101, nolost=1)
-        mirr2s3 = Beam3.initialize_from_shadow4_beam(mirr2)
-        plotxy(mirr2s3, 2, 1, title="Footprint 2", nbins=101, nolost=1)
+        plotxy(beam2, 1, 3, title="Image 2", nbins=101, nolost=1)
+        plotxy(mirr2, 2, 1, title="Footprint 2", nbins=101, nolost=1)
 
 def example_branch_2(do_plot=True):
     source = SourceGaussian.initialize_from_keywords(number_of_rays=100000,
@@ -129,8 +126,7 @@ def example_branch_2(do_plot=True):
     print(beam0.info())
 
     if do_plot:
-        beam0s3 = Beam3.initialize_from_shadow4_beam(beam0)
-        plotxy(beam0s3, 4, 6, title="Image 0", nbins=201)
+        plotxy(beam0, 4, 6, title="Image 0", nbins=201)
 
     #
     # syned definitopns
@@ -168,10 +164,8 @@ def example_branch_2(do_plot=True):
     #
 
     if do_plot:
-        beam1s3 = Beam3.initialize_from_shadow4_beam(beam1)
-        plotxy(beam1s3, 1, 3, title="Image 1", nbins=101, nolost=1)
-        mirr1s3 = Beam3.initialize_from_shadow4_beam(mirr1)
-        plotxy(mirr1s3, 2, 1, title="Footprint 1", nbins=101, nolost=1)
+        plotxy(beam1, 1, 3, title="Image 1", nbins=101, nolost=1)
+        plotxy(mirr1, 2, 1, title="Footprint 1", nbins=101, nolost=1)
 
 def example_branch_3(surface_shape_file, do_plot=True):
     #
@@ -189,8 +183,7 @@ def example_branch_3(surface_shape_file, do_plot=True):
     print(beam0.info())
 
     if do_plot:
-        beam0s3 = Beam3.initialize_from_shadow4_beam(beam0)
-        plotxy(beam0s3, 4, 6, title="Image 0", nbins=201)
+        plotxy(beam0, 4, 6, title="Image 0", nbins=201)
 
     #
     # syned definitopns
@@ -241,10 +234,8 @@ def example_branch_3(surface_shape_file, do_plot=True):
     #
 
     if do_plot:
-        beam1s3 = Beam3.initialize_from_shadow4_beam(beam1)
-        plotxy(beam1s3, 1, 3, title="Image 1", nbins=101, nolost=1)
-        mirr1s3 = Beam3.initialize_from_shadow4_beam(mirr1)
-        plotxy(mirr1s3, 2, 1, title="Footprint 1", nbins=101, nolost=1)
+        plotxy(beam1, 1, 3, title="Image 1", nbins=101, nolost=1)
+        plotxy(mirr1, 2, 1, title="Footprint 1", nbins=101, nolost=1)
 
 
 def example_branch_4(do_plot=True, f_refl=0):
@@ -267,8 +258,7 @@ def example_branch_4(do_plot=True, f_refl=0):
     print(beam0.info())
 
     if do_plot:
-        beam0s3 = Beam3.initialize_from_shadow4_beam(beam0)
-        plotxy(beam0s3, 4, 6, title="Image 0", nbins=201)
+        plotxy(beam0, 4, 6, title="Image 0", nbins=201)
 
     #
     # syned definitopns
@@ -293,7 +283,7 @@ def example_branch_4(do_plot=True, f_refl=0):
     # shadow definitions
     #
     if f_refl == 0: # prerefl
-        from shadow4.physical_models.prerefl.prerefl import PreRefl
+
         PreRefl.prerefl(interactive=False, SYMBOL="SiC", DENSITY=3.217, FILE="SiC.dat",
                         E_MIN=100.0, E_MAX=20000.0, E_STEP=100.0)
         mirror1 = S4MirrorElement(optical_element=S4Mirror(name="M1",
@@ -341,10 +331,8 @@ def example_branch_4(do_plot=True, f_refl=0):
     #
 
     if do_plot:
-        beam1s3 = Beam3.initialize_from_shadow4_beam(beam1)
-        plotxy(beam1s3, 1, 3, title="Image 1", nbins=101, nolost=1)
-        mirr1s3 = Beam3.initialize_from_shadow4_beam(mirr1)
-        plotxy(mirr1s3, 2, 1, title="Footprint 1", nbins=101, nolost=1)
+        plotxy(beam1, 1, 3, title="Image 1", nbins=101, nolost=1)
+        plotxy(mirr1, 2, 1, title="Footprint 1", nbins=101, nolost=1)
 
 def example_branch_5(surface_type, do_plot=True):
     #
@@ -436,10 +424,8 @@ def example_branch_5(surface_type, do_plot=True):
     #
 
     if do_plot:
-        beam1s3 = Beam3.initialize_from_shadow4_beam(beam1)
-        plotxy(beam1s3, 1, 3, nbins=101, nolost=1, title=surface_type)
-        # mirr1s3 = Beam3.initialize_from_shadow4_beam(mirr1)
-        # plotxy(mirr1s3, 2, 1, title="Footprint 1", nbins=101, nolost=1)
+        plotxy(beam1, 1, 3, nbins=101, nolost=1, title=surface_type)
+        # plotxy(mirr1, 2, 1, title="Footprint 1", nbins=101, nolost=1)
 
 
 if __name__ == "__main__":

@@ -1,17 +1,14 @@
 
 import numpy
-from shadow4.beam.beam import Beam
+
 from shadow4.sources.source_geometrical.source_gaussian import SourceGaussian
 from shadow4.optical_elements.s4_ideal_lens import S4IdealLens, S4IdealLensElement
 from shadow4.optical_elements.s4_ideal_lens import S4SuperIdealLens, S4SuperIdealLensElement
 
 
-from shadow4.compatibility.beam3 import Beam3
-from Shadow.ShadowTools import plotxy
+from shadow4.tools.graphics import plotxy, histo1
 
-# from syned.beamline.optical_elements.ideal_elements.lens import IdealLens as SyIdelLens
 from syned.beamline.element_coordinates import ElementCoordinates
-from syned.beamline.beamline_element import BeamlineElement
 
 
 def get_sigmas_radiation(photon_energy,undulator_length):
@@ -21,7 +18,7 @@ def get_sigmas_radiation(photon_energy,undulator_length):
     return 1e6*2.740/4/numpy.pi*numpy.sqrt(lambdan*undulator_length),1e6*0.69*numpy.sqrt(lambdan/undulator_length)
 
 
-def test_with_collimated_beam(do_plot=True,interface='new'):
+def test_with_collimated_beam(do_plot=True):
 
     #
     # collimated source
@@ -30,17 +27,15 @@ def test_with_collimated_beam(do_plot=True,interface='new'):
 
 
 
-    if interface == 'new':
-        beam = src.get_beam()
-    elif interface == "old":
-        beam = Beam()
-        beam.genSource(src)
+
+    beam = src.get_beam()
+
     print(beam.info())
     SX, SZ = (1e6*beam.get_standard_deviation(1),1e6*beam.get_standard_deviation(3))
 
     if do_plot:
-        beam3 = Beam3.initialize_from_shadow4_beam(beam)
-        plotxy(beam3,1,3,nbins=100,title="SOURCE")
+        plotxy(beam,1,3,nbins=100,title="SOURCE")
+        # histo1(beam, 1, nbins=100)
 
     #
     # lens definition
@@ -57,15 +52,12 @@ def test_with_collimated_beam(do_plot=True,interface='new'):
     #
     # trace
     #
-    if interface == 'new':
-        beam2 = lens1e.trace_beam(beam)
-    elif interface == 'old':
-        beam2 = beam.traceOE(lens1, 1, overwrite=False)
+
+    beam2, tmp = lens1e.trace_beam(beam)
 
     #
     if do_plot:
-        beam3 = Beam3.initialize_from_shadow4_beam(beam2)
-        plotxy(beam3,1,3,nbins=100,title="FOCAL PLANE")
+        plotxy(beam2,1,3,nbins=100,title="FOCAL PLANE")
 
     FX, FZ = (1e6*beam2.get_standard_deviation(1),1e6*beam2.get_standard_deviation(3))
     print("Source dimensions: %f %f um"%(SX,SZ))
@@ -81,22 +73,16 @@ def test_with_divergent_beam_super_ideal(do_plot=True):
 
     beam = src.get_beam()
 
-    # point source
-    # beam.set_column(1,0.0)
-    # beam.set_column(3,0.0)
-
     print(beam.info())
     SX, SZ = (1e6*beam.get_standard_deviation(1),1e6*beam.get_standard_deviation(3))
 
     if do_plot:
-        beam3 = Beam3.initialize_from_shadow4_beam(beam)
-        plotxy(beam3,4,6,nbins=100,title="SOURCE DIVERGENCES")
+        plotxy(beam,4,6,nbins=100,title="SOURCE DIVERGENCES")
 
     beam_tmp = beam.duplicate()
     beam_tmp.retrace(100.0)
     if do_plot:
-        beam3 = Beam3.initialize_from_shadow4_beam(beam_tmp)
-        plotxy(beam3,1,3,nbins=100,title="SOURCE AFTER 10m")
+        plotxy(beam_tmp,1,3,nbins=100,title="SOURCE AFTER 10m")
 
     p = 10.0
     q = 10.0
@@ -106,7 +92,7 @@ def test_with_divergent_beam_super_ideal(do_plot=True):
                         coordinates=ElementCoordinates(p=p, q=q))
 
 
-    beam2 = lens1e.trace_beam(beam)
+    beam2, tmp = lens1e.trace_beam(beam)
 
     X = beam2.get_column(1)
     Y = beam2.get_column(3)
@@ -114,8 +100,7 @@ def test_with_divergent_beam_super_ideal(do_plot=True):
     print("Y: ",Y.min(),Y.max(),Y.std())
 
     if do_plot:
-        beam3 = Beam3.initialize_from_shadow4_beam(beam2)
-        plotxy(beam3,1,3,nbins=100,title="FOCAL PLANE",xrange=[-5e-9,5e-9],yrange=[-5e-9,5e-9])
+        plotxy(beam2,1,3,nbins=100,title="FOCAL PLANE",xrange=[-5e-5,5e-5],yrange=[-5e-5,5e-5])
 
     FX, FZ = (1e6*beam2.get_standard_deviation(1),1e6*beam2.get_standard_deviation(3))
     print("Source dimensions (rms): %f %f um"%(SX,SZ))
@@ -133,22 +118,15 @@ def test_with_divergent_beam(do_plot=True):
 
     beam = src.get_beam()
 
-    # point source
-    # beam.set_column(1,0.0)
-    # beam.set_column(3,0.0)
-
-    print(beam.info())
     SX, SZ = (1e6*beam.get_standard_deviation(1),1e6*beam.get_standard_deviation(3))
 
     if do_plot:
-        beam3 = Beam3.initialize_from_shadow4_beam(beam)
-        plotxy(beam3,4,6,nbins=100,title="SOURCE DIVERGENCES")
+        plotxy(beam,4,6,nbins=100,title="SOURCE DIVERGENCES")
 
     beam_tmp = beam.duplicate()
     beam_tmp.retrace(100.0)
     if do_plot:
-        beam3 = Beam3.initialize_from_shadow4_beam(beam_tmp)
-        plotxy(beam3,1,3,nbins=100,title="SOURCE AFTER 10m")
+        plotxy(beam_tmp,1,3,nbins=100,title="SOURCE AFTER 10m")
 
 
     #
@@ -163,7 +141,7 @@ def test_with_divergent_beam(do_plot=True):
                                 coordinates=ElementCoordinates(p=p, q=q))
 
     print(lens1e.info())
-    beam2 = lens1e.trace_beam(beam)
+    beam2, tmp = lens1e.trace_beam(beam)
 
 
     X = beam2.get_column(1)
@@ -173,8 +151,7 @@ def test_with_divergent_beam(do_plot=True):
 
 
     if do_plot:
-        beam3 = Beam3.initialize_from_shadow4_beam(beam2)
-        plotxy(beam3,1,3,nbins=100,title="FOCAL PLANE",xrange=[-5e-9,5e-9],yrange=[-5e-9,5e-9])
+        plotxy(beam2,1,3,nbins=100,title="FOCAL PLANE",xrange=[-5e-5,5e-5],yrange=[-5e-5,5e-5])
 
     FX, FZ = (1e6*beam2.get_standard_deviation(1),1e6*beam2.get_standard_deviation(3))
     print("Source dimensions (rms): %f %f um"%(SX,SZ))
@@ -216,17 +193,11 @@ def test_id16ni(do_plot=True):
                                                   sigmaX=Sx,sigmaZ=Sz,
                                                   sigmaXprime=Sxp,sigmaZprime=Szp)
 
-    # src = SourceGaussian.initialize_from_keywords(number_of_rays=10000,
-    #                                               sigmaX=     1000e-6/2.35,sigmaZ=   10e-6/2.35,
-    #                                               sigmaXprime=30e-6/2.35,sigmaZprime=15e-6/2.35)
     beam = src.get_beam()
-    print(beam.info())
     SX, SZ = (1e6*beam.get_standard_deviation(1),1e6*beam.get_standard_deviation(3))
 
     if do_plot:
-        beam3 = Beam3.initialize_from_shadow4_beam(beam)
-        plotxy(beam3,1,3,nbins=100,title="SOURCE")
-
+        plotxy(beam,1,3,nbins=100,title="SOURCE")
 
     #
     # multilayer
@@ -236,12 +207,10 @@ def test_id16ni(do_plot=True):
     F = 1/(1/p+1/q)
 
 
-    lens1e = S4IdealLensElement(optical_element=S4IdealLens(name="ML", focal_x=F, focal_y=F),
+    lens1e = S4IdealLensElement(optical_element=S4IdealLens(name="ML", focal_x=F, focal_y=0),
                                 coordinates=ElementCoordinates(p=p, q=q))
 
-    beam = lens1e.trace_beam(beam)
-
-
+    beam, tmp = lens1e.trace_beam(beam)
 
 
     FX, FZ = (1e6*beam.get_standard_deviation(1),1e6*beam.get_standard_deviation(3))
@@ -262,7 +231,7 @@ def test_id16ni(do_plot=True):
 
 
     print(lens2e.info())
-    beam = lens2e.trace_beam(beam)
+    beam, tmp = lens2e.trace_beam(beam)
 
 
 
@@ -275,15 +244,15 @@ def test_id16ni(do_plot=True):
                                 coordinates=ElementCoordinates(p=p, q=q))
 
     print(lens3e.info())
-    beam = lens3e.trace_beam(beam)
+    beam, tmp = lens3e.trace_beam(beam)
 
 
     #
     #
     #
-    beam3 = Beam3.initialize_from_shadow4_beam(beam)
+    # beam3 = Beam3.initialize_from_shadow4_beam(beam)
     if do_plot:
-        tkt = plotxy(beam3,1,3,nbins=300,xrange=[-0.0000005,0.0000005],yrange=[-0.0000005,0.0000005],title="FOCAL PLANE")
+        tkt = plotxy(beam,1,3,nbins=300,xrange=[-0.0000005,0.0000005],yrange=[-0.0000005,0.0000005],title="FOCAL PLANE")
 
         print(tkt['fwhm_h'],tkt['fwhm_v'])
 
@@ -298,7 +267,9 @@ def test_id16ni(do_plot=True):
     if do_plot: print("Demagnification:(HISTO) H:%g V:%g (theoretical: %g,%g) "%(f2dot35*SX/(f2dot35*1e6*tkt['fwhm_h']),SZ/(1e6*tkt['fwhm_v']),demagX[0]*demagX[1],demagZ))
 
 if __name__ == "__main__":
-    test_with_collimated_beam(do_plot=False,interface='new')
-    test_with_divergent_beam(do_plot=False)
-    test_id16ni(do_plot=False)
-    test_with_divergent_beam_super_ideal(do_plot=False)
+    do_plot = True
+
+    test_with_collimated_beam(do_plot=do_plot)
+    test_with_divergent_beam(do_plot=do_plot)
+    test_id16ni(do_plot=do_plot)
+    test_with_divergent_beam_super_ideal(do_plot=do_plot)

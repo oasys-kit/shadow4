@@ -408,6 +408,195 @@ class Beam(object):
             rmax = 1.0
         return [rmin, rmax]
 
+    def histo1(self, col, xrange=None, nbins=50, nolost=0, ref=0, write=None, factor=1.0, calculate_widths=1,
+               calculate_hew=0):
+        """
+        Calculate the histogram of a column, simply counting the rays, or weighting with another column.
+        It returns a dictionary which contains the histogram data.
+
+        Parameters
+        ----------
+        col
+            int for the chosen column.
+        xrange
+            tuple or list of length 2 describing the interval of interest for x, the data read from the chosen column.
+                      (default: None, thus using min and max of the array)
+        nbins
+            number of bins of the histogram.
+        nolost
+                 0   All rays
+                 1   Only good rays
+                 2   Only lost rays
+        ref
+                 0, None, "no", "NO" or "No":   only count the rays
+                 23, "Yes", "YES" or "yes":     weight with intensity (look at col=23 |E|^2 total intensity)
+                 other value: use that column as weight
+        write
+                 None (default)   don't write any file
+                 file_name   write the histogram into the file 'file_name'.
+        factor
+            a scalar factor to multiply the selected column before histogramming
+                      (e.g., for changing scale from cm to um then factor=1e4).
+        calculate_widths
+        calculate_hew
+
+        Returns
+        -------
+
+        a python dictionary with the calculated histogram. The following keys are set:
+                 error, col, write, nolost, nbins, xrange, factor
+                 histogram, bins, histogram_sigma, bin_center, bin_left, bin_right,
+                 intensity, fwhm, nrays, good_rays,
+
+        """
+
+        # initialize return value
+        ticket = {'error': 1}
+
+        # coli = col - 1
+
+        if ref == None: ref = 0
+        if ref == "No": ref = 0
+        if ref == "NO": ref = 0
+        if ref == "no": ref = 0
+
+        if ref == "Yes": ref = 23
+        if ref == "YES": ref = 23
+        if ref == "yes": ref = 23
+
+        if ref == 1:
+            print(
+                "Shadow.Beam.histo1: Warning: weighting with column 1 (X) [not with intensity as may happen in old versions]")
+
+        # copy the inputs
+        ticket['col'] = col
+        ticket['write'] = write
+        ticket['nolost'] = nolost
+        ticket['nbins'] = nbins
+        ticket['xrange'] = xrange
+
+        ticket['factor'] = factor
+        ticket['ref'] = ref
+
+        if ref == 0:
+            x = self.get_column(col, nolost=nolost)
+            w = numpy.ones(len(x))
+        else:
+            x, w = self.getshcol((col, ref), nolost=nolost)
+
+        if factor != 1.0: x *= factor
+
+        if xrange == None:
+            xrange = [x.min(), x.max()]
+
+        h, bins = numpy.histogram(x, bins=nbins, range=xrange, weights=w)
+        # evaluate the histogram with squares of the weight for error calculations
+        h2, bins2 = numpy.histogram(x, bins=nbins, range=xrange, weights=(w * w))
+
+        # Evaluation of histogram error.
+        # See Pag 17 in Salvat, Fernandez-Varea and Sempau
+        # Penelope, A Code System for Monte Carlo Simulation of
+        # Electron and Photon Transport, AEN NEA  (2003)
+        #
+        # See James, Rep. Prog. Phys., Vol 43 (1980) pp 1145-1189 (special attention to pag. 1184)
+        h_sigma = numpy.sqrt(h2 - h * h / float(len(w)))
+
+        if write != None and write != "":
+            f = open(write, 'w')
+            f.write('#F %s \n' % (write))
+            f.write('#C This file has been created using Shadow.Beam.histo1() \n')
+            f.write('#C COLUMN 1 CORRESPONDS TO ABSCISSAS IN THE CENTER OF EACH BIN\n')
+            f.write('#C COLUMN 2 CORRESPONDS TO ABSCISSAS IN THE THE LEFT CORNER OF THE BIN\n')
+            f.write('#C COLUMN 3 CORRESPONDS TO INTENSITY\n')
+            f.write('#C COLUMN 4 CORRESPONDS TO ERROR: SIGMA_INTENSITY\n')
+            f.write('#C col = %d\n' % (col))
+            f.write('#C nolost = %d\n' % (nolost))
+            f.write('#C nbins = %d\n' % (nbins))
+            f.write('#C ref = %d\n' % (ref), )
+            f.write(' \n')
+            f.write('#S 1 histogram\n')
+            f.write('#N 4\n')
+            f.write('#L X1  X2  Y  YERR\n')
+            for i in range(len(h)):
+                f.write('%f\t%f\t%f\t%f\n' % ((bins[i] + bins[i + 1]) * 0.5, bins[i], h[i], h_sigma[i]))
+            f.close()
+            print('histo1: file written to disk: %s' % (write))
+
+        #
+        # output
+        ticket['error'] = 0
+        ticket['histogram'] = h
+        ticket['bins'] = bins
+        ticket['histogram_sigma'] = h_sigma
+        bin_center = bins[:-1] + (bins[1] - bins[0]) * 0.5
+        ticket['bin_center'] = bin_center
+        ticket['bin_left'] = bins[:-1]
+        ticket['bin_right'] = bins[:-1] + (bins[1] - bins[0])
+        ticket['xrange'] = xrange
+        ticket['intensity'] = self.intensity(nolost=nolost)
+        ticket['fwhm'] = None
+        ticket['nrays'] = self.get_number_of_rays(nolost=0)
+        ticket['good_rays'] = self.get_number_of_rays(nolost=1)
+
+        # for practical purposes, writes the points the will define the histogram area
+        tmp_b = []
+        tmp_h = []
+        for s, t, v in zip(ticket["bin_left"], ticket["bin_right"], ticket["histogram"]):
+            tmp_b.append(s)
+            tmp_h.append(v)
+            tmp_b.append(t)
+            tmp_h.append(v)
+        ticket['histogram_path'] = numpy.array(tmp_h)
+        ticket['bin_path'] = numpy.array(tmp_b)
+
+        if calculate_widths > 0:
+            # CALCULATE fwhm
+            tt = numpy.where(h >= max(h) * 0.5)
+            if h[tt].size > 1:
+                binSize = bins[1] - bins[0]
+                ticket['fwhm'] = binSize * (tt[0][-1] - tt[0][0])
+                ticket['fwhm_coordinates'] = (bin_center[tt[0][0]], bin_center[tt[0][-1]])
+
+            # CALCULATE fwhm with subpixel resolution (as suggested by A Wojdyla)
+            ixl_e = tt[0][0]
+            ixr_e = tt[0][-1]
+            try:
+                xl = ixl_e - (h[ixl_e] - max(h) * 0.5) / (h[ixl_e] - h[ixl_e - 1])
+                xr = ixr_e - (h[ixr_e] - max(h) * 0.5) / (h[ixr_e + 1] - h[ixr_e])
+                ticket['fwhm_subpixel'] = binSize * numpy.abs(xr - xl)
+                ticket['fwhm_subpixel_coordinates'] = \
+                    (numpy.interp(xl, range(bin_center.size), bin_center),
+                     numpy.interp(xr, range(bin_center.size), bin_center))
+            except:
+                ticket['fwhm_subpixel'] = None
+
+        if calculate_widths == 2:
+            # CALCULATE FW at 25% HEIGHT
+            tt = numpy.where(h >= max(h) * 0.25)
+            if h[tt].size > 1:
+                binSize = bins[1] - bins[0]
+                ticket['fw25%m'] = binSize * (tt[0][-1] - tt[0][0])
+            else:
+                ticket["fw25%m"] = None
+
+            # CALCULATE FW at 75% HEIGHT
+            tt = numpy.where(h >= max(h) * 0.75)
+            if h[tt].size > 1:
+                binSize = bins[1] - bins[0]
+                ticket['fw75%m'] = binSize * (tt[0][-1] - tt[0][0])
+            else:
+                ticket["fw75%m"] = None
+
+        if calculate_hew:
+            # CALCULATE HALF-ENERGY-WIDTH
+            cdf = numpy.cumsum(ticket["histogram"])
+            cdf /= cdf.max()
+            # hew is two times  the x value that has cdf=0.5 (Eq. 9 in ﻿https://arxiv.org/pdf/1505.07474v2.pdf)
+            hew = 2 * float(bin_center[numpy.argwhere(cdf > 0.5)][0])
+            ticket["hew"] = hew
+
+        return ticket
+
     def histo2(self,col_h,col_v,nbins=25,ref=23, nbins_h=None, nbins_v=None, nolost=0,xrange=None,yrange=None,
              calculate_widths=1):
         """

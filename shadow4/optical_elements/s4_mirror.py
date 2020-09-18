@@ -76,7 +76,7 @@ class S4Mirror(Mirror, S4OpticalElement):
         return super(S4Mirror, self).info() + "\n" + info_mirror
 
     def set_surface_conic(self, conic_coefficients=[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,-1.0,0.0]):
-        self.set_surface_shape = (
+        self.set_surface_shape(
             Conic(conic_coefficients=conic_coefficients)
             )
 

@@ -24,12 +24,15 @@ class S4IdealLensElement(S4BeamlineElement):
         return self.get_optical_element()._focal_y
 
     def trace_beam(self, beam1, flag_lost_value=-1):
-        beam = beam1.duplicate()
+        beam0 = beam1.duplicate()
+
+
 
         p,q = self.get_p_and_q()
-
         if p != 0.0:
-            beam.retrace(p,resetY=True)
+            beam0.retrace(p,resetY=True)
+
+        beam = beam0.duplicate()
 
         # rotate around Z
         if self.get_focalX() != 0.0:
@@ -45,7 +48,7 @@ class S4IdealLensElement(S4BeamlineElement):
         if q != 0.0:
             beam.retrace(q,resetY=True)
 
-        return beam
+        return beam, beam0
 
 
 class S4SuperIdealLens(IdealLens, S4OpticalElement):
@@ -67,14 +70,16 @@ class S4SuperIdealLensElement(S4BeamlineElement):
 
 
     def trace_beam(self,beam1):
-        beam = beam1.duplicate()
+        beam0 = beam1.duplicate()
 
         lens = self.get_optical_element()
 
         p, q = self.get_p_and_q()
 
         if p != 0.0:
-            beam.retrace(p,resetY=True)
+            beam0.retrace(p,resetY=True)
+
+        beam = beam0.duplicate()
 
         # rotate around Z; watch out the minus!!
         if lens._focal_p_x != 0.0:
@@ -107,5 +112,5 @@ class S4SuperIdealLensElement(S4BeamlineElement):
         if q != 0.0:
             beam.retrace(q,resetY=True)
 
-        return beam
+        return beam, beam0
 
