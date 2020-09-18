@@ -12,7 +12,7 @@ from shadow4.compatibility.beam3 import Beam3
 # shadow4
 #
 from shadow4.beam.beam import Beam
-from shadow4.optical_surfaces.toroid import Toroid
+from shadow4.optical_surfaces.s4_toroid import S4Toroid
 
 
 def create_start_files():
@@ -224,7 +224,7 @@ def minishadow_run_toroid_mirror():
     print("fmirr = %s, p=%f, q=%f, alpha=%f, theta_grazing=%f rad, fcyl=%d"%\
               (fmirr,p,q,alpha,theta_grazing,fcyl))
 
-    t = Toroid()
+    t = S4Toroid()
 
     t.set_from_focal_distances(p, q, theta_grazing)
 

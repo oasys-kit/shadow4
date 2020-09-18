@@ -53,9 +53,8 @@ class Cylinder:
 
 class Conic(SurfaceShape):
     def __init__(self, 
-                 conic_coefficients=[0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0], 
-                 convexity=Convexity.UPWARD):
-        SurfaceShape.__init__(self, convexity)
+                 conic_coefficients=[0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]):
+        SurfaceShape.__init__(self, convexity=Convexity.NONE)
 
         self._conic_coefficients = conic_coefficients
 
@@ -68,7 +67,7 @@ class Plane(SurfaceShape):
 
 class Sphere(SurfaceShape):
     def __init__(self, radius=1.0, convexity=Convexity.UPWARD):
-        SurfaceShape.__init__(self, convexity=Convexity.NONE)
+        SurfaceShape.__init__(self, convexity=convexity)
         self._radius = radius
 
     def get_radius(self):

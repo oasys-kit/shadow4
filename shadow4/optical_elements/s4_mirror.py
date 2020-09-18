@@ -10,8 +10,8 @@ from syned.beamline.element_coordinates import ElementCoordinates
 from syned.beamline.optical_elements.mirrors.mirror import Mirror
 
 from shadow4.optical_surfaces.conic import Conic as S4Conic
-from shadow4.optical_surfaces.toroid import Toroid as S4Toroid
-from shadow4.optical_surfaces.mesh import Mesh as S4Mesh
+from shadow4.optical_surfaces.s4_toroid import S4Toroid as S4Toroid
+from shadow4.optical_surfaces.s4_mesh import S4Mesh as S4Mesh
 from shadow4.physical_models.prerefl.prerefl import PreRefl
 
 from shadow4.optical_elements.s4_optical_element import S4OpticalElement
@@ -89,7 +89,6 @@ class S4Mirror(Mirror, S4OpticalElement):
         self._boundary_shape = \
             Rectangle(x_left=x_left, x_right=x_right, y_bottom=y_bottom, y_top=y_top)
 
-
 from shadow4.optical_elements.s4_beamline_element import S4BeamlineElement
 
 class S4MirrorElement(S4BeamlineElement):
@@ -129,25 +128,12 @@ class S4MirrorElement(S4BeamlineElement):
             '''
             surshape = soe.get_surface_shape()
 
-            if isinstance(surshape, Conic):
-                print(">>>>> Conic mirror")
-                ccc = S4Conic.initialize_from_coefficients(surshape._conic_coefficients)
-                mirr, normal = ccc.apply_specular_reflection_on_beam(beam)
-            elif isinstance(surshape, Toroidal):
-                print(">>>>> Toroidal mirror",surshape._min_radius, surshape._maj_radius)
-                toroid = S4Toroid()
-                toroid.set_toroid_radii(surshape._maj_radius, surshape._min_radius,)
-                mirr, normal = toroid.apply_specular_reflection_on_beam(beam)
             elif isinstance(surshape, SurfaceData):
                 print(">>>>> SurfaceData mirror")
                 num_mesh = S4Mesh()
                 # num_mesh.load_h5file(surshape.surface_data_file)
                 num_mesh.load_surface_data(surshape)
                 mirr,normal,t,x1,v1,x2,v2 = num_mesh.apply_specular_reflection_on_beam(beam)
-            elif isinstance(surshape, Plane):
-                print(">>>>> Plane mirror")
-                ccc = S4Conic.initialize_as_plane()
-                mirr, normal = ccc.apply_specular_reflection_on_beam(beam)
             elif isinstance(surshape, SphericalCylinder):  # Note this check must come before Sphere as SphericalCylinder is Sphere
                 print(">>>>> SphericalCylinder mirror")
                 if surshape.get_direction() == 0:
@@ -163,18 +149,6 @@ class S4MirrorElement(S4BeamlineElement):
             elif isinstance(surshape, Sphere):
                 print(">>>>> Sphere mirror")
                 ccc = S4Conic.initialize_as_sphere_from_curvature_radius(surshape.get_radius(),cylindrical=False,cylangle=0.0)
-                mirr, normal = ccc.apply_specular_reflection_on_beam(beam)
-
-            elif isinstance(surshape, EllipticalCylinder):
-                print(">>>>> EllipticalCylinder mirror",surshape)
-                ccc = S4Conic.initialize_as_ellipsoid_from_focal_distances(surshape.get_p(),surshape.get_q(),
-                            surshape.get_grazing_angle(), cylindrical=0, cylangle=0.0, switch_convexity=0)
-                mirr, normal = ccc.apply_specular_reflection_on_beam(beam)
-
-            elif isinstance(surshape, Ellipsoid):
-                print(">>>>> Ellipsoid mirror",surshape)
-                ccc = S4Conic.initialize_as_ellipsoid_from_focal_distances(surshape.get_p(),surshape.get_q(),
-                            surshape.get_grazing_angle(), cylindrical=0, cylangle=0.0, switch_convexity=0)
                 mirr, normal = ccc.apply_specular_reflection_on_beam(beam)
 
             elif isinstance(surshape, HyperbolicCylinder):

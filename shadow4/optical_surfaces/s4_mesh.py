@@ -61,7 +61,7 @@ def plot_surface_and_line(Z,x,y,zz,xx,yy,show=True):
 
     return fig
 
-class Mesh(object):
+class S4Mesh(object):
     def __init__(self,surface=None):
         self.__x0 = [0.0,0.0,0.0]
         self.__v0 = [0.0,0.0,0.0]
@@ -335,7 +335,7 @@ if __name__ == "__main__":
 
     plot_surface_and_line(Z,x,y,zz,xx,yy)
 
-    mm = Mesh()
+    mm = S4Mesh()
     mm.set_ray(x0,v0)
     mm.set_surface(sphere)
 

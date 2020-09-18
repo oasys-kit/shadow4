@@ -11,7 +11,7 @@ import Shadow
 # minishadow
 #
 from shadow4.beam.beam import Beam
-from shadow4.optical_surfaces.mesh import Mesh
+from shadow4.optical_surfaces.s4_mesh import S4Mesh
 
 def write_bragg_preprocessor_file():
     bragg(interactive=False, DESCRIPTOR="Si",H_MILLER_INDEX=1,K_MILLER_INDEX=1,L_MILLER_INDEX=1,
@@ -335,7 +335,7 @@ def minishadow_run_mesh_mirror():
 
     print("p=%f, q=%f, alpha=%f, theta_grazing=%f rad"%(p,q,alpha,theta_grazing))
 
-    mm = Mesh()
+    mm = S4Mesh()
     mm.load_file("bump.dat")
 
     newbeam.rotate(alpha,axis=2)

@@ -1,27 +1,24 @@
 import numpy
 
-from shadow4.optical_elements.s4_mirror import S4MirrorElement, S4Mirror, ElementCoordinates
-from shadow4.optical_surfaces.conic import Conic as S4Conic
-
 from shadow4.syned.shape import Ellipsoid, EllipticalCylinder, Convexity, Direction
 
-class SurfaceCalculation:
-    INTERNAL = 0
-    EXTERNAL = 1
+from shadow4.optical_elements.s4_optical_element import SurfaceCalculation, S4CurvedOpticalElement
+from shadow4.optical_elements.s4_mirror import S4MirrorElement, S4Mirror, ElementCoordinates
+from shadow4.optical_surfaces.s4_conic import S4Conic
 
-class S4EllispoidMirror(S4Mirror):
+class S4EllispoidMirror(S4Mirror, S4CurvedOpticalElement):
     def __init__(self,
-                 name="Undefined",
+                 name="Ellipsoid Mirror",
                  boundary_shape=None,
                  surface_calculation=SurfaceCalculation.INTERNAL,
+                 is_cylinder=False,
+                 cylinder_direction=Direction.TANGENTIAL,
+                 convexity=Convexity.UPWARD,
                  min_axis=0.0,
                  maj_axis=0.0,
                  p_focus=0.0,
                  q_focus=0.0,
                  grazing_angle=0.0,
-                 convexity=Convexity.UPWARD,
-                 is_cylinder=False,
-                 cylinder_direction=Direction.TANGENTIAL,
                  # inputs related to mirror reflectivity
                  f_reflec=0,  # reflectivity of surface: 0=no reflectivity, 1=full polarization
                  f_refl=0,  # 0=prerefl file
@@ -32,19 +29,21 @@ class S4EllispoidMirror(S4Mirror):
                  file_refl="",  # preprocessor file fir f_refl=0,2,3,4
                  refraction_index=1.0  # refraction index (complex) for f_refl=1
                  ):
-        if is_cylinder:
-            if surface_calculation == SurfaceCalculation.EXTERNAL:
-                super().__init__(name, boundary_shape, EllipticalCylinder.create_elliptical_cylinder_from_axes(min_axis, maj_axis, p_focus, convexity, cylinder_direction),
-                                 f_reflec, f_refl, file_refl, refraction_index)
+        S4CurvedOpticalElement.__init__(surface_calculation, is_cylinder)
+
+        if self._surface_calculation == SurfaceCalculation.EXTERNAL:
+            if self._is_cylinder:
+                S4Mirror.__init__(name, boundary_shape, EllipticalCylinder.create_elliptical_cylinder_from_axes(min_axis, maj_axis, p_focus, convexity, cylinder_direction),
+                                  f_reflec, f_refl, file_refl, refraction_index)
             else:
-                super().__init__(name, boundary_shape, EllipticalCylinder.create_elliptical_cylinder_from_p_q(p_focus, q_focus, grazing_angle, convexity, cylinder_direction),
+                S4Mirror.__init__(name, boundary_shape, Ellipsoid.create_ellipsoid_from_axes(min_axis, maj_axis, p_focus, convexity),
                                  f_reflec, f_refl, file_refl, refraction_index)
         else:
-            if surface_calculation == SurfaceCalculation.EXTERNAL:
-                super().__init__(name, boundary_shape, Ellipsoid.create_ellipsoid_from_axes(min_axis, maj_axis, p_focus, convexity),
-                                 f_reflec, f_refl, file_refl, refraction_index)
+            if self._is_cylinder:
+                S4Mirror.__init__(name, boundary_shape, EllipticalCylinder.create_elliptical_cylinder_from_p_q(p_focus, q_focus, grazing_angle, convexity, cylinder_direction),
+                                  f_reflec, f_refl, file_refl, refraction_index)
             else:
-                super().__init__(name, boundary_shape, Ellipsoid.create_ellipsoid_from_p_q(p_focus, q_focus, grazing_angle, convexity),
+               S4Mirror.__init__(name, boundary_shape, Ellipsoid.create_ellipsoid_from_p_q(p_focus, q_focus, grazing_angle, convexity),
                                  f_reflec, f_refl, file_refl, refraction_index)
 
 class S4EllipsoidMirrorElement(S4MirrorElement):
@@ -66,6 +65,8 @@ class S4EllipsoidMirrorElement(S4MirrorElement):
             print(">>>>> EllipticalCylinder mirror", surshape)
             cylindrical = 0
             cylangle    = 0.0
+        else:
+            raise ValueError("Surface shape is not Ellipsoid or Elliptical Cylinder")
 
         ccc = S4Conic.initialize_as_ellipsoid_from_focal_distances(surshape.get_p(), surshape.get_q(), surshape.get_grazing_angle(),
                                                                    cylindrical=cylindrical, cylangle=cylangle, switch_convexity=switch_convexity)

@@ -3,7 +3,7 @@ import numpy
 
 from numpy.testing import assert_equal, assert_almost_equal
 
-class Toroid(object):
+class S4Toroid(object):
 
     def __init__(self, coeff=None):
 
@@ -26,7 +26,7 @@ class Toroid(object):
     def initialize_from_coefficients(cls, coeff):
         if numpy.array(coeff).size != 5:
             raise Exception("Invalid coefficients (dimension must be 5)")
-        return Toroid(coeff=coeff)
+        return S4Toroid(coeff=coeff)
     #
     # @classmethod
     # def initialize_as_plane(cls):
@@ -63,7 +63,7 @@ class Toroid(object):
     #     return ccc
 
     def duplicate(self):
-        return Toroid.initialize_from_coefficients(self.coeff.copy())
+        return S4Toroid.initialize_from_coefficients(self.coeff.copy())
 
     #
     # getters
@@ -431,6 +431,6 @@ class Toroid(object):
 
 if __name__ == "__main__":
 
-    t = Toroid()
+    t = S4Toroid()
 
     print(t.info())

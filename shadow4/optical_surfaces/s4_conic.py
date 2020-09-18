@@ -9,7 +9,7 @@ from numpy.testing import assert_equal, assert_almost_equal
 #      ccc[6]*X   + ccc[7]*Y   + ccc[8]*Z + ccc[9] = 0
 
 
-class Conic(object):
+class S4Conic(object):
 
     def __init__(self, ccc=numpy.zeros(10)):
 
@@ -22,18 +22,18 @@ class Conic(object):
     def initialize_from_coefficients(cls, ccc):
         if numpy.array(ccc).size != 10:
             raise Exception("Invalid coefficients (dimension must be 10)")
-        return Conic(ccc=ccc)
+        return S4Conic(ccc=ccc)
 
     @classmethod
     def initialize_as_plane(cls):
-        return Conic(numpy.array([0,0,0,0,0,0,0,0,-1.,0]))
+        return S4Conic(numpy.array([0, 0, 0, 0, 0, 0, 0, 0, -1., 0]))
 
     #
     # initializers from focal distances
     #
     @classmethod
     def initialize_as_sphere_from_focal_distances(cls,p, q, theta1, cylindrical=0, cylangle=0.0, switch_convexity=0):
-        ccc = Conic()
+        ccc = S4Conic()
         ccc.set_sphere_from_focal_distances(p,q,theta1)
         if cylindrical:
             ccc.set_cylindrical(cylangle)
@@ -44,7 +44,7 @@ class Conic(object):
 
     @classmethod
     def initialize_as_ellipsoid_from_focal_distances(cls,p, q, theta1, cylindrical=0, cylangle=0.0, switch_convexity=0):
-        ccc = Conic()
+        ccc = S4Conic()
         ccc.set_ellipsoid_from_focal_distances(p,q,theta1)
         if cylindrical:
             ccc.set_cylindrical(cylangle)
@@ -54,7 +54,7 @@ class Conic(object):
 
     @classmethod
     def initialize_as_paraboloid_from_focal_distances(cls,p, q, theta1, cylindrical=0, cylangle=0.0, switch_convexity=0):
-        ccc = Conic()
+        ccc = S4Conic()
         ccc.set_paraboloid_from_focal_distances(p,q,theta1)
         if cylindrical:
             ccc.set_cylindrical(cylangle)
@@ -64,7 +64,7 @@ class Conic(object):
 
     @classmethod
     def initialize_as_hyperboloid_from_focal_distances(cls,p, q, theta1, cylindrical=0, cylangle=0.0, switch_convexity=0):
-        ccc = Conic()
+        ccc = S4Conic()
         ccc.set_hyperboloid_from_focal_distances(p,q,theta1)
         if cylindrical:
             ccc.set_cylindrical(cylangle)
@@ -77,7 +77,7 @@ class Conic(object):
     #
     @classmethod
     def initialize_as_sphere_from_curvature_radius(cls, radius, cylindrical=0, cylangle=0.0, switch_convexity=0):
-        ccc = Conic()
+        ccc = S4Conic()
         ccc.set_sphere_from_curvature_radius(radius)
         if cylindrical:
             ccc.set_cylindrical(cylangle)
@@ -86,7 +86,7 @@ class Conic(object):
         return ccc
 
     def duplicate(self):
-        return Conic.initialize_from_coefficients(self.ccc.copy())
+        return S4Conic.initialize_from_coefficients(self.ccc.copy())
 
     #
     # getters
@@ -1014,7 +1014,7 @@ if __name__ == "__main__":
     q = 2.64
     theta1 = 0.02181
     # ccc = Conic.initialize_as_sphere_from_focal_distances(p, q, theta1, cylindrical=0, cylangle=0.0, switch_convexity=0)
-    ccc = Conic.initialize_as_ellipsoid_from_focal_distances(p, q, theta1, cylindrical=0, cylangle=0.0, switch_convexity=0)
+    ccc = S4Conic.initialize_as_ellipsoid_from_focal_distances(p, q, theta1, cylindrical=0, cylangle=0.0, switch_convexity=0)
     # ccc = Conic.initialize_as_paraboloid_from_focal_distances(p, q, theta1, cylindrical=0, cylangle=0.0, switch_convexity=0)
     # ccc = Conic.initialize_as_hyperboloid_from_focal_distances(p, q, theta1, cylindrical=0, cylangle=0.0, switch_convexity=0)
     # print(ccc.info())
@@ -1038,10 +1038,10 @@ if __name__ == "__main__":
     plot_image(Z,x,y)
     print(ccc.info())
     print("Ellipsoid parameters: ")
-    tkt = Conic.calculate_ellipsoid_parameters_from_focal_distances(p, q, theta1)
+    tkt = S4Conic.calculate_ellipsoid_parameters_from_focal_distances(p, q, theta1)
 
     # using external parameters
-    ccc2 = Conic()
+    ccc2 = S4Conic()
     ccc2.set_ellipsoid_from_external_parameters(AXMAJ=tkt["AXMAJ"],AXMIN=tkt["AXMIN"],ELL_THE=tkt["ELL_THE"])
     # for key in tkt.keys():
     #     print(key,tkt[key])
