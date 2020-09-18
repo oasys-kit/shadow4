@@ -124,8 +124,11 @@ class S4MirrorElement(S4BeamlineElement):
         if not isinstance(soe, Mirror): # undefined
             raise Exception("Undefined mirror")
         else:
+            mirr, normal = self.analyze_surface_shape(beam)
+
+            '''
             surshape = soe.get_surface_shape()
-            
+
             if isinstance(surshape, Conic):
                 print(">>>>> Conic mirror")
                 ccc = S4Conic.initialize_from_coefficients(surshape._conic_coefficients)
@@ -201,6 +204,7 @@ class S4MirrorElement(S4BeamlineElement):
             else:
                 print(">>>>>", surshape)
                 raise Exception("cannot trace this surface shape")
+        '''
 
         #
         # apply mirror boundaries
@@ -336,6 +340,9 @@ class S4MirrorElement(S4BeamlineElement):
         beam_out.change_to_image_reference_system(theta_grazing1, q)
 
         return beam_out, mirr
+
+    def analyze_surface_shape(self, beam):
+        raise NotImplementedError()
 
     #
     # i/o utilities

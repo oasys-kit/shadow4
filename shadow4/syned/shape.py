@@ -30,6 +30,9 @@ class SurfaceShape(Shape):
 
         self._convexity = convexity
 
+    def get_convexity(self):
+        return self._convexity
+
 class BoundaryShape(Shape):
     def __init__(self):
         Shape.__init__(self)
@@ -45,6 +48,9 @@ class Cylinder:
     def __init__(self, cylinder_direction=Direction.TANGENTIAL):
         self._cylinder_direction = cylinder_direction
 
+    def get_cylinder_direction(self):
+        return self._cylinder_direction
+
 class Conic(SurfaceShape):
     def __init__(self, 
                  conic_coefficients=[0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0], 
@@ -52,6 +58,9 @@ class Conic(SurfaceShape):
         SurfaceShape.__init__(self, convexity)
 
         self._conic_coefficients = conic_coefficients
+
+    def get_conic_coefficients(self):
+        return self._conic_coefficients
 
 class Plane(SurfaceShape):
     def __init__(self):
@@ -108,19 +117,74 @@ class Ellipsoid(SurfaceShape):
     defining the position of the origin of the mirror. This additional parameter can be "p", "x0", "y0"
     or the angle beta from the ellipsoid center (tan(beta)=y0/x0). For simplicity, we store "p" in syned.
     """
-    def __init__(self, min_axis=0.0, maj_axis=0.0, convexity=Convexity.UPWARD, p=None):
+    def __init__(self, min_axis=0.0, maj_axis=0.0, p_focus=0.0, convexity=Convexity.UPWARD):
         SurfaceShape.__init__(self, convexity)
 
         self._min_axis = min_axis
         self._maj_axis = maj_axis
-        self._p = p
+        self._p_focus  = p_focus
+
+
+    @classmethod
+    def create_ellipsoid_from_axes(cls, min_axis=0.0, maj_axis=0.0, p_focus=0.0, convexity=Convexity.UPWARD):
+        return Ellipsoid(min_axis, maj_axis, p_focus, convexity)
+
+    @classmethod
+    def create_ellipsoid_from_p_q(cls, p=2.0, q=1.0, grazing_angle=0.003, convexity=Convexity.UPWARD):
+        ellipsoid = Ellipsoid(convexity=convexity)
+        ellipsoid.initialize_from_p_q(p, q, grazing_angle)
+
+        return ellipsoid
 
     def initialize_from_p_q(self, p=2.0, q=1.0, grazing_angle=0.003):
         self._min_axis, self._maj_axis = Ellipsoid.get_axis_from_p_q(p, q, grazing_angle)
-        self._p = p
+        self._p_focus = p
+
+    def initialize_from_shadow_parameters(self, axmaj=2.0, axmin=1.0, ell_the=0.003, convexity=Convexity.UPWARD):
+        tanbeta2 = numpy.tan(ell_the) ** 2
+        y = axmaj * axmin / numpy.sqrt(axmin ** 2 + axmaj ** 2 * tanbeta2)
+        z = y * numpy.tan(ell_the)
+        c = numpy.sqrt(axmaj ** 2 - axmin ** 2)
+        p = numpy.sqrt( (y + c)**2 + z**2)
+
+        self.__init__(axmin, axmaj, p, convexity)
+
+    def get_axes(self):
+        return self._min_axis, self._maj_axis
 
     def get_p_q(self, grazing_angle=0.003):
         return Ellipsoid.get_p_q_from_axis(self._min_axis, self._maj_axis, grazing_angle)
+
+    # semiaxes etc
+    def get_a(self):
+        return 0.5 * self._maj_axis
+
+    def get_b(self):
+        return 0.5 * self._min_axis
+
+    def get_c(self):
+        return numpy.sqrt(self.get_a()**2 - self.get_b()**2)
+
+    def get_p_focus(self):
+        return self._p_focus
+
+    def get_q_focus(self):
+        return 2 * self.get_a() - self.get_p()
+
+    def get_eccentricity(self):
+        return self.get_c() / self.get_a()
+
+    def get_grazing_angle(self):
+        return numpy.arcsin( self.get_b() / numpy.sqrt(self.get_p_focus() * self.get_q_focus()))
+
+    def get_mirror_center(self):
+        coor_along_axis_maj = (self.get_p_focus()**2 - self.get_q_focus()**1) / (4 * self.get_c())
+        coor_along_axis_min = self.get_b * numpy.sqrt(1 - (coor_along_axis_maj / self.get_a())**2)
+        return coor_along_axis_maj, coor_along_axis_min
+
+    def get_angle_pole_from_origin(self):
+        x1, x2 = self.get_mirror_center()
+        return numpy.arctan(x2 / x1)
 
     @classmethod
     def get_axis_from_p_q(cls, p=2.0, q=1.0, grazing_angle=0.003):
@@ -140,68 +204,33 @@ class Ellipsoid(SurfaceShape):
         return p, q
 
 
-    # semiaxes etc
-    def get_a(self):
-        return 0.5 * self._maj_axis
-
-    def get_b(self):
-        return 0.5 * self._min_axis
-
-    def get_c(self):
-        return numpy.sqrt(self.get_a()**2 - self.get_b()**2)
-
-    def get_p(self):
-        if self._p is None:
-            raise Exception("undefined p arm")
-        else:
-            return self._p
-
-    def get_q(self):
-        return 2 * self.get_a() - self.get_p()
-
-    def get_eccentricity(self):
-        return self.get_c / self.get_a()
-
-    def get_grazing_angle(self):
-        return numpy.arcsin( self.get_b() / numpy.sqrt(self.get_p() * self.get_q()))
-
-    def get_mirror_center(self):
-        coor_along_axis_maj = (self.get_p()**2 - self.get_q()**1) / (4 * self.get_c())
-        coor_along_axis_min = self.get_b * numpy.sqrt(1 - (coor_along_axis_maj / self.get_a())**2)
-        return coor_along_axis_maj, coor_along_axis_min
-
-    def get_angle_pole_from_origin(self):
-        x1, x2 = self.get_mirror_center()
-        return numpy.arctan(x2 / x1)
-
-    def initialize_from_shadow_parameters(self, axmaj=2.0, axmin=1.0, ell_the=0.003,
-                                          convexity=Convexity.UPWARD, ):
-
-        tanbeta2 = numpy.tan(ell_the) ** 2
-        y = axmaj * axmin / numpy.sqrt(axmin ** 2 + axmaj ** 2 * tanbeta2)
-        z = y * numpy.tan(ell_the)
-        c = numpy.sqrt(axmaj ** 2 - axmin ** 2)
-        p = numpy.sqrt( (y + c)**2 + z**2)
-        self.__init__(min_axis=0.5 * axmaj,
-                      maj_axis=0.5 * axmin,
-                      convexity=convexity,
-                      p=p)
-
 
 class EllipticalCylinder(Ellipsoid, Cylinder):
     def __init__(self, 
                  min_axis=0.0, 
                  maj_axis=0.0, 
-                 convexity=Convexity.UPWARD, 
+                 p_focus=0.0,
+                 convexity=Convexity.UPWARD,
                  cylinder_direction=Direction.TANGENTIAL):
-        Ellipsoid.__init__(self, min_axis, maj_axis, convexity)
+        Ellipsoid.__init__(self, min_axis, maj_axis, p_focus, convexity)
         Cylinder.__init__(self, cylinder_direction)
 
-    def initialize_from_p_q(self, p=2.0, q=1.0, grazing_angle=0.003):
-        if self._cylinder_direction == Direction.SAGITTAL:
-            raise NotImplementedError("Operation not possible for SAGITTAL direction")
 
-        return super().initialize_from_p_q(p, q, grazing_angle)
+    @classmethod
+    def create_elliptical_cylinder_from_axes(cls, min_axis=0.0, maj_axis=0.0, p_focus=0.0, convexity=Convexity.UPWARD, cylinder_direction=Direction.TANGENTIAL):
+        return EllipticalCylinder(min_axis, maj_axis, p_focus, convexity, cylinder_direction)
+
+    @classmethod
+    def create_elliptical_cylinder_from_p_q(cls, p=2.0, q=1.0, grazing_angle=0.003, convexity=Convexity.UPWARD, cylinder_direction=Direction.TANGENTIAL):
+        elliptical_cylinder = EllipticalCylinder(convexity=convexity, cylinder_direction=cylinder_direction)
+        elliptical_cylinder.initialize_from_p_q(p, q, grazing_angle)
+
+        return elliptical_cylinder
+
+    def initialize_from_p_q(self, p=2.0, q=1.0, grazing_angle=0.003):
+        if self._cylinder_direction == Direction.SAGITTAL: raise NotImplementedError("Operation not possible for SAGITTAL direction")
+
+        super().initialize_from_p_q(p, q, grazing_angle)
 
     def get_p_q(self, grazing_angle=0.003):
         if self._cylinder_direction == Direction.SAGITTAL:
@@ -288,6 +317,9 @@ class Hyperboloid(SurfaceShape):
         self._maj_axis = maj_axis
         self._p = p
 
+    def get_axis(self):
+        return self._min_axis, self._maj_axis
+
     def initialize_from_p_q(self, p=2.0, q=1.0, grazing_angle=0.003):
         self._min_axis, self._maj_axis = Hyperboloid.get_axis_from_p_q(p, q, grazing_angle)
         self._p = p
@@ -353,6 +385,10 @@ class Toroidal(SurfaceShape):
                     ("min_radius"         , "Minor radius r   ", "m" ),
                     ("maj_radius"         , "Major radius R (optical=R+r)", "m" ),
             ] )
+
+    def get_radii(self):
+        return self._min_radius, self._maj_radius
+
     def initialize_from_p_q(self, p=2.0, q=1.0, grazing_angle=0.003):
         self._maj_radius = Sphere.get_radius_from_p_q(p, q, grazing_angle)
         self._min_radius = SphericalCylinder.get_radius_from_p_q_sagittal(p, q, grazing_angle)
