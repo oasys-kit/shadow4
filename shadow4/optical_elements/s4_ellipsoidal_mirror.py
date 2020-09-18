@@ -2,11 +2,11 @@ import numpy
 
 from shadow4.syned.shape import Ellipsoid, EllipticalCylinder, Convexity, Direction
 
-from shadow4.optical_elements.s4_optical_element import SurfaceCalculation, S4CurvedOpticalElement
+from shadow4.optical_elements.s4_optical_element import SurfaceCalculation, S4EllipsoidOpticalElement
 from shadow4.optical_elements.s4_mirror import S4MirrorElement, S4Mirror, ElementCoordinates
 from shadow4.optical_surfaces.s4_conic import S4Conic
 
-class S4EllispoidMirror(S4Mirror, S4CurvedOpticalElement):
+class S4EllispoidMirror(S4Mirror, S4EllipsoidOpticalElement):
     def __init__(self,
                  name="Ellipsoid Mirror",
                  boundary_shape=None,
@@ -29,22 +29,10 @@ class S4EllispoidMirror(S4Mirror, S4CurvedOpticalElement):
                  file_refl="",  # preprocessor file fir f_refl=0,2,3,4
                  refraction_index=1.0  # refraction index (complex) for f_refl=1
                  ):
-        S4CurvedOpticalElement.__init__(surface_calculation, is_cylinder)
-
-        if self._surface_calculation == SurfaceCalculation.EXTERNAL:
-            if self._is_cylinder:
-                S4Mirror.__init__(name, boundary_shape, EllipticalCylinder.create_elliptical_cylinder_from_axes(min_axis, maj_axis, p_focus, convexity, cylinder_direction),
-                                  f_reflec, f_refl, file_refl, refraction_index)
-            else:
-                S4Mirror.__init__(name, boundary_shape, Ellipsoid.create_ellipsoid_from_axes(min_axis, maj_axis, p_focus, convexity),
-                                 f_reflec, f_refl, file_refl, refraction_index)
-        else:
-            if self._is_cylinder:
-                S4Mirror.__init__(name, boundary_shape, EllipticalCylinder.create_elliptical_cylinder_from_p_q(p_focus, q_focus, grazing_angle, convexity, cylinder_direction),
-                                  f_reflec, f_refl, file_refl, refraction_index)
-            else:
-               S4Mirror.__init__(name, boundary_shape, Ellipsoid.create_ellipsoid_from_p_q(p_focus, q_focus, grazing_angle, convexity),
-                                 f_reflec, f_refl, file_refl, refraction_index)
+        S4EllipsoidOpticalElement.__init__(surface_calculation, is_cylinder, cylinder_direction, convexity,
+                                           min_axis, maj_axis, p_focus, q_focus, grazing_angle)
+        S4Mirror.__init__(name, boundary_shape, self._curved_surface_shape,
+                          f_reflec, f_refl, file_refl, refraction_index)
 
 class S4EllipsoidMirrorElement(S4MirrorElement):
     def __init__(self, optical_element=None, coordinates=None):
@@ -60,7 +48,6 @@ class S4EllipsoidMirrorElement(S4MirrorElement):
             print(">>>>> EllipticalCylinder mirror", surshape)
             cylindrical = 1
             cylangle = 0.0 if surshape.get_cylinder_direction() == Direction.TANGENTIAL else (0.5 * numpy.pi)
-
         elif isinstance(surshape, Ellipsoid):
             print(">>>>> EllipticalCylinder mirror", surshape)
             cylindrical = 0
