@@ -1,5 +1,5 @@
 import numpy
-from syned.beamline.optical_elements.ideal_elements.screen import Screen as SynedScreen
+from syned.beamline.optical_elements.ideal_elements.screen import Screen
 from syned.beamline.beamline_element import BeamlineElement
 from shadow4.syned.element_coordinates import ElementCoordinates # TODO from syned.beamline.element_coordinates
 
@@ -8,7 +8,7 @@ from shadow4.optical_elements.s4_optical_element import S4OpticalElement
 from shadow4.optical_elements.s4_beamline_element import S4BeamlineElement
 
 
-class S4Empty(SynedScreen, S4OpticalElement):
+class S4Empty(Screen, S4OpticalElement):
     def __init__(self, name="Undefined"):
         super().__init__(name=name)
 

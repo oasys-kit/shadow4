@@ -1,37 +1,50 @@
-
 import numpy
-from collections import OrderedDict
 
 from syned.beamline.optical_elements.gratings.grating import GratingVLS
-from syned.beamline.shape import SurfaceShape, Plane
-from shadow4.syned.element_coordinates import ElementCoordinates # from syned.beamline.element_coordinates import ElementCoordinates
-from syned.beamline.beamline import BeamlineElement
+from syned.beamline.shape import Plane
 
-class Grating(object):
+from shadow4.syned.element_coordinates import ElementCoordinates # TODO from syned.beamline.element_coordinates
+from shadow4.optical_elements.s4_optical_element import S4OpticalElement
+from shadow4.optical_elements.s4_beamline_element import S4BeamlineElement
 
-    def __init__(self, beamline_element_syned=None):
-        if beamline_element_syned is None:
-            self._beamline_element_syned = BeamlineElement(SurfaceShape(),ElementCoordinates())
-        else:
-            self._beamline_element_syned = beamline_element_syned
+class S4Grating(GratingVLS, S4OpticalElement):
 
-    def info(self):
-        if self._beamline_element_syned is not None:
-            return (self._beamline_element_syned.info())
-    # def to_dictionary(self):
-    #     #returns a dictionary with the variable names as keys, and a tuple with value, unit and doc string
-    #     mytuple = [ ("focal_x"   ,( self._focal_x ,"m",  "Ideal lens focal length (horizontal)" ) ),
-    #                 ("focal_y"   ,( self._focal_y ,"m",  "Ideal lens focal length (vertical)"  ) )]
-    #     return(OrderedDict(mytuple))
+    def __init__(self,
+                 name="Undefined",
+                 surface_shape=None,
+                 boundary_shape=None,
+                 ruling=800e3,
+                 ruling_coeff_linear=0.0,
+                 ruling_coeff_quadratic=0.0,
+                 ruling_coeff_cubic=0.0,
+                 ruling_coeff_quartic=0.0,
+                 coating=None,
+                 coating_thickness=None,):
+
+        super.__init__(name=name,
+                 surface_shape=surface_shape,
+                 boundary_shape=boundary_shape,
+                 ruling=ruling,
+                 ruling_coeff_linear=ruling_coeff_linear,
+                 ruling_coeff_quadratic=ruling_coeff_quadratic,
+                 ruling_coeff_cubic=ruling_coeff_cubic,
+                 ruling_coeff_quartic=ruling_coeff_quartic,
+                 coating=coating,
+                 coating_thickness=coating_thickness,)
+
+class S4GratingElement(S4BeamlineElement):
+
+    def __init__(self, optical_element=None, coordinates=None):
+        super().__init__(optical_element if optical_element is not None else S4Grating(),
+                         coordinates if coordinates is not None else ElementCoordinates())
+
 
     def trace_beam(self,beam1):
-        p = self._beamline_element_syned.get_coordinates().p()
-        q = self._beamline_element_syned.get_coordinates().q()
-        theta1 = self._beamline_element_syned.get_coordinates().angle_radial()
-        theta1 = self._beamline_element_syned.get_coordinates().angle_radial_2()
-        alpha = self._beamline_element_syned.get_coordinates().angle_azimuthal()
+        p, q, theta1, theta2, alpha = self.get_positions()
 
         beam = beam1.duplicate()
+
+        print("# to be implemented...")
 
         return beam
 
@@ -39,10 +52,8 @@ class Grating(object):
 def test_plane_vls():
 
 
-    from shadow4.sources.source_geometrical.gaussian import SourceGaussian
+    from shadow4.sources.source_geometrical.source_gaussian import SourceGaussian
     from shadow4.beam.beam import Beam
-    from shadow4.compatibility.beam3 import Beam3
-    from Shadow.ShadowTools import plotxy
 
     #
     # source
@@ -88,35 +99,14 @@ def test_plane_vls():
                                            angle_radial_out= 87.588577 * numpy.pi / 180,
                                            angle_azimuthal = 0.0)
 
-    beamline_element_syned = BeamlineElement(optical_element=grating_syned, coordinates=coordinates_syned)
 
-    grating_s4 = Grating(beamline_element_syned=beamline_element_syned)
+
+    grating_s4 = S4GratingElement(optical_element=grating_syned, coordinates=coordinates_syned)
 
     print(grating_s4.info())
 
     beam_out = grating_s4.trace_beam(beam)
 
-    #
-    # lens1 = LensIdeal("test",focal_x=10.0,focal_z=10.0,p=100.0,q=10.0)
-    #
-    # method = 2 # 0:direct, 1:interface with overwrite, 2: no overwrite
-    # if method == 0:
-    #     beam2 = lens1.trace_beam(beam)
-    # elif method == 1:
-    #     beam.traceOE(lens1,1,overwrite=True)
-    #     beam2 = beam
-    # elif method == 2:
-    #     beam2 = beam.traceOE(lens1,1,overwrite=True)
-    # else:
-    #     raise Exception("Undefined method")
-    #
-    # #
-    #
-    # plotxy(beam2.get_shadow3_beam(),1,3,nbins=100,title="FOCAL PLANE")
-    # FX, FZ = (1e6*beam2.get_standard_deviation(1),1e6*beam2.get_standard_deviation(3))
-    # print("Source dimensions: %f %f um"%(SX,SZ))
-    # print("Focal dimensions: %f %f um"%(FX,FZ))
-    # print("Demagnification: %g %g"%(SX/FX,SX/FZ))
 
 
 if __name__ == "__main__":

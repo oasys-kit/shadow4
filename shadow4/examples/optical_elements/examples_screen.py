@@ -1,23 +1,20 @@
 
 import numpy
-from shadow4.beam.beam import Beam
+
 from shadow4.sources.source_geometrical.source_gaussian import SourceGaussian
-from shadow4.optical_elements.screen import Screen
+from shadow4.optical_elements.s4_screen import S4Screen, S4ScreenElement
 
 
 from shadow4.compatibility.beam3 import Beam3
 from Shadow.ShadowTools import plotxy
 
-from syned.beamline.optical_elements.ideal_elements.lens import IdealLens as SyIdelLens
 from syned.beamline.element_coordinates import ElementCoordinates
-from syned.beamline.beamline_element import BeamlineElement
 
-from syned.beamline.optical_elements.ideal_elements.screen import Screen as SyScreen
 
-from shadow4.syned.absorbers.beam_stopper import BeamStopper as SyBeamStopper   # TODO: syned.beamline.optical_elements.
-from shadow4.syned.absorbers.filter import Filter as SyFilter                   # TODO: syned.beamline.optical_elements.
-from shadow4.syned.absorbers.holed_filter import HoledFilter as SyHoledFilter   # TODO: syned.beamline.optical_elements.
-from shadow4.syned.absorbers.slit import Slit as SySlit                         # TODO: syned.beamline.optical_elements.
+# from shadow4.syned.absorbers.beam_stopper import BeamStopper    # TODO: syned.beamline.optical_elements.
+# from shadow4.syned.absorbers.filter import Filter               # TODO: syned.beamline.optical_elements.
+# from shadow4.syned.absorbers.holed_filter import HoledFilter    # TODO: syned.beamline.optical_elements.
+# from shadow4.syned.absorbers.slit import Slit                   # TODO: syned.beamline.optical_elements.
 
 
 from shadow4.syned.shape import Rectangle, Ellipse, TwoEllipses # TODO from syned.beamline.shape
@@ -37,42 +34,19 @@ def example_screen(do_plot=True):
     #
     src = SourceGaussian.initialize_collimated_source(number_of_rays=10000,sigmaX=1e-6,sigmaZ=1e-6)
 
-    interface = 'old' # 'new'
+    beam = src.get_beam()
 
-    if interface == 'new':
-        beam = src.get_beam()
-    elif interface == "old":
-        beam = Beam()
-        beam.genSource(src)
     print(beam.info())
-    SX, SZ = (1e6*beam.get_standard_deviation(1),1e6*beam.get_standard_deviation(3))
-
-    # if do_plot:
-    #     beam3 = Beam3.initialize_from_shadow4_beam(beam)
-    #     plotxy(beam3,1,3,nbins=100,title="SOURCE")
 
     #
     # screen definition
     #
 
-    syscreen1 = SyScreen(name="Undefined")
-
-    coordinates_syned = ElementCoordinates(p=100.0, q=0.0)
-
-    beamline_element_syned = BeamlineElement(optical_element=syscreen1, coordinates=coordinates_syned)
-
-    screen1 = Screen(beamline_element_syned=beamline_element_syned)
+    screen1 = S4ScreenElement(optical_element=S4Screen(), coordinates=ElementCoordinates(p=100.0, q=0.0))
 
     print(screen1.info())
 
-    #
-    # trace
-    #
-    interface = 'new'
-    if interface == 'new':
-        beam2 = screen1.trace_beam(beam)
-    elif interface == 'old':
-        beam2 = beam.traceOE(screen1, 1, overwrite=False)
+    beam2, tmp = screen1.trace_beam(beam)
 
     #
     if do_plot:
@@ -85,22 +59,16 @@ def example_slit(do_plot=True):
     src = SourceGaussian.initialize_collimated_source(number_of_rays=10000,sigmaX=1e-6,sigmaZ=1e-6)
     beam = src.get_beam()
 
-    # if do_plot:
-    #     beam3 = Beam3.initialize_from_shadow4_beam(beam)
-    #     plotxy(beam3,1,3,nbins=100,title="SOURCE")
 
     #
     # slit definition
     #
     boundary_shape = Rectangle(x_left=-0.5e-6, x_right=0.5e-6, y_bottom=-0.5e-6, y_top=0.5e-6)
+    coordinates = ElementCoordinates(p=100.0, q=0.0)
+    optical_element = S4Screen(name="slit1", boundary_shape=boundary_shape,
+                                i_abs=False, i_stop=False, thick=0.0, file_abs="")
 
-    syslit1 = SySlit(name="Undefined",boundary_shape=boundary_shape)
-
-    coordinates_syned = ElementCoordinates(p=100.0, q=0.0)
-
-    beamline_element_syned = BeamlineElement(optical_element=syslit1, coordinates=coordinates_syned)
-
-    slit1 = Screen(beamline_element_syned=beamline_element_syned)
+    slit1 = S4ScreenElement(optical_element=optical_element, coordinates=coordinates)
 
     print(slit1.info())
 
@@ -108,7 +76,7 @@ def example_slit(do_plot=True):
     # trace
     #
 
-    beam2 = slit1.trace_beam(beam)
+    beam2, tmp = slit1.trace_beam(beam)
 
 
     #
@@ -123,22 +91,16 @@ def example_beam_stopper(do_plot=True):
     src = SourceGaussian.initialize_collimated_source(number_of_rays=10000,sigmaX=1e-6,sigmaZ=1e-6)
     beam = src.get_beam()
 
-    # if do_plot:
-    #     beam3 = Beam3.initialize_from_shadow4_beam(beam)
-    #     plotxy(beam3,1,3,nbins=100,title="SOURCE")
 
     #
     # slit definition
     #
     boundary_shape = Ellipse(-1e-6, 1e-6, -0.5e-6, 0.5e-6)
+    coordinates = ElementCoordinates(p=100.0, q=0.0)
+    optical_element = S4Screen(name="slit1", boundary_shape=boundary_shape,
+                                i_abs=False, i_stop=True, thick=0.0, file_abs="")
 
-    sy1 = SyBeamStopper(name="Undefined",boundary_shape=boundary_shape)
-
-    coordinates_syned = ElementCoordinates(p=100.0, q=0.0)
-
-    beamline_element_syned = BeamlineElement(optical_element=sy1, coordinates=coordinates_syned)
-
-    screen1 = Screen(beamline_element_syned=beamline_element_syned)
+    screen1 = S4ScreenElement(optical_element=optical_element, coordinates=coordinates)
 
     print(screen1.info())
 
@@ -146,7 +108,7 @@ def example_beam_stopper(do_plot=True):
     # trace
     #
 
-    beam2 = screen1.trace_beam(beam)
+    beam2, tmp = screen1.trace_beam(beam)
 
 
     #
@@ -160,29 +122,21 @@ def example_filter(do_plot=True):
     src = SourceGaussian.initialize_collimated_source(number_of_rays=10000,sigmaX=1e-6,sigmaZ=1e-6)
     beam = src.get_beam()
 
-    # if do_plot:
-    #     beam3 = Beam3.initialize_from_shadow4_beam(beam)
-    #     plotxy(beam3,1,3,nbins=100,title="SOURCE")
-
     #
     # slit definition
     #
-    boundary_shape = None # Rectangle(x_left=-0.5e-6, x_right=0.5e-6, y_bottom=-0.5e-6, y_top=0.5e-6)
 
-    syfilter1 = SyFilter(name="Undefined",boundary_shape=boundary_shape,
-                         material="",
-                         thickness=10e-6
-                         )
 
-    coordinates_syned = ElementCoordinates(p=100.0, q=0.0)
-
-    beamline_element_syned = BeamlineElement(optical_element=syfilter1, coordinates=coordinates_syned)
-
-    # from Shadow.ShadowPreprocessorsXraylib import prerefl
     from shadow4.physical_models.prerefl.prerefl import PreRefl
     PreRefl.prerefl(interactive=False, SYMBOL="Be", DENSITY=1.848, FILE="Be.dat", E_MIN=100.0, E_MAX=20000.0, E_STEP=100.0)
 
-    filter1 = Screen(beamline_element_syned=beamline_element_syned, i_abs=True, file_abs="Be.dat", thick=10e-6)
+
+
+    optical_element = S4Screen(name="filter1", boundary_shape=None,
+                                i_abs=True, i_stop=False, thick=10e-6, file_abs="Be.dat")
+    coordinates = ElementCoordinates(p=100.0, q=0.0)
+    filter1 = S4ScreenElement(optical_element=optical_element, coordinates=coordinates)
+
 
     print(filter1.info())
 
@@ -190,8 +144,7 @@ def example_filter(do_plot=True):
     # trace
     #
 
-    beam2 = filter1.trace_beam(beam)
-
+    beam2, tmp = filter1.trace_beam(beam)
 
     #
     if do_plot:
@@ -205,25 +158,17 @@ def example_holed_filter(do_plot=True):
     src = SourceGaussian.initialize_collimated_source(number_of_rays=10000,sigmaX=1e-6,sigmaZ=1e-6)
     beam = src.get_beam()
 
-    # if do_plot:
-    #     beam3 = Beam3.initialize_from_shadow4_beam(beam)
-    #     plotxy(beam3,1,3,nbins=100,title="SOURCE")
 
     #
     # slit definition
     #
     boundary_shape = Rectangle(x_left=-0.5e-6, x_right=0.5e-6, y_bottom=-0.5e-6, y_top=0.5e-6)
 
-    syfilter1 = SyHoledFilter(name="Undefined",boundary_shape=boundary_shape,
-                         material="Be.dat",
-                         thickness=10e-6
-                         )
+    optical_element = S4Screen(name="filter1", boundary_shape=boundary_shape,
+                                i_abs=True, i_stop=True, thick=10e-6, file_abs="Be.dat")
 
-    coordinates_syned = ElementCoordinates(p=100.0, q=0.0)
-
-    beamline_element_syned = BeamlineElement(optical_element=syfilter1, coordinates=coordinates_syned)
-
-    filter1 = Screen(beamline_element_syned=beamline_element_syned)
+    coordinates = ElementCoordinates(p=100.0, q=0.0)
+    filter1 = S4ScreenElement(optical_element=optical_element, coordinates=coordinates)
 
     print(filter1.info())
 
@@ -231,7 +176,7 @@ def example_holed_filter(do_plot=True):
     # trace
     #
 
-    beam2 = filter1.trace_beam(beam)
+    beam2, tmp = filter1.trace_beam(beam)
 
 
     #
@@ -244,10 +189,10 @@ if __name__ == "__main__":
     from srxraylib.plot.gol import set_qt
     set_qt()
 
-    example_screen(do_plot=True)
-    example_slit(do_plot=True)
-    example_beam_stopper(do_plot=True)
+    do_plot = True
 
-
-    example_filter(do_plot=True)
-    example_holed_filter(do_plot=True)
+    example_screen(do_plot=do_plot)
+    example_slit(do_plot=do_plot)
+    example_beam_stopper(do_plot=do_plot)
+    example_filter(do_plot=do_plot)
+    example_holed_filter(do_plot=do_plot)
