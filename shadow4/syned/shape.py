@@ -70,8 +70,16 @@ class Sphere(SurfaceShape):
         SurfaceShape.__init__(self, convexity=convexity)
         self._radius = radius
 
-    def get_radius(self):
-        return self._radius
+    @classmethod
+    def create_sphere_from_radius(cls, radius=0.0, convexity=Convexity.UPWARD):
+        return Sphere(radius, convexity)
+
+    @classmethod
+    def create_sphere_from_p_q(cls, p=2.0, q=1.0, grazing_angle=0.003, convexity=Convexity.UPWARD):
+        sphere = Sphere(convexity=convexity)
+        sphere.initialize_from_p_q(p, q, grazing_angle)
+
+        return sphere
 
     def initialize_from_p_q(self, p=2.0, q=1.0, grazing_angle=0.003):
         self._radius = Sphere.get_radius_from_p_q(p, q, grazing_angle)
@@ -81,6 +89,10 @@ class Sphere(SurfaceShape):
         # 1/p + 1/q = 2/(R cos(pi/2 - gr.a.))
         return (2*p*q/(p+q))/numpy.sin(grazing_angle)
 
+    def get_radius(self):
+        return self._radius
+
+
 class SphericalCylinder(Sphere, Cylinder):
     def __init__(self, 
                  radius=1.0, 
@@ -89,20 +101,22 @@ class SphericalCylinder(Sphere, Cylinder):
         Sphere.__init__(self, radius, convexity)
         Cylinder.__init__(self, cylinder_direction)
 
+    @classmethod
+    def create_spherical_cylinder_from_radius(cls, radius=0.0, convexity=Convexity.UPWARD, cylinder_direction=Direction.TANGENTIAL):
+        return SphericalCylinder(radius, convexity, cylinder_direction)
+
+    @classmethod
+    def create_spherical_cylinder_from_p_q(cls, p=2.0, q=1.0, grazing_angle=0.003, convexity=Convexity.UPWARD, cylinder_direction=Direction.TANGENTIAL):
+        spherical_cylinder = SphericalCylinder(convexity=convexity, cylinder_direction=cylinder_direction)
+        spherical_cylinder.initialize_from_p_q(p, q, grazing_angle)
+
+        return spherical_cylinder
+
     def initialize_from_p_q(self, p=2.0, q=1.0, grazing_angle=0.003):
         if self._cylinder_direction == Direction.TANGENTIAL:
             self._radius = Sphere.get_radius_from_p_q(p, q, grazing_angle)
         elif self._cylinder_direction == Direction.SAGITTAL:
             self._radius = SphericalCylinder.get_radius_from_p_q_sagittal(p, q, grazing_angle)
-
-    def set_direction_tangential(self):
-        self._cylinder_direction = Direction.TANGENTIAL
-
-    def set_direction_sagittal(self):
-        self._cylinder_direction = Direction.SAGITTAL
-
-    def get_direction(self):
-        return self._cylinder_direction
 
     @classmethod
     def get_radius_from_p_q_sagittal(cls, p=2.0, q=1.0, grazing_angle=0.003):
@@ -168,13 +182,13 @@ class Ellipsoid(SurfaceShape):
         return self._p_focus
 
     def get_q_focus(self):
-        return 2 * self.get_a() - self.get_p()
+        return 2 * self.get_a() - self.get_p_focus()
 
     def get_eccentricity(self):
         return self.get_c() / self.get_a()
 
     def get_grazing_angle(self):
-        return numpy.arcsin( self.get_b() / numpy.sqrt(self.get_p_focus() * self.get_q_focus()))
+        return numpy.arcsin(self.get_b() / numpy.sqrt(self.get_p_focus() * self.get_q_focus()))
 
     def get_mirror_center(self):
         coor_along_axis_maj = (self.get_p_focus()**2 - self.get_q_focus()**1) / (4 * self.get_c())
@@ -214,7 +228,6 @@ class EllipticalCylinder(Ellipsoid, Cylinder):
         Ellipsoid.__init__(self, min_axis, maj_axis, p_focus, convexity)
         Cylinder.__init__(self, cylinder_direction)
 
-
     @classmethod
     def create_elliptical_cylinder_from_axes(cls, min_axis=0.0, maj_axis=0.0, p_focus=0.0, convexity=Convexity.UPWARD, cylinder_direction=Direction.TANGENTIAL):
         return EllipticalCylinder(min_axis, maj_axis, p_focus, convexity, cylinder_direction)
@@ -232,8 +245,119 @@ class EllipticalCylinder(Ellipsoid, Cylinder):
         super().initialize_from_p_q(p, q, grazing_angle)
 
     def get_p_q(self, grazing_angle=0.003):
-        if self._cylinder_direction == Direction.SAGITTAL:
-            raise NotImplementedError("Operation not possible for SAGITTAL direction")
+        if self._cylinder_direction == Direction.SAGITTAL: raise NotImplementedError("Operation not possible for SAGITTAL direction")
+
+        return super().get_p_q(grazing_angle)
+
+class Hyperboloid(SurfaceShape):
+    """
+    Hyperboloid: Revolution hyperboloid (two sheets: rotation around major axis).
+    It is defined with three parameters: axes of the hyperbola and an additional parameter
+    defining the position of the origin of the mirror. This additional parameter can be "p", "x0", "y0"
+    or the angle beta from the ellipsoid center (tan(beta)=y0/x0). For simplicity, we store "p" in syned.
+    """
+    def __init__(self, min_axis=0.0, maj_axis=0.0, p_focus=0.0, convexity=Convexity.UPWARD):
+        SurfaceShape.__init__(self, convexity)
+
+        self._min_axis = min_axis
+        self._maj_axis = maj_axis
+        self._p_focus  = p_focus
+
+    @classmethod
+    def create_hyperboloid_from_axes(cls, min_axis=0.0, maj_axis=0.0, p_focus=0.0, convexity=Convexity.UPWARD):
+        return Hyperboloid(min_axis, maj_axis, p_focus, convexity)
+
+    @classmethod
+    def create_hyperboloid_from_p_q(cls, p=2.0, q=1.0, grazing_angle=0.003, convexity=Convexity.UPWARD):
+        hyperboloid = Hyperboloid(convexity=convexity)
+        hyperboloid.initialize_from_p_q(p, q, grazing_angle)
+
+        return hyperboloid
+
+    def initialize_from_p_q(self, p=2.0, q=1.0, grazing_angle=0.003):
+        self._min_axis, self._maj_axis = Hyperboloid.get_axis_from_p_q(p, q, grazing_angle)
+        self._p_focus = p
+
+    # TODO:
+    def initialize_from_shadow_parameters(self, axmaj=2.0, axmin=1.0, ell_the=0.003, convexity=Convexity.UPWARD):
+        raise NotImplementedError("TODO")
+
+    def get_axes(self):
+        return self._min_axis, self._maj_axis
+
+    def get_p_q(self, grazing_angle=0.003):
+        return Hyperboloid.get_p_q_from_axis(self._min_axis, self._maj_axis, grazing_angle)
+
+    # semiaxes etc
+    def get_a(self):
+        return 0.5 * self._maj_axis
+
+    def get_b(self):
+        return 0.5 * self._min_axis
+
+    def get_c(self):
+        return numpy.sqrt(self.get_a()**2 + self.get_b()**2)
+
+    def get_p_focus(self):
+        return self._p_focus
+
+    def get_q_focus(self):
+        return self.get_p_focus() - 2 * self.get_a()
+
+    def get_eccentricity(self):
+        return self.get_c / self.get_a()
+
+    def get_grazing_angle(self):
+        return numpy.arcsin(self.get_b() / numpy.sqrt(self.get_p_focus() * self.get_q_focus()))
+
+    #TODO:
+    def get_mirror_center(self):
+        raise NotImplementedError("TODO")
+
+    def get_angle_pole_from_origin(self):
+        raise NotImplementedError("TODO")
+
+    @classmethod
+    def get_axis_from_p_q(cls, p=2.0, q=1.0, grazing_angle=0.003, branch_sign=+1):
+        min_axis = 2*numpy.sqrt(p*q)*numpy.sin(grazing_angle)
+        maj_axis = (p - q) * branch_sign
+
+        return min_axis, maj_axis
+
+    # TODO:
+    @classmethod
+    def get_p_q_from_axis(cls, min_axis=2.0, maj_axis=1.0, grazing_angle=0.003):
+        raise NotImplementedError("TODO")
+
+class HyperbolicCylinder(Hyperboloid, Cylinder):
+    def __init__(self, 
+                 min_axis=0.0, 
+                 maj_axis=0.0, 
+                 p_focus=0.0,
+                 convexity=Convexity.UPWARD, 
+                 cylinder_direction=Direction.TANGENTIAL):
+        Hyperboloid.__init__(self, min_axis, maj_axis, p_focus, convexity)
+        Cylinder.__init__(self, cylinder_direction)
+
+
+    @classmethod
+    def create_hyperbolic_cylinder_from_axes(cls, min_axis=0.0, maj_axis=0.0, p_focus=0.0, convexity=Convexity.UPWARD, cylinder_direction=Direction.TANGENTIAL):
+        return HyperbolicCylinder(min_axis, maj_axis, p_focus, convexity, cylinder_direction)
+
+    @classmethod
+    def create_hyperbolic_cylinder_from_p_q(cls, p=2.0, q=1.0, grazing_angle=0.003, convexity=Convexity.UPWARD, cylinder_direction=Direction.TANGENTIAL):
+        hyperbolic_cylinder = HyperbolicCylinder(convexity=convexity, cylinder_direction=cylinder_direction)
+        hyperbolic_cylinder.initialize_from_p_q(p, q, grazing_angle)
+
+        return hyperbolic_cylinder
+
+    def initialize_from_p_q(self, p=2.0, q=1.0, grazing_angle=0.003):
+        if self._cylinder_direction == Direction.SAGITTAL: raise NotImplementedError("Operation not possible for SAGITTAL direction")
+
+        super().initialize_from_p_q(p, q, grazing_angle)
+
+    def get_p_q(self, grazing_angle=0.003):
+        if self._cylinder_direction == Direction.SAGITTAL: raise NotImplementedError("Operation not possible for SAGITTAL direction")
 
         return super().get_p_q(grazing_angle)
 
@@ -249,8 +373,8 @@ class Paraboloid(SurfaceShape):
     the mirror pole to focus (pole to focus).
 
     """
-    def __init__(self, 
-                 parabola_parameter=0.0, 
+    def __init__(self,
+                 parabola_parameter=0.0,
                  convexity=Convexity.UPWARD,
                  at_infinity=Side.SOURCE,
                  pole_to_focus=None):
@@ -289,9 +413,9 @@ class Paraboloid(SurfaceShape):
 
 
 class ParabolicCylinder(Paraboloid, Cylinder):
-    def __init__(self, 
-                 parabola_parameter=0.0, 
-                 convexity=Convexity.UPWARD, 
+    def __init__(self,
+                 parabola_parameter=0.0,
+                 convexity=Convexity.UPWARD,
                  cylinder_direction=Direction.TANGENTIAL):
         Paraboloid.__init__(self, parabola_parameter, convexity)
         Cylinder.__init__(self, cylinder_direction)
@@ -302,77 +426,8 @@ class ParabolicCylinder(Paraboloid, Cylinder):
 
         return super().initialize_from_p_q(p, q, grazing_angle, at_infinity)
 
-class Hyperboloid(SurfaceShape):
-    """
-    Hyperboloid: Revolution hyperboloid (two sheets: rotation around major axis).
-    It is defined with three parameters: axes of the hyperbola and an additional parameter
-    defining the position of the origin of the mirror. This additional parameter can be "p", "x0", "y0"
-    or the angle beta from the ellipsoid center (tan(beta)=y0/x0). For simplicity, we store "p" in syned.
-    """
-    def __init__(self, min_axis=0.0, maj_axis=0.0, convexity=Convexity.UPWARD, p=None):
-        SurfaceShape.__init__(self, convexity)
-
-        self._min_axis = min_axis
-        self._maj_axis = maj_axis
-        self._p = p
-
-    def get_axis(self):
-        return self._min_axis, self._maj_axis
-
-    def initialize_from_p_q(self, p=2.0, q=1.0, grazing_angle=0.003):
-        self._min_axis, self._maj_axis = Hyperboloid.get_axis_from_p_q(p, q, grazing_angle)
-        self._p = p
-
-    @classmethod
-    def get_axis_from_p_q(cls, p=2.0, q=1.0, grazing_angle=0.003, branch_sign=+1):
-
-        min_axis = 2*numpy.sqrt(p*q)*numpy.sin(grazing_angle)
-        maj_axis = (p - q) * branch_sign
-
-        return min_axis, maj_axis
-
-    def get_p_q(self, grazing_angle=0.003):
-        raise NotImplementedError("TBD")
-
-
-    # semiaxes etc
-    def get_a(self):
-        return 0.5 * self._maj_axis
-
-    def get_b(self):
-        return 0.5 * self._min_axis
-
-    def get_c(self):
-        return numpy.sqrt(self.get_a()**2 + self.get_b()**2)
-
-    def get_p(self):
-        if self._p is None:
-            raise Exception("undefined p arm")
-        else:
-            return self._p
-
-    def get_q(self):
-        return self.get_p() - 2 * self.get_a()
-
-    def get_eccentricity(self):
-        return self.get_c / self.get_a()
-
-    def get_grazing_angle(self):
-        return numpy.arcsin( self.get_b() / numpy.sqrt(self.get_p() * self.get_q()))
-
-
-
-class HyperbolicCylinder(Hyperboloid, Cylinder):
-    def __init__(self, 
-                 min_axis=0.0, 
-                 maj_axis=0.0, 
-                 convexity=Convexity.UPWARD, 
-                 cylinder_direction=Direction.TANGENTIAL):
-        Hyperboloid.__init__(self, min_axis, maj_axis, convexity)
-        Cylinder.__init__(self, cylinder_direction)
-
 # TODO: consider rename to Toroid?
-class Toroidal(SurfaceShape):
+class Toroid(SurfaceShape):
     def __init__(self, min_radius=0.0, maj_radius=0.0):
         SurfaceShape.__init__(self, convexity=Convexity.NONE)
         

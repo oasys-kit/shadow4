@@ -27,14 +27,14 @@ class S4ConicMirrorElement(S4MirrorElement):
                          coordinates if coordinates is not None else ElementCoordinates())
 
     def analyze_surface_shape(self, beam):
-        surshape = self.get_optical_element().get_surface_shape()
+        surface_shape = self.get_optical_element().get_surface_shape()
 
-        if isinstance(surshape, Conic):
+        if isinstance(surface_shape, Conic):
             print(">>>>> Conic mirror")
         else:
             raise ValueError("Surface shape is not Conic")
 
-        ccc = S4Conic.initialize_from_coefficients(surshape.get_conic_coefficients())
+        ccc = S4Conic.initialize_from_coefficients(surface_shape.get_conic_coefficients())
 
         mirr, normal = ccc.apply_specular_reflection_on_beam(beam)
 

@@ -2,10 +2,11 @@ import numpy
 
 from shadow4.syned.shape import Plane
 
+from shadow4.optical_elements.s4_optical_element import S4PlaneOpticalElement
 from shadow4.optical_elements.s4_mirror import S4MirrorElement, S4Mirror, ElementCoordinates
 from shadow4.optical_surfaces.s4_conic import S4Conic
 
-class S4PlaneMirror(S4Mirror):
+class S4PlaneMirror(S4Mirror, S4PlaneOpticalElement):
     def __init__(self,
                  name="Plane Mirror",
                  boundary_shape=None,
@@ -19,8 +20,8 @@ class S4PlaneMirror(S4Mirror):
                  file_refl="",  # preprocessor file fir f_refl=0,2,3,4
                  refraction_index=1.0  # refraction index (complex) for f_refl=1
                  ):
-
-        S4Mirror.__init__(name, boundary_shape, Plane(), f_reflec, f_refl, file_refl, refraction_index)
+        S4PlaneOpticalElement.__init__(self)
+        S4Mirror.__init__(self, name, boundary_shape, self._plane_surface_shape, f_reflec, f_refl, file_refl, refraction_index)
 
 class S4PlaneMirrorElement(S4MirrorElement):
     def __init__(self, optical_element=None, coordinates=None):
@@ -28,9 +29,9 @@ class S4PlaneMirrorElement(S4MirrorElement):
                          coordinates if coordinates is not None else ElementCoordinates())
 
     def analyze_surface_shape(self, beam):
-        surshape = self.get_optical_element().get_surface_shape()
+        surface_shape = self.get_optical_element().get_surface_shape()
 
-        if isinstance(surshape, Plane):
+        if isinstance(surface_shape, Plane):
             print(">>>>> Plane mirror")
         else:
             raise ValueError("Surface shape is not Plane")

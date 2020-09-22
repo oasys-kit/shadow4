@@ -9,7 +9,7 @@ from shadow4.sources.source_geometrical.source_gaussian import SourceGaussian
 from shadow4.sources.source_geometrical.source_geometrical import SourceGeometrical
 
 from shadow4.syned.shape import Rectangle, Ellipse, TwoEllipses # TODO from syned.beamline.shape
-from shadow4.syned.shape import Toroidal, Conic # TODO from syned.beamline.shape
+from shadow4.syned.shape import Toroid, Conic # TODO from syned.beamline.shape
 
 
 from shadow4.optical_elements.s4_empty import S4Empty, S4EmptyElement

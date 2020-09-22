@@ -6,7 +6,7 @@ from shadow4.beam.beam import Beam
 from shadow4.sources.source_geometrical.source_gaussian import SourceGaussian
 
 from shadow4.syned.shape import Rectangle, Ellipse, TwoEllipses # TODO from syned.beamline.shape
-from shadow4.syned.shape import Toroidal, Conic, SurfaceData # TODO from syned.beamline.shape
+from shadow4.syned.shape import Toroid, Conic, SurfaceData # TODO from syned.beamline.shape
 from shadow4.syned.shape import Plane, Sphere, Ellipsoid, Paraboloid, Hyperboloid # TODO from syned.beamline.shape
 from shadow4.syned.shape import SphericalCylinder, EllipticalCylinder, HyperbolicCylinder, ParabolicCylinder # TODO from syned.beamline.shape
 
@@ -133,7 +133,7 @@ def example_branch_2(do_plot=True):
     #
 
     # surface shape
-    surface_shape = Toroidal(min_radius=0.157068, maj_radius=358.124803-0.157068) # Plane() # SurfaceShape()
+    surface_shape = Toroid(min_radius=0.157068, maj_radius=358.124803 - 0.157068) # Plane() # SurfaceShape()
 
 
     # boundaries
