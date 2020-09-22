@@ -440,8 +440,25 @@ class Toroid(SurfaceShape):
                     ("maj_radius"         , "Major radius R (optical=R+r)", "m" ),
             ] )
 
+    @classmethod
+    def create_toroid_from_radii(cls, min_radius=0.0, maj_radius=0.0):
+        return Toroid(min_radius, maj_radius)
+
+    @classmethod
+    def create_toroid_from_p_q(cls, p=2.0, q=1.0, grazing_angle=0.003):
+        toroid = Toroid()
+        toroid.initialize_from_p_q(p, q, grazing_angle)
+
+        return toroid
+
     def get_radii(self):
         return self._min_radius, self._maj_radius
+
+    def get_min_radius(self):
+        return self._min_radius
+
+    def get_maj_radius(self):
+        return self._maj_radius
 
     def initialize_from_p_q(self, p=2.0, q=1.0, grazing_angle=0.003):
         self._maj_radius = Sphere.get_radius_from_p_q(p, q, grazing_angle)

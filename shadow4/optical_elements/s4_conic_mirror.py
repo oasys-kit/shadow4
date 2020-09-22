@@ -2,7 +2,9 @@ from shadow4.syned.shape import Conic
 from shadow4.optical_elements.s4_mirror import S4MirrorElement, S4Mirror, ElementCoordinates
 from shadow4.optical_surfaces.s4_conic import S4Conic
 
-class S4ConicMirror(S4Mirror):
+from shadow4.optical_elements.s4_optical_element import S4ConicOpticalElement
+
+class S4ConicMirror(S4Mirror, S4ConicOpticalElement):
     def __init__(self,
                  name="Conic Mirror",
                  boundary_shape=None,
@@ -17,8 +19,8 @@ class S4ConicMirror(S4Mirror):
                  file_refl="",  # preprocessor file fir f_refl=0,2,3,4
                  refraction_index=1.0  # refraction index (complex) for f_refl=1
                  ):
-
-        S4Mirror.__init__(name, boundary_shape, Conic(conic_coefficients),
+        S4ConicOpticalElement.__init__(self, conic_coefficients)
+        S4Mirror.__init__(self, name, boundary_shape, self._conic_surface_shape,
                           f_reflec, f_refl, file_refl, refraction_index)
 
 class S4ConicMirrorElement(S4MirrorElement):

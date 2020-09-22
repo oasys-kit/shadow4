@@ -105,10 +105,26 @@ class S4HyperboloidOpticalElement(S4CurvedOpticalElement):
 
 
 class S4ToroidalOpticalElement(S4CurvedOpticalElement):
-    pass
+    def __init__(self,
+                 surface_calculation=SurfaceCalculation.INTERNAL,
+                 min_radius=0.0,
+                 maj_radius=0.0,
+                 p_focus=0.0,
+                 q_focus=0.0,
+                 grazing_angle=0.0,
+                 ):
+        S4CurvedOpticalElement.__init__(self, surface_calculation, False)
+
+        if self._surface_calculation == SurfaceCalculation.EXTERNAL:
+            self._curved_surface_shape = Toroid.create_toroid_from_radii(min_radius, maj_radius, maj_radius)
+        else:
+            self._curved_surface_shape = Toroid.create_toroid_from_p_q(p_focus, q_focus, grazing_angle)
 
 class S4ConicOpticalElement(S4CurvedOpticalElement):
-    pass
+    def __init__(self, conic_coefficients=[0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]):
+        S4CurvedOpticalElement.__init__(self, surface_calculation=SurfaceCalculation.INTERNAL, is_cylinder=False)
+
+        self._conic_surface_shape = Conic(conic_coefficients=conic_coefficients)
 
 class S4ParaboloidOpticalElement(S4CurvedOpticalElement):
     pass
