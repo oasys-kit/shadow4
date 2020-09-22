@@ -73,16 +73,6 @@ class S4Mirror(Mirror, S4OpticalElement):
 
         return super(S4Mirror, self).info() + "\n" + info_mirror
 
-    def set_surface_conic(self, conic_coefficients=[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,-1.0,0.0]):
-        self.set_surface_shape(
-            Conic(conic_coefficients=conic_coefficients)
-            )
-
-    def set_surface_toroid(self, min_radius=0.0, maj_radius=0.0):
-        self.set_surface_shape(
-            Toroid(min_radius=min_radius, maj_radius=maj_radius)
-        )
-
     def set_boundaries_rectangle(self, x_left=-1e3, x_right=1e3, y_bottom=-1e3, y_top=1e3):
         self._boundary_shape = \
             Rectangle(x_left=x_left, x_right=x_right, y_bottom=y_bottom, y_top=y_top)

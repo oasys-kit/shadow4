@@ -27,14 +27,13 @@ class S4ConicMirrorElement(S4MirrorElement):
     def __init__(self, optical_element=None, coordinates=None):
         super().__init__(optical_element if optical_element is not None else S4ConicMirror(),
                          coordinates if coordinates is not None else ElementCoordinates())
+        if not isinstance(self.get_optical_element().get_surface_shape(), Conic):
+            raise ValueError("Wrong Optical Element: only Conic shape is accepted")
 
     def analyze_surface_shape(self, beam):
         surface_shape = self.get_optical_element().get_surface_shape()
 
-        if isinstance(surface_shape, Conic):
-            print(">>>>> Conic mirror")
-        else:
-            raise ValueError("Surface shape is not Conic")
+        print(">>>>> Conic mirror")
 
         ccc = S4Conic.initialize_from_coefficients(surface_shape.get_conic_coefficients())
 

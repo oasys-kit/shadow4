@@ -34,10 +34,14 @@ class S4HyperboloidMirror(S4Mirror, S4HyperboloidOpticalElement):
         S4Mirror.__init__(self, name, boundary_shape, self._curved_surface_shape,
                           f_reflec, f_refl, file_refl, refraction_index)
 
+
 class S4HyperboloidMirrorElement(S4MirrorElement):
     def __init__(self, optical_element=None, coordinates=None):
         super().__init__(optical_element if optical_element is not None else S4HyperboloidMirror(),
                          coordinates if coordinates is not None else ElementCoordinates())
+        if not (isinstance(self.get_optical_element().get_surface_shape(), HyperbolicCylinder) or
+                isinstance(self.get_optical_element().get_surface_shape(), Hyperboloid)):
+            raise ValueError("Wrong Optical Element: only Hyperboloid or Hyperbolic Cylinder shape is accepted")
 
     def analyze_surface_shape(self, beam):
         surface_shape = self.get_optical_element().get_surface_shape()
@@ -52,8 +56,6 @@ class S4HyperboloidMirrorElement(S4MirrorElement):
             print(">>>>> Hyperboloid mirror", surface_shape)
             cylindrical = 0
             cylangle    = 0.0
-        else:
-            raise ValueError("Surface shape is not Hyperboloid or Hyperbolic Cylinder")
 
         ccc = S4Conic.initialize_as_hyperboloid_from_focal_distances(surface_shape.get_p_focus(), surface_shape.get_q_focus(), surface_shape.get_grazing_angle(),
                                                                      cylindrical=cylindrical, cylangle=cylangle, switch_convexity=switch_convexity)

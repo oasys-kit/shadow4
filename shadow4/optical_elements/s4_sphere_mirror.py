@@ -38,6 +38,9 @@ class S4SphereMirrorElement(S4MirrorElement):
     def __init__(self, optical_element=None, coordinates=None):
         super().__init__(optical_element if optical_element is not None else S4SphereMirror(),
                          coordinates if coordinates is not None else ElementCoordinates())
+        if not (isinstance(self.get_optical_element().get_surface_shape(), SphericalCylinder) or
+                isinstance(self.get_optical_element().get_surface_shape(), Sphere)):
+            raise ValueError("Wrong Optical Element: only Sphere or Spherical Cylinder shape is accepted")
 
     def analyze_surface_shape(self, beam):
         surface_shape = self.get_optical_element().get_surface_shape()
@@ -52,8 +55,6 @@ class S4SphereMirrorElement(S4MirrorElement):
             print(">>>>> Sphere mirror", surface_shape)
             cylindrical = 0
             cylangle    = 0.0
-        else:
-            raise ValueError("Surface shape is not Sphere or Spherical Cylinder")
 
         ccc = S4Conic.initialize_as_sphere_from_curvature_radius(surface_shape.get_radius(),
                                                                  cylindrical=cylindrical, cylangle=cylangle, switch_convexity=switch_convexity)

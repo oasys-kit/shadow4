@@ -33,14 +33,13 @@ class S4ToroidalMirrorElement(S4MirrorElement):
     def __init__(self, optical_element=None, coordinates=None):
         super().__init__(optical_element if optical_element is not None else S4ToroidalMirror(),
                          coordinates if coordinates is not None else ElementCoordinates())
+        if not isinstance(self.get_optical_element().get_surface_shape(), Toroid):
+            raise ValueError("Wrong Optical Element: only Toroid shape is accepted")
 
     def analyze_surface_shape(self, beam):
         surface_shape = self.get_optical_element().get_surface_shape()
 
-        if isinstance(surface_shape, Toroid):
-            print(">>>>> Toroidal mirror", surface_shape._min_radius, surface_shape._maj_radius)
-        else:
-            raise ValueError("Surface shape is not Toroidal")
+        print(">>>>> Toroidal mirror", surface_shape._min_radius, surface_shape._maj_radius)
 
         toroid = S4Toroid()
         toroid.set_toroid_radii(surface_shape._maj_radius, surface_shape._min_radius)
