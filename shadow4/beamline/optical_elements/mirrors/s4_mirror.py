@@ -104,26 +104,6 @@ class S4MirrorElement(S4BeamlineElement):
         else:
             mirr, normal = self.analyze_surface_shape(beam)
 
-            '''
-            surface_shape = soe.get_surface_shape()
-
-            elif isinstance(surface_shape, Paraboloid):
-                print(">>>>> Paraboloid mirror",surface_shape)
-                if surface_shape.get_at_infinity == 0:
-                    p = 1e10
-                    q = surface_shape.get_pole_to_focus()
-                else:
-                    q = 1e10
-                    p = surface_shape.get_pole_to_focus()
-
-                ccc = S4Conic.initialize_as_paraboloid_from_focal_distances(p,q, surface_shape.get_grazing_angle(), cylindrical=0, cylangle=0.0, switch_convexity=0)
-                mirr, normal = ccc.apply_specular_reflection_on_beam(beam)
-
-            else:
-                print(">>>>>", surface_shape)
-                raise Exception("cannot trace this surface shape")
-        '''
-
         #
         # apply mirror boundaries
         #

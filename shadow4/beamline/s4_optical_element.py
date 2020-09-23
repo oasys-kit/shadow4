@@ -3,7 +3,7 @@ from shadow4.syned.shape import Direction, Convexity, \
     Ellipsoid, EllipticalCylinder, \
     Hyperboloid, HyperbolicCylinder, \
     Paraboloid, ParabolicCylinder, \
-    Toroid, Conic, SurfaceData, Plane
+    Toroid, Conic, SurfaceData, Plane, Side
 
 class S4OpticalElement(object):
 
@@ -87,7 +87,6 @@ class S4EllipsoidOpticalElement(S4CurvedOpticalElement):
             else:                 self._curved_surface_shape = Ellipsoid.create_ellipsoid_from_p_q(p_focus, q_focus, grazing_angle, convexity)
 
 class S4HyperboloidOpticalElement(S4CurvedOpticalElement):
-
     def __init__(self,
                  surface_calculation=SurfaceCalculation.INTERNAL,
                  is_cylinder=False,
@@ -132,10 +131,29 @@ class S4ConicOpticalElement(S4CurvedOpticalElement):
         self._conic_surface_shape = Conic(conic_coefficients=conic_coefficients)
 
 class S4ParaboloidOpticalElement(S4CurvedOpticalElement):
-    pass
+    def __init__(self,
+                 surface_calculation=SurfaceCalculation.INTERNAL,
+                 is_cylinder=False,
+                 cylinder_direction=Direction.TANGENTIAL,
+                 convexity=Convexity.UPWARD,
+                 parabola_parameter=0.0,
+                 at_infinity=Side.SOURCE,
+                 pole_to_focus=None,
+                 p_focus=0.0,
+                 q_focus=0.0,
+                 grazing_angle=0.0,
+                 ):
+        S4CurvedOpticalElement.__init__(self, surface_calculation, is_cylinder)
+
+        if self._surface_calculation == SurfaceCalculation.EXTERNAL:
+            if self._is_cylinder: self._curved_surface_shape = ParabolicCylinder.create_parabolic_cylinder_from_parabola_parameter(parabola_parameter, at_infinity, pole_to_focus, convexity, cylinder_direction)
+            else:                 self._curved_surface_shape = Paraboloid.create_paraboloid_from_parabola_parameter(parabola_parameter, at_infinity, pole_to_focus, convexity)
+        else:
+            if self._is_cylinder: self._curved_surface_shape = ParabolicCylinder.create_parabolic_cylinder_from_p_q(p_focus, q_focus, grazing_angle, at_infinity, convexity, cylinder_direction)
+            else:                 self._curved_surface_shape = Paraboloid.create_paraboloid_from_p_q(p_focus, q_focus, grazing_angle, at_infinity, convexity)
 
 class S4SurfaceDataOpticalElement(S4CurvedOpticalElement):
     def __init__(self, xx=None, yy=None, zz=None, surface_data_file=None):
         S4CurvedOpticalElement.__init__(self, surface_calculation=SurfaceCalculation.INTERNAL, is_cylinder=False)
 
-        self._conic_surface_shape = SurfaceData(xx, yy, xx, surface_data_file)
+        self._curved_surface_shape = SurfaceData(xx, yy, xx, surface_data_file)

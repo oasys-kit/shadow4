@@ -46,8 +46,8 @@ class S4SurfaceDataMirrorElement(S4MirrorElement):
         elif surface_shape.has_surface_data_file():
             filename, file_extension = os.path.splitext(surface_shape._surface_data_file)
 
-            if file_extension.lower() in [".h5", ".hdf", ".hdf5"]: num_mesh.load_h5file(surface_shape)
-            else:                                                  num_mesh.load_file(surface_shape) # 3 columns ASCII
+            if file_extension.lower() in [".h5", ".hdf", ".hdf5"]: num_mesh.load_h5file(surface_shape._surface_data_file)
+            else:                                                  num_mesh.load_file(surface_shape._surface_data_file) # 3 columns ASCII
 
         mirr, normal, _, _, _, _, _ = num_mesh.apply_specular_reflection_on_beam(beam)
 

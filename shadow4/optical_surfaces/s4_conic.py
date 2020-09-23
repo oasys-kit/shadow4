@@ -543,8 +543,6 @@ class S4Conic(object):
         self.ccc[9] = 0.0
 
     def set_ellipsoid_from_external_parameters(self, AXMAJ, AXMIN, ELL_THE):
-
-
         YCEN  = AXMAJ*AXMIN
         YCEN  = YCEN/numpy.sqrt(AXMIN**2+AXMAJ**2*numpy.tan(ELL_THE)**2)
         ZCEN  = YCEN*numpy.tan(ELL_THE)

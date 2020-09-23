@@ -5,16 +5,19 @@ from syned.beamline.element_coordinates import ElementCoordinates
 from shadow4.beam.beam import Beam
 from shadow4.sources.source_geometrical.source_gaussian import SourceGaussian
 
-from shadow4.syned.shape import Rectangle  # TODO from syned.beamline.shape
-from shadow4.syned.shape import Toroid, Conic, SurfaceData # TODO from syned.beamline.shape
-from shadow4.syned.shape import Plane, Sphere, Ellipsoid, Paraboloid, Hyperboloid # TODO from syned.beamline.shape
-from shadow4.syned.shape import SphericalCylinder, EllipticalCylinder, HyperbolicCylinder, ParabolicCylinder # TODO from syned.beamline.shape
+from shadow4.syned.shape import Rectangle, Direction, Side  # TODO from syned.beamline.shape
 
-
-from shadow4.beamline.optical_elements.mirrors.s4_mirror import S4Mirror, S4MirrorElement
 from shadow4.beamline.s4_optical_element import SurfaceCalculation
+
 from shadow4.beamline.optical_elements.mirrors.s4_conic_mirror import S4ConicMirror, S4ConicMirrorElement
 from shadow4.beamline.optical_elements.mirrors.s4_toroidal_mirror import S4ToroidalMirror, S4ToroidalMirrorElement
+from shadow4.beamline.optical_elements.mirrors.s4_surface_data_mirror import S4SurfaceDataMirror, S4SurfaceDataMirrorElement
+from shadow4.beamline.optical_elements.mirrors.s4_plane_mirror import S4PlaneMirror, S4PlaneMirrorElement
+from shadow4.beamline.optical_elements.mirrors.s4_ellipsoid_mirror import S4EllipsoidMirror, S4EllipsoidMirrorElement
+from shadow4.beamline.optical_elements.mirrors.s4_hyperboloid_mirror import S4HyperboloidMirror, S4HyperboloidMirrorElement
+from shadow4.beamline.optical_elements.mirrors.s4_paraboloid_mirror import S4ParaboloidMirror, S4ParaboloidMirrorElement
+from shadow4.beamline.optical_elements.mirrors.s4_sphere_mirror import S4SphereMirror, S4SphereMirrorElement
+
 from shadow4.tools.graphics import plotxy
 
 from shadow4.physical_models.prerefl.prerefl import PreRefl
@@ -67,7 +70,7 @@ def example_branch_1(do_plot=True):
 
     coordinates_syned = ElementCoordinates(p = 10.0,
                                            q = 6.0,
-                                           angle_radial = 88.8 * numpy.pi / 180,)
+                                           angle_radial = numpy.radians(88.8))
 
     #
     # shadow definitions
@@ -100,7 +103,7 @@ def example_branch_1(do_plot=True):
     
     mirror2 = S4ConicMirrorElement(optical_element=S4ConicMirror(conic_coefficients=[0,0,0,0,0,0,0,0,-1,0],
                                                                  boundary_shape=Rectangle(-100e-6,100e-6,-150e-6,150e-6)),
-                                   coordinates=ElementCoordinates(p = 10.0, q = 100.0, angle_radial = 0.5*numpy.pi - 0.003))
+                                   coordinates=ElementCoordinates(p = 10.0, q = 100.0, angle_radial = (0.5*numpy.pi - 0.003)))
 
     print(mirror2.info())
     #
@@ -141,7 +144,7 @@ def example_branch_2(do_plot=True):
                                                                        boundary_shape=boundary_shape),
                                       coordinates=ElementCoordinates(p = 10.0,
                                                                      q = 6.0,
-                                                                     angle_radial = 88.8 * numpy.pi / 180,))
+                                                                     angle_radial = numpy.radians(88.8)))
 
 
     print(mirror1.info())
@@ -182,38 +185,21 @@ def example_branch_3(surface_shape_file, do_plot=True):
     # syned definitopns
     #
 
-    # surface shape
-
-    # surface_shape = NumericalMesh(surface_shape_file)
-
-    import h5py
-    f = h5py.File(surface_shape_file, 'r')
-    x = f["/surface_file/X"][:]
-    y = f["/surface_file/Y"][:]
-    Z = f["/surface_file/Z"][:]
-    f.close()
-
-    surface_shape = SurfaceData(xx=x, yy=y, zz=Z, surface_data_file=surface_shape_file)
-
     # boundaries
     rlen1 = 0.6
     rlen2 = 0.6
     rwidx1 = 0.05
     rwidx2 = 0.05
 
-    boundary_shape = Rectangle(x_left=-rwidx2,x_right=rwidx1,y_bottom=-rlen2,y_top=rlen1)
-
-    coordinates_syned = ElementCoordinates(p = 100.0,
-                                           q = 1000.0,
-                                           angle_radial = 88.8 * numpy.pi / 180,)
-
     #
     # shadow definitions
     #
-    mirror1 = S4MirrorElement(optical_element=S4Mirror(name="M1",
-                                                       surface_shape=surface_shape,
-                                                       boundary_shape=boundary_shape),
-                              coordinates=coordinates_syned)
+    mirror1 = S4SurfaceDataMirrorElement(optical_element=S4SurfaceDataMirror(name="M1",
+                                                                             surface_data_file=surface_shape_file,
+                                                                             boundary_shape=Rectangle(x_left=-rwidx2,x_right=rwidx1,y_bottom=-rlen2,y_top=rlen1)),
+                                         coordinates=ElementCoordinates(p = 100.0,
+                                                                        q = 1000.0,
+                                                                        angle_radial = numpy.radians(88.8)))
     print(mirror1.info())
 
     #
@@ -258,18 +244,17 @@ def example_branch_4(do_plot=True, f_refl=0):
     #
 
     # surface shape
-    surface_shape = Conic(conic_coefficients=[0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, -1.0, 0.0])
-
     # boundaries
     rlen1 = 5e-05
     rlen2 = 5e-05
     rwidx1 = 2e-05
     rwidx2 = 2e-05
+
     boundary_shape = Rectangle(x_left=-rwidx2,x_right=rwidx1,y_bottom=-rlen2,y_top=rlen1)
 
     coordinates_syned = ElementCoordinates(p = 10.0,
                                            q = 6.0,
-                                           angle_radial = 88.8 * numpy.pi / 180,)
+                                           angle_radial = numpy.radians(88.8))
 
 
     #
@@ -279,37 +264,37 @@ def example_branch_4(do_plot=True, f_refl=0):
 
         PreRefl.prerefl(interactive=False, SYMBOL="SiC", DENSITY=3.217, FILE="SiC.dat",
                         E_MIN=100.0, E_MAX=20000.0, E_STEP=100.0)
-        mirror1 = S4MirrorElement(optical_element=S4Mirror(name="M1",
-                                                           surface_shape=surface_shape,
-                                                           boundary_shape=boundary_shape,
-                                                           f_reflec=1, f_refl=f_refl, file_refl="SiC.dat"),
-                                  coordinates=coordinates_syned)
+        mirror1 = S4ConicMirrorElement(optical_element=S4ConicMirror(name="M1",
+                                                                     conic_coefficients=[0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, -1.0, 0.0],
+                                                                     boundary_shape=boundary_shape,
+                                                                     f_reflec=1, f_refl=f_refl, file_refl="SiC.dat"),
+                                       coordinates=coordinates_syned)
     elif f_refl == 1: # refraction index
         import xraylib
         refraction_index = xraylib.Refractive_Index("SiC", 2.4797, 3.217)
-        mirror1 = S4MirrorElement(optical_element=S4Mirror(name="M1",
-                                                           surface_shape=surface_shape,
-                                                           boundary_shape=boundary_shape,
-                                                           f_reflec=1, f_refl=f_refl, file_refl="", refraction_index=refraction_index),
-                                  coordinates=coordinates_syned)
+        mirror1 = S4ConicMirrorElement(optical_element=S4ConicMirror(name="M1",
+                                                                     conic_coefficients=[0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, -1.0, 0.0],
+                                                                     boundary_shape=boundary_shape,
+                                                                     f_reflec=1, f_refl=f_refl, file_refl="", refraction_index=refraction_index),
+                                       coordinates=coordinates_syned)
     elif f_refl == 2:  # user file: 1D  vs angle
-        mirror1 = S4MirrorElement(optical_element=S4Mirror(name="M1",
-                                                           surface_shape=surface_shape,
-                                                           boundary_shape=boundary_shape,
-                                                           f_reflec=1, f_refl=f_refl, file_refl="../../../oasys_workspaces/xoppy_f1f2_139980555361648.dat"),
-                                  coordinates=coordinates_syned)
+        mirror1 = S4ConicMirrorElement(optical_element=S4ConicMirror(name="M1",
+                                                                     conic_coefficients=[0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, -1.0, 0.0],
+                                                                     boundary_shape=boundary_shape,
+                                                                     f_reflec=1, f_refl=f_refl, file_refl="../../../oasys_workspaces/xoppy_f1f2_139980555361648.dat"),
+                                       coordinates=coordinates_syned)
     elif f_refl == 3:  # user file 1D vs energy
-        mirror1 = S4MirrorElement(optical_element=S4Mirror(name="M1",
-                                                           surface_shape=surface_shape,
-                                                           boundary_shape=boundary_shape,
-                                                           f_reflec=1, f_refl=f_refl, file_refl="../../../oasys_workspaces/xoppy_f1f2_139981943656272.dat"),
-                                  coordinates=coordinates_syned)
+        mirror1 = S4ConicMirrorElement(optical_element=S4ConicMirror(name="M1",
+                                                                     conic_coefficients=[0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, -1.0, 0.0],
+                                                                     boundary_shape=boundary_shape,
+                                                                     f_reflec=1, f_refl=f_refl, file_refl="../../../oasys_workspaces/xoppy_f1f2_139981943656272.dat"),
+                                       coordinates=coordinates_syned)
     elif f_refl == 4:  # user file
-        mirror1 = S4MirrorElement(optical_element=S4Mirror(name="M1",
-                                                           surface_shape=surface_shape,
+        mirror1 = S4ConicMirrorElement(optical_element=S4ConicMirror(name="M1",
+                                                           conic_coefficients=[0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, -1.0, 0.0],
                                                            boundary_shape=boundary_shape,
                                                            f_reflec=1, f_refl=f_refl, file_refl="../../../oasys_workspaces/xoppy_f1f2_139980938100080.dat"),
-                                  coordinates=coordinates_syned)
+                                       coordinates=coordinates_syned)
 
     print(mirror1.info())
 
@@ -346,64 +331,115 @@ def example_branch_5(surface_type, do_plot=True):
     #
     # syned definitopns
     #
+    # boundaries
+    boundary_shape = None
+
+    coordinates_syned = ElementCoordinates(p = 10.0,
+                                           q = 10.0,
+                                           angle_radial = numpy.radians(88.8))
 
     # surface shape
 
     if surface_type == "plane":
-        surface_shape = Plane()
+        mirror1 = S4PlaneMirrorElement(optical_element=S4PlaneMirror(name="M1",
+                                                                     boundary_shape=boundary_shape),
+                                       coordinates=coordinates_syned)
     elif surface_type == "sphere":
-        surface_shape = Sphere()
-        surface_shape.initialize_from_p_q(10.0, 10.0, grazing_angle=(90.0 - 88.8) * numpy.pi / 180)
+        mirror1 = S4SphereMirrorElement(optical_element=S4SphereMirror(name="M1",
+                                                                       boundary_shape=boundary_shape,
+                                                                       is_cylinder=False,
+                                                                       surface_calculation=SurfaceCalculation.INTERNAL,
+                                                                       p_focus=10.0,
+                                                                       q_focus=10.0,
+                                                                       grazing_angle=numpy.radians(90.0 - 88.8)),
+                                       coordinates=coordinates_syned)
     elif surface_type == "spherical_cylinder_tangential":
-        surface_shape = SphericalCylinder()
-        surface_shape.set_direction_tangential()
-        surface_shape.initialize_from_p_q(10.0, 10.0, grazing_angle=(90.0 - 88.8) * numpy.pi / 180)
+        mirror1 = S4SphereMirrorElement(optical_element=S4SphereMirror(name="M1",
+                                                                       boundary_shape=boundary_shape,
+                                                                       is_cylinder=True,
+                                                                       cylinder_direction=Direction.TANGENTIAL,
+                                                                       surface_calculation=SurfaceCalculation.INTERNAL,
+                                                                       p_focus=10.0,
+                                                                       q_focus=10.0,
+                                                                       grazing_angle=numpy.radians(90.0 - 88.8)),
+                                       coordinates=coordinates_syned)
     elif surface_type == "spherical_cylinder_sagittal":
-        surface_shape = SphericalCylinder()
-        surface_shape.set_direction_sagittal()
-        surface_shape.initialize_from_p_q(10.0, 10.0, grazing_angle=(90.0 - 88.8) * numpy.pi / 180)
+        mirror1 = S4SphereMirrorElement(optical_element=S4SphereMirror(name="M1",
+                                                                       boundary_shape=boundary_shape,
+                                                                       is_cylinder=True,
+                                                                       cylinder_direction=Direction.SAGITTAL,
+                                                                       surface_calculation=SurfaceCalculation.INTERNAL,
+                                                                       p_focus=10.0,
+                                                                       q_focus=10.0,
+                                                                       grazing_angle=numpy.radians(90.0 - 88.8)),
+                                       coordinates=coordinates_syned)
     elif surface_type == "ellipsoid":
-        surface_shape = Ellipsoid()
-        surface_shape.initialize_from_p_q(p=20.0,q=10.0,grazing_angle=0.003)
+        mirror1 = S4EllipsoidMirrorElement(optical_element=S4EllipsoidMirror(name="M1",
+                                                                             boundary_shape=boundary_shape,
+                                                                             is_cylinder=False,
+                                                                             surface_calculation=SurfaceCalculation.INTERNAL,
+                                                                             p_focus=20.0,
+                                                                             q_focus=10.0,
+                                                                             grazing_angle=0.003),
+                                          coordinates=coordinates_syned)
     elif surface_type == "elliptical_cylinder":
-        surface_shape = EllipticalCylinder()
-        surface_shape.initialize_from_p_q(p=20.0,q=10.0,grazing_angle=0.003)
+        mirror1 = S4EllipsoidMirrorElement(optical_element=S4EllipsoidMirror(name="M1",
+                                                                             boundary_shape=boundary_shape,
+                                                                             is_cylinder=True,
+                                                                             cylinder_direction=Direction.TANGENTIAL,
+                                                                             surface_calculation=SurfaceCalculation.INTERNAL,
+                                                                             p_focus=20.0,
+                                                                             q_focus=10.0,
+                                                                             grazing_angle=0.003),
+                                          coordinates=coordinates_syned)
     elif surface_type == "hyperboloid":
-        surface_shape = Hyperboloid()
-        surface_shape.initialize_from_p_q(p=20.0,q=10.0,grazing_angle=0.003)
+        mirror1 = S4HyperboloidMirrorElement(optical_element=S4HyperboloidMirror(name="M1",
+                                                                                 boundary_shape=boundary_shape,
+                                                                                 is_cylinder=False,
+                                                                                 surface_calculation=SurfaceCalculation.INTERNAL,
+                                                                                 p_focus=20.0,
+                                                                                 q_focus=10.0,
+                                                                                 grazing_angle=0.003),
+                                             coordinates=coordinates_syned)
     elif surface_type == "hyperbolic_cylinder":
-        surface_shape = HyperbolicCylinder()
-        surface_shape.initialize_from_p_q(p=20.0,q=10.0,grazing_angle=0.003)
-
-    elif surface_type == "parabolic_cylinder":
-        surface_shape = ParabolicCylinder()
-        surface_shape.initialize_from_p_q(p=20.0,q=10.0,grazing_angle=0.003)
-
+        mirror1 = S4HyperboloidMirrorElement(optical_element=S4HyperboloidMirror(name="M1",
+                                                                                 boundary_shape=boundary_shape,
+                                                                                 is_cylinder=True,
+                                                                                 cylinder_direction=Direction.TANGENTIAL,
+                                                                                 surface_calculation=SurfaceCalculation.INTERNAL,
+                                                                                 p_focus=20.0,
+                                                                                 q_focus=10.0,
+                                                                                 grazing_angle=0.003),
+                                             coordinates=coordinates_syned)
     elif surface_type == "paraboloid":
-        surface_shape = Paraboloid()
-        surface_shape.initialize_from_p_q(p=20.0,q=10.0,grazing_angle=0.003)
-
+        mirror1 = S4ParaboloidMirrorElement(optical_element=S4ParaboloidMirror(name="M1",
+                                                                                 boundary_shape=boundary_shape,
+                                                                                 is_cylinder=False,
+                                                                                 surface_calculation=SurfaceCalculation.INTERNAL,
+                                                                                 at_infinity=Side.SOURCE,
+                                                                                 p_focus=20.0,
+                                                                                 q_focus=10.0,
+                                                                                 grazing_angle=0.003),
+                                             coordinates=coordinates_syned)
+    elif surface_type == "parabolic_cylinder":
+        mirror1 = S4ParaboloidMirrorElement(optical_element=S4ParaboloidMirror(name="M1",
+                                                                               boundary_shape=boundary_shape,
+                                                                               is_cylinder=True,
+                                                                               cylinder_direction=Direction.TANGENTIAL,
+                                                                               surface_calculation=SurfaceCalculation.INTERNAL,
+                                                                               at_infinity=Side.SOURCE,
+                                                                               p_focus=20.0,
+                                                                               q_focus=10.0,
+                                                                               grazing_angle=0.003),
+                                            coordinates=coordinates_syned)
     elif surface_type == "conic":
-        surface_shape = Conic(conic_coefficients=[0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, -1.0, 0.0])
+        mirror1 = S4ConicMirrorElement(optical_element=S4ConicMirror(name="M1",
+                                                                     boundary_shape=boundary_shape,
+                                                                     conic_coefficients=[0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, -1.0, 0.0]),
+                                       coordinates=coordinates_syned)
     else:
         raise Exception("undefined surface shape")
 
-
-    # boundaries
-    boundary_shape = None
-
-
-    coordinates_syned = ElementCoordinates(p = 10.0,
-                                           q = 10.0,
-                                           angle_radial = 88.8 * numpy.pi / 180,)
-
-    #
-    # shadow definitions
-    #
-    mirror1 = S4MirrorElement(optical_element=S4Mirror(name="M1",
-                                                       surface_shape=surface_shape,
-                                                       boundary_shape=boundary_shape),
-                              coordinates=coordinates_syned)
 
     #
     # run
@@ -428,8 +464,8 @@ if __name__ == "__main__":
     from srxraylib.plot.gol import set_qt
     set_qt()
 
-    do_plot = True
-
+    do_plot = False
+    '''
     example_branch_1(do_plot=do_plot) # two plane mirrors
     example_branch_2(do_plot=do_plot) # toroid
     example_branch_3("../../../oasys_workspaces/test_shadow4.hdf5",do_plot=do_plot) # mesh
@@ -439,6 +475,7 @@ if __name__ == "__main__":
     example_branch_4(do_plot=do_plot, f_refl=2)  # user file 1D, angle[mrad], reflectivity
     example_branch_4(do_plot=do_plot, f_refl=3)  # user file 1D, angle[mrad], reflectivity
     example_branch_4(do_plot=do_plot, f_refl=4)  # user file 2D, energy [eV], angle[mrad], reflectivity
+    '''
 
     for myconicshape in ["plane", \
                          "sphere", "spherical_cylinder_tangential", "spherical_cylinder_sagittal", \
