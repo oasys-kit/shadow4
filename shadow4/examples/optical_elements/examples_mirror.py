@@ -12,7 +12,9 @@ from shadow4.syned.shape import SphericalCylinder, EllipticalCylinder, Hyperboli
 
 
 from shadow4.beamline.optical_elements.mirrors.s4_mirror import S4Mirror, S4MirrorElement
-
+from shadow4.beamline.s4_optical_element import SurfaceCalculation
+from shadow4.beamline.optical_elements.mirrors.s4_conic_mirror import S4ConicMirror, S4ConicMirrorElement
+from shadow4.beamline.optical_elements.mirrors.s4_toroidal_mirror import S4ToroidalMirror, S4ToroidalMirrorElement
 from shadow4.tools.graphics import plotxy
 
 from shadow4.physical_models.prerefl.prerefl import PreRefl
@@ -39,9 +41,6 @@ def example_branch_1(do_plot=True):
     #
 
     # surface shape
-
-    surface_shape = Conic(conic_coefficients=[0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, -1.0, 0.0])
-    # surface_shape = Toroidal(min_radius=5.0, maj_radius=2.0) # Plane() # SurfaceShape()
 
 
     # boundaries
@@ -73,10 +72,11 @@ def example_branch_1(do_plot=True):
     #
     # shadow definitions
     #
-    mirror1 = S4MirrorElement(optical_element=S4Mirror(name="M1",
-                                                       surface_shape=surface_shape,
+    mirror1 = S4ConicMirrorElement(optical_element=S4ConicMirror(name="M1",
+                                                       conic_coefficients=[0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, -1.0, 0.0],
                                                        boundary_shape=boundary_shape),
                               coordinates=coordinates_syned)
+
     print(mirror1.info())
 
     
@@ -98,13 +98,9 @@ def example_branch_1(do_plot=True):
     # M2
     #
     
-    mirror2 = S4MirrorElement()
-
-
-    mirror2.get_optical_element().set_surface_conic([0,0,0,0,0,0,0,0,-1,0])
-    mirror2.get_optical_element().set_boundaries_rectangle(-100e-6,100e-6,-150e-6,150e-6)
-    mirror2.set_p_and_q(p=10,q=100)
-    mirror2.set_grazing_angle(theta_grazing=3e-3)
+    mirror2 = S4ConicMirrorElement(optical_element=S4ConicMirror(conic_coefficients=[0,0,0,0,0,0,0,0,-1,0],
+                                                                 boundary_shape=Rectangle(-100e-6,100e-6,-150e-6,150e-6)),
+                                   coordinates=ElementCoordinates(p = 10.0, q = 100.0, angle_radial = 0.5*numpy.pi - 0.003))
 
     print(mirror2.info())
     #
@@ -132,25 +128,22 @@ def example_branch_2(do_plot=True):
     # syned definitopns
     #
 
-    # surface shape
-    surface_shape = Toroid(min_radius=0.157068, maj_radius=358.124803 - 0.157068) # Plane() # SurfaceShape()
-
-
     # boundaries
     boundary_shape = None #Rectangle(x_left=-rwidx2,x_right=rwidx1,y_bottom=-rlen2,y_top=rlen1)
-
-
-    coordinates_syned = ElementCoordinates(p = 10.0,
-                                           q = 6.0,
-                                           angle_radial = 88.8 * numpy.pi / 180,)
 
     #
     # shadow definitions
     #
-    mirror1 = S4MirrorElement(optical_element=S4Mirror(name="M1",
-                                                       surface_shape=surface_shape,
-                                                       boundary_shape=boundary_shape),
-                              coordinates=coordinates_syned)
+    mirror1 = S4ToroidalMirrorElement(optical_element=S4ToroidalMirror(name="M1",
+                                                                       surface_calculation=SurfaceCalculation.EXTERNAL,
+                                                                       min_radius=0.157068,
+                                                                       maj_radius=358.124803 - 0.157068,
+                                                                       boundary_shape=boundary_shape),
+                                      coordinates=ElementCoordinates(p = 10.0,
+                                                                     q = 6.0,
+                                                                     angle_radial = 88.8 * numpy.pi / 180,))
+
+
     print(mirror1.info())
 
     #
@@ -435,7 +428,7 @@ if __name__ == "__main__":
     from srxraylib.plot.gol import set_qt
     set_qt()
 
-    do_plot = False
+    do_plot = True
 
     example_branch_1(do_plot=do_plot) # two plane mirrors
     example_branch_2(do_plot=do_plot) # toroid

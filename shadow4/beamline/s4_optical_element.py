@@ -121,7 +121,7 @@ class S4ToroidalOpticalElement(S4CurvedOpticalElement):
         S4CurvedOpticalElement.__init__(self, surface_calculation, False)
 
         if self._surface_calculation == SurfaceCalculation.EXTERNAL:
-            self._curved_surface_shape = Toroid.create_toroid_from_radii(min_radius, maj_radius, maj_radius)
+            self._curved_surface_shape = Toroid.create_toroid_from_radii(min_radius, maj_radius)
         else:
             self._curved_surface_shape = Toroid.create_toroid_from_p_q(p_focus, q_focus, grazing_angle)
 
