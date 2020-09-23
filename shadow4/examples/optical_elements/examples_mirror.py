@@ -464,8 +464,8 @@ if __name__ == "__main__":
     from srxraylib.plot.gol import set_qt
     set_qt()
 
-    do_plot = False
-    '''
+    do_plot = True
+
     example_branch_1(do_plot=do_plot) # two plane mirrors
     example_branch_2(do_plot=do_plot) # toroid
     example_branch_3("../../../oasys_workspaces/test_shadow4.hdf5",do_plot=do_plot) # mesh
@@ -475,7 +475,6 @@ if __name__ == "__main__":
     example_branch_4(do_plot=do_plot, f_refl=2)  # user file 1D, angle[mrad], reflectivity
     example_branch_4(do_plot=do_plot, f_refl=3)  # user file 1D, angle[mrad], reflectivity
     example_branch_4(do_plot=do_plot, f_refl=4)  # user file 2D, energy [eV], angle[mrad], reflectivity
-    '''
 
     for myconicshape in ["plane", \
                          "sphere", "spherical_cylinder_tangential", "spherical_cylinder_sagittal", \
