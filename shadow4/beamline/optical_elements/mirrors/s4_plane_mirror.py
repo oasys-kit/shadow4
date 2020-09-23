@@ -1,9 +1,7 @@
-import numpy
-
 from shadow4.syned.shape import Plane
 
-from shadow4.optical_elements.s4_optical_element import S4PlaneOpticalElement
-from shadow4.optical_elements.s4_mirror import S4MirrorElement, S4Mirror, ElementCoordinates
+from shadow4.beamline.s4_optical_element import S4PlaneOpticalElement
+from shadow4.beamline.optical_elements.mirrors import S4MirrorElement, S4Mirror, ElementCoordinates
 from shadow4.optical_surfaces.s4_conic import S4Conic
 
 class S4PlaneMirror(S4Mirror, S4PlaneOpticalElement):

@@ -2,8 +2,8 @@ import numpy
 
 from syned.beamline.element_coordinates import ElementCoordinates
 from syned.beamline.optical_elements.ideal_elements.lens import IdealLens
-from shadow4.optical_elements.s4_optical_element import S4OpticalElement
-from shadow4.optical_elements.s4_beamline_element import S4BeamlineElement
+from shadow4.beamline.s4_optical_element import S4OpticalElement
+from shadow4.beamline.s4_beamline_element import S4BeamlineElement
 
 
 class S4IdealLens(IdealLens, S4OpticalElement):

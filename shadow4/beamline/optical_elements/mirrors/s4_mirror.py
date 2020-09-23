@@ -1,20 +1,12 @@
 import numpy
 
-from shadow4.syned.shape import Rectangle, Ellipse, TwoEllipses # TODO from syned.beamline.shape
-from shadow4.syned.shape import Toroid, Conic, SurfaceData, Plane, Sphere, Ellipsoid, Paraboloid, Hyperboloid # TODO from syned.beamline.shape
-from shadow4.syned.shape import SphericalCylinder, EllipticalCylinder, HyperbolicCylinder # TODO from syned.beamline.shape
-
+from shadow4.syned.shape import Rectangle
 
 from syned.beamline.element_coordinates import ElementCoordinates
-
 from syned.beamline.optical_elements.mirrors.mirror import Mirror
 
-from shadow4.optical_surfaces.s4_conic import S4Conic
-from shadow4.optical_surfaces.s4_toroid import S4Toroid
-from shadow4.optical_surfaces.s4_mesh import S4Mesh
 from shadow4.physical_models.prerefl.prerefl import PreRefl
-
-from shadow4.optical_elements.s4_optical_element import S4OpticalElement
+from shadow4.beamline.s4_optical_element import S4OpticalElement
 
 class S4Mirror(Mirror, S4OpticalElement):
 
@@ -74,10 +66,9 @@ class S4Mirror(Mirror, S4OpticalElement):
         return super(S4Mirror, self).info() + "\n" + info_mirror
 
     def set_boundaries_rectangle(self, x_left=-1e3, x_right=1e3, y_bottom=-1e3, y_top=1e3):
-        self._boundary_shape = \
-            Rectangle(x_left=x_left, x_right=x_right, y_bottom=y_bottom, y_top=y_top)
+        self._boundary_shape = Rectangle(x_left=x_left, x_right=x_right, y_bottom=y_bottom, y_top=y_top)
 
-from shadow4.optical_elements.s4_beamline_element import S4BeamlineElement
+from shadow4.beamline.s4_beamline_element import S4BeamlineElement
 
 class S4MirrorElement(S4BeamlineElement):
     
@@ -116,13 +107,6 @@ class S4MirrorElement(S4BeamlineElement):
             '''
             surface_shape = soe.get_surface_shape()
 
-            elif isinstance(surface_shape, SurfaceData):
-                print(">>>>> SurfaceData mirror")
-                num_mesh = S4Mesh()
-                # num_mesh.load_h5file(surface_shape.surface_data_file)
-                num_mesh.load_surface_data(surface_shape)
-                mirr,normal,t,x1,v1,x2,v2 = num_mesh.apply_specular_reflection_on_beam(beam)
- 
             elif isinstance(surface_shape, Paraboloid):
                 print(">>>>> Paraboloid mirror",surface_shape)
                 if surface_shape.get_at_infinity == 0:

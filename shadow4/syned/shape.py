@@ -384,6 +384,17 @@ class Paraboloid(SurfaceShape):
         self._at_infinity = at_infinity
         self._pole_to_focus = pole_to_focus
 
+    @classmethod
+    def create_paraboloid_from_axes(cls, parabola_parameter=0.0, convexity=Convexity.UPWARD, at_infinity=Side.SOURCE, pole_to_focus=None):
+        return Paraboloid(parabola_parameter, convexity, at_infinity, pole_to_focus)
+
+    @classmethod
+    def create_paraboloid_from_p_q(cls, p=2.0, q=1.0, grazing_angle=0.003, convexity=Convexity.UPWARD, at_infinity=Side.SOURCE):
+        paraboloid = Paraboloid(convexity=convexity)
+        paraboloid.initialize_from_p_q(p, q, grazing_angle, at_infinity)
+
+        return paraboloid
+
     def initialize_from_p_q(self, p=2.0, q=1.0, grazing_angle=0.003, at_infinity=Side.SOURCE):
         self._parabola_parameter = Paraboloid.get_parabola_parameter_from_p_q(p, q, grazing_angle, at_infinity)
         self._at_infinity = at_infinity
@@ -416,9 +427,22 @@ class ParabolicCylinder(Paraboloid, Cylinder):
     def __init__(self,
                  parabola_parameter=0.0,
                  convexity=Convexity.UPWARD,
+                 at_infinity=Side.SOURCE, 
+                 pole_to_focus=None,
                  cylinder_direction=Direction.TANGENTIAL):
-        Paraboloid.__init__(self, parabola_parameter, convexity)
+        Paraboloid.__init__(self, parabola_parameter, convexity, at_infinity, pole_to_focus)
         Cylinder.__init__(self, cylinder_direction)
+
+    @classmethod
+    def create_parabolic_cylinder_from_axes(cls, parabola_parameter=0.0, convexity=Convexity.UPWARD, at_infinity=Side.SOURCE, pole_to_focus=None, cylinder_direction=Direction.TANGENTIAL):
+        return ParabolicCylinder(parabola_parameter, convexity, at_infinity, pole_to_focus, cylinder_direction)
+
+    @classmethod
+    def create_parabolic_cylinder_from_p_q(cls, p=2.0, q=1.0, grazing_angle=0.003, convexity=Convexity.UPWARD, at_infinity=Side.SOURCE, cylinder_direction=Direction.TANGENTIAL):
+        parabolic_cylinder = ParabolicCylinder(convexity=convexity, cylinder_direction=cylinder_direction)
+        parabolic_cylinder.initialize_from_p_q(p, q, grazing_angle, at_infinity)
+
+        return parabolic_cylinder
 
     def initialize_from_p_q(self, p=2.0, q=1.0, grazing_angle=0.003, at_infinity=Side.SOURCE):
         if self._cylinder_direction == Direction.SAGITTAL:
@@ -482,11 +506,16 @@ class SurfaceData(SurfaceShape):
                  yy=None,
                  zz=None,
                  surface_data_file=None):
-        self.xx = xx
-        self.yy = yy
-        self.zz = zz
-        self.surface_data_file=surface_data_file
+        self._xx = xx
+        self._yy = yy
+        self._zz = zz
+        self._surface_data_file=surface_data_file
 
+    def has_surface_data(self):
+        return not (self._xx is None or self._yy is None or self._zz is None)
+
+    def has_surface_data_file(self):
+        return not self._surface_data_file is None
 #
 # subclasses for BoundaryShape
 #

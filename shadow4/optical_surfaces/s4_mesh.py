@@ -62,11 +62,10 @@ def plot_surface_and_line(Z,x,y,zz,xx,yy,show=True):
     return fig
 
 class S4Mesh(object):
-    def __init__(self,surface=None):
+    def __init__(self, surface=None):
         self.__x0 = [0.0,0.0,0.0]
         self.__v0 = [0.0,0.0,0.0]
         self.surface = surface
-
 
     def line(self,t):
         return (self.__x0[0] + self.__v0[0] * t,
@@ -100,7 +99,7 @@ class S4Mesh(object):
         self.surface = interpolate.interp2d(x,y,z.T, kind=kind)
 
     def load_surface_data(self, surface_data_object, kind='cubic'):
-        self.surface = interpolate.interp2d(surface_data_object.xx, surface_data_object.yy, surface_data_object.zz, kind=kind)
+        self.surface = interpolate.interp2d(surface_data_object._xx, surface_data_object._yy, surface_data_object._zz, kind=kind)
 
     def load_surface_data_arrays(self,x,y,Z,kind='cubic'):
         self.surface = interpolate.interp2d(x,y,Z.T, kind=kind)

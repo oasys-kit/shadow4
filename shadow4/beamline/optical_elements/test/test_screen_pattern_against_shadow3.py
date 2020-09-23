@@ -7,11 +7,10 @@ import numpy
 
 from syned.beamline.beamline import BeamlineElement
 from syned.beamline.element_coordinates import ElementCoordinates
-from shadow4.syned.absorbers.slit import Slit as SySlit                         # TODO: syned.beamline.optical_elements.
 from shadow4.syned.absorbers.beam_stopper import BeamStopper as SyBeamStopper   # TODO: syned.beamline.optical_elements.
 
 from shadow4.beam.beam import Beam
-from shadow4.optical_elements.screen import Screen
+from shadow4.beamline.optical_elements import Screen
 
 from Shadow.ShadowTools import plotxy
 from shadow4.compatibility.beam3 import Beam3

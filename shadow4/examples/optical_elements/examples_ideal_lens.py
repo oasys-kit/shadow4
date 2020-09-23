@@ -2,11 +2,11 @@
 import numpy
 
 from shadow4.sources.source_geometrical.source_gaussian import SourceGaussian
-from shadow4.optical_elements.s4_ideal_lens import S4IdealLens, S4IdealLensElement
-from shadow4.optical_elements.s4_ideal_lens import S4SuperIdealLens, S4SuperIdealLensElement
+from shadow4.beamline.optical_elements.ideal_elements.s4_ideal_lens import S4IdealLens, S4IdealLensElement
+from shadow4.beamline.optical_elements.ideal_elements.s4_ideal_lens import S4SuperIdealLens, S4SuperIdealLensElement
 
 
-from shadow4.tools.graphics import plotxy, histo1
+from shadow4.tools.graphics import plotxy
 
 from syned.beamline.element_coordinates import ElementCoordinates
 

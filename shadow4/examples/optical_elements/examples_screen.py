@@ -2,7 +2,7 @@
 import numpy
 
 from shadow4.sources.source_geometrical.source_gaussian import SourceGaussian
-from shadow4.optical_elements.s4_screen import S4Screen, S4ScreenElement
+from shadow4.beamline.optical_elements import S4Screen, S4ScreenElement
 
 from shadow4.tools.graphics import plotxy
 
@@ -15,7 +15,7 @@ from syned.beamline.element_coordinates import ElementCoordinates
 # from shadow4.syned.absorbers.slit import Slit                   # TODO: syned.beamline.optical_elements.
 
 
-from shadow4.syned.shape import Rectangle, Ellipse, TwoEllipses # TODO from syned.beamline.shape
+from shadow4.syned.shape import Rectangle, Ellipse  # TODO from syned.beamline.shape
 
 
 def get_sigmas_radiation(photon_energy,undulator_length):

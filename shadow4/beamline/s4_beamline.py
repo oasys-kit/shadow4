@@ -1,7 +1,4 @@
 from syned.beamline.beamline import Beamline
-from syned.storage_ring.light_source import LightSource
-
-
 
 
 class S4Beamline(Beamline):
@@ -25,7 +22,7 @@ class S4Beamline(Beamline):
 
 
 if __name__ == "__main__":
-    from shadow4.optical_elements.s4_mirror import S4Mirror, S4MirrorElement
+    from shadow4.beamline.optical_elements.mirrors import S4Mirror, S4MirrorElement
     from syned.beamline.element_coordinates import ElementCoordinates
 
     m1 = S4Mirror()

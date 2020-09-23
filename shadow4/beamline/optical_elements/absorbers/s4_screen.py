@@ -17,14 +17,13 @@ import numpy
 
 from syned.beamline.optical_elements.absorbers.absorber import Absorber
 
-from syned.beamline.beamline_element import BeamlineElement
 from syned.beamline.element_coordinates import ElementCoordinates
-from shadow4.syned.shape import BoundaryShape, Rectangle, Ellipse, TwoEllipses, MultiplePatch # TODO from syned.beamline.shape
+from shadow4.syned.shape import Rectangle, Ellipse, MultiplePatch # TODO from syned.beamline.shape
 
 from shadow4.physical_models.prerefl.prerefl import PreRefl
 
-from shadow4.optical_elements.s4_optical_element import S4OpticalElement
-from shadow4.optical_elements.s4_beamline_element import S4BeamlineElement
+from shadow4.beamline.s4_optical_element import S4OpticalElement
+from shadow4.beamline.s4_beamline_element import S4BeamlineElement
 
 class S4Screen(Absorber, S4OpticalElement):
     def __init__(self,

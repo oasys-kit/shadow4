@@ -1,8 +1,8 @@
 from shadow4.syned.shape import Toroid
-from shadow4.optical_elements.s4_mirror import S4MirrorElement, S4Mirror, ElementCoordinates
+from shadow4.beamline.optical_elements.mirrors import S4MirrorElement, S4Mirror, ElementCoordinates
 from shadow4.optical_surfaces.s4_toroid import S4Toroid
 
-from shadow4.optical_elements.s4_optical_element import SurfaceCalculation, S4ToroidalOpticalElement
+from shadow4.beamline.s4_optical_element import SurfaceCalculation, S4ToroidalOpticalElement
 
 class S4ToroidalMirror(S4Mirror, S4ToroidalOpticalElement):
     def __init__(self,

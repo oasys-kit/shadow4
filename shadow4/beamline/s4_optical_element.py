@@ -3,7 +3,7 @@ from shadow4.syned.shape import Direction, Convexity, \
     Ellipsoid, EllipticalCylinder, \
     Hyperboloid, HyperbolicCylinder, \
     Paraboloid, ParabolicCylinder, \
-    Toroid, Conic, Plane
+    Toroid, Conic, SurfaceData, Plane
 
 class S4OpticalElement(object):
 
@@ -21,6 +21,13 @@ class SurfaceCalculation:
     INTERNAL = 0
     EXTERNAL = 1
 
+
+class S4PlaneOpticalElement(S4OpticalElement):
+    def __init__(self):
+        S4OpticalElement.__init__(self)
+
+        self._plane_surface_shape = Plane()
+
 class S4CurvedOpticalElement(S4OpticalElement):
 
     def __init__(self,
@@ -33,11 +40,9 @@ class S4CurvedOpticalElement(S4OpticalElement):
         self._is_cylinder = is_cylinder
         self._curved_surface_shape = None # auxiliary field
 
-class S4PlaneOpticalElement(S4OpticalElement):
-    def __init__(self):
-        S4OpticalElement.__init__(self)
-        
-        self._plane_surface_shape = Plane()
+##################################################
+# CURVED OPTICAL ELEMENTS
+##################################################
 
 class S4SphereOpticalElement(S4CurvedOpticalElement):
     def __init__(self,
@@ -128,3 +133,9 @@ class S4ConicOpticalElement(S4CurvedOpticalElement):
 
 class S4ParaboloidOpticalElement(S4CurvedOpticalElement):
     pass
+
+class S4SurfaceDataOpticalElement(S4CurvedOpticalElement):
+    def __init__(self, xx=None, yy=None, zz=None, surface_data_file=None):
+        S4CurvedOpticalElement.__init__(self, surface_calculation=SurfaceCalculation.INTERNAL, is_cylinder=False)
+
+        self._conic_surface_shape = SurfaceData(xx, yy, xx, surface_data_file)

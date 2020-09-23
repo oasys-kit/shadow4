@@ -5,15 +5,15 @@ from syned.beamline.element_coordinates import ElementCoordinates
 from shadow4.beam.beam import Beam
 from shadow4.sources.source_geometrical.source_gaussian import SourceGaussian
 
-from shadow4.syned.shape import Rectangle, Ellipse, TwoEllipses # TODO from syned.beamline.shape
+from shadow4.syned.shape import Rectangle  # TODO from syned.beamline.shape
 from shadow4.syned.shape import Toroid, Conic, SurfaceData # TODO from syned.beamline.shape
 from shadow4.syned.shape import Plane, Sphere, Ellipsoid, Paraboloid, Hyperboloid # TODO from syned.beamline.shape
 from shadow4.syned.shape import SphericalCylinder, EllipticalCylinder, HyperbolicCylinder, ParabolicCylinder # TODO from syned.beamline.shape
 
 
-from shadow4.optical_elements.s4_mirror import S4Mirror, S4MirrorElement
+from shadow4.beamline.optical_elements.mirrors.s4_mirror import S4Mirror, S4MirrorElement
 
-from shadow4.tools.graphics import plotxy, histo1
+from shadow4.tools.graphics import plotxy
 
 from shadow4.physical_models.prerefl.prerefl import PreRefl
 

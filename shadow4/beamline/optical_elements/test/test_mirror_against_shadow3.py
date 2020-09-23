@@ -9,7 +9,7 @@ from syned.beamline.optical_elements.mirrors.mirror import Mirror as SyMirror
 
 from syned.beamline.element_coordinates import ElementCoordinates
 
-from shadow4.syned.shape import Plane, Sphere, Ellipsoid, Paraboloid, Hyperboloid # TODO from syned.beamline.shape
+from shadow4.syned.shape import Plane  # TODO from syned.beamline.shape
 
 from shadow4.beam.beam import Beam
 
@@ -17,11 +17,9 @@ from shadow4.beam.beam import Beam
 from Shadow.ShadowTools import plotxy
 from shadow4.compatibility.beam3 import Beam3
 
-from shadow4.syned.shape import MultiplePatch
+from shadow4.syned.shape import Rectangle  # TODO from syned.beamline.shape
 
-from shadow4.syned.shape import Rectangle, Ellipse, TwoEllipses # TODO from syned.beamline.shape
-
-from shadow4.optical_elements.s4_mirror import S4Mirror, S4MirrorElement
+from shadow4.beamline.optical_elements.mirrors import S4Mirror, S4MirrorElement
 
 from numpy.testing import assert_almost_equal
 
@@ -30,7 +28,6 @@ def run_shadow3():
     # Python script to run shadow3. Created automatically with ShadowTools.make_python_script_from_list().
     #
     import Shadow
-    import numpy
 
     # write (1) or not (0) SHADOW files start.xx end.xx star.xx
     iwrite = 0
