@@ -11,7 +11,7 @@ from srxraylib.plot.gol import plot
 import numpy
 from wofry.propagator.propagator import PropagationManager, PropagationElements, PropagationParameters
 from syned.beamline.beamline_element import BeamlineElement
-from syned.beamline.element_coordinates import ElementCoordinates
+from shadow4.syned.element_coordinates import ElementCoordinates
 from wofry.propagator.propagators1D.fresnel_zoom import FresnelZoom1D
 
 

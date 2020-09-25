@@ -8,7 +8,6 @@ from syned.syned_object import SynedObject
 class ElementCoordinates(SynedObject):
     def __init__(self, p = 0.0, q = 0.0, angle_radial=0.0, angle_azimuthal=0.0, angle_radial_out=None):
         """
-
         :param p: distance from previous element.
         :param q: distance to next element.
         :param angle_radial: Radial inclination angle.
@@ -47,3 +46,24 @@ class ElementCoordinates(SynedObject):
 
     def angle_azimuthal(self):
         return self._angle_azimuthal
+
+    def set_positions(self, p=0.0, q=0.0, angle_radial=0.0, angle_radial_out=None, angle_azimuthal=0.0):
+        self._p = p
+        self._q = q
+        self._angle_radial = angle_radial
+        self._angle_radial_out = angle_radial_out
+        self._angle_azimuthal = angle_azimuthal
+
+    def get_positions(self):
+        return self.p(), \
+            self.q(), \
+            self.angle_radial(), \
+            self.angle_radial_out(), \
+            self.angle_azimuthal()
+
+    def set_p_and_q(self, p=0.0, q=0.0):
+        self.get_coordinates()._p = p
+        self.get_coordinates()._q = q
+
+    def get_p_and_q(self):
+        return self.p(), self.q()

@@ -2,13 +2,12 @@ import numpy
 
 from shadow4.syned.shape import Rectangle
 
-from syned.beamline.element_coordinates import ElementCoordinates
+from shadow4.syned.element_coordinates import ElementCoordinates
 from syned.beamline.optical_elements.mirrors.mirror import Mirror
 
 from shadow4.physical_models.prerefl.prerefl import PreRefl
-from shadow4.beamline.s4_optical_element import S4OpticalElement
 
-class S4Mirror(Mirror, S4OpticalElement):
+class S4Mirror(Mirror):
 
     def __init__(self,
                  name="Undefined",
@@ -59,11 +58,6 @@ class S4Mirror(Mirror, S4OpticalElement):
         self._f_refl = f_refl
         self._file_refl = file_refl
         self._refraction_index = refraction_index
-
-    def info(self):
-        info_mirror = "Specific attributes: TODO"
-
-        return super(S4Mirror, self).info() + "\n" + info_mirror
 
     def set_boundaries_rectangle(self, x_left=-1e3, x_right=1e3, y_bottom=-1e3, y_top=1e3):
         self._boundary_shape = Rectangle(x_left=x_left, x_right=x_right, y_bottom=y_bottom, y_top=y_top)

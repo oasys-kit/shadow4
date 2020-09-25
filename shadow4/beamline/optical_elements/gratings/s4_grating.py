@@ -3,7 +3,7 @@ import numpy
 from syned.beamline.optical_elements.gratings.grating import GratingVLS
 from syned.beamline.shape import Plane
 
-from shadow4.syned.element_coordinates import ElementCoordinates # TODO from syned.beamline.element_coordinates
+from shadow4.syned.element_coordinates import ElementCoordinates # TODO from shadow4.syned.element_coordinates
 from shadow4.beamline.s4_optical_element import S4OpticalElement
 from shadow4.beamline.s4_beamline_element import S4BeamlineElement
 
@@ -40,7 +40,7 @@ class S4GratingElement(S4BeamlineElement):
 
 
     def trace_beam(self,beam1):
-        p, q, theta1, theta2, alpha = self.get_positions()
+        p, q, theta1, theta2, alpha = self.get_coordinates().get_positions()
 
         beam = beam1.duplicate()
 

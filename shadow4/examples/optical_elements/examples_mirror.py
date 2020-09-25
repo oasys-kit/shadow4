@@ -1,6 +1,6 @@
 import numpy
 
-from syned.beamline.element_coordinates import ElementCoordinates
+from shadow4.syned.element_coordinates import ElementCoordinates
 
 from shadow4.beam.beam import Beam
 from shadow4.sources.source_geometrical.source_gaussian import SourceGaussian

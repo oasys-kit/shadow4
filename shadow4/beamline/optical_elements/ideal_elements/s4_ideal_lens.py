@@ -1,6 +1,6 @@
 import numpy
 
-from syned.beamline.element_coordinates import ElementCoordinates
+from shadow4.syned.element_coordinates import ElementCoordinates
 from syned.beamline.optical_elements.ideal_elements.lens import IdealLens
 from shadow4.beamline.s4_optical_element import S4OpticalElement
 from shadow4.beamline.s4_beamline_element import S4BeamlineElement
@@ -28,7 +28,7 @@ class S4IdealLensElement(S4BeamlineElement):
 
 
 
-        p,q = self.get_p_and_q()
+        p,q = self.get_coordinates().get_p_and_q()
         if p != 0.0:
             beam0.retrace(p,resetY=True)
 
@@ -74,7 +74,7 @@ class S4SuperIdealLensElement(S4BeamlineElement):
 
         lens = self.get_optical_element()
 
-        p, q = self.get_p_and_q()
+        p, q = self.get_coordinates().get_p_and_q()
 
         if p != 0.0:
             beam0.retrace(p,resetY=True)

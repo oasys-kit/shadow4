@@ -7,7 +7,7 @@ import numpy
 
 from syned.beamline.optical_elements.mirrors.mirror import Mirror as SyMirror
 
-from syned.beamline.element_coordinates import ElementCoordinates
+from shadow4.syned.element_coordinates import ElementCoordinates
 
 from shadow4.syned.shape import Plane  # TODO from syned.beamline.shape
 

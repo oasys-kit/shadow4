@@ -17,7 +17,7 @@ import numpy
 
 from syned.beamline.optical_elements.absorbers.absorber import Absorber
 
-from syned.beamline.element_coordinates import ElementCoordinates
+from shadow4.syned.element_coordinates import ElementCoordinates
 from shadow4.syned.shape import Rectangle, Ellipse, MultiplePatch # TODO from syned.beamline.shape
 
 from shadow4.physical_models.prerefl.prerefl import PreRefl
@@ -49,7 +49,7 @@ class S4ScreenElement(S4BeamlineElement):
     def trace_beam(self,beam1,flag_lost_value=-1):
         beam0 = beam1.duplicate()
 
-        p,q = self.get_p_and_q()
+        p,q = self.get_coordinates().get_p_and_q()
 
         oe = self.get_optical_element()
         coor = self.get_coordinates()

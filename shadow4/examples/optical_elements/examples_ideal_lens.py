@@ -8,7 +8,7 @@ from shadow4.beamline.optical_elements.ideal_elements.s4_ideal_lens import S4Sup
 
 from shadow4.tools.graphics import plotxy
 
-from syned.beamline.element_coordinates import ElementCoordinates
+from shadow4.syned.element_coordinates import ElementCoordinates
 
 
 def get_sigmas_radiation(photon_energy,undulator_length):

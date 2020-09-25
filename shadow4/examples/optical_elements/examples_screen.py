@@ -6,7 +6,7 @@ from shadow4.beamline.optical_elements import S4Screen, S4ScreenElement
 
 from shadow4.tools.graphics import plotxy
 
-from syned.beamline.element_coordinates import ElementCoordinates
+from shadow4.syned.element_coordinates import ElementCoordinates
 
 
 # from shadow4.syned.absorbers.beam_stopper import BeamStopper    # TODO: syned.beamline.optical_elements.

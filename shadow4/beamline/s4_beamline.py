@@ -23,7 +23,7 @@ class S4Beamline(Beamline):
 
 if __name__ == "__main__":
     from shadow4.beamline.optical_elements.mirrors import S4Mirror, S4MirrorElement
-    from syned.beamline.element_coordinates import ElementCoordinates
+    from shadow4.syned.element_coordinates import ElementCoordinates
 
     m1 = S4Mirror()
     m2 = S4Mirror()

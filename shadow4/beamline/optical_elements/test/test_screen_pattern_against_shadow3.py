@@ -6,7 +6,7 @@
 import numpy
 
 from syned.beamline.beamline import BeamlineElement
-from syned.beamline.element_coordinates import ElementCoordinates
+from shadow4.syned.element_coordinates import ElementCoordinates
 from shadow4.syned.absorbers.beam_stopper import BeamStopper as SyBeamStopper   # TODO: syned.beamline.optical_elements.
 
 from shadow4.beam.beam import Beam

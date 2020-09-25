@@ -718,7 +718,7 @@ class S4UndulatorLightSource(LightSource, S4LightSource):
         from wofry.propagator.wavefront1D.generic_wavefront import GenericWavefront1D
         from wofry.propagator.propagator import PropagationManager, PropagationElements, PropagationParameters
         from syned.beamline.beamline_element import BeamlineElement
-        from syned.beamline.element_coordinates import ElementCoordinates
+        from shadow4.syned.element_coordinates import ElementCoordinates
         from wofry.propagator.propagators1D.fresnel_zoom import FresnelZoom1D
         from wofry.beamline.optical_elements.ideal_elements.screen import WOScreen1D
 

@@ -263,9 +263,9 @@ def test_empty_element( do_plot=0,
     #                  angle_azimuthal=alpha_deg*numpy.pi/180, p=p, q=q)
 
     empty = S4EmptyElement()
-    empty.set_positions(angle_radial=theta1_deg*numpy.pi/180,
-                     angle_radial_out=theta2_deg*numpy.pi/180,
-                     angle_azimuthal=alpha_deg*numpy.pi/180, p=p, q=q)
+    empty.get_coordinates().set_positions(angle_radial=theta1_deg*numpy.pi/180,
+                                          angle_radial_out=theta2_deg*numpy.pi/180,
+                                          angle_azimuthal=alpha_deg*numpy.pi/180, p=p, q=q)
 
     beam1, mirr1 = empty.trace_beam(beam0)
 
