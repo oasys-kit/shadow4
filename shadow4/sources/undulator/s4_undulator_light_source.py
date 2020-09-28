@@ -274,6 +274,9 @@ class S4UndulatorLightSource(LightSource, S4LightSource):
     # get from results
     #
 
+    def get_result_photon_size_sigma(self):
+        return self.__result_photon_size_sigma
+
     def get_result_dictionary(self):
         if self.__result_radiation is None:
             self.__calculate_radiation()
@@ -806,7 +809,7 @@ class S4UndulatorLightSource(LightSource, S4LightSource):
             s2d = Sampler2D(tmp,theta,phi)
             sampled_theta,sampled_phi = s2d.get_n_sampled_points(NRAYS)
 
-            sampled_photon_energy = self._EMIN
+            sampled_photon_energy = self.get_magnetic_structure()._EMIN
 
         elif photon_energy_spectrum == "polychromatic":
             #3D case

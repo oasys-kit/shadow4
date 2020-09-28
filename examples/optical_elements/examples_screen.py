@@ -2,7 +2,7 @@
 import numpy
 
 from shadow4.sources.source_geometrical.source_gaussian import SourceGaussian
-from shadow4.beamline.optical_elements import S4Screen, S4ScreenElement
+from shadow4.beamline.optical_elements.absorbers.s4_screen import S4Screen, S4ScreenElement
 
 from shadow4.tools.graphics import plotxy
 

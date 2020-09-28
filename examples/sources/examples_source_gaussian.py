@@ -1,6 +1,5 @@
 from shadow4.sources.source_geometrical.source_gaussian import SourceGaussian
-from shadow4.compatibility.beam3 import Beam3
-import Shadow
+from shadow4.tools.graphics import plotxy
 from srxraylib.plot.gol import plot_scatter
 
 def example_point_source():
@@ -35,9 +34,7 @@ def example_point_source():
 
     beam = a.get_beam()
 
-    # plot old style
-    beam_shadow3 = Beam3.initialize_from_shadow4_beam(beam)
-    Shadow.ShadowTools.plotxy(beam_shadow3,4,6,title="point source")
+    plotxy(beam,4,6,title="point source")
 
 def example_collimated_source():
     #
@@ -51,8 +48,7 @@ def example_collimated_source():
     print(a.info())
     beam = a.get_beam()
 
-    beam_shadow3 = Beam3.initialize_from_shadow4_beam(beam)
-    Shadow.ShadowTools.plotxy(beam_shadow3,1,3,title="collimated source")
+    plotxy(beam,1,3,title="collimated source")
 
     plot_scatter(beam.get_column(1),beam.get_column(3),xtitle="col 1",ytitle="col 3",title="collimated source")
     print(beam.info())
