@@ -51,16 +51,19 @@ from setuptools import setup
 PACKAGES = [
     "shadow4",
     "shadow4.beam",
-    "shadow4.compatibility",
     "shadow4.sources.source_geometrical",
+    "shadow4.sources.bending_magnet",
     "shadow4.sources.undulator",
     "shadow4.sources.wiggler",
-    "shadow4.sources.bending_magnet",
-    "shadow4.optical_elements",
     "shadow4.optical_surfaces",
     "shadow4.physical_models.prerefl",
     "shadow4.physical_models.mlayer",
-    "shadow4.syned",
+    "shadow4.beamline",
+    "shadow4.beamline.ideal_elements",
+    "shadow4.beamline.absorbers",
+    "shadow4.beamline.mirrors",
+    "shadow4.beamline.crystals",
+    "shadow4.beamline.gratings",
 ]
 
 INSTALL_REQUIRES = (
@@ -73,10 +76,10 @@ INSTALL_REQUIRES = (
 
 
 setup(name='shadow4',
-      version='0.1.0',
+      version='0.1.1',
       description='shadow implementation in python',
       author='Manuel Sanchez del Rio',
-      author_email='srio@lbl.gov, srio@esrf.eu',
+      author_email='srio@esrf.eu, ',
       url='https://github.com/srio/shadow4/',
       packages=PACKAGES,
       install_requires=INSTALL_REQUIRES,
