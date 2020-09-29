@@ -43,7 +43,7 @@ class S4ParaboloidMirrorElement(S4MirrorElement):
                 isinstance(self.get_optical_element().get_surface_shape(), Paraboloid)):
             raise ValueError("Wrong Optical Element: only Paraboloid or Parabolic Cylinder shape is accepted")
 
-    def analyze_surface_shape(self, beam):
+    def apply_local_reflection(self, beam):
         surface_shape = self.get_optical_element().get_surface_shape()
 
         switch_convexity = 0 if surface_shape.get_convexity() == Convexity.UPWARD else 1

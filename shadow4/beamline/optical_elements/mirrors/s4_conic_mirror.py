@@ -30,7 +30,7 @@ class S4ConicMirrorElement(S4MirrorElement):
         if not isinstance(self.get_optical_element().get_surface_shape(), Conic):
             raise ValueError("Wrong Optical Element: only Conic shape is accepted")
 
-    def analyze_surface_shape(self, beam):
+    def apply_local_reflection(self, beam):
         surface_shape = self.get_optical_element().get_surface_shape()
 
         print(">>>>> Conic mirror")

@@ -96,7 +96,7 @@ class S4MirrorElement(S4BeamlineElement):
         if not isinstance(soe, Mirror): # undefined
             raise Exception("Undefined mirror")
         else:
-            mirr, normal = self.analyze_surface_shape(beam)
+            mirr, normal = self.apply_local_reflection(beam)
 
         #
         # apply mirror boundaries
@@ -233,7 +233,7 @@ class S4MirrorElement(S4BeamlineElement):
 
         return beam_out, mirr
 
-    def analyze_surface_shape(self, beam):
+    def apply_local_reflection(self, beam):
         raise NotImplementedError()
 
     #

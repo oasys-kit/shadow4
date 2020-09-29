@@ -41,7 +41,7 @@ class S4SphereMirrorElement(S4MirrorElement):
                 isinstance(self.get_optical_element().get_surface_shape(), Sphere)):
             raise ValueError("Wrong Optical Element: only Sphere or Spherical Cylinder shape is accepted")
 
-    def analyze_surface_shape(self, beam):
+    def apply_local_reflection(self, beam):
         surface_shape = self.get_optical_element().get_surface_shape()
 
         switch_convexity = 0 if surface_shape.get_convexity() == Convexity.UPWARD else 1
