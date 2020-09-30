@@ -259,6 +259,7 @@ class S4Mesh(object):
         x1 =   newbeam.get_columns([1,2,3])
         v1 =   newbeam.get_columns([4,5,6])
         flag = newbeam.get_column(10)
+        optical_path = newbeam.get_column(13)
 
         t,iflag = self.calculate_intercept(x1,v1)
 
@@ -293,6 +294,7 @@ class S4Mesh(object):
         newbeam.rays[:,5-1] = v2[1,:]
         newbeam.rays[:,6-1] = v2[2,:]
         newbeam.rays[:,10-1] = flag
+        newbeam.rays[:,13-1] = optical_path + t
         #
         return newbeam,normal,t,x1,v1,x2,v2
 

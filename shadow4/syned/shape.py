@@ -386,17 +386,17 @@ class Paraboloid(SurfaceShape):
 
     @classmethod
     def create_paraboloid_from_parabola_parameter(cls, parabola_parameter=0.0, at_infinity=Side.SOURCE, pole_to_focus=None, convexity=Convexity.UPWARD):
-        return Paraboloid(parabola_parameter, at_infinity, pole_to_focus, convexity)
+        return Paraboloid(parabola_parameter, at_infinity=at_infinity, pole_to_focus=pole_to_focus, convexity=convexity)
 
     @classmethod
     def create_paraboloid_from_p_q(cls, p=2.0, q=1.0, grazing_angle=0.003, at_infinity=Side.SOURCE, convexity=Convexity.UPWARD):
         paraboloid = Paraboloid(convexity=convexity)
-        paraboloid.initialize_from_p_q(p, q, grazing_angle, at_infinity)
+        paraboloid.initialize_from_p_q(p, q, grazing_angle=grazing_angle, at_infinity=at_infinity)
 
         return paraboloid
 
     def initialize_from_p_q(self, p=2.0, q=1.0, grazing_angle=0.003, at_infinity=Side.SOURCE):
-        self._parabola_parameter = Paraboloid.get_parabola_parameter_from_p_q(p, q, grazing_angle, at_infinity)
+        self._parabola_parameter = Paraboloid.get_parabola_parameter_from_p_q(p=p, q=q, grazing_angle=grazing_angle, at_infinity=at_infinity)
         self._at_infinity = at_infinity
         if at_infinity == Side.SOURCE:
             self._pole_to_focus = q
@@ -420,7 +420,7 @@ class Paraboloid(SurfaceShape):
         return self._pole_to_focus
 
     def get_grazing_angle(self):
-        return numpy.arcsin( self.get_parabola_parameter() / (2 * self.get_pole_to_focus()))
+        return numpy.arcsin( numpy.sqrt( self.get_parabola_parameter() / (2 * self.get_pole_to_focus())))
 
 
 class ParabolicCylinder(Paraboloid, Cylinder):
@@ -430,7 +430,8 @@ class ParabolicCylinder(Paraboloid, Cylinder):
                  pole_to_focus=None,
                  convexity=Convexity.UPWARD,
                  cylinder_direction=Direction.TANGENTIAL):
-        Paraboloid.__init__(self, parabola_parameter, at_infinity, pole_to_focus, convexity)
+        Paraboloid.__init__(self, parabola_parameter=parabola_parameter, at_infinity=at_infinity,
+                            pole_to_focus=pole_to_focus, convexity=convexity)
         Cylinder.__init__(self, cylinder_direction)
 
     @classmethod
@@ -849,17 +850,33 @@ if __name__=="__main__":
     # print("for grazing angle 0.2618, ellipse p,q = ",ell.get_p_q(0.2618))
 
 
-    ell = Ellipsoid()
+    # ell = Ellipsoid()
+    # p = 20
+    # q = 10
+    # theta_graz = 0.2618
+    # ell.initialize_from_p_q(p, q, theta_graz)
+    # print ("ellipse p, q: ",ell.get_p(), ell.get_q())
+    # print("ellipse grazing_angle: ", ell.get_grazing_angle())
+    # assert (numpy.abs(p - ell.get_p()) < 1e-10 )
+    # assert (numpy.abs(q - ell.get_q()) < 1e-10)
+    # assert (numpy.abs(theta_graz - ell.get_grazing_angle()) < 1e-10)
+
+
+
     p = 20
     q = 10
-    theta_graz = 0.2618
-    ell.initialize_from_p_q(p, q, theta_graz)
-    print ("ellipse p, q: ",ell.get_p(), ell.get_q())
-    print("ellipse grazing_angle: ", ell.get_grazing_angle())
-    assert (numpy.abs(p - ell.get_p()) < 1e-10 )
-    assert (numpy.abs(q - ell.get_q()) < 1e-10)
-    assert (numpy.abs(theta_graz - ell.get_grazing_angle()) < 1e-10)
-
+    theta_graz = 0.003
+    at_infinity = Side.SOURCE
+    par = Paraboloid.create_paraboloid_from_p_q(p=p, q=q, grazing_angle=theta_graz, at_infinity=at_infinity, convexity=Convexity.UPWARD)
+    print("inputs  p, q, theta_graz: ", p, q, theta_graz, at_infinity)
+    print ("ellipse p or q: ",par.get_pole_to_focus())
+    print("ellipse par: ", par.get_parabola_parameter())
+    print("ellipse grazing_angle: ", par.get_grazing_angle())
+    if par.get_at_infinity() == Side.SOURCE:
+        assert (numpy.abs(q - par.get_pole_to_focus()) < 1e-10 )
+    else:
+        assert (numpy.abs(p - par.get_pole_to_focus()) < 1e-10)
+    assert (numpy.abs(theta_graz - par.get_grazing_angle()) < 1e-10)
 
 
     # circle = Circle(3.0)
