@@ -42,13 +42,18 @@ class Bragg(object):
         out_dict = {}
 
         line_index = 0
-        variables = lines[line_index].split(" ")
-        out_dict["flag"] = int(variables[0])
+        line = lines[line_index]
+        line = " ".join(line.split())
+        variables = line.split(" ")
+        print(">>>>>>>>>> variables", variables)
+        out_dict["i_latt"] = int(variables[0])
         out_dict["one_over_volume_times_electron_radius_in_cm"] = float(variables[1])
         out_dict["dspacing_in_A"] = float(variables[2])
 
         line_index += 1
-        variables = lines[line_index].split(" ")
+        line = lines[line_index]
+        line = " ".join(line.split())
+        variables = line.split(" ")
         out_dict["zeta_a"] = int(variables[0])
         out_dict["zeta_b"] = int(variables[1])
         out_dict["temper"] = float(variables[2])
@@ -61,7 +66,7 @@ class Bragg(object):
         line = line.replace(")", "")
         line = line.replace(" ", "")
         variables = line.split(",")
-        print(">>>>>>>>>> variables", variables)
+        # print(">>>>>>>>>> variables", variables)
         out_dict["ga.real"] = float(variables[0])
         out_dict["ga.imag"] = float(variables[1])
 
@@ -71,7 +76,7 @@ class Bragg(object):
         line = line.replace(")", "")
         line = line.replace(" ", "")
         variables = line.split(",")
-        print(">>>>>>>>>> variables", variables)
+        # print(">>>>>>>>>> variables", variables)
         out_dict["ga_bar.real"] = float(variables[0])
         out_dict["ga_bar.imag"] = float(variables[1])
 
@@ -81,7 +86,7 @@ class Bragg(object):
         line = line.replace(")", "")
         line = line.replace(" ", "")
         variables = line.split(",")
-        print(">>>>>>>>>> variables", variables)
+        # print(">>>>>>>>>> variables", variables)
         out_dict["gb.real"] = float(variables[0])
         out_dict["gb.imag"] = float(variables[1])
 
@@ -91,7 +96,7 @@ class Bragg(object):
         line = line.replace(")", "")
         line = line.replace(" ", "")
         variables = line.split(",")
-        print(">>>>>>>>>> variables", variables)
+        # print(">>>>>>>>>> variables", variables)
         out_dict["gb_bar.real"] = float(variables[0])
         out_dict["gb_bar.imag"] = float(variables[1])
 
@@ -99,30 +104,32 @@ class Bragg(object):
         line = lines[line_index]
         line = " ".join(line.split())
         variables = line.split(" ")
-        print(">>>>>>>>>> variables", variables)
-        out_dict["fit_1"] = []
+        # print(">>>>>>>>>> variables", variables)
+        out_dict["fit_a"] = []
         for variable in variables:
-            out_dict["fit_1"].append(float(variable))
+            out_dict["fit_a"].append(float(variable))
 
         line_index += 1
         line = lines[line_index]
         line = " ".join(line.split())
         variables = line.split(" ")
-        print(">>>>>>>>>> variables", variables)
-        out_dict["fit_2"] = []
+        # print(">>>>>>>>>> variables", variables)
+        out_dict["fit_b"] = []
         for variable in variables:
-            out_dict["fit_2"].append(float(variable))
+            out_dict["fit_b"].append(float(variable))
 
         line_index += 1
-        variables = lines[line_index].split(" ")
+        line = lines[line_index]
+        line = " ".join(line.split())
+        variables = line.split(" ")
         npoint = int(variables[0])
         out_dict["npoint"] = npoint
 
         line_index += 1
         text = " ".join(lines[line_index:])
         variables = text.split()
-        print(">>>> text: ", text)
-        print(">>>> text: ", variables)
+        # print(">>>> text: ", text)
+        # print(">>>> text: ", variables)
 
 
         Energy = numpy.zeros(npoint)
@@ -268,9 +275,9 @@ class Bragg(object):
             yy = numpy.array([yy00, yy01, yy02])
             fit = numpy.polyfit(xx, yy, 2)
             if i == 0:
-                fit_1 = fit[::-1] # (tuple(fit[::-1].tolist()))
+                fit_a = fit[::-1] # (tuple(fit[::-1].tolist()))
             elif i == 1:
-                fit_2 = fit[::-1] # (tuple(fit[::-1].tolist()))
+                fit_b = fit[::-1] # (tuple(fit[::-1].tolist()))
             else:
                 raise Exception("Unknown crystal structure")
             # print "zeta: ",zeta
@@ -310,7 +317,7 @@ class Bragg(object):
         out_dict["emax"]       = emax
         out_dict["estep"]      = estep
         # outputs
-        out_dict["flag"] = 0
+        out_dict["i_latt"] = 0
         out_dict["one_over_volume_times_electron_radius_in_cm"] = one_over_volume_times_electron_radius_in_cm
         out_dict["dspacing_in_A"] = dspacing_in_A
         out_dict["zeta_a"] = zeta_a
@@ -326,8 +333,8 @@ class Bragg(object):
         out_dict["gb_bar.real"] = gb_bar.real
         out_dict["gb_bar.imag"] = gb_bar.imag
 
-        out_dict["fit_1"] = fit_1
-        out_dict["fit_2"] = fit_2
+        out_dict["fit_a"] = fit_a
+        out_dict["fit_b"] = fit_b
         out_dict["npoint"] = npoint
         out_dict["Energy"] = Energy
         out_dict["F1a"] = F1a
@@ -340,7 +347,7 @@ class Bragg(object):
         if fileout != "":
             f = open(fileout, 'wt')
 
-            f.write("%i " % out_dict["flag"])  # flag ZincBlende
+            f.write("%i " % out_dict["i_latt"])  # flag ZincBlende
             # f.write("%e " % ((1e0 / volume_in_cm3) * (codata_e2_mc2 * 1e2))) # 1/V*electronRadius
             f.write("%e " % (out_dict["one_over_volume_times_electron_radius_in_cm"]))
             f.write("%e " % out_dict["dspacing_in_A"])
@@ -353,8 +360,8 @@ class Bragg(object):
             f.write("(%20.11e,%20.11e ) \n" % (out_dict["ga_bar.real"], out_dict["ga_bar.imag"]))
             f.write("(%20.11e,%20.11e ) \n" % (out_dict["gb.real"], out_dict["gb.imag"]))
             f.write("(%20.11e,%20.11e ) \n" % (out_dict["gb_bar.real"], out_dict["gb_bar.imag"]))
-            f.write("%e %e %e  \n" % (out_dict["fit_1"][0], out_dict["fit_1"][1], out_dict["fit_1"][2]  ))
-            f.write("%e %e %e  \n" % (out_dict["fit_2"][0], out_dict["fit_2"][1], out_dict["fit_2"][2]  ))
+            f.write("%e %e %e  \n" % (out_dict["fit_a"][0], out_dict["fit_a"][1], out_dict["fit_a"][2]  ))
+            f.write("%e %e %e  \n" % (out_dict["fit_b"][0], out_dict["fit_b"][1], out_dict["fit_b"][2]  ))
             f.write(("%i \n") % out_dict["npoint"])
             for i in range(npoint):
                 f.write(("%20.11e %20.11e %20.11e \n %20.11e %20.11e \n") % ( \
@@ -398,23 +405,125 @@ class Bragg(object):
 
         return F_H_bar
 
+    def energy_index(self, energy):
+        Energy = self._preprocessor_dictionary["Energy"]
+        if (energy < Energy.min()) or (energy > Energy.max()):
+            return -100
+            # raise Exception("Energy %f outside the defined interval [%f, %f]" % (energy, Energy.min(), Energy.max() ))
+
+        ll = numpy.where( Energy > energy)
+        # print(">>> ll: ", ll, Energy.size, Energy.min(), Energy.max())
+        return ll[0][0]
+
+    def interpolate(self, PHOT):
+        ENERGY = self._preprocessor_dictionary["Energy"]
+        NENER = self.energy_index(PHOT) - 1
+        FP_A = self._preprocessor_dictionary["F1a"]
+        FP_B = self._preprocessor_dictionary["F1b"]
+        FPP_A = self._preprocessor_dictionary["F2a"]
+        FPP_B = self._preprocessor_dictionary["F2b"]
+        F1A	=  FP_A[NENER] +  (FP_A[NENER+1] -  FP_A[NENER]) *  (PHOT - ENERGY[NENER]) / (ENERGY[NENER+1] - ENERGY[NENER])
+        F2A	= FPP_A[NENER] + (FPP_A[NENER+1] - FPP_A[NENER]) *  (PHOT - ENERGY[NENER]) / (ENERGY[NENER+1] - ENERGY[NENER])
+        F1B	=  FP_B[NENER] +  (FP_B[NENER+1] -  FP_B[NENER]) *  (PHOT - ENERGY[NENER]) / (ENERGY[NENER+1] - ENERGY[NENER])
+        F2B	= FPP_B[NENER] + (FPP_B[NENER+1] - FPP_B[NENER]) *  (PHOT - ENERGY[NENER]) / (ENERGY[NENER+1] - ENERGY[NENER])
+        return F1A, F2A, F1B, F2B
+
+    def F_elastic(self, ratio):
+        CA = self._preprocessor_dictionary["fit_a"]
+        CB = self._preprocessor_dictionary["fit_b"]
+        # print(">>> CA", CA, ratio)
+        FOA = CA[2] * ratio ** 2 + CA[1] * ratio + CA[0]
+        FOB = CB[2] * ratio ** 2 + CB[1] * ratio + CB[0]
+        # print("FOA, FOB", FOA, FOB)
+        return FOA, FOB
+
+    def structure_factor(self, energy, ratio):
+
+        F1A, F2A, F1B, F2B = self.interpolate(energy)
+        FOA, FOB = self.F_elastic(ratio)
+        FA = FOA + F1A + 1j * F2A
+        FB = FOB + F1B + 1j * F2B
+        print(">> For atom A, fo + f' + if'' = ", FA)
+        print(">> For atom B, fo + f' + if'' = ", FB)
+
+        I_LATT = self._preprocessor_dictionary["i_latt"]
+
+        GA = self._preprocessor_dictionary["ga.real"] + 1j * self._preprocessor_dictionary["ga.imag"]
+        GB = self._preprocessor_dictionary["gb.real"] + 1j * self._preprocessor_dictionary["gb.imag"]
+        GA_BAR = self._preprocessor_dictionary["ga_bar.real"] + 1j * self._preprocessor_dictionary["ga_bar.imag"]
+        GB_BAR = self._preprocessor_dictionary["gb_bar.real"] + 1j * self._preprocessor_dictionary["gb_bar.imag"]
+        ATNUM_A = self._preprocessor_dictionary["zeta_a"]
+        ATNUM_B = self._preprocessor_dictionary["zeta_b"]
+        TEMPER = self._preprocessor_dictionary["temper"]
+
+
+        # RN = self._preprocessor_dictionary["one_over_volume_times_electron_radius_in_cm"]
+
+        if (I_LATT == 0):
+            # ABSORP = 2.0 * RN * R_LAM0 * (4.0*(DIMAG(FA)+DIMAG(FB)))
+            F_0 = 4*((F1A + ATNUM_A + F1B + ATNUM_B) + 1j*(F2A + F2B))
+        # ELSE IF (I_LATT.EQ.1) THEN
+        # ABSORP = 2.0D0*RN*R_LAM0*(4.0D0*(DIMAG(FA)+DIMAG(FB)))
+        # F_0 = 4*((F1A + ATNUM_A + F1B + ATNUM_B) + CI*(F2A + F2B))
+        # ELSE IF (I_LATT.EQ.2) THEN
+        # FB	 = (0.0D0,0.0D0)
+        # ABSORP = 2.0D0*RN*R_LAM0*(4.0D0*DIMAG(FA))
+        # F_0 = 4*(F1A + ATNUM_A + CI*F2A)
+        # ELSE IF (I_LATT.EQ.3) THEN
+        # ABSORP = 2.0D0*RN*R_LAM0*(DIMAG(FA)+DIMAG(FB))
+        # F_0 = (F1A + ATNUM_A + F1B + ATNUM_B) + CI*(F2A + F2B)
+        # ELSE IF (I_LATT.EQ.4) THEN
+        # FB     = (0.0D0,0.0D0)
+        # ABSORP = 2.0D0*RN*R_LAM0*(2.0D0*(DIMAG(FA)))
+        # F_0 = 2*(F1A+ CI*F2A )
+        # ELSE IF (I_LATT.EQ.5) THEN
+        # FB     = (0.0D0,0.0D0)
+        # ABSORP = 2.0D0*RN*R_LAM0*(4.0D0*(DIMAG(FA)))
+        # F_0 = 4*(F1A + CI*F2A )
+        # END IF
+
+
+        # ! C
+        # ! C FH and FH_BAR are the structure factors for (h,k,l) and (-h,-k,-l).
+        # ! C
+        # ! C srio, Added TEMPER here (95/01/19)
+        FH 	= ( (GA * FA) + (GB * FB) ) * TEMPER
+        FH_BAR	= ( (GA_BAR * FA) + (GB_BAR * FB) ) * TEMPER
+
+        return F_0, FH, FH_BAR
 
 if __name__ == "__main__":
+    import numpy
     # out = Bragg.bragg(interactive=False, DESCRIPTOR="Si", H_MILLER_INDEX=1, K_MILLER_INDEX=1, L_MILLER_INDEX=1,
     #       TEMPERATURE_FACTOR=1.0, E_MIN=5000.0, E_MAX=15000.0, E_STEP=100.0, SHADOW_FILE="bragg.dat")
 
-    a = Bragg()
-    a.run_preprocessor(interactive=False, DESCRIPTOR="Si", H_MILLER_INDEX=1, K_MILLER_INDEX=1, L_MILLER_INDEX=1,
-          TEMPERATURE_FACTOR=1.0, E_MIN=5000.0, E_MAX=15000.0, E_STEP=100.0, SHADOW_FILE="bragg.dat")
-    out = a.get_preprocessor_dictionary()
+    #==========================================================================================
+    # a = Bragg()
+    # a.run_preprocessor(interactive=False, DESCRIPTOR="Si", H_MILLER_INDEX=1, K_MILLER_INDEX=1, L_MILLER_INDEX=1,
+    #       TEMPERATURE_FACTOR=1.0, E_MIN=5000.0, E_MAX=15000.0, E_STEP=100.0, SHADOW_FILE="bragg.dat")
+    # out = a.get_preprocessor_dictionary()
+    #
+    #
+    # b = Bragg.create_from_preprocessor_file("bragg.dat")
+    # # b.load_preprocessor_file("bragg.dat")
+    # tmp = b.get_preprocessor_dictionary()
+    #
+    # for key in tmp.keys():
+    #     print("---------------", key)
+    #     print(out[key] - tmp[key])
+    #
+    # print(a.F0(10000.0), a.FH(10000.0), a.FH_bar(10000.0))
 
-
-    b = Bragg.create_from_preprocessor_file("bragg.dat")
-    # b.load_preprocessor_file("bragg.dat")
-    tmp = b.get_preprocessor_dictionary()
-
-    for key in tmp.keys():
-        print("---------------", key)
-        print(out[key] - tmp[key])
-
-    print(a.F0(10000.0), a.FH(10000.0), a.FH_bar(10000.0))
+    # ==========================================================================================
+    b = Bragg.create_from_preprocessor_file("bragg_xop.dat")
+    # for energy in numpy.linspace(4000, 16000, 100):
+    #     print("Energy index for %f : %f" % (energy, b.energy_index(energy)))
+    # ratio = 0.1595 # sin_theta_over_lambda
+    ener = numpy.linspace(8000.0,9000,10)
+    ratio = 0.1595
+    F0, FH, FH_BAR = b.structure_factor(ener, ratio)
+    print("Structure factor F0: (%g, %g)" % (F0.real, F0.imag))
+    print("Structure factor FH: (%g, %g)" % (FH.real, FH.imag))
+    print("Structure factor FH_BAR: (%g, %g)" % (FH_BAR.real, FH_BAR.imag))
+    struct = numpy.sqrt( FH * FH_BAR)
+    print("Structure factor STRUCT: (%g, %g)" % (struct.real, struct.imag))
