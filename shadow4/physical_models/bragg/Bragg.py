@@ -8,6 +8,15 @@ class Bragg(object):
         self._preprocessor_file = preprocessor_file
         self._preprocessor_dictionary = preprocessor_dictionary
 
+    def set_preprocessor_file(self, filename):
+        self._preprocessor_file = filename
+
+    def get_preprocessor_file(self):
+        return self._preprocessor_file
+
+    def get_preprocessor_dictionary(self):
+        return self._preprocessor_dictionary
+
     def run_preprocessor(self, interactive=True, DESCRIPTOR="Si", H_MILLER_INDEX=1, K_MILLER_INDEX=1, L_MILLER_INDEX=1,
               TEMPERATURE_FACTOR=1.0, E_MIN=5000.0, E_MAX=15000.0, E_STEP=100.0, SHADOW_FILE="bragg.dat"):
 
@@ -18,14 +27,13 @@ class Bragg(object):
 
         return Bragg.__init__(self, preprocessor_file=SHADOW_FILE, preprocessor_dictionary=out_dict)
 
-    def set_preprocessor_file(self, filename):
-        self._preprocessor_file = filename
-
-    def get_preprocessor_file(self):
-        return self._preprocessor_file
-
-    def get_preprocessor_dictionary(self):
-        return self._preprocessor_dictionary
+    def __parse_line(self, line, remove=[]):
+        if len(remove) > 0:
+            for str1 in remove:
+                line = line.replace(str1, " ")
+        line = " ".join(line.split())
+        variables = line.split(" ")
+        return variables
 
     def load_preprocessor_file(self, filename=None):
         if filename is None:
@@ -34,26 +42,20 @@ class Bragg(object):
             self._preprocessor_file = filename
 
         f = open(filename, 'r')
-        # lines = f.readlines()
         lines = f.read().splitlines()
         f.close()
 
-        print(lines)
         out_dict = {}
 
         line_index = 0
-        line = lines[line_index]
-        line = " ".join(line.split())
-        variables = line.split(" ")
-        print(">>>>>>>>>> variables", variables)
+        variables = self.__parse_line(lines[line_index])
+        # print(">>>>>>>>>> variables", variables)
         out_dict["i_latt"] = int(variables[0])
         out_dict["one_over_volume_times_electron_radius_in_cm"] = float(variables[1])
-        out_dict["dspacing_in_A"] = float(variables[2])
+        out_dict["dspacing_in_cm"] = float(variables[2])
 
         line_index += 1
-        line = lines[line_index]
-        line = " ".join(line.split())
-        variables = line.split(" ")
+        variables = self.__parse_line(lines[line_index])
         out_dict["zeta_a"] = int(variables[0])
         out_dict["zeta_b"] = int(variables[1])
         out_dict["temper"] = float(variables[2])
@@ -61,32 +63,20 @@ class Bragg(object):
         # line_index += 1
 
         line_index += 1
-        line = lines[line_index]
-        line = line.replace("(", "")
-        line = line.replace(")", "")
-        line = line.replace(" ", "")
-        variables = line.split(",")
+        variables = self.__parse_line(lines[line_index], remove=["(",")",","])
         # print(">>>>>>>>>> variables", variables)
         out_dict["ga.real"] = float(variables[0])
         out_dict["ga.imag"] = float(variables[1])
 
         line_index += 1
-        line = lines[line_index]
-        line = line.replace("(", "")
-        line = line.replace(")", "")
-        line = line.replace(" ", "")
-        variables = line.split(",")
         # print(">>>>>>>>>> variables", variables)
+        variables = self.__parse_line(lines[line_index], remove=["(", ")", ","])
         out_dict["ga_bar.real"] = float(variables[0])
         out_dict["ga_bar.imag"] = float(variables[1])
 
         line_index += 1
-        line = lines[line_index]
-        line = line.replace("(", "")
-        line = line.replace(")", "")
-        line = line.replace(" ", "")
-        variables = line.split(",")
         # print(">>>>>>>>>> variables", variables)
+        variables = self.__parse_line(lines[line_index], remove=["(", ")", ","])
         out_dict["gb.real"] = float(variables[0])
         out_dict["gb.imag"] = float(variables[1])
 
@@ -101,35 +91,26 @@ class Bragg(object):
         out_dict["gb_bar.imag"] = float(variables[1])
 
         line_index += 1
-        line = lines[line_index]
-        line = " ".join(line.split())
-        variables = line.split(" ")
+        variables = self.__parse_line(lines[line_index])
         # print(">>>>>>>>>> variables", variables)
         out_dict["fit_a"] = []
         for variable in variables:
             out_dict["fit_a"].append(float(variable))
 
         line_index += 1
-        line = lines[line_index]
-        line = " ".join(line.split())
-        variables = line.split(" ")
+        variables = self.__parse_line(lines[line_index])
         # print(">>>>>>>>>> variables", variables)
         out_dict["fit_b"] = []
         for variable in variables:
             out_dict["fit_b"].append(float(variable))
 
         line_index += 1
-        line = lines[line_index]
-        line = " ".join(line.split())
-        variables = line.split(" ")
+        variables = self.__parse_line(lines[line_index])
         npoint = int(variables[0])
         out_dict["npoint"] = npoint
 
         line_index += 1
-        text = " ".join(lines[line_index:])
-        variables = text.split()
-        # print(">>>> text: ", text)
-        # print(">>>> text: ", variables)
+        variables = self.__parse_line(" ".join(lines[line_index:]))
 
 
         Energy = numpy.zeros(npoint)
@@ -158,6 +139,43 @@ class Bragg(object):
 
         self._preprocessor_dictionary = out_dict
 
+    def write_preprocessor_file(self, filename=None):
+        if filename is not None: self.set_preprocessor_file(filename)
+        self.dump_preprocessor_file(self.get_preprocessor_dictionary(), fileout=self.get_preprocessor_file())
+
+    @classmethod
+    def dump_preprocessor_file(cls, out_dict, fileout=""):
+        if fileout != "":
+            f = open(fileout, 'wt')
+
+            f.write("%i " % out_dict["i_latt"])  # flag ZincBlende
+            # f.write("%e " % ((1e0 / volume_in_cm3) * (codata_e2_mc2 * 1e2))) # 1/V*electronRadius
+            f.write("%e " % (out_dict["one_over_volume_times_electron_radius_in_cm"]))
+            f.write("%e " % out_dict["dspacing_in_cm"])
+            f.write("\n")
+            f.write("%i " % out_dict["zeta_a"])
+            f.write("%i " % out_dict["zeta_b"])
+            f.write("%e " % out_dict["temper"])  # temperature parameter
+            f.write("\n")
+            f.write("(%20.11e,%20.11e ) \n" % (out_dict["ga.real"], out_dict["ga.imag"]))
+            f.write("(%20.11e,%20.11e ) \n" % (out_dict["ga_bar.real"], out_dict["ga_bar.imag"]))
+            f.write("(%20.11e,%20.11e ) \n" % (out_dict["gb.real"], out_dict["gb.imag"]))
+            f.write("(%20.11e,%20.11e ) \n" % (out_dict["gb_bar.real"], out_dict["gb_bar.imag"]))
+            f.write("%e %e %e  \n" % (out_dict["fit_a"][0], out_dict["fit_a"][1], out_dict["fit_a"][2]  ))
+            f.write("%e %e %e  \n" % (out_dict["fit_b"][0], out_dict["fit_b"][1], out_dict["fit_b"][2]  ))
+            f.write(("%i \n") % out_dict["npoint"])
+            for i in range(out_dict["npoint"]):
+                f.write(("%20.11e %20.11e %20.11e \n %20.11e %20.11e \n") % ( \
+                    out_dict["Energy"][i],
+                    out_dict["F1a"][i],
+                    out_dict["F2a"][i],
+                    out_dict["F1b"][i],
+                    out_dict["F2b"][i]
+                ))
+            f.close()
+            print("File written to disk: %s" % fileout)
+
+
 
     @classmethod
     def create_from_preprocessor_file(cls, filename):
@@ -172,11 +190,9 @@ class Bragg(object):
          SHADOW preprocessor for crystals - python+xraylib version
 
          -"""
-        # retrieve physical constants needed
+
         # codata_e2_mc2 = 2.81794032e-15 = Classical electron radius in S.I.
-
         codata_e2_mc2 = codata.hbar * codata.alpha / codata.m_e / codata.c
-
 
         if interactive:
             print("bragg: SHADOW preprocessor for crystals - python+xraylib version")
@@ -222,13 +238,9 @@ class Bragg(object):
             estep      = float(E_STEP)
 
 
-
         #
         # end input section, start calculations
         #
-
-
-
         cryst = xraylib.Crystal_GetCrystal(descriptor)
         volume = cryst['volume']
         volume_in_cm3 = volume * 1e-8 * 1e-8 * 1e-8  # in cm^3
@@ -248,10 +260,9 @@ class Bragg(object):
             print("    %3i %f %f %f %f" % (atom['Zatom'], atom['fraction'], atom['x'], atom['y'], atom['z']))
         print("  ")
 
-
         # dspacing
         dspacing = xraylib.Crystal_dSpacing(cryst, hh, kk, ll)
-        dspacing_in_A = dspacing * 1e-8
+        dspacing_in_cm = dspacing * 1e-8
         atom = cryst['atom'] # Z's
 
         ga = (1e0 + 0j) + numpy.exp(1j * numpy.pi * (hh + kk)) \
@@ -280,12 +291,6 @@ class Bragg(object):
                 fit_b = fit[::-1] # (tuple(fit[::-1].tolist()))
             else:
                 raise Exception("Unknown crystal structure")
-            # print "zeta: ",zeta
-            # print "z,xx,YY: ",zeta,xx,yy
-            # print "fit: ",fit[::-1] # reversed coeffs
-            # print "fit-tuple: ",(tuple(fit[::-1].tolist())) # reversed coeffs
-            # print("fit-tuple: %e %e %e  \n" % (tuple(fit[::-1].tolist())) ) # reversed coeffs
-            # f.write("%e %e %e  \n" % (tuple(fit[::-1].tolist())))  # reversed coeffs
 
         Energy = numpy.zeros(npoint)
         F1a = numpy.zeros(npoint)
@@ -302,9 +307,6 @@ class Bragg(object):
             F1b[i] = xraylib.Fi(int(zetas[1]), energy * 1e-3)
             F2b[i] = abs(xraylib.Fii(int(zetas[1]), energy * 1e-3))
 
-
-
-
         out_dict = {}
         # inputs
         out_dict["fileout"]    = fileout
@@ -319,7 +321,7 @@ class Bragg(object):
         # outputs
         out_dict["i_latt"] = 0
         out_dict["one_over_volume_times_electron_radius_in_cm"] = one_over_volume_times_electron_radius_in_cm
-        out_dict["dspacing_in_A"] = dspacing_in_A
+        out_dict["dspacing_in_cm"] = dspacing_in_cm
         out_dict["zeta_a"] = zeta_a
         out_dict["zeta_b"] = zeta_b
         out_dict["temper"] = temper
@@ -342,84 +344,40 @@ class Bragg(object):
         out_dict["F1b"] = F1b
         out_dict["F2b"] = F2b
 
-
-
-        if fileout != "":
-            f = open(fileout, 'wt')
-
-            f.write("%i " % out_dict["i_latt"])  # flag ZincBlende
-            # f.write("%e " % ((1e0 / volume_in_cm3) * (codata_e2_mc2 * 1e2))) # 1/V*electronRadius
-            f.write("%e " % (out_dict["one_over_volume_times_electron_radius_in_cm"]))
-            f.write("%e " % out_dict["dspacing_in_A"])
-            f.write("\n")
-            f.write("%i " % out_dict["zeta_a"])
-            f.write("%i " % out_dict["zeta_b"])
-            f.write("%e " % out_dict["temper"])  # temperature parameter
-            f.write("\n")
-            f.write("(%20.11e,%20.11e ) \n" % (out_dict["ga.real"], out_dict["ga.imag"]))
-            f.write("(%20.11e,%20.11e ) \n" % (out_dict["ga_bar.real"], out_dict["ga_bar.imag"]))
-            f.write("(%20.11e,%20.11e ) \n" % (out_dict["gb.real"], out_dict["gb.imag"]))
-            f.write("(%20.11e,%20.11e ) \n" % (out_dict["gb_bar.real"], out_dict["gb_bar.imag"]))
-            f.write("%e %e %e  \n" % (out_dict["fit_a"][0], out_dict["fit_a"][1], out_dict["fit_a"][2]  ))
-            f.write("%e %e %e  \n" % (out_dict["fit_b"][0], out_dict["fit_b"][1], out_dict["fit_b"][2]  ))
-            f.write(("%i \n") % out_dict["npoint"])
-            for i in range(npoint):
-                f.write(("%20.11e %20.11e %20.11e \n %20.11e %20.11e \n") % ( \
-                    out_dict["Energy"][i],
-                    out_dict["F1a"][i],
-                    out_dict["F2a"][i],
-                    out_dict["F1b"][i],
-                    out_dict["F2b"][i]
-                ))
-            f.close()
-            print("File written to disk: %s" % fileout)
-
+        Bragg.dump_preprocessor_file(out_dict, fileout=fileout)
 
         return out_dict
 
-    def F0(self, energy):
-        """
-        Calculate F0 from Zachariasen.
-        :param energy: photon energy in eV.
-        :return: F0
-        """
-        F_0 = 0
-        return F_0
 
-    def FH(self, energy):
-        """
-        Calculate FH from Zachariasen.
-        :param energy: photon energy in eV.
-        :return: FH
-        """
-        F_H = 0
-        return F_H
-
-    def FH_bar(self, energy):
-        """
-        Calculate FH_bar from Zachariasen.
-        :param energy: photon energy in eV.
-        :return: FH_bar
-        """
-        F_H_bar = 0
-
-        return F_H_bar
-
-    def energy_index(self, energy):
+    def __energy_index(self, energy):
         Energy = self._preprocessor_dictionary["Energy"]
-        if (energy < Energy.min()) or (energy > Energy.max()):
-            return -100
-            # raise Exception("Energy %f outside the defined interval [%f, %f]" % (energy, Energy.min(), Energy.max() ))
+        if isinstance(energy, int):
+            energy = float(energy)
+        if isinstance(energy, float):
+            if (energy < Energy.min()) or (energy > Energy.max()):
+                return -100
+            ll = numpy.where(Energy > energy)[0][0]
+        else:
+            ll = numpy.zeros(energy.size, dtype=int)
+            for i, ener in enumerate(energy):
+                if (ener < Energy.min()) or (ener > Energy.max()):
+                    ll[i] = -100
+                else:
+                    ll[i] = numpy.where( Energy > ener)[0][0]
 
-        ll = numpy.where( Energy > energy)
-        # print(">>> ll: ", ll, Energy.size, Energy.min(), Energy.max())
-        return ll[0][0]
+        NENER = numpy.array(ll)
+        # print(">>>>>>>>>>>>>>>>>>>>>>>>>>>>> NENER", NENER, type(NENER), NENER.any())
 
-    def interpolate(self, PHOT):
+        if (NENER < 0).any():
+            raise Exception("Cannot interpolate: energy outside limits")
+
+        return NENER
+
+    def __interpolate(self, PHOT):
         ENERGY = self._preprocessor_dictionary["Energy"]
-        NENER = self.energy_index(PHOT) - 1
-        FP_A = self._preprocessor_dictionary["F1a"]
-        FP_B = self._preprocessor_dictionary["F1b"]
+        NENER = self.__energy_index(PHOT) - 1
+        FP_A  = self._preprocessor_dictionary["F1a"]
+        FP_B  = self._preprocessor_dictionary["F1b"]
         FPP_A = self._preprocessor_dictionary["F2a"]
         FPP_B = self._preprocessor_dictionary["F2b"]
         F1A	=  FP_A[NENER] +  (FP_A[NENER+1] -  FP_A[NENER]) *  (PHOT - ENERGY[NENER]) / (ENERGY[NENER+1] - ENERGY[NENER])
@@ -431,20 +389,19 @@ class Bragg(object):
     def F_elastic(self, ratio):
         CA = self._preprocessor_dictionary["fit_a"]
         CB = self._preprocessor_dictionary["fit_b"]
-        # print(">>> CA", CA, ratio)
         FOA = CA[2] * ratio ** 2 + CA[1] * ratio + CA[0]
         FOB = CB[2] * ratio ** 2 + CB[1] * ratio + CB[0]
-        # print("FOA, FOB", FOA, FOB)
         return FOA, FOB
 
-    def structure_factor(self, energy, ratio):
+    def structure_factor(self, energy, ratio=None):
 
-        F1A, F2A, F1B, F2B = self.interpolate(energy)
+        if ratio is None:
+            ratio = self.ratio(energy, theta=None)
+
+        F1A, F2A, F1B, F2B = self.__interpolate(energy)
         FOA, FOB = self.F_elastic(ratio)
         FA = FOA + F1A + 1j * F2A
         FB = FOB + F1B + 1j * F2B
-        print(">> For atom A, fo + f' + if'' = ", FA)
-        print(">> For atom B, fo + f' + if'' = ", FB)
 
         I_LATT = self._preprocessor_dictionary["i_latt"]
 
@@ -462,26 +419,24 @@ class Bragg(object):
         if (I_LATT == 0):
             # ABSORP = 2.0 * RN * R_LAM0 * (4.0*(DIMAG(FA)+DIMAG(FB)))
             F_0 = 4*((F1A + ATNUM_A + F1B + ATNUM_B) + 1j*(F2A + F2B))
-        # ELSE IF (I_LATT.EQ.1) THEN
-        # ABSORP = 2.0D0*RN*R_LAM0*(4.0D0*(DIMAG(FA)+DIMAG(FB)))
-        # F_0 = 4*((F1A + ATNUM_A + F1B + ATNUM_B) + CI*(F2A + F2B))
-        # ELSE IF (I_LATT.EQ.2) THEN
-        # FB	 = (0.0D0,0.0D0)
-        # ABSORP = 2.0D0*RN*R_LAM0*(4.0D0*DIMAG(FA))
-        # F_0 = 4*(F1A + ATNUM_A + CI*F2A)
-        # ELSE IF (I_LATT.EQ.3) THEN
-        # ABSORP = 2.0D0*RN*R_LAM0*(DIMAG(FA)+DIMAG(FB))
-        # F_0 = (F1A + ATNUM_A + F1B + ATNUM_B) + CI*(F2A + F2B)
-        # ELSE IF (I_LATT.EQ.4) THEN
-        # FB     = (0.0D0,0.0D0)
-        # ABSORP = 2.0D0*RN*R_LAM0*(2.0D0*(DIMAG(FA)))
-        # F_0 = 2*(F1A+ CI*F2A )
-        # ELSE IF (I_LATT.EQ.5) THEN
-        # FB     = (0.0D0,0.0D0)
-        # ABSORP = 2.0D0*RN*R_LAM0*(4.0D0*(DIMAG(FA)))
-        # F_0 = 4*(F1A + CI*F2A )
-        # END IF
-
+        elif (I_LATT == 1):
+            # ABSORP = 2.0D0*RN*R_LAM0*(4.0D0*(DIMAG(FA)+DIMAG(FB)))
+            F_0 = 4*((F1A + ATNUM_A + F1B + ATNUM_B) + 1j*(F2A + F2B))
+        elif (I_LATT == 2):
+            FB	 = 0.0 + 0.0j
+            # ABSORP = 2.0D0*RN*R_LAM0*(4.0D0*DIMAG(FA))
+            F_0 = 4*(F1A + ATNUM_A + 1j*F2A)
+        elif (I_LATT == 3):
+            # ABSORP = 2.0D0*RN*R_LAM0*(DIMAG(FA)+DIMAG(FB))
+            F_0 = (F1A + ATNUM_A + F1B + ATNUM_B) + CI*(F2A + F2B)
+        elif (I_LATT == 4):
+            FB = 0.0 + 0.0j
+            # ABSORP = 2.0D0*RN*R_LAM0*(2.0D0*(DIMAG(FA)))
+            F_0 = 2*(F1A+ 1j*F2A)
+        elif (I_LATT == 5):
+            FB = 0.0 + 0.0j
+            # ABSORP = 2.0D0*RN*R_LAM0*(4.0D0*(DIMAG(FA)))
+            F_0 = 4*(F1A + 1j*F2A )
 
         # ! C
         # ! C FH and FH_BAR are the structure factors for (h,k,l) and (-h,-k,-l).
@@ -489,41 +444,159 @@ class Bragg(object):
         # ! C srio, Added TEMPER here (95/01/19)
         FH 	= ( (GA * FA) + (GB * FB) ) * TEMPER
         FH_BAR	= ( (GA_BAR * FA) + (GB_BAR * FB) ) * TEMPER
+        STRUCT = numpy.sqrt(FH * FH_BAR)
+        return F_0, FH, FH_BAR, STRUCT, FA, FB
 
-        return F_0, FH, FH_BAR
+    def info(self, energy):
+
+        F_0, FH, FH_BAR, STRUCT, FA, FB = self.structure_factor(energy)
+        ratio = self.ratio(energy, theta=None)
+        darwin_s, darwin_p = self.darwin_halfwidth(energy)
+
+        info_text = ""
+        if isinstance(energy, float) or isinstance(energy, int):
+            info_text += "\nPhoton energy: %g eV" % energy
+            info_text += "\nsin(theta)/wavelength = %g A**-1" % ratio
+            info_text += "\n    For atom A, fo + f' + if'' = (%g + %g i) " %  (FA.real, FA.imag)
+            info_text += "\n    For atom B, fo + f' + if'' = (%g + %g i) " %  (FB.real, FB.imag)
+            info_text += "\n    Structure factor F0: (%g + %g i)" %  (F_0.real, F_0.imag)
+            info_text += "\n    Structure factor FH: (%g + %g i)" %  (FH.real, FH.imag)
+            info_text += "\n    Structure factor FH_BAR (%g + %g i): " % (FH_BAR.real, FH_BAR.imag)
+            info_text += "\n    Structure factor STRUCT: (%g + %g i): " % (STRUCT.real, STRUCT.imag)
+            info_text += "\n    dSpacing = %g m" % self.dSpacing()
+            info_text += "\n    wavelength = %g m" % self.wavelength(energy)
+            info_text += "\n    bragg angle = %g rad = %g deg " % ( self.angleBragg(energy), b.angleBragg(energy) * 180 / numpy.pi)
+            info_text += "\n    darwin_halfwidth_s = %f urad " % (1e6 * darwin_s)
+            info_text += "\n    darwin_halfwidth_p = %f urad " % (1e6 * darwin_p)
+        else:
+            for i, ener in enumerate(energy):
+                info_text += "\nPhoton energy: %g eV" % ener
+                info_text += "\nsin(theta)/wavelength = %g A**-1" % ratio[i]
+                info_text += "\n    For atom A, fo + f' + if'' = (%g + i %g) " %  (FA[i].real, FA[i].imag)
+                info_text += "\n    For atom B, fo + f' + if'' = (%g + i %g) " %  (FB[i].real, FB[i].imag)
+                info_text += "\n    Structure factor F0: (%g + %g i)" %  (F_0[i].real, F_0[i].imag)
+                info_text += "\n    Structure factor FH: (%g + %g i)" %  (FH[i].real, FH[i].imag)
+                info_text += "\n    Structure factor FH_BAR (%g + %g i): " % (FH_BAR[i].real, FH_BAR[i].imag)
+                info_text += "\n    Structure factor STRUCT: (%g + %g i): " % (STRUCT[i].real, STRUCT[i].imag)
+                info_text += "\n    dSpacing = %g m" % self.dSpacing()
+                info_text += "\n    wavelength = %g m" % self.wavelength(ener)
+                info_text += "\n    bragg angle = %g rad = %g deg " % ( self.angleBragg(ener), b.angleBragg(ener) * 180 / numpy.pi)
+                info_text += "\n    darwin_halfwidth_s = %f urad " % (1e6 * darwin_s[i])
+                info_text += "\n    darwin_halfwidth_p = %f urad " % (1e6 * darwin_p[i])
+        return info_text
+
+    def F0(self, energy, ratio=None):
+        """
+        Calculate F0 from Zachariasen.
+        :param energy: photon energy in eV.
+        :return: F0
+        """
+        F_0, FH, FH_BAR, STRUCT, FA, FB = self.structure_factor(energy, ratio)
+        return F_0
+
+    def FH(self, energy, ratio=None):
+        """
+        Calculate FH from Zachariasen.
+        :param energy: photon energy in eV.
+        :return: FH
+        """
+        F_0, FH, FH_BAR, STRUCT, FA, FB = self.structure_factor(energy, ratio)
+        return FH
+
+    def FH_bar(self, energy, ratio=None):
+        """
+        Calculate FH_bar from Zachariasen.
+        :param energy: photon energy in eV.
+        :return: FH_bar
+        """
+        F_0, FH, FH_BAR, STRUCT, FA, FB = self.structure_factor(energy, ratio)
+        return FH_BAR
+
+
+    def wavelength(self, energy):
+        return codata.h * codata.c / codata.e / energy
+
+    def ratio(self, energy, theta=None):
+        """
+        sin(theta) / lambda in A**-1
+
+        Parameters
+        ----------
+        energy
+
+        Returns
+        -------
+
+        """
+
+        if theta is None:
+            theta = self.angleBragg(energy)
+
+        return numpy.sin(theta) / ( 1e10 * self.wavelength(energy))
+
+    def darwin_halfwidth_s(self, energy):
+        return self.darwin_halfwidth(energy)[0]
+
+    def darwin_halfwidth_p(self, energy):
+        return self.darwin_halfwidth(energy)[1]
+
+    def darwin_halfwidth(self, energy):
+        if isinstance(energy, int): energy = float(energy)
+        RN = self.get_preprocessor_dictionary()["one_over_volume_times_electron_radius_in_cm"]
+        R_LAM0 = self.wavelength(energy) * 1e2
+        F_0, FH, FH_BAR, STRUCT, FA, FB = b.structure_factor(energy, ratio=None)
+        STRUCT = numpy.sqrt( FH * FH_BAR)
+        TEMPER = self.get_preprocessor_dictionary()["temper"]
+        GRAZE = self.angleBragg(energy)
+        SSVAR	= RN*(R_LAM0**2)*STRUCT*TEMPER/numpy.pi/numpy.sin(2.0*GRAZE)
+        SPVAR = SSVAR * numpy.abs(numpy.cos(2.0 * GRAZE))
+        return SSVAR.real, SPVAR.real
+
+    # as in crystalpy
+    def dSpacing(self):
+        """
+        Returns the lattice spacing d in A
+        :return: Lattice spacing.
+        """
+
+        return self._preprocessor_dictionary["dspacing_in_cm"] * 1e-2
+
+    def angleBragg(self, energy):
+        """
+        Returns the Bragg angle for a given energy.
+        :param energy: Energy to calculate the Bragg angle for.
+        :return: Bragg angle.
+        """
+
+        return numpy.arcsin( self.wavelength(energy) / 2 / self.dSpacing())
+
 
 if __name__ == "__main__":
     import numpy
-    # out = Bragg.bragg(interactive=False, DESCRIPTOR="Si", H_MILLER_INDEX=1, K_MILLER_INDEX=1, L_MILLER_INDEX=1,
-    #       TEMPERATURE_FACTOR=1.0, E_MIN=5000.0, E_MAX=15000.0, E_STEP=100.0, SHADOW_FILE="bragg.dat")
+    out = Bragg.bragg(interactive=False, DESCRIPTOR="Si", H_MILLER_INDEX=1, K_MILLER_INDEX=1, L_MILLER_INDEX=1,
+          TEMPERATURE_FACTOR=1.0, E_MIN=5000.0, E_MAX=15000.0, E_STEP=100.0, SHADOW_FILE="bragg.dat")
 
     #==========================================================================================
-    # a = Bragg()
-    # a.run_preprocessor(interactive=False, DESCRIPTOR="Si", H_MILLER_INDEX=1, K_MILLER_INDEX=1, L_MILLER_INDEX=1,
-    #       TEMPERATURE_FACTOR=1.0, E_MIN=5000.0, E_MAX=15000.0, E_STEP=100.0, SHADOW_FILE="bragg.dat")
-    # out = a.get_preprocessor_dictionary()
-    #
-    #
-    # b = Bragg.create_from_preprocessor_file("bragg.dat")
-    # # b.load_preprocessor_file("bragg.dat")
-    # tmp = b.get_preprocessor_dictionary()
-    #
-    # for key in tmp.keys():
-    #     print("---------------", key)
-    #     print(out[key] - tmp[key])
-    #
-    # print(a.F0(10000.0), a.FH(10000.0), a.FH_bar(10000.0))
+    a = Bragg()
+    a.run_preprocessor(interactive=False, DESCRIPTOR="Si", H_MILLER_INDEX=1, K_MILLER_INDEX=1, L_MILLER_INDEX=1,
+          TEMPERATURE_FACTOR=1.0, E_MIN=5000.0, E_MAX=15000.0, E_STEP=100.0, SHADOW_FILE="bragg.dat")
+    out = a.get_preprocessor_dictionary()
+
+
+    # ==========================================================================================
+    b = Bragg.create_from_preprocessor_file("bragg.dat")
+    tmp = b.get_preprocessor_dictionary()
+
+    for key in tmp.keys():
+        print("---------------", key)
+        print(out[key] - tmp[key])
+
+    print(a.F0(10000.0), a.FH(10000.0), a.FH_bar(10000.0))
 
     # ==========================================================================================
     b = Bragg.create_from_preprocessor_file("bragg_xop.dat")
-    # for energy in numpy.linspace(4000, 16000, 100):
-    #     print("Energy index for %f : %f" % (energy, b.energy_index(energy)))
-    # ratio = 0.1595 # sin_theta_over_lambda
-    ener = numpy.linspace(8000.0,9000,10)
+    ener = numpy.linspace(8000.0,9000,2)
     ratio = 0.1595
-    F0, FH, FH_BAR = b.structure_factor(ener, ratio)
-    print("Structure factor F0: (%g, %g)" % (F0.real, F0.imag))
-    print("Structure factor FH: (%g, %g)" % (FH.real, FH.imag))
-    print("Structure factor FH_BAR: (%g, %g)" % (FH_BAR.real, FH_BAR.imag))
-    struct = numpy.sqrt( FH * FH_BAR)
-    print("Structure factor STRUCT: (%g, %g)" % (struct.real, struct.imag))
+    F_0, FH, FH_BAR, STRUCT, FA, FB = b.structure_factor(ener, ratio=None)
+    info_text = b.info(ener)
+    print(info_text)
