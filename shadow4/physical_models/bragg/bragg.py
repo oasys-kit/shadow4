@@ -464,8 +464,9 @@ class Bragg(object):
             info_text += "\n    Structure factor FH_BAR (%g + %g i): " % (FH_BAR.real, FH_BAR.imag)
             info_text += "\n    Structure factor STRUCT: (%g + %g i): " % (STRUCT.real, STRUCT.imag)
             info_text += "\n    dSpacing = %g m" % self.dSpacing()
+            info_text += "\n    unit cell volume = %g A^3" % (self.unitcellVolume())
             info_text += "\n    wavelength = %g m" % self.wavelength(energy)
-            info_text += "\n    bragg angle = %g rad = %g deg " % ( self.angleBragg(energy), b.angleBragg(energy) * 180 / numpy.pi)
+            info_text += "\n    bragg angle = %g rad = %g deg " % ( self.angleBragg(energy), self.angleBragg(energy) * 180 / numpy.pi)
             info_text += "\n    darwin_halfwidth_s = %f urad " % (1e6 * darwin_s)
             info_text += "\n    darwin_halfwidth_p = %f urad " % (1e6 * darwin_p)
         else:
@@ -479,39 +480,12 @@ class Bragg(object):
                 info_text += "\n    Structure factor FH_BAR (%g + %g i): " % (FH_BAR[i].real, FH_BAR[i].imag)
                 info_text += "\n    Structure factor STRUCT: (%g + %g i): " % (STRUCT[i].real, STRUCT[i].imag)
                 info_text += "\n    dSpacing = %g m" % self.dSpacing()
+                info_text += "\n    unit cell volume = %g A^3" % (self.unitcellVolume())
                 info_text += "\n    wavelength = %g m" % self.wavelength(ener)
-                info_text += "\n    bragg angle = %g rad = %g deg " % ( self.angleBragg(ener), b.angleBragg(ener) * 180 / numpy.pi)
+                info_text += "\n    bragg angle = %g rad = %g deg " % ( self.angleBragg(ener), self.angleBragg(ener) * 180 / numpy.pi)
                 info_text += "\n    darwin_halfwidth_s = %f urad " % (1e6 * darwin_s[i])
                 info_text += "\n    darwin_halfwidth_p = %f urad " % (1e6 * darwin_p[i])
         return info_text
-
-    def F0(self, energy, ratio=None):
-        """
-        Calculate F0 from Zachariasen.
-        :param energy: photon energy in eV.
-        :return: F0
-        """
-        F_0, FH, FH_BAR, STRUCT, FA, FB = self.structure_factor(energy, ratio)
-        return F_0
-
-    def FH(self, energy, ratio=None):
-        """
-        Calculate FH from Zachariasen.
-        :param energy: photon energy in eV.
-        :return: FH
-        """
-        F_0, FH, FH_BAR, STRUCT, FA, FB = self.structure_factor(energy, ratio)
-        return FH
-
-    def FH_bar(self, energy, ratio=None):
-        """
-        Calculate FH_bar from Zachariasen.
-        :param energy: photon energy in eV.
-        :return: FH_bar
-        """
-        F_0, FH, FH_BAR, STRUCT, FA, FB = self.structure_factor(energy, ratio)
-        return FH_BAR
-
 
     def wavelength(self, energy):
         return codata.h * codata.c / codata.e / energy
@@ -544,7 +518,7 @@ class Bragg(object):
         if isinstance(energy, int): energy = float(energy)
         RN = self.get_preprocessor_dictionary()["one_over_volume_times_electron_radius_in_cm"]
         R_LAM0 = self.wavelength(energy) * 1e2
-        F_0, FH, FH_BAR, STRUCT, FA, FB = b.structure_factor(energy, ratio=None)
+        F_0, FH, FH_BAR, STRUCT, FA, FB = self.structure_factor(energy, ratio=None)
         STRUCT = numpy.sqrt( FH * FH_BAR)
         TEMPER = self.get_preprocessor_dictionary()["temper"]
         GRAZE = self.angleBragg(energy)
@@ -552,7 +526,36 @@ class Bragg(object):
         SPVAR = SSVAR * numpy.abs(numpy.cos(2.0 * GRAZE))
         return SSVAR.real, SPVAR.real
 
-    # as in crystalpy
+    #
+    # methods as in crystalpy
+    #
+    def F0(self, energy, ratio=None):
+        """
+        Calculate F0 from Zachariasen.
+        :param energy: photon energy in eV.
+        :return: F0
+        """
+        F_0, FH, FH_BAR, STRUCT, FA, FB = self.structure_factor(energy, ratio)
+        return F_0
+
+    def FH(self, energy, ratio=None):
+        """
+        Calculate FH from Zachariasen.
+        :param energy: photon energy in eV.
+        :return: FH
+        """
+        F_0, FH, FH_BAR, STRUCT, FA, FB = self.structure_factor(energy, ratio)
+        return FH
+
+    def FH_bar(self, energy, ratio=None):
+        """
+        Calculate FH_bar from Zachariasen.
+        :param energy: photon energy in eV.
+        :return: FH_bar
+        """
+        F_0, FH, FH_BAR, STRUCT, FA, FB = self.structure_factor(energy, ratio)
+        return FH_BAR
+
     def dSpacing(self):
         """
         Returns the lattice spacing d in A
@@ -570,6 +573,19 @@ class Bragg(object):
 
         return numpy.arcsin( self.wavelength(energy) / 2 / self.dSpacing())
 
+    def unitcellVolume(self):
+        """
+        Returns the unit cell volume.
+
+        :return: Unit cell volume
+        """
+        # Retrieve unit cell volume from xraylib.
+        one_over_volume_times_electron_radius_in_cm = self.get_preprocessor_dictionary()["one_over_volume_times_electron_radius_in_cm"]
+        # codata_e2_mc2 = 2.81794032e-15 = Classical electron radius in S.I.
+        codata_e2_mc2 = codata.hbar * codata.alpha / codata.m_e / codata.c
+        one_over_volume_in_cm = one_over_volume_times_electron_radius_in_cm / (codata_e2_mc2 * 1e2)
+        unit_cell_volume = 1.0 / one_over_volume_in_cm * (1e-2)**3
+        return unit_cell_volume * (1e10)**3
 
 if __name__ == "__main__":
     import numpy
