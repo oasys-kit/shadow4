@@ -490,6 +490,9 @@ class Bragg(object):
     def wavelength(self, energy):
         return codata.h * codata.c / codata.e / energy
 
+    def wavelength_in_A(self, energy):
+        return 1e10 * self.wavelength(energy)
+
     def ratio(self, energy, theta=None):
         """
         sin(theta) / lambda in A**-1
@@ -506,7 +509,7 @@ class Bragg(object):
         if theta is None:
             theta = self.angleBragg(energy)
 
-        return numpy.sin(theta) / ( 1e10 * self.wavelength(energy))
+        return numpy.sin(theta) / ( self.wavelength_in_A(energy))
 
     def darwin_halfwidth_s(self, energy):
         return self.darwin_halfwidth(energy)[0]
@@ -562,7 +565,7 @@ class Bragg(object):
         :return: Lattice spacing.
         """
 
-        return self._preprocessor_dictionary["dspacing_in_cm"] * 1e-2
+        return self._preprocessor_dictionary["dspacing_in_cm"] * 1e8
 
     def angleBragg(self, energy):
         """
@@ -571,7 +574,7 @@ class Bragg(object):
         :return: Bragg angle.
         """
 
-        return numpy.arcsin( self.wavelength(energy) / 2 / self.dSpacing())
+        return numpy.arcsin( self.wavelength_in_A(energy) / 2 / self.dSpacing())
 
     def unitcellVolume(self):
         """

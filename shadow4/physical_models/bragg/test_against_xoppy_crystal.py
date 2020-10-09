@@ -151,6 +151,7 @@ def calculate_with_crystalpy(bragg_or_laue=0,  #
                             angle_deviation_min    = -100e-6, # radians
                             angle_deviation_max    = 100e-6,  # radians
                             angle_deviation_points = 500,
+                            method = 0, # 0=crystalpy input, 1=shadow4 preprocessor file
                             ):
 
     if bragg_or_laue == 0:
@@ -173,9 +174,7 @@ def calculate_with_crystalpy(bragg_or_laue=0,  #
     # Create a diffraction setup.
 
     # print("\nCreating a diffraction setup...")
-    method = 1
-    if method == 0:
-        diffraction_setup = DiffractionSetup(geometry_type          = geometry_type,
+    diffraction_setup0 = DiffractionSetup(geometry_type          = geometry_type,
                                                    crystal_name           = crystal_name,
                                                    thickness              = thickness,
                                                    miller_h               = miller_h,
@@ -183,8 +182,7 @@ def calculate_with_crystalpy(bragg_or_laue=0,  #
                                                    miller_l               = miller_l,
                                                    asymmetry_angle        = asymmetry_angle,
                                                    azimuthal_angle        = 0.0)
-    elif method == 1:
-        diffraction_setup = S4DiffractionSetup(geometry_type          = geometry_type,
+    diffraction_setup1 = S4DiffractionSetup(geometry_type          = geometry_type,
                                                    crystal_name           = crystal_name,
                                                    thickness              = thickness,
                                                    miller_h               = miller_h,
@@ -194,6 +192,18 @@ def calculate_with_crystalpy(bragg_or_laue=0,  #
                                                    azimuthal_angle        = 0.0,
                                                    preprocessor_file="bragg_xop.dat")
 
+
+    if method == 0:
+        diffraction_setup = diffraction_setup0
+    elif method == 1:
+        diffraction_setup = diffraction_setup1
+
+    # ener = 8000.0
+    # print(">>>", diffraction_setup0.F0(ener),          diffraction_setup1.F0(ener))
+    # print(">>>", diffraction_setup0.FH(ener),          diffraction_setup1.FH(ener),)
+    # print(">>>", diffraction_setup0.FH_bar(ener),      diffraction_setup1.FH_bar(ener))
+    # print(">>>", diffraction_setup0.angleBragg(ener),  diffraction_setup1.angleBragg(ener))
+    # print(">>>", diffraction_setup0.dSpacing(),        diffraction_setup1.dSpacing())
 
     # energy                 = 8000.0                           # eV
     # angle_deviation_min    = -100e-6                          # radians
@@ -493,7 +503,8 @@ if __name__ == "__main__":
 
     from srxraylib.plot.gol import plot
 
-    for case in ["bragg_symmetric"]: # ,"laue_symmetric","bragg_asymmetric","laue_asymmetric"]:
+    method = 1
+    for case in ["bragg_symmetric","laue_symmetric","bragg_asymmetric","laue_asymmetric"]:
         input_dict = input_cases(case)
 
         angle1, intS1, intP1 = calculate_with_crystalpy(
@@ -508,27 +519,28 @@ if __name__ == "__main__":
                                 energy                    =  input_dict["energy"],
                                 angle_deviation_min       =  input_dict["angle_deviation_min"],
                                 angle_deviation_max       =  input_dict["angle_deviation_max"],
+                                angle_deviation_points    =  input_dict["angle_deviation_points"],
+                                method = method)
+
+        # plot(angle1,intS1,legend=['S-pol crystalpy'])
+
+        angle2, intS2, intP2 = calculate_with_xoppy(
+                                bragg_or_laue             =  input_dict["bragg_or_laue"],
+                                diffracted_or_transmitted =  input_dict["diffracted_or_transmitted"],
+                                crystal_name              =  input_dict["crystal_name"],
+                                thickness                 =  input_dict["thickness"],
+                                miller_h                  =  input_dict["miller_h"],
+                                miller_k                  =  input_dict["miller_k"],
+                                miller_l                  =  input_dict["miller_l"],
+                                asymmetry_angle           =  input_dict["asymmetry_angle"],
+                                energy                    =  input_dict["energy"],
+                                angle_deviation_min       =  input_dict["angle_deviation_min"],
+                                angle_deviation_max       =  input_dict["angle_deviation_max"],
                                 angle_deviation_points    =  input_dict["angle_deviation_points"],)
 
-        plot(angle1,intS1,legend=['S-pol crystalpy'])
 
-        # angle2, intS2, intP2 = calculate_with_xoppy(
-        #                         bragg_or_laue             =  input_dict["bragg_or_laue"],
-        #                         diffracted_or_transmitted =  input_dict["diffracted_or_transmitted"],
-        #                         crystal_name              =  input_dict["crystal_name"],
-        #                         thickness                 =  input_dict["thickness"],
-        #                         miller_h                  =  input_dict["miller_h"],
-        #                         miller_k                  =  input_dict["miller_k"],
-        #                         miller_l                  =  input_dict["miller_l"],
-        #                         asymmetry_angle           =  input_dict["asymmetry_angle"],
-        #                         energy                    =  input_dict["energy"],
-        #                         angle_deviation_min       =  input_dict["angle_deviation_min"],
-        #                         angle_deviation_max       =  input_dict["angle_deviation_max"],
-        #                         angle_deviation_points    =  input_dict["angle_deviation_points"],)
-        #
-        #
-        #
-        # plot(angle1,intS1,angle2,intS2,legend=['S-pol crystalpy','S-pol xoppy'],title=case)
+
+        plot(angle1,intS1,angle2,intS2,legend=['S-pol crystalpy','S-pol xoppy'],title=case)
 
 
 
