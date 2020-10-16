@@ -59,11 +59,12 @@ PACKAGES = [
     "shadow4.physical_models.prerefl",
     "shadow4.physical_models.mlayer",
     "shadow4.beamline",
-    "shadow4.beamline.ideal_elements",
-    "shadow4.beamline.absorbers",
-    "shadow4.beamline.mirrors",
-    "shadow4.beamline.crystals",
-    "shadow4.beamline.gratings",
+    "shadow4.beamline.optical_elements",
+    "shadow4.beamline.optical_elements.ideal_elements",
+    "shadow4.beamline.optical_elements.absorbers",
+    "shadow4.beamline.optical_elements.mirrors",
+    "shadow4.beamline.optical_elements.crystals",
+    "shadow4.beamline.optical_elements.gratings",
 ]
 
 INSTALL_REQUIRES = (
