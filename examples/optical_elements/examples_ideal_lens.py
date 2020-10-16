@@ -18,7 +18,7 @@ def get_sigmas_radiation(photon_energy,undulator_length):
     return 1e6*2.740/4/numpy.pi*numpy.sqrt(lambdan*undulator_length),1e6*0.69*numpy.sqrt(lambdan/undulator_length)
 
 
-def test_with_collimated_beam(do_plot=True):
+def lens_with_collimated_beam(do_plot=True):
 
     #
     # collimated source
@@ -65,7 +65,7 @@ def test_with_collimated_beam(do_plot=True):
     print("Demagnification: %g %g"%(SX/FX,SX/FZ))
 
 
-def test_with_divergent_beam_super_ideal(do_plot=True):
+def lens_with_divergent_beam_super_ideal(do_plot=True):
 
     src = SourceGaussian.initialize_from_keywords(number_of_rays=100000,
                                                   sigmaX=     20e-6/2.35,sigmaZ=     10e-6/2.35,
@@ -108,7 +108,7 @@ def test_with_divergent_beam_super_ideal(do_plot=True):
     print("Demagnification: H:%g V:%g (theoretical: %g) "%(SX/FX,SZ/FZ,p/q))
 
 
-def test_with_divergent_beam(do_plot=True):
+def lens_with_divergent_beam(do_plot=True):
 
 
 
@@ -159,7 +159,7 @@ def test_with_divergent_beam(do_plot=True):
     print("Demagnification: H:%g V:%g (theoretical: %g) "%(SX/FX,SZ/FZ,p/q))
 
 
-def test_id16ni(do_plot=True):
+def lens_id16ni(do_plot=True):
 
     #
     # source
@@ -271,7 +271,7 @@ if __name__ == "__main__":
     set_qt()
     do_plot = True
 
-    test_with_collimated_beam(do_plot=do_plot)
-    test_with_divergent_beam(do_plot=do_plot)
-    test_id16ni(do_plot=do_plot)
-    test_with_divergent_beam_super_ideal(do_plot=do_plot)
+    lens_with_collimated_beam(do_plot=do_plot)
+    lens_with_divergent_beam(do_plot=do_plot)
+    lens_id16ni(do_plot=do_plot)
+    lens_with_divergent_beam_super_ideal(do_plot=do_plot)

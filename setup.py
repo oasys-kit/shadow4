@@ -51,6 +51,7 @@ from setuptools import setup
 PACKAGES = [
     "shadow4",
     "shadow4.beam",
+    "shadow4.sources",
     "shadow4.sources.source_geometrical",
     "shadow4.sources.bending_magnet",
     "shadow4.sources.undulator",
@@ -58,6 +59,7 @@ PACKAGES = [
     "shadow4.optical_surfaces",
     "shadow4.physical_models.prerefl",
     "shadow4.physical_models.mlayer",
+    "shadow4.physical_models.bragg",
     "shadow4.beamline",
     "shadow4.beamline.optical_elements",
     "shadow4.beamline.optical_elements.ideal_elements",
