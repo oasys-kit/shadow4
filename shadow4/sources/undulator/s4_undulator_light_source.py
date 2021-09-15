@@ -224,43 +224,43 @@ class S4UndulatorLightSource(LightSource, S4LightSource):
 
         # undul_phot
         if undulator.code_undul_phot == 'internal':
-            undul_phot_dict = SourceUndulatorFactory.undul_phot(E_ENERGY  = syned_electron_beam.energy(),
-                                         INTENSITY = syned_electron_beam.current(),
-                                         LAMBDAU   = undulator.period_length(),
-                                         NPERIODS  = undulator.number_of_periods(),
-                                         K         = undulator.K(),
-                                         EMIN      = undulator._EMIN,
-                                         EMAX      = undulator._EMAX,
-                                         NG_E      = undulator._NG_E,
-                                         MAXANGLE  = undulator._MAXANGLE,
-                                         NG_T      = undulator._NG_T,
-                                         NG_P      = undulator._NG_P,
-                                         number_of_trajectory_points = undulator._NG_J)
+            undul_phot_dict = SourceUndulatorFactory.calculate_undulator_emission(electron_energy= syned_electron_beam.energy(),
+                                                                                  electron_current= syned_electron_beam.current(),
+                                                                                  undulator_period= undulator.period_length(),
+                                                                                  undulator_nperiods= undulator.number_of_periods(),
+                                                                                  K         = undulator.K(),
+                                                                                  photon_energy= undulator._EMIN,
+                                                                                  EMAX      = undulator._EMAX,
+                                                                                  NG_E      = undulator._NG_E,
+                                                                                  MAXANGLE  = undulator._MAXANGLE,
+                                                                                  number_of_points= undulator._NG_T,
+                                                                                  NG_P      = undulator._NG_P,
+                                                                                  number_of_trajectory_points = undulator._NG_J)
 
         elif undulator.code_undul_phot == 'pysru' or  undulator.code_undul_phot == 'pySRU':
-            undul_phot_dict = SourceUndulatorFactoryPysru.undul_phot(E_ENERGY  = syned_electron_beam.energy(),
-                                         INTENSITY = syned_electron_beam.current(),
-                                         LAMBDAU   = undulator.period_length(),
-                                         NPERIODS  = undulator.number_of_periods(),
-                                         K         = undulator.K(),
-                                         EMIN      = undulator._EMIN,
-                                         EMAX      = undulator._EMAX,
-                                         NG_E      = undulator._NG_E,
-                                         MAXANGLE  = undulator._MAXANGLE,
-                                         NG_T      = undulator._NG_T,
-                                         NG_P      = undulator._NG_P,)
+            undul_phot_dict = SourceUndulatorFactoryPysru.calculate_undulator_emission(electron_energy= syned_electron_beam.energy(),
+                                                                                       electron_current= syned_electron_beam.current(),
+                                                                                       undulator_period= undulator.period_length(),
+                                                                                       undulator_nperiods= undulator.number_of_periods(),
+                                                                                       K         = undulator.K(),
+                                                                                       photon_energy= undulator._EMIN,
+                                                                                       EMAX      = undulator._EMAX,
+                                                                                       NG_E      = undulator._NG_E,
+                                                                                       MAXANGLE  = undulator._MAXANGLE,
+                                                                                       number_of_points= undulator._NG_T,
+                                                                                       NG_P      = undulator._NG_P, )
         elif undulator.code_undul_phot == 'srw' or  undulator.code_undul_phot == 'SRW':
-            undul_phot_dict = SourceUndulatorFactorySrw.undul_phot(E_ENERGY  = self.syned_electron_beam.energy(),
-                                         INTENSITY = syned_electron_beam.current(),
-                                         LAMBDAU   = undulator.period_length(),
-                                         NPERIODS  = undulator.number_of_periods(),
-                                         K         = undulator.K(),
-                                         EMIN      = undulator._EMIN,
-                                         EMAX      = undulator._EMAX,
-                                         NG_E      = undulator._NG_E,
-                                         MAXANGLE  = undulator._MAXANGLE,
-                                         NG_T      = undulator._NG_T,
-                                         NG_P      = undulator._NG_P,)
+            undul_phot_dict = SourceUndulatorFactorySrw.calculate_undulator_emission(electron_energy= self.syned_electron_beam.energy(),
+                                                                                     electron_current= syned_electron_beam.current(),
+                                                                                     undulator_period= undulator.period_length(),
+                                                                                     undulator_nperiods= undulator.number_of_periods(),
+                                                                                     K         = undulator.K(),
+                                                                                     photon_energy= undulator._EMIN,
+                                                                                     EMAX      = undulator._EMAX,
+                                                                                     NG_E      = undulator._NG_E,
+                                                                                     MAXANGLE  = undulator._MAXANGLE,
+                                                                                     number_of_points= undulator._NG_T,
+                                                                                     NG_P      = undulator._NG_P, )
         else:
             raise Exception("Not implemented undul_phot code: "+undulator.code_undul_phot)
 
