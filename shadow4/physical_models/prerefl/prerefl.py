@@ -334,91 +334,250 @@ class PreRefl(object):
 
         return None
 
+    #
+    # this is copied (ans sligtly ceaned) from shadow3 python preprocessors
+    #
+    @classmethod
+    def prerefl_cxro(cls, input_file="https://henke.lbl.gov/tmp/xray8378.dat", output_file="prerefl.dat",
+                     E_MIN=None, E_MAX=None, NPOINTS=1000):
+        """
+         Preprocessor for mirrors - data from file downloaded from https://henke.lbl.gov/ (refractio)
+
+         -"""
+
+        # retrieve physical constants needed
+        import scipy
+
+        import scipy.constants as codata
+
+        tocm = codata.h * codata.c / codata.e * 1e2
+
+        a = numpy.loadtxt(input_file, skiprows=2)
+
+        energy0 = a[:,0]
+        delta0  = a[:,1]
+        beta0   = a[:,2]
+
+        if E_MIN is None:
+            E_MIN = energy0.min()
+
+        if E_MAX is None:
+            E_MAX = energy0.max()
+
+        if energy0[0] > E_MIN:
+            raise Exception("File min(energy) = %g greater than limit %g, cannot interpolate" % (energy0[0], E_MIN))
+
+        if energy0[-1] < E_MAX:
+            raise Exception("File max(energy) = %g smaller than limit %g, cannot interpolate" % (energy0[-1], E_MAX))
+
+
+        # read density from header
+        if "http" in input_file:
+            import urllib.request as urllib
+            fp = urllib.urlopen(input_file)
+            lines = fp.readlines()
+            mylist = lines[0].decode('utf-8').split("=")
+            density = float(mylist[1])
+        else:
+            fp = open(input_file) # Open file on read mode
+            lines = fp.read().split("\n") # Create a list containing all lines
+            fp.close() # Close file
+            mylist = lines[0].split("=")
+            density = float(mylist[1])
+
+
+
+        energy = numpy.linspace(E_MIN, E_MAX, int(NPOINTS))
+        delta = numpy.interp(energy, energy0, delta0)
+        beta  = numpy.interp(energy, energy0, beta0)
+
+        twopi = numpy.pi * 2
+
+        npoint = energy.size
+        depth0 = density / 2.0
+
+        qmin = energy[0] / tocm * twopi
+        qmax = energy[-1] / tocm * twopi
+        qstep = (energy[1] - energy[0]) / tocm * twopi
+
+        f = open(output_file, 'wt')
+        f.write(("%20.11e " * 4 + "\n") % tuple([qmin, qmax, qstep, depth0]))
+        f.write("%i \n" % int(npoint))
+        for i in range(npoint):
+            tmp = 2e0 * delta[i]
+            f.write("%e \n" % tmp)
+        for i in range(npoint):
+            tmp2 = 2e0 * beta[i]
+            f.write("%e \n" % tmp2)
+        print("File written to disk: %s" % output_file)
+        f.close()
+
+
+        return None
 
 if __name__ == "__main__":
-
     from srxraylib.plot.gol import plot
+    if True:
+        from srxraylib.plot.gol import plot
 
-    #
-    # refractive index
-    #
-
-
-    prerefl_file = "Be5_30.dat"
-    PreRefl.prerefl(interactive=False, SYMBOL="Be", DENSITY=1.848, FILE=prerefl_file,
-                    E_MIN=5000.0, E_MAX=30000.0, E_STEP=100.0)
+        #
+        # refractive index
+        #
 
 
+        prerefl_file = "Be5_30.dat"
+        PreRefl.prerefl(interactive=False, SYMBOL="Be", DENSITY=1.848, FILE=prerefl_file,
+                        E_MIN=5000.0, E_MAX=30000.0, E_STEP=100.0)
 
-    a = PreRefl()
 
 
-    a.read_preprocessor_file(prerefl_file)
+        a = PreRefl()
 
-    refraction_index = a.get_refraction_index(10000.0,verbose=True)
 
-    a.preprocessor_info()
+        a.read_preprocessor_file(prerefl_file)
 
-    #
-    # mirror reflectivity
-    #
+        refraction_index = a.get_refraction_index(10000.0,verbose=True)
 
-    a = PreRefl()
+        a.preprocessor_info()
 
-    prerefl_file = "Rh5_50.dat"
-    PreRefl.prerefl(interactive=False, SYMBOL="Be", DENSITY=1.848, FILE=prerefl_file,
-                    E_MIN=5000.0, E_MAX=50000.0, E_STEP=100.0)
+        #
+        # mirror reflectivity
+        #
 
-    a.read_preprocessor_file(prerefl_file)
+        a = PreRefl()
 
-    Energy = numpy.linspace(5000.0,40000.0,100)
+        prerefl_file = "Rh5_50.dat"
+        PreRefl.prerefl(interactive=False, SYMBOL="Be", DENSITY=1.848, FILE=prerefl_file,
+                        E_MIN=5000.0, E_MAX=50000.0, E_STEP=100.0)
 
-    RS0 = numpy.zeros_like(Energy)
-    RS5 = numpy.zeros_like(Energy)
+        a.read_preprocessor_file(prerefl_file)
 
-    a.preprocessor_info()
+        Energy = numpy.linspace(5000.0,40000.0,100)
 
-    #
-    # scalar inputs
-    #
-    process_phase = False
-    method = 2
+        RS0 = numpy.zeros_like(Energy)
+        RS5 = numpy.zeros_like(Energy)
 
-    for ii,ee in enumerate(Energy):
+        a.preprocessor_info()
+
+        #
+        # scalar inputs
+        #
+        process_phase = False
+        method = 2
+
+        for ii,ee in enumerate(Energy):
+            if process_phase:
+                ss, pp = a.reflectivity_amplitudes_fresnel(grazing_angle_mrad=3.0, photon_energy_ev=ee,
+                                                           roughness_rms_A=0.0, method=method)
+                RS0[ii] = numpy.abs(ss)**2
+                ss, pp = a.reflectivity_amplitudes_fresnel(grazing_angle_mrad=3.0, photon_energy_ev=ee,
+                                                           roughness_rms_A=5.0, method=method)
+                RS5[ii] = numpy.abs(ss)**2
+            else:
+                rs, rp, rav = a.reflectivity_fresnel(grazing_angle_mrad=3.0,photon_energy_ev=ee,
+                                                     roughness_rms_A=0.0, method=method)
+                RS0[ii] = rs
+                rs, rp, rav = a.reflectivity_fresnel(grazing_angle_mrad=3.0,photon_energy_ev=ee,
+                                                     roughness_rms_A=5.0, method=method)
+                RS5[ii] = rs
+
+        plot(Energy,RS0,Energy,RS5,ylog=True,legend=["no roughness","5A RMS roughness"],title="scalar inputs")
+
+
+
+        # array inputs
+
+        Grazing_angle = numpy.ones_like(Energy) * 3.0
+
         if process_phase:
-            ss, pp = a.reflectivity_amplitudes_fresnel(grazing_angle_mrad=3.0, photon_energy_ev=ee,
-                                                       roughness_rms_A=0.0, method=method)
-            RS0[ii] = numpy.abs(ss)**2
-            ss, pp = a.reflectivity_amplitudes_fresnel(grazing_angle_mrad=3.0, photon_energy_ev=ee,
-                                                       roughness_rms_A=5.0, method=method)
-            RS5[ii] = numpy.abs(ss)**2
+            rs0, rp0 = a.reflectivity_amplitudes_fresnel(grazing_angle_mrad=Grazing_angle, photon_energy_ev=Energy,
+                                                         roughness_rms_A=0.0)
+            rs1, rp1 = a.reflectivity_amplitudes_fresnel(grazing_angle_mrad=Grazing_angle, photon_energy_ev=Energy,
+                                                         roughness_rms_A=5.0)
+
+            plot(Energy, numpy.abs(rs0)**2, Energy, numpy.abs(rs1)**2, ylog=True, legend=["no roughness", "5A RMS roughness"], title="array inputs")
+
         else:
-            rs, rp, rav = a.reflectivity_fresnel(grazing_angle_mrad=3.0,photon_energy_ev=ee,
-                                                 roughness_rms_A=0.0, method=method)
-            RS0[ii] = rs
-            rs, rp, rav = a.reflectivity_fresnel(grazing_angle_mrad=3.0,photon_energy_ev=ee,
-                                                 roughness_rms_A=5.0, method=method)
-            RS5[ii] = rs
+            rs0, rp0, rav0 = a.reflectivity_fresnel(grazing_angle_mrad=Grazing_angle, photon_energy_ev=Energy, roughness_rms_A=0.0)
+            rs1, rp1, rav1 = a.reflectivity_fresnel(grazing_angle_mrad=Grazing_angle, photon_energy_ev=Energy, roughness_rms_A=5.0)
 
-    plot(Energy,RS0,Energy,RS5,ylog=True,legend=["no roughness","5A RMS roughness"],title="scalar inputs")
+            plot(Energy, rs0, Energy, rs1, ylog=True, legend=["no roughness", "5A RMS roughness"],title="array inputs")
 
 
+    if True: # compare with cxro
 
-    # array inputs
+        prerefl_file = "reflec1.dat"
+        prerefl_file_cxro = "reflec_cxro.dat"
 
-    Grazing_angle = numpy.ones_like(Energy) * 3.0
 
-    if process_phase:
-        rs0, rp0 = a.reflectivity_amplitudes_fresnel(grazing_angle_mrad=Grazing_angle, photon_energy_ev=Energy,
-                                                     roughness_rms_A=0.0)
-        rs1, rp1 = a.reflectivity_amplitudes_fresnel(grazing_angle_mrad=Grazing_angle, photon_energy_ev=Energy,
-                                                     roughness_rms_A=5.0)
+        PreRefl.prerefl(interactive=False, SYMBOL="Au", DENSITY=19.3, FILE=prerefl_file,
+                        E_MIN=50.0, E_MAX=501.0, E_STEP=1.0)
 
-        plot(Energy, numpy.abs(rs0)**2, Energy, numpy.abs(rs1)**2, ylog=True, legend=["no roughness", "5A RMS roughness"], title="array inputs")
+        PreRefl.prerefl_cxro(input_file="https://henke.lbl.gov/tmp/xray8378.dat",
+                             output_file=prerefl_file_cxro,
+                             E_MIN=50, E_MAX=501,  NPOINTS=500)
 
-    else:
-        rs0, rp0, rav0 = a.reflectivity_fresnel(grazing_angle_mrad=Grazing_angle, photon_energy_ev=Energy, roughness_rms_A=0.0)
-        rs1, rp1, rav1 = a.reflectivity_fresnel(grazing_angle_mrad=Grazing_angle, photon_energy_ev=Energy, roughness_rms_A=5.0)
+        Energy = numpy.linspace(100.0,500.0,1000)
+        grazing_angle_mrad = 175.5
 
-        plot(Energy, rs0, Energy, rs1, ylog=True, legend=["no roughness", "5A RMS roughness"],title="array inputs")
+        a = PreRefl()
+        a.read_preprocessor_file(filename=prerefl_file)
+        rs, rp, rav = a.reflectivity_fresnel(grazing_angle_mrad=grazing_angle_mrad, photon_energy_ev=Energy,
+                                             roughness_rms_A=0.0, method=2)
+
+        a2 = PreRefl()
+        a2.read_preprocessor_file(filename=prerefl_file_cxro)
+        rs2, rp2, rav2 = a2.reflectivity_fresnel(grazing_angle_mrad=grazing_angle_mrad, photon_energy_ev=Energy,
+                                             roughness_rms_A=0.0, method=2)
+
+        plot(Energy, rs,
+             Energy, rs2, legend=["xraylib","cxro"],
+             xtitle="Photon energy [eV]", ytitle="Reflectivity", title="Au@%g mrad" % grazing_angle_mrad)
+
+    if True: # comparing with f1f2_calc
+
+        # """
+
+        prerefl_file = "reflec1.dat"
+
+        PreRefl.prerefl(interactive=False, SYMBOL="Au", DENSITY=19.3, FILE=prerefl_file,
+                        E_MIN=50.0, E_MAX=501.0, E_STEP=1.0)
+
+        Energy = numpy.linspace(100.0, 500.0, 1000)
+        grazing_angle_mrad = 175.5
+
+        PreRefl.prerefl(interactive=False, SYMBOL="Au", DENSITY=19.3, FILE=prerefl_file,
+                        E_MIN=50.0, E_MAX=501.0, E_STEP=1.0)
+
+        a = PreRefl()
+        a.read_preprocessor_file(prerefl_file)
+        a.get_refraction_index(100.0, verbose=1)
+
+        RS0 = numpy.zeros_like(Energy)
+
+        #
+        # scalar inputs
+        #
+        process_phase = False
+        method = 0
+
+        for ii,ee in enumerate(Energy):
+            if process_phase:
+                ss, pp = a.reflectivity_amplitudes_fresnel(grazing_angle_mrad=grazing_angle_mrad, photon_energy_ev=ee,
+                                                           roughness_rms_A=0.0, method=method)
+                RS0[ii] = numpy.abs(ss)**2
+            else:
+                rs, rp, rav = a.reflectivity_fresnel(grazing_angle_mrad=grazing_angle_mrad,photon_energy_ev=ee,
+                                                     roughness_rms_A=0.0, method=method)
+                RS0[ii] = rs
+
+
+
+        from xoppylib.xoppy_xraylib_util import f1f2_calc
+        aa = f1f2_calc("Au", Energy, theta=grazing_angle_mrad*1e-3, F=8, density=None, rough=0.0, verbose=True)
+        print(aa.shape)
+        plot(Energy,RS0,
+             Energy,aa,
+             legend=["RS0",'f1f2_calc'])
+
 
