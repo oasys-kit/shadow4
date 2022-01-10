@@ -502,6 +502,11 @@ class SourceGeometrical(object):
             u_norm[:,i] = uu
         return u / u_norm
 
+    def get_beam(self, N=5000, POL_DEG=1.0, POL_ANGLE=0.0, F_COHER=False):
+
+        rays =  self.calculate_rays(N=N,POL_DEG=POL_DEG,POL_ANGLE=POL_ANGLE,F_COHER=F_COHER)
+        return Beam.initialize_from_array(rays)
+
 if __name__ == "__main__":
     pass
 

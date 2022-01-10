@@ -40,6 +40,9 @@ class S4CurvedOpticalElement(S4OpticalElement):
         self._is_cylinder = is_cylinder
         self._curved_surface_shape = None # auxiliary field
 
+    def get_curved_surface_shape(self):
+        return self._curved_surface_shape
+
 ##################################################
 # CURVED OPTICAL ELEMENTS
 ##################################################

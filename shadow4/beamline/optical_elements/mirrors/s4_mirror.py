@@ -7,6 +7,9 @@ from syned.beamline.optical_elements.mirrors.mirror import Mirror
 
 from shadow4.physical_models.prerefl.prerefl import PreRefl
 
+from shadow4.beamline.s4_beamline_element import S4BeamlineElement
+
+
 class S4Mirror(Mirror):
 
     def __init__(self,
@@ -62,7 +65,7 @@ class S4Mirror(Mirror):
     def set_boundaries_rectangle(self, x_left=-1e3, x_right=1e3, y_bottom=-1e3, y_top=1e3):
         self._boundary_shape = Rectangle(x_left=x_left, x_right=x_right, y_bottom=y_bottom, y_top=y_top)
 
-from shadow4.beamline.s4_beamline_element import S4BeamlineElement
+
 
 class S4MirrorElement(S4BeamlineElement):
     

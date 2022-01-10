@@ -1,6 +1,8 @@
 
 import numpy
 
+from shadow4.tools.arrayofvectors import vector_refraction
+
 from numpy.testing import assert_equal, assert_almost_equal
 
 # OE surface in form of conic equation:
@@ -106,7 +108,10 @@ class S4Conic(object):
         self.ccc = ccc
 
 
+    # todo: remove and use shadow4.tools.arrayofvectors.vector_reflection
     def vector_reflection(self,v1,normal):
+        # \vec{r} = \vec{i} - 2 (\vec{i} \vec{n}) \vec{n}
+        # \vec{r} = \vec{i} - 2 tmp3
         tmp = v1 * normal
         tmp2 = tmp[0,:] + tmp[1,:] + tmp[2,:]
         tmp3 = normal.copy()
@@ -187,6 +192,64 @@ class S4Conic(object):
         newbeam.set_column(13, optical_path + t)
 
         return newbeam, normal
+
+
+    def apply_refraction_on_beam(self, newbeam, refraction_index_object, refraction_index_image):
+
+
+        # ;
+        # ; TRACING...
+        # ;
+
+        x1 =   newbeam.get_columns([1,2,3]) # numpy.array(3, npoints)
+        v1 =   newbeam.get_columns([4,5,6]) # numpy.array(3, npoints)
+        flag = newbeam.get_column(10)
+        optical_path = newbeam.get_column(13)
+
+        t1,t2 = self.calculate_intercept(x1,v1)
+        t, iflag = self.choose_solution(t1,t2,reference_distance=-newbeam.get_column(2).mean())
+
+        # for i in range(t.size):
+        #     print(">>>> solutions: ",t1[i],t2[i],t[i])
+
+        x2 = x1 + v1 * t
+        for i in range(flag.size):
+            if iflag[i] < 0: flag[i] = -100
+
+
+        # ;
+        # ; Calculates the normal at each intercept [see shadow's normal.F]
+        # ;
+
+        normal = self.get_normal(x2)
+        print(">>>>>> apply_refraction_on_beam, normal=", normal.shape, normal)
+
+        # ;
+        # ; reflection
+        # ;
+
+        v2t = vector_refraction(v1.T,normal.T, refraction_index_object, refraction_index_image) # TODO...
+        v2 = v2t.T
+
+        print(">>> v1: ", v1.T[0,:])
+        print(">>> n: ", normal.T[0, :])
+        print(">>> v2: ", v2.T[0, :])
+
+        # ;
+        # ; writes the mirr.XX file
+        # ;
+
+        newbeam.set_column(1, x2[0])
+        newbeam.set_column(2, x2[1])
+        newbeam.set_column(3, x2[2])
+        newbeam.set_column(4, v2[0])
+        newbeam.set_column(5, v2[1])
+        newbeam.set_column(6, v2[2])
+        newbeam.set_column(10, flag )
+        newbeam.set_column(13, optical_path + t)
+
+        return newbeam, normal
+
 
     def calculate_intercept(self,XIN,VIN,keep=0):
 
