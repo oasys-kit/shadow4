@@ -28,7 +28,7 @@ def refractive_interface_with_collimated_beam(do_plot=True):
 
     src = SourceGeometrical()
     src.set_energy_distribution_singleline(value=5000, unit='A')
-    src.set_spatial_type_rectangle(width=1e-3, height=1e-5)
+    src.set_spatial_type_rectangle(width=1e-3, height=1e-3)
     src.set_angular_distribution_uniform(0,0,0,0)
 
     beam = src.get_beam()
@@ -36,19 +36,19 @@ def refractive_interface_with_collimated_beam(do_plot=True):
     print(beam.info())
     SX, SZ = (1e6*beam.get_standard_deviation(1),1e6*beam.get_standard_deviation(3))
 
-    if do_plot:
-        plotxy(beam,1,3,nbins=100,title="SOURCE")
+    # if do_plot:
+    #     plotxy(beam,1,3,nbins=100,title="SOURCE")
         # histo1(beam, 1, nbins=100)
 
     #
     # lens definition
     #
 
-    # lens1e = S4IdealLensElement(optical_element=S4IdealLens(name="Undefined", focal_x=10.0, focal_y=10.0),
-    #                             coordinates=ElementCoordinates(p=100.0, q=10.0))
+    # interface1 = S4IdealLensElement(optical_element=S4IdealLens(name="Undefined", focal_x=5.0, focal_y=5.0),
+    #                             coordinates=ElementCoordinates(p=0.0, q=5.0))
     #
     #
-    # print(lens1e.info())
+    # print(interface1.info())
 
 
     interface1 = S4ConicInterfaceElement(
@@ -57,9 +57,9 @@ def refractive_interface_with_collimated_beam(do_plot=True):
                                     boundary_shape=None,
                                     material_object=1.0,
                                     material_image=1.5,
-                                    conic_coefficients=[1.0, 1.0, 1.0, 0.0, -0.0, -0.0, 0.0, 0.0, 3350.0, 0.0],
+                                    conic_coefficients=[1.0, 1.0, 1.0, 0.0, -0.0, -0.0, 0.0, 0.0, 3350.0e-3, 0.0],
                                     ),
-                                coordinates=ElementCoordinates(p=0.0, q=5000.0,
+                                coordinates=ElementCoordinates(p=0.0, q=5000.0e-3,
                                             angle_radial=0.0, angle_azimuthal=0.0, angle_radial_out=numpy.pi))
 
     print(interface1.info())
@@ -68,11 +68,13 @@ def refractive_interface_with_collimated_beam(do_plot=True):
     # trace
     #
 
-    beam2, tmp = interface1.trace_beam(beam)
+    beam2, mirr2 = interface1.trace_beam(beam)
 
     #
     if do_plot:
-        plotxy(beam2,1,3,nbins=100,title="FOCAL PLANE")
+        plotxy(beam2, 1, 3, nbins=100, title="FOCAL PLANE")
+        plotxy(mirr2, 1, 3, nbins=100, title="FOOTPRINT")
+        plotxy(mirr2, 4, 5, nbins=100, title="FOOT DIV")
 
     FX, FZ = (1e6*beam2.get_standard_deviation(1),1e6*beam2.get_standard_deviation(3))
     print("Source dimensions: %f %f um"%(SX,SZ))

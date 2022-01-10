@@ -30,52 +30,9 @@ class S4Conic(object):
     def initialize_as_plane(cls):
         return S4Conic(numpy.array([0, 0, 0, 0, 0, 0, 0, 0, -1., 0]))
 
-    #
-    # initializers from focal distances
-    #
-    @classmethod
-    def initialize_as_sphere_from_focal_distances(cls,p, q, theta1, cylindrical=0, cylangle=0.0, switch_convexity=0):
-        ccc = S4Conic()
-        ccc.set_sphere_from_focal_distances(p,q,theta1)
-        if cylindrical:
-            ccc.set_cylindrical(cylangle)
-        if switch_convexity:
-            ccc.switch_convexity()
-        return ccc
-
-
-    @classmethod
-    def initialize_as_ellipsoid_from_focal_distances(cls,p, q, theta1, cylindrical=0, cylangle=0.0, switch_convexity=0):
-        ccc = S4Conic()
-        ccc.set_ellipsoid_from_focal_distances(p,q,theta1)
-        if cylindrical:
-            ccc.set_cylindrical(cylangle)
-        if switch_convexity:
-            ccc.switch_convexity()
-        return ccc
-
-    @classmethod
-    def initialize_as_paraboloid_from_focal_distances(cls,p, q, theta1, cylindrical=0, cylangle=0.0, switch_convexity=0):
-        ccc = S4Conic()
-        ccc.set_paraboloid_from_focal_distances(p,q,theta1)
-        if cylindrical:
-            ccc.set_cylindrical(cylangle)
-        if switch_convexity:
-            ccc.switch_convexity()
-        return ccc
-
-    @classmethod
-    def initialize_as_hyperboloid_from_focal_distances(cls,p, q, theta1, cylindrical=0, cylangle=0.0, switch_convexity=0):
-        ccc = S4Conic()
-        ccc.set_hyperboloid_from_focal_distances(p,q,theta1)
-        if cylindrical:
-            ccc.set_cylindrical(cylangle)
-        if switch_convexity:
-            ccc.switch_convexity()
-        return ccc
 
     #
-    # initializars from surface parameters
+    # initializers from surface parameters
     #
     @classmethod
     def initialize_as_sphere_from_curvature_radius(cls, radius, cylindrical=0, cylangle=0.0, switch_convexity=0):
@@ -97,34 +54,6 @@ class S4Conic(object):
     def get_coefficients(self):
         return self.ccc.copy()
 
-
-    #
-    # setters
-    #
-
-    def set_coefficients(self,ccc):
-        if numpy.array(ccc).size != 10:
-            raise Exception("Invalid coefficients (dimension must be 10)")
-        self.ccc = ccc
-
-
-    # todo: remove and use shadow4.tools.arrayofvectors.vector_reflection
-    def vector_reflection(self,v1,normal):
-        # \vec{r} = \vec{i} - 2 (\vec{i} \vec{n}) \vec{n}
-        # \vec{r} = \vec{i} - 2 tmp3
-        tmp = v1 * normal
-        tmp2 = tmp[0,:] + tmp[1,:] + tmp[2,:]
-        tmp3 = normal.copy()
-
-        for jj in (0,1,2):
-            tmp3[jj,:] = tmp3[jj,:] * tmp2
-
-        v2 = v1 - 2 * tmp3
-        v2mod = numpy.sqrt(v2[0,:]**2 + v2[1,:]**2 + v2[2,:]**2)
-        v2 /= v2mod
-
-        return v2
-
     def get_normal(self,x2):
         # ;
         # ; Calculates the normal at intercept points x2 [see shadow's normal.F]
@@ -142,114 +71,121 @@ class S4Conic(object):
 
         return normal
 
+    #
+    # setters
+    #
 
-    def apply_specular_reflection_on_beam(self, newbeam):
+    def set_coefficients(self,ccc):
+        if numpy.array(ccc).size != 10:
+            raise Exception("Invalid coefficients (dimension must be 10)")
+        self.ccc = ccc
 
+    def set_cylindrical(self,CIL_ANG):
 
-        # ;
-        # ; TRACING...
-        # ;
+        COS_CIL = numpy.cos(CIL_ANG)
+        SIN_CIL = numpy.sin(CIL_ANG)
 
-        x1 =   newbeam.get_columns([1,2,3]) # numpy.array(a3.getshcol([1,2,3]))
-        v1 =   newbeam.get_columns([4,5,6]) # numpy.array(a3.getshcol([4,5,6]))
-        flag = newbeam.get_column(10)        # numpy.array(a3.getshonecol(10))
-        optical_path = newbeam.get_column(13)
-
-        t1,t2 = self.calculate_intercept(x1,v1)
-        t, iflag = self.choose_solution(t1,t2,reference_distance=-newbeam.get_column(2).mean())
-
-        # for i in range(t.size):
-        #     print(">>>> solutions: ",t1[i],t2[i],t[i])
-
-        x2 = x1 + v1 * t
-        for i in range(flag.size):
-            if iflag[i] < 0: flag[i] = -100
-
-
-        # ;
-        # ; Calculates the normal at each intercept [see shadow's normal.F]
-        # ;
-
-        normal = self.get_normal(x2)
-
-        # ;
-        # ; reflection
-        # ;
-
-        v2 = self.vector_reflection(v1,normal)
-
-        # ;
-        # ; writes the mirr.XX file
-        # ;
-
-        newbeam.set_column(1, x2[0])
-        newbeam.set_column(2, x2[1])
-        newbeam.set_column(3, x2[2])
-        newbeam.set_column(4, v2[0])
-        newbeam.set_column(5, v2[1])
-        newbeam.set_column(6, v2[2])
-        newbeam.set_column(10, flag )
-        newbeam.set_column(13, optical_path + t)
-
-        return newbeam, normal
+        A_1	 =   self.ccc[1-1]
+        A_2	 =   self.ccc[2-1]
+        A_3	 =   self.ccc[3-1]
+        A_4	 =   self.ccc[4-1]
+        A_5	 =   self.ccc[5-1]
+        A_6	 =   self.ccc[6-1]
+        A_7	 =   self.ccc[7-1]
+        A_8	 =   self.ccc[8-1]
+        A_9	 =   self.ccc[9-1]
+        A_10 =   self.ccc[10-1]
 
 
-    def apply_refraction_on_beam(self, newbeam, refraction_index_object, refraction_index_image):
+        self.ccc[1-1] =  A_1 * SIN_CIL**4 + A_2 * COS_CIL**2 * SIN_CIL**2 - A_4 * COS_CIL * SIN_CIL**3
+        self.ccc[2-1] =  A_2 * COS_CIL**4 + A_1 * COS_CIL**2 * SIN_CIL**2 - A_4 * COS_CIL**3 * SIN_CIL
+        self.ccc[3-1] =  A_3						 # Z^2
+        self.ccc[4-1] =  - 2*A_1 * COS_CIL * SIN_CIL**3 - 2 * A_2 * COS_CIL**3 * SIN_CIL + 2 * A_4 * COS_CIL**2 *SIN_CIL**2 # X Y
+        self.ccc[5-1] =  A_5 * COS_CIL**2 - A_6 * COS_CIL * SIN_CIL	 # Y Z
+        self.ccc[6-1] =  A_6 * SIN_CIL**2 - A_5 * COS_CIL * SIN_CIL	 # X Z
+        self.ccc[7-1] =  A_7 * SIN_CIL**2 - A_8 * COS_CIL * SIN_CIL	 # X
+        self.ccc[8-1] =  A_8 * COS_CIL**2 - A_7 * COS_CIL * SIN_CIL	 # Y
+        self.ccc[9-1] =  A_9						 # Z
+        self.ccc[10-1]=  A_10
 
 
-        # ;
-        # ; TRACING...
-        # ;
 
-        x1 =   newbeam.get_columns([1,2,3]) # numpy.array(3, npoints)
-        v1 =   newbeam.get_columns([4,5,6]) # numpy.array(3, npoints)
-        flag = newbeam.get_column(10)
-        optical_path = newbeam.get_column(13)
-
-        t1,t2 = self.calculate_intercept(x1,v1)
-        t, iflag = self.choose_solution(t1,t2,reference_distance=-newbeam.get_column(2).mean())
-
-        # for i in range(t.size):
-        #     print(">>>> solutions: ",t1[i],t2[i],t[i])
-
-        x2 = x1 + v1 * t
-        for i in range(flag.size):
-            if iflag[i] < 0: flag[i] = -100
+    def set_sphere_from_curvature_radius(self,rmirr):
+        self.ccc[1-1] =  1.0	        # X^2  # = 0 in cylinder case
+        self.ccc[2-1] =  1.0	        # Y^2
+        self.ccc[3-1] =  1.0	        # Z^2
+        self.ccc[4-1] =   .0	        # X*Y   # = 0 in cylinder case
+        self.ccc[5-1] =   .0	        # Y*Z
+        self.ccc[6-1] =   .0	        # X*Z   # = 0 in cylinder case
+        self.ccc[7-1] =   .0	        # X     # = 0 in cylinder case
+        self.ccc[8-1] =   .0	        # Y
+        self.ccc[9-1] = -2 * rmirr	# Z
+        self.ccc[10-1]  =   .0       # G
 
 
-        # ;
-        # ; Calculates the normal at each intercept [see shadow's normal.F]
-        # ;
 
-        normal = self.get_normal(x2)
-        print(">>>>>> apply_refraction_on_beam, normal=", normal.shape, normal)
+    def set_ellipsoid_from_external_parameters(self, AXMAJ, AXMIN, ELL_THE):
+        YCEN  = AXMAJ*AXMIN
+        YCEN  = YCEN/numpy.sqrt(AXMIN**2+AXMAJ**2*numpy.tan(ELL_THE)**2)
+        ZCEN  = YCEN*numpy.tan(ELL_THE)
+        ZCEN  = - numpy.abs(ZCEN)
+        if (numpy.cos(ELL_THE) < 0):
+            YCEN = - numpy.abs(YCEN)
+        else:
+            YCEN = numpy.abs(YCEN)
 
-        # ;
-        # ; reflection
-        # ;
 
-        v2t = vector_refraction(v1.T,normal.T, refraction_index_object, refraction_index_image) # TODO...
-        v2 = v2t.T
+        AFOCI = numpy.sqrt( AXMAJ**2 - AXMIN**2 )
+        # ECCENT = AFOCI/AXMAJ
 
-        print(">>> v1: ", v1.T[0,:])
-        print(">>> n: ", normal.T[0, :])
-        print(">>> v2: ", v2.T[0, :])
+        # ;C
+        # ;C Computes now the normal in the mirror center.
+        # ;C
+        RNCEN = numpy.zeros(3)
+        RNCEN[1-1] =  0.0
+        RNCEN[2-1] = -2 * YCEN / AXMAJ**2
+        RNCEN[3-1] = -2 * ZCEN / AXMIN**2
+        # ;CALL NORM(RNCEN,RNCEN)
+        RNCEN = RNCEN / numpy.sqrt((RNCEN**2).sum())
+        # ;C
+        # ;C Computes the tangent versor in the mirror center.
+        # ;C
+        RTCEN = numpy.zeros(3)
+        RTCEN[1-1] =  0.0
+        RTCEN[2-1] =  RNCEN[3-1]
+        RTCEN[3-1] = -RNCEN[2-1]
 
-        # ;
-        # ; writes the mirr.XX file
-        # ;
 
-        newbeam.set_column(1, x2[0])
-        newbeam.set_column(2, x2[1])
-        newbeam.set_column(3, x2[2])
-        newbeam.set_column(4, v2[0])
-        newbeam.set_column(5, v2[1])
-        newbeam.set_column(6, v2[2])
-        newbeam.set_column(10, flag )
-        newbeam.set_column(13, optical_path + t)
 
-        return newbeam, normal
+        # ;C Computes now the quadric coefficient with the mirror center
+        # ;C located at (0,0,0) and normal along (0,0,1)
+        # ;C
 
+        A = 1 / AXMIN ** 2
+        B = 1 / AXMAJ ** 2
+        C = A
+        self.ccc[0] = A
+        self.ccc[1] = B * RTCEN[2 - 1] ** 2 + C * RTCEN[3 - 1] ** 2
+        self.ccc[2] = B * RNCEN[2 - 1] ** 2 + C * RNCEN[3 - 1] ** 2
+        self.ccc[3] = 0.0
+        self.ccc[4] = 2 * (B * RNCEN[2 - 1] * RTCEN[2 - 1] + C * RNCEN[3 - 1] * RTCEN[3 - 1])
+        self.ccc[5] = 0.0
+        self.ccc[6] = 0.0
+        self.ccc[7] = 0.0
+        self.ccc[8] = 2 * (B * YCEN * RNCEN[2 - 1] + C * ZCEN * RNCEN[3 - 1])
+        self.ccc[9] = 0.0
+
+
+
+
+
+    #
+    # calculations
+    #
+    def switch_convexity(self):
+        self.ccc[5-1]  = - self.ccc[5-1]
+        self.ccc[6-1]  = - self.ccc[6-1]
+        self.ccc[9-1]  = - self.ccc[9-1]
 
     def calculate_intercept(self,XIN,VIN,keep=0):
 
@@ -409,7 +345,6 @@ class S4Conic(object):
 
 
 
-
     def choose_solution(self,TPAR1,TPAR2,reference_distance=10.0):
         #todo remove this nasty thing
         TPAR = numpy.zeros_like(TPAR1)
@@ -460,464 +395,6 @@ class S4Conic(object):
             TPAR2 = numpy.asscalar(TPAR2)
 
         return TPAR2.real
-
-
-    def set_cylindrical(self,CIL_ANG):
-
-        COS_CIL = numpy.cos(CIL_ANG)
-        SIN_CIL = numpy.sin(CIL_ANG)
-
-        A_1	 =   self.ccc[1-1]
-        A_2	 =   self.ccc[2-1]
-        A_3	 =   self.ccc[3-1]
-        A_4	 =   self.ccc[4-1]
-        A_5	 =   self.ccc[5-1]
-        A_6	 =   self.ccc[6-1]
-        A_7	 =   self.ccc[7-1]
-        A_8	 =   self.ccc[8-1]
-        A_9	 =   self.ccc[9-1]
-        A_10 =   self.ccc[10-1]
-
-
-        self.ccc[1-1] =  A_1 * SIN_CIL**4 + A_2 * COS_CIL**2 * SIN_CIL**2 - A_4 * COS_CIL * SIN_CIL**3
-        self.ccc[2-1] =  A_2 * COS_CIL**4 + A_1 * COS_CIL**2 * SIN_CIL**2 - A_4 * COS_CIL**3 * SIN_CIL
-        self.ccc[3-1] =  A_3						 # Z^2
-        self.ccc[4-1] =  - 2*A_1 * COS_CIL * SIN_CIL**3 - 2 * A_2 * COS_CIL**3 * SIN_CIL + 2 * A_4 * COS_CIL**2 *SIN_CIL**2 # X Y
-        self.ccc[5-1] =  A_5 * COS_CIL**2 - A_6 * COS_CIL * SIN_CIL	 # Y Z
-        self.ccc[6-1] =  A_6 * SIN_CIL**2 - A_5 * COS_CIL * SIN_CIL	 # X Z
-        self.ccc[7-1] =  A_7 * SIN_CIL**2 - A_8 * COS_CIL * SIN_CIL	 # X
-        self.ccc[8-1] =  A_8 * COS_CIL**2 - A_7 * COS_CIL * SIN_CIL	 # Y
-        self.ccc[9-1] =  A_9						 # Z
-        self.ccc[10-1]=  A_10
-
-    def switch_convexity(self):
-        self.ccc[5-1]  = - self.ccc[5-1]
-        self.ccc[6-1]  = - self.ccc[6-1]
-        self.ccc[9-1]  = - self.ccc[9-1]
-
-
-    def set_sphere_from_focal_distances(self, ssour, simag, theta_grazing, verbose=True):
-        # todo: implement also sagittal bending
-        print("Theta grazing is: %f" %(theta_grazing))
-        theta = (numpy.pi/2) - theta_grazing
-        rmirr = ssour * simag * 2 / numpy.cos(theta) / (ssour + simag)
-
-        if verbose:
-            txt = ""
-            txt += "p=%f, q=%f, theta_grazing=%f rad, theta_normal=%f rad\n"%(ssour,simag,theta_grazing,theta)
-            txt += "Radius= %f \n"%(rmirr)
-            print(txt)
-
-        self.ccc[1-1] =  1.0	        # X^2  # = 0 in cylinder case
-        self.ccc[2-1] =  1.0	        # Y^2
-        self.ccc[3-1] =  1.0	        # Z^2
-        self.ccc[4-1] =   .0	        # X*Y   # = 0 in cylinder case
-        self.ccc[5-1] =   .0	        # Y*Z
-        self.ccc[6-1] =   .0	        # X*Z   # = 0 in cylinder case
-        self.ccc[7-1] =   .0	        # X     # = 0 in cylinder case
-        self.ccc[8-1] =   .0	        # Y
-        self.ccc[9-1] = -2 * rmirr	# Z
-        self.ccc[10-1]  =   .0       # G
-
-    def set_sphere_from_curvature_radius(self,rmirr):
-        self.ccc[1-1] =  1.0	        # X^2  # = 0 in cylinder case
-        self.ccc[2-1] =  1.0	        # Y^2
-        self.ccc[3-1] =  1.0	        # Z^2
-        self.ccc[4-1] =   .0	        # X*Y   # = 0 in cylinder case
-        self.ccc[5-1] =   .0	        # Y*Z
-        self.ccc[6-1] =   .0	        # X*Z   # = 0 in cylinder case
-        self.ccc[7-1] =   .0	        # X     # = 0 in cylinder case
-        self.ccc[8-1] =   .0	        # Y
-        self.ccc[9-1] = -2 * rmirr	# Z
-        self.ccc[10-1]  =   .0       # G
-
-    def set_ellipsoid_from_focal_distances(self, ssour, simag, theta_grazing, verbose=True):
-
-        # theta = (numpy.pi/2) - theta_grazing
-        # COSTHE = numpy.cos(theta)
-        # SINTHE = numpy.sin(theta)
-        #
-        # AXMAJ = ( ssour + simag )/2
-        # AXMIN = numpy.sqrt( simag * ssour) * COSTHE
-        #
-        #
-        # AFOCI = numpy.sqrt( AXMAJ**2 - AXMIN**2 )
-        # ECCENT = AFOCI/AXMAJ
-        # # ;C
-        # # ;C The center is computed on the basis of the object and image positions
-        # # ;C
-        # YCEN  = (ssour - simag) * 0.5 / ECCENT
-        # ZCEN  = -numpy.sqrt( 1 - YCEN**2 / AXMAJ**2) * AXMIN
-        # # ;C
-        # # ;C Computes now the normal in the mirror center.
-        # # ;C
-        # RNCEN = numpy.zeros(3)
-        # RNCEN[1-1] =  0.0
-        # RNCEN[2-1] = -2 * YCEN / AXMAJ**2
-        # RNCEN[3-1] = -2 * ZCEN / AXMIN**2
-        # # ;CALL NORM(RNCEN,RNCEN)
-        # RNCEN = RNCEN / numpy.sqrt((RNCEN**2).sum())
-        # # ;C
-        # # ;C Computes the tangent versor in the mirror center.
-        # # ;C
-        # RTCEN = numpy.zeros(3)
-        # RTCEN[1-1] =  0.0
-        # RTCEN[2-1] =  RNCEN[3-1]
-        # RTCEN[3-1] = -RNCEN[2-1]
-        #
-        # if verbose:
-        #     txt = ""
-        #     txt += "p=%f, q=%f, theta_grazing=%f rad, theta_normal=%f rad\n" % (ssour, simag, theta_grazing, theta)
-        #     txt += 'Ellipsoid of revolution a=%f \n'%AXMAJ
-        #     txt += 'Ellipsoid of revolution b=%f \n'%AXMIN
-        #     txt += 'Ellipsoid of revolution c=sqrt(a^2-b^2)=%f \n'%AFOCI
-        #     txt += 'Ellipsoid of revolution focal distance c^2=%f \n'%(AFOCI**2)
-        #     txt += 'Ellipsoid of revolution excentricity: %f \n'%ECCENT
-        #     txt += 'Optical element center at: [0,%f,%f]\n'%(YCEN,ZCEN)
-        #     txt += 'Optical element normal: [%f,%f,%f]\n'%(RNCEN[0],RNCEN[1],RNCEN[2])
-        #     txt += 'Optical element tangent: [%f,%f,%f]\n'%(RTCEN[0],RTCEN[1],RTCEN[2])
-        #     print(txt)
-
-        tkt = self.calculate_ellipsoid_parameters_from_focal_distances(ssour, simag, theta_grazing, verbose=verbose)
-
-        AXMAJ = tkt["AXMAJ"]
-        AXMIN = tkt["AXMIN"]
-        RTCEN = tkt["RTCEN"]
-        RNCEN = tkt["RNCEN"]
-        YCEN = tkt["YCEN"]
-        ZCEN = tkt["ZCEN"]
-
-        # ;C Computes now the quadric coefficient with the mirror center
-        # ;C located at (0,0,0) and normal along (0,0,1)
-        # ;C
-
-        A = 1 / AXMIN**2
-        B = 1 / AXMAJ**2
-        C = A
-        self.ccc[0] = A
-        self.ccc[1] = B * RTCEN[2-1]**2 + C * RTCEN[3-1]**2
-        self.ccc[2] = B * RNCEN[2-1]**2 + C * RNCEN[3-1]**2
-        self.ccc[3] = 0.0
-        self.ccc[4] = 2 * (B * RNCEN[2-1] * RTCEN[2-1] + C * RNCEN[3-1] * RTCEN[3-1])
-        self.ccc[5] = 0.0
-        self.ccc[6] = 0.0
-        self.ccc[7] = 0.0
-        self.ccc[8] = 2 * (B * YCEN * RNCEN[2-1] + C * ZCEN * RNCEN[3-1])
-        self.ccc[9] = 0.0
-
-    def set_ellipsoid_from_external_parameters(self, AXMAJ, AXMIN, ELL_THE):
-        YCEN  = AXMAJ*AXMIN
-        YCEN  = YCEN/numpy.sqrt(AXMIN**2+AXMAJ**2*numpy.tan(ELL_THE)**2)
-        ZCEN  = YCEN*numpy.tan(ELL_THE)
-        ZCEN  = - numpy.abs(ZCEN)
-        if (numpy.cos(ELL_THE) < 0):
-            YCEN = - numpy.abs(YCEN)
-        else:
-            YCEN = numpy.abs(YCEN)
-
-
-        AFOCI = numpy.sqrt( AXMAJ**2 - AXMIN**2 )
-        # ECCENT = AFOCI/AXMAJ
-
-        # ;C
-        # ;C Computes now the normal in the mirror center.
-        # ;C
-        RNCEN = numpy.zeros(3)
-        RNCEN[1-1] =  0.0
-        RNCEN[2-1] = -2 * YCEN / AXMAJ**2
-        RNCEN[3-1] = -2 * ZCEN / AXMIN**2
-        # ;CALL NORM(RNCEN,RNCEN)
-        RNCEN = RNCEN / numpy.sqrt((RNCEN**2).sum())
-        # ;C
-        # ;C Computes the tangent versor in the mirror center.
-        # ;C
-        RTCEN = numpy.zeros(3)
-        RTCEN[1-1] =  0.0
-        RTCEN[2-1] =  RNCEN[3-1]
-        RTCEN[3-1] = -RNCEN[2-1]
-
-
-
-        # ;C Computes now the quadric coefficient with the mirror center
-        # ;C located at (0,0,0) and normal along (0,0,1)
-        # ;C
-
-        A = 1 / AXMIN ** 2
-        B = 1 / AXMAJ ** 2
-        C = A
-        self.ccc[0] = A
-        self.ccc[1] = B * RTCEN[2 - 1] ** 2 + C * RTCEN[3 - 1] ** 2
-        self.ccc[2] = B * RNCEN[2 - 1] ** 2 + C * RNCEN[3 - 1] ** 2
-        self.ccc[3] = 0.0
-        self.ccc[4] = 2 * (B * RNCEN[2 - 1] * RTCEN[2 - 1] + C * RNCEN[3 - 1] * RTCEN[3 - 1])
-        self.ccc[5] = 0.0
-        self.ccc[6] = 0.0
-        self.ccc[7] = 0.0
-        self.ccc[8] = 2 * (B * YCEN * RNCEN[2 - 1] + C * ZCEN * RNCEN[3 - 1])
-        self.ccc[9] = 0.0
-
-    def set_paraboloid_from_focal_distances(self, SSOUR, SIMAG, theta_grazing, infinity_location="",
-                                            verbose=True):
-        # ;C
-        # ;C Computes the parabola
-        # ;C
-        theta = (numpy.pi/2) - theta_grazing
-        COSTHE = numpy.cos(theta)
-        SINTHE = numpy.sin(theta)
-
-        if infinity_location == "":
-            if SSOUR <= SIMAG:
-                location = "q"
-            else:
-                location = "p"
-
-        if location=="q":
-            PARAM = 2 * SSOUR * COSTHE**2
-            YCEN = -SSOUR * SINTHE**2
-            ZCEN = -2 * SSOUR * SINTHE * COSTHE
-            fact = -1.0
-        elif location == "p":
-            PARAM =   2 * SIMAG * COSTHE**2
-            YCEN = - SIMAG * SINTHE**2
-            ZCEN = -2 * SIMAG * SINTHE * COSTHE
-            fact = 1.0
-
-        if verbose:
-            txt = ""
-            if location == "p":
-                txt += "Source is at infinity\n"
-                txt += "q=%f, theta_grazing=%f rad, theta_normal=%f rad\n" % (SIMAG, theta_grazing, theta)
-            else:
-                txt += "Image is at infinity\n"
-                txt += "p=%f, theta_grazing=%f rad, theta_normal=%f rad\n" % (SSOUR, theta_grazing, theta)
-            txt += 'Parabloid of revolution PARAM=%f \n'%PARAM
-            txt += 'Optical element center at: [0,%f,%f]\n'%(YCEN,ZCEN)
-            print(txt)
-
-        self.ccc[0] = 1.0
-        self.ccc[1] = COSTHE**2
-        self.ccc[2] = SINTHE**2
-        self.ccc[3] = 0.0
-        self.ccc[4] = 2 * fact * COSTHE * SINTHE
-        self.ccc[5] = 0.0
-        self.ccc[6] = 0.0
-        self.ccc[7] = 0.0
-        self.ccc[8] = 2 * ZCEN * SINTHE - 2 * PARAM * COSTHE
-        self.ccc[9] = 0.0
-
-
-    def set_hyperboloid_from_focal_distances(self, SSOUR, SIMAG, theta_grazing, verbose=True):
-
-        theta = (numpy.pi/2) - theta_grazing
-        COSTHE = numpy.cos(theta)
-        SINTHE = numpy.sin(theta)
-
-        AXMAJ = (SSOUR - SIMAG)/2
-        # ;C
-        # ;C If AXMAJ > 0, then we are on the left branch of the hyp. Else we
-        # ;C are onto the right one. We have to discriminate between the two cases
-        # ;C In particular, if AXMAJ.LT.0 then the hiperb. will be convex.
-        # ;C
-        AFOCI = 0.5 * numpy.sqrt( SSOUR**2 + SIMAG**2 + 2 * SSOUR * SIMAG * numpy.cos(2 * theta) )
-        # ;; why this works better?
-        # ;;		AFOCI = 0.5D0*SQRT( SSOUR^2 + SIMAG^2 - 2*SSOUR*SIMAG*COS(2*THETA) )
-        AXMIN = numpy.sqrt( AFOCI**2 - AXMAJ**2 )
-
-        ECCENT = AFOCI / numpy.abs( AXMAJ )
-
-        BRANCH = -1.0   #; branch=+1,-1
-        # ;C
-        # ;C Computes the center coordinates in the hiperbola RF.
-        # ;C
-        # ;IF AXMAJ GT 0.0D0 THEN BEGIN
-        # ;  YCEN	=   ( AXMAJ - SSOUR )/ECCENT			; < 0
-        # ;ENDIF ELSE BEGIN
-        # ;  YCEN	=   ( SSOUR - AXMAJ )/ECCENT			; > 0
-        # ;ENDELSE
-
-        if AXMAJ>0:
-            YCEN = (SSOUR - AXMAJ) / ECCENT
-        else:
-            YCEN = (SSOUR - AXMAJ) / ECCENT
-
-
-        #YCEN =   numpy.abs( SSOUR - AXMAJ ) / ECCENT * BRANCH
-
-        ZCEN_ARG = numpy.abs( YCEN**2 / AXMAJ**2 - 1.0)
-
-        if ZCEN_ARG > 1.0e-14:
-            ZCEN = -AXMIN * numpy.sqrt(ZCEN_ARG)  # < 0
-        else:
-            ZCEN = 0.0
-
-        # ;
-        # ; THIS GIVES BETTER LOOKING HYPERBOLA BUT WORSE TRACING. WHY?
-        # ;YCEN=ABS(YCEN)
-        # ;ZCEN=ABS(ZCEN)
-        # ;C
-        # ;C Computes now the normal in the same RF. The signs are forced to
-        # ;C suit our RF.
-        # ;C
-
-        RNCEN = numpy.zeros(3)
-        RNCEN[1-1] = 0.0
-        RNCEN[2-1] = -numpy.abs( YCEN ) / AXMAJ**2 # < 0
-        RNCEN[3-1] = -ZCEN / AXMIN**2              # > 0
-
-        RNCEN = RNCEN / numpy.sqrt((RNCEN**2).sum())
-        # ;C
-        # ;C Computes the tangent in the same RF
-        # ;C
-        RTCEN = numpy.zeros(3)
-        RTCEN[1-1] =  0.0
-        RTCEN[2-1] = -RNCEN[3-1]  # > 0
-        RTCEN[3-1] =  RNCEN[2-1]  # > 0
-
-        # txt = [txt,  $
-        # String('Rev Hyperboloid a: ', $
-        # AXMAJ, Format='(A40,G20.15)'), $
-        # String('Rev Hyperboloid b: ', $
-        # AXMIN, Format='(A40,G20.15)'), $
-        # String('Rev Hyperboloid c: ', $
-        # AFOCI, Format='(A40,G20.15)'), $
-        # String('Rev Hyperboloid focal discance c^2: ', $
-        # AFOCI^2, Format='(A40,G20.15)'), $
-        # String('Rev Hyperboloid excentricity: ', $
-        # ECCENT, Format='(A40,G20.15)'), $
-        # 'Mirror BRANCH: '+String(branch), $
-        # 'Mirror center at: '+vect2string([0,YCEN,ZCEN]), $
-        # 'Mirror normal: '+vect2string(RNCEN), $
-        # 'Mirror tangent: '+vect2string(RTCEN) ]
-        if verbose:
-            txt = ""
-            txt += "p=%f, q=%f, theta_grazing=%f rad, theta_normal=%f rad\n" % (SSOUR, SIMAG, theta_grazing, theta)
-            txt += 'Hyperboloid of revolution a=%f \n'%AXMAJ
-            txt += 'Hyperboloid of revolution b=%f \n'%AXMIN
-            txt += 'Hyperboloid of revolution c=%f \n'%AFOCI
-            txt += 'Hyperboloid of revolution focal distance c^2=%f \n'%(AFOCI**2)
-            txt += 'Hyperboloid of revolution excentricity: %f \n'%ECCENT
-            txt += 'Optical element center at: [0,%f,%f]\n'%(YCEN,ZCEN)
-            txt += 'Optical element normal: [%f,%f,%f]\n'%(RNCEN[0],RNCEN[1],RNCEN[2])
-            txt += 'Optical element tangent: [%f,%f,%f]\n'%(RTCEN[0],RTCEN[1],RTCEN[2])
-            print(txt)
-        # ;C
-        # ;C Coefficients of the canonical form
-        # ;C
-        A = -1 / AXMIN**2
-        B =  1 / AXMAJ**2
-        C =  A
-        # ;C
-        # ;C Rotate now in the mirror RF. The equations are the same as for the
-        # ;C ellipse case.
-        # ;C
-        self.ccc[0] = A
-        self.ccc[1] = B * RTCEN[2-1]**2 + C * RTCEN[3-1]**2
-        self.ccc[2] = B * RNCEN[2-1]**2 + C * RNCEN[3-1]**2
-        self.ccc[3] = 0.0
-        self.ccc[4] =  2 * (B *RNCEN[2-1] * RTCEN[2-1] + C * RNCEN[3-1] * RTCEN[3-1])
-        self.ccc[5] = 0.0
-        self.ccc[6] = 0.0
-        self.ccc[7] = 0.0
-        self.ccc[8] = 2 * (B * YCEN * RNCEN[2-1] + C * ZCEN * RNCEN[3-1])
-        self.ccc[9] = 0.0
-
-
-
-    @classmethod
-    def calculate_ellipsoid_parameters_from_focal_distances(cls,ssour, simag, theta_grazing, verbose=True):
-        theta = (numpy.pi/2) - theta_grazing
-        COSTHE = numpy.cos(theta)
-        SINTHE = numpy.sin(theta)
-
-        AXMAJ = ( ssour + simag )/2
-        AXMIN = numpy.sqrt( simag * ssour) * COSTHE
-
-
-        AFOCI = numpy.sqrt( AXMAJ**2 - AXMIN**2 )
-        ECCENT = AFOCI/AXMAJ
-        # ;C
-        # ;C The center is computed on the basis of the object and image positions
-        # ;C
-        YCEN  = (ssour - simag) * 0.5 / ECCENT
-        ZCEN  = -numpy.sqrt( 1 - YCEN**2 / AXMAJ**2) * AXMIN
-        # ;C
-        # ;C Computes now the normal in the mirror center.
-        # ;C
-        RNCEN = numpy.zeros(3)
-        RNCEN[1-1] =  0.0
-        RNCEN[2-1] = -2 * YCEN / AXMAJ**2
-        RNCEN[3-1] = -2 * ZCEN / AXMIN**2
-        # ;CALL NORM(RNCEN,RNCEN)
-        RNCEN = RNCEN / numpy.sqrt((RNCEN**2).sum())
-        # ;C
-        # ;C Computes the tangent versor in the mirror center.
-        # ;C
-        RTCEN = numpy.zeros(3)
-        RTCEN[1-1] =  0.0
-        RTCEN[2-1] =  RNCEN[3-1]
-        RTCEN[3-1] = -RNCEN[2-1]
-
-        # new
-
-        ELL_THE = numpy.arctan( ZCEN / YCEN)
-
-        YCEN2  = AXMAJ*AXMIN
-        YCEN2  = YCEN2/numpy.sqrt(AXMIN**2+AXMAJ**2*numpy.tan(ELL_THE)**2)
-        ZCEN2  = YCEN2*numpy.tan(ELL_THE)
-        ZCEN2  = - numpy.abs(ZCEN2)
-        if (numpy.cos(ELL_THE) < 0):
-            YCEN2 = - numpy.abs(YCEN2)
-        else:
-            YCEN2 = numpy.abs(YCEN2)
-
-        print("YCEN2,ZCEN2: ",YCEN2,ZCEN2)
-
-        if verbose:
-            txt = ""
-            txt += "p=%f, q=%f, theta_grazing=%f rad, theta_normal=%f rad\n" % (ssour, simag, theta_grazing, theta)
-            txt += 'Ellipsoid of revolution a=%f \n'%AXMAJ
-            txt += 'Ellipsoid of revolution b=%f \n'%AXMIN
-            txt += 'Ellipsoid of revolution c=sqrt(a^2-b^2)=%f \n'%AFOCI
-            txt += 'Ellipsoid of revolution focal distance c^2=%f \n'%(AFOCI**2)
-            txt += 'Ellipsoid of revolution excentricity: %f \n'%ECCENT
-            txt += 'Optical element center at: [0,%f,%f]\n'%(YCEN,ZCEN)
-            txt += 'Optical element normal: [%f,%f,%f]\n'%(RNCEN[0],RNCEN[1],RNCEN[2])
-            txt += 'Optical element tangent: [%f,%f,%f]\n'%(RTCEN[0],RTCEN[1],RTCEN[2])
-            print(txt)
-        return {
-            "ssour":ssour, "simag":simag, "theta_grazing":theta_grazing, "theta":theta,
-            "AXMAJ":AXMAJ, "AXMIN":AXMIN, "ELL_THE":ELL_THE,
-            "AFOCI":AFOCI, "YCEN":YCEN, "ZCEN":ZCEN, "YCEN2":YCEN2, "ZCEN2":ZCEN2, "RNCEN":RNCEN, "RTCEN":RTCEN}
-
-    #
-    # info
-    #
-    def info(self):
-        """
-
-        :return:
-        """
-        txt = ""
-
-        txt += "++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++\n"
-        txt += "OE surface in form of conic equation: \n"
-        txt += "  ccc[0]*X^2 + ccc[1]*Y^2 + ccc[2]*Z^2  \n"
-        txt += "  ccc[3]*X*Y + ccc[4]*Y*Z + ccc[5]*X*Z  \n"
-        txt += "  ccc[6]*X   + ccc[7]*Y   + ccc[8]*Z + ccc[9] = 0 \n"
-        txt += " with \n"
-        txt += " c[0] = %g \n "%self.ccc[0]
-        txt += " c[1] = %g \n "%self.ccc[1]
-        txt += " c[2] = %g \n "%self.ccc[2]
-        txt += " c[3] = %g \n "%self.ccc[3]
-        txt += " c[4] = %g \n "%self.ccc[4]
-        txt += " c[5] = %g \n "%self.ccc[5]
-        txt += " c[6] = %g \n "%self.ccc[6]
-        txt += " c[7] = %g \n "%self.ccc[7]
-        txt += " c[8] = %g \n "%self.ccc[8]
-        txt += " c[9] = %g \n "%self.ccc[9]
-        txt += "++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++'n"
-
-        return txt
 
 
 
@@ -1007,7 +484,6 @@ class S4Conic(object):
         self.ccc = numpy.array([self.ccc[0], self.ccc[1], self.ccc[2], self.ccc[3], self.ccc[4], self.ccc[5], c6, c7, c8, c9])
 
 
-
     def translation_surface_conic_y(self, y0):
 
         c6 = - self.ccc[3] * y0 + self.ccc[6]
@@ -1065,6 +541,539 @@ class S4Conic(object):
             ss = -cc / bb
 
         return numpy.real(ss)
+
+    #
+    # info
+    #
+    def info(self):
+        """
+
+        :return:
+        """
+        txt = ""
+
+        txt += "++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++\n"
+        txt += "OE surface in form of conic equation: \n"
+        txt += "  ccc[0]*X^2 + ccc[1]*Y^2 + ccc[2]*Z^2  \n"
+        txt += "  ccc[3]*X*Y + ccc[4]*Y*Z + ccc[5]*X*Z  \n"
+        txt += "  ccc[6]*X   + ccc[7]*Y   + ccc[8]*Z + ccc[9] = 0 \n"
+        txt += " with \n"
+        txt += " c[0] = %g \n "%self.ccc[0]
+        txt += " c[1] = %g \n "%self.ccc[1]
+        txt += " c[2] = %g \n "%self.ccc[2]
+        txt += " c[3] = %g \n "%self.ccc[3]
+        txt += " c[4] = %g \n "%self.ccc[4]
+        txt += " c[5] = %g \n "%self.ccc[5]
+        txt += " c[6] = %g \n "%self.ccc[6]
+        txt += " c[7] = %g \n "%self.ccc[7]
+        txt += " c[8] = %g \n "%self.ccc[8]
+        txt += " c[9] = %g \n "%self.ccc[9]
+        txt += "++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++'n"
+
+        return txt
+
+
+    #
+    # reflector routines
+    #
+
+    #
+    # initializers from focal distances
+    #
+    @classmethod
+    def initialize_as_sphere_from_focal_distances(cls,p, q, theta1, cylindrical=0, cylangle=0.0, switch_convexity=0):
+        ccc = S4Conic()
+        ccc.set_sphere_from_focal_distances(p,q,theta1)
+        if cylindrical:
+            ccc.set_cylindrical(cylangle)
+        if switch_convexity:
+            ccc.switch_convexity()
+        return ccc
+
+
+    @classmethod
+    def initialize_as_ellipsoid_from_focal_distances(cls,p, q, theta1, cylindrical=0, cylangle=0.0, switch_convexity=0):
+        ccc = S4Conic()
+        ccc.set_ellipsoid_from_focal_distances(p,q,theta1)
+        if cylindrical:
+            ccc.set_cylindrical(cylangle)
+        if switch_convexity:
+            ccc.switch_convexity()
+        return ccc
+
+    @classmethod
+    def initialize_as_paraboloid_from_focal_distances(cls,p, q, theta1, cylindrical=0, cylangle=0.0, switch_convexity=0):
+        ccc = S4Conic()
+        ccc.set_paraboloid_from_focal_distances(p,q,theta1)
+        if cylindrical:
+            ccc.set_cylindrical(cylangle)
+        if switch_convexity:
+            ccc.switch_convexity()
+        return ccc
+
+    @classmethod
+    def initialize_as_hyperboloid_from_focal_distances(cls,p, q, theta1, cylindrical=0, cylangle=0.0, switch_convexity=0):
+        ccc = S4Conic()
+        ccc.set_hyperboloid_from_focal_distances(p,q,theta1)
+        if cylindrical:
+            ccc.set_cylindrical(cylangle)
+        if switch_convexity:
+            ccc.switch_convexity()
+        return ccc
+
+    def set_sphere_from_focal_distances(self, ssour, simag, theta_grazing, verbose=True):
+        # todo: implement also sagittal bending
+        print("Theta grazing is: %f" % (theta_grazing))
+        theta = (numpy.pi / 2) - theta_grazing
+        rmirr = ssour * simag * 2 / numpy.cos(theta) / (ssour + simag)
+
+        if verbose:
+            txt = ""
+            txt += "p=%f, q=%f, theta_grazing=%f rad, theta_normal=%f rad\n" % (ssour, simag, theta_grazing, theta)
+            txt += "Radius= %f \n" % (rmirr)
+            print(txt)
+
+        self.ccc[1 - 1] = 1.0  # X^2  # = 0 in cylinder case
+        self.ccc[2 - 1] = 1.0  # Y^2
+        self.ccc[3 - 1] = 1.0  # Z^2
+        self.ccc[4 - 1] = .0  # X*Y   # = 0 in cylinder case
+        self.ccc[5 - 1] = .0  # Y*Z
+        self.ccc[6 - 1] = .0  # X*Z   # = 0 in cylinder case
+        self.ccc[7 - 1] = .0  # X     # = 0 in cylinder case
+        self.ccc[8 - 1] = .0  # Y
+        self.ccc[9 - 1] = -2 * rmirr  # Z
+        self.ccc[10 - 1] = .0  # G
+
+    def set_ellipsoid_from_focal_distances(self, ssour, simag, theta_grazing, verbose=True):
+
+        # theta = (numpy.pi/2) - theta_grazing
+        # COSTHE = numpy.cos(theta)
+        # SINTHE = numpy.sin(theta)
+        #
+        # AXMAJ = ( ssour + simag )/2
+        # AXMIN = numpy.sqrt( simag * ssour) * COSTHE
+        #
+        #
+        # AFOCI = numpy.sqrt( AXMAJ**2 - AXMIN**2 )
+        # ECCENT = AFOCI/AXMAJ
+        # # ;C
+        # # ;C The center is computed on the basis of the object and image positions
+        # # ;C
+        # YCEN  = (ssour - simag) * 0.5 / ECCENT
+        # ZCEN  = -numpy.sqrt( 1 - YCEN**2 / AXMAJ**2) * AXMIN
+        # # ;C
+        # # ;C Computes now the normal in the mirror center.
+        # # ;C
+        # RNCEN = numpy.zeros(3)
+        # RNCEN[1-1] =  0.0
+        # RNCEN[2-1] = -2 * YCEN / AXMAJ**2
+        # RNCEN[3-1] = -2 * ZCEN / AXMIN**2
+        # # ;CALL NORM(RNCEN,RNCEN)
+        # RNCEN = RNCEN / numpy.sqrt((RNCEN**2).sum())
+        # # ;C
+        # # ;C Computes the tangent versor in the mirror center.
+        # # ;C
+        # RTCEN = numpy.zeros(3)
+        # RTCEN[1-1] =  0.0
+        # RTCEN[2-1] =  RNCEN[3-1]
+        # RTCEN[3-1] = -RNCEN[2-1]
+        #
+        # if verbose:
+        #     txt = ""
+        #     txt += "p=%f, q=%f, theta_grazing=%f rad, theta_normal=%f rad\n" % (ssour, simag, theta_grazing, theta)
+        #     txt += 'Ellipsoid of revolution a=%f \n'%AXMAJ
+        #     txt += 'Ellipsoid of revolution b=%f \n'%AXMIN
+        #     txt += 'Ellipsoid of revolution c=sqrt(a^2-b^2)=%f \n'%AFOCI
+        #     txt += 'Ellipsoid of revolution focal distance c^2=%f \n'%(AFOCI**2)
+        #     txt += 'Ellipsoid of revolution excentricity: %f \n'%ECCENT
+        #     txt += 'Optical element center at: [0,%f,%f]\n'%(YCEN,ZCEN)
+        #     txt += 'Optical element normal: [%f,%f,%f]\n'%(RNCEN[0],RNCEN[1],RNCEN[2])
+        #     txt += 'Optical element tangent: [%f,%f,%f]\n'%(RTCEN[0],RTCEN[1],RTCEN[2])
+        #     print(txt)
+
+        tkt = self.calculate_ellipsoid_parameters_from_focal_distances(ssour, simag, theta_grazing, verbose=verbose)
+
+        AXMAJ = tkt["AXMAJ"]
+        AXMIN = tkt["AXMIN"]
+        RTCEN = tkt["RTCEN"]
+        RNCEN = tkt["RNCEN"]
+        YCEN = tkt["YCEN"]
+        ZCEN = tkt["ZCEN"]
+
+        # ;C Computes now the quadric coefficient with the mirror center
+        # ;C located at (0,0,0) and normal along (0,0,1)
+        # ;C
+
+        A = 1 / AXMIN ** 2
+        B = 1 / AXMAJ ** 2
+        C = A
+        self.ccc[0] = A
+        self.ccc[1] = B * RTCEN[2 - 1] ** 2 + C * RTCEN[3 - 1] ** 2
+        self.ccc[2] = B * RNCEN[2 - 1] ** 2 + C * RNCEN[3 - 1] ** 2
+        self.ccc[3] = 0.0
+        self.ccc[4] = 2 * (B * RNCEN[2 - 1] * RTCEN[2 - 1] + C * RNCEN[3 - 1] * RTCEN[3 - 1])
+        self.ccc[5] = 0.0
+        self.ccc[6] = 0.0
+        self.ccc[7] = 0.0
+        self.ccc[8] = 2 * (B * YCEN * RNCEN[2 - 1] + C * ZCEN * RNCEN[3 - 1])
+        self.ccc[9] = 0.0
+
+    def set_paraboloid_from_focal_distances(self, SSOUR, SIMAG, theta_grazing, infinity_location="",
+                                            verbose=True):
+        # ;C
+        # ;C Computes the parabola
+        # ;C
+        theta = (numpy.pi / 2) - theta_grazing
+        COSTHE = numpy.cos(theta)
+        SINTHE = numpy.sin(theta)
+
+        if infinity_location == "":
+            if SSOUR <= SIMAG:
+                location = "q"
+            else:
+                location = "p"
+
+        if location == "q":
+            PARAM = 2 * SSOUR * COSTHE ** 2
+            YCEN = -SSOUR * SINTHE ** 2
+            ZCEN = -2 * SSOUR * SINTHE * COSTHE
+            fact = -1.0
+        elif location == "p":
+            PARAM = 2 * SIMAG * COSTHE ** 2
+            YCEN = - SIMAG * SINTHE ** 2
+            ZCEN = -2 * SIMAG * SINTHE * COSTHE
+            fact = 1.0
+
+        if verbose:
+            txt = ""
+            if location == "p":
+                txt += "Source is at infinity\n"
+                txt += "q=%f, theta_grazing=%f rad, theta_normal=%f rad\n" % (SIMAG, theta_grazing, theta)
+            else:
+                txt += "Image is at infinity\n"
+                txt += "p=%f, theta_grazing=%f rad, theta_normal=%f rad\n" % (SSOUR, theta_grazing, theta)
+            txt += 'Parabloid of revolution PARAM=%f \n' % PARAM
+            txt += 'Optical element center at: [0,%f,%f]\n' % (YCEN, ZCEN)
+            print(txt)
+
+        self.ccc[0] = 1.0
+        self.ccc[1] = COSTHE ** 2
+        self.ccc[2] = SINTHE ** 2
+        self.ccc[3] = 0.0
+        self.ccc[4] = 2 * fact * COSTHE * SINTHE
+        self.ccc[5] = 0.0
+        self.ccc[6] = 0.0
+        self.ccc[7] = 0.0
+        self.ccc[8] = 2 * ZCEN * SINTHE - 2 * PARAM * COSTHE
+        self.ccc[9] = 0.0
+
+    def set_hyperboloid_from_focal_distances(self, SSOUR, SIMAG, theta_grazing, verbose=True):
+
+        theta = (numpy.pi / 2) - theta_grazing
+        COSTHE = numpy.cos(theta)
+        SINTHE = numpy.sin(theta)
+
+        AXMAJ = (SSOUR - SIMAG) / 2
+        # ;C
+        # ;C If AXMAJ > 0, then we are on the left branch of the hyp. Else we
+        # ;C are onto the right one. We have to discriminate between the two cases
+        # ;C In particular, if AXMAJ.LT.0 then the hiperb. will be convex.
+        # ;C
+        AFOCI = 0.5 * numpy.sqrt(SSOUR ** 2 + SIMAG ** 2 + 2 * SSOUR * SIMAG * numpy.cos(2 * theta))
+        # ;; why this works better?
+        # ;;		AFOCI = 0.5D0*SQRT( SSOUR^2 + SIMAG^2 - 2*SSOUR*SIMAG*COS(2*THETA) )
+        AXMIN = numpy.sqrt(AFOCI ** 2 - AXMAJ ** 2)
+
+        ECCENT = AFOCI / numpy.abs(AXMAJ)
+
+        BRANCH = -1.0  # ; branch=+1,-1
+        # ;C
+        # ;C Computes the center coordinates in the hiperbola RF.
+        # ;C
+        # ;IF AXMAJ GT 0.0D0 THEN BEGIN
+        # ;  YCEN	=   ( AXMAJ - SSOUR )/ECCENT			; < 0
+        # ;ENDIF ELSE BEGIN
+        # ;  YCEN	=   ( SSOUR - AXMAJ )/ECCENT			; > 0
+        # ;ENDELSE
+
+        if AXMAJ > 0:
+            YCEN = (SSOUR - AXMAJ) / ECCENT
+        else:
+            YCEN = (SSOUR - AXMAJ) / ECCENT
+
+        # YCEN =   numpy.abs( SSOUR - AXMAJ ) / ECCENT * BRANCH
+
+        ZCEN_ARG = numpy.abs(YCEN ** 2 / AXMAJ ** 2 - 1.0)
+
+        if ZCEN_ARG > 1.0e-14:
+            ZCEN = -AXMIN * numpy.sqrt(ZCEN_ARG)  # < 0
+        else:
+            ZCEN = 0.0
+
+        # ;
+        # ; THIS GIVES BETTER LOOKING HYPERBOLA BUT WORSE TRACING. WHY?
+        # ;YCEN=ABS(YCEN)
+        # ;ZCEN=ABS(ZCEN)
+        # ;C
+        # ;C Computes now the normal in the same RF. The signs are forced to
+        # ;C suit our RF.
+        # ;C
+
+        RNCEN = numpy.zeros(3)
+        RNCEN[1 - 1] = 0.0
+        RNCEN[2 - 1] = -numpy.abs(YCEN) / AXMAJ ** 2  # < 0
+        RNCEN[3 - 1] = -ZCEN / AXMIN ** 2  # > 0
+
+        RNCEN = RNCEN / numpy.sqrt((RNCEN ** 2).sum())
+        # ;C
+        # ;C Computes the tangent in the same RF
+        # ;C
+        RTCEN = numpy.zeros(3)
+        RTCEN[1 - 1] = 0.0
+        RTCEN[2 - 1] = -RNCEN[3 - 1]  # > 0
+        RTCEN[3 - 1] = RNCEN[2 - 1]  # > 0
+
+        # txt = [txt,  $
+        # String('Rev Hyperboloid a: ', $
+        # AXMAJ, Format='(A40,G20.15)'), $
+        # String('Rev Hyperboloid b: ', $
+        # AXMIN, Format='(A40,G20.15)'), $
+        # String('Rev Hyperboloid c: ', $
+        # AFOCI, Format='(A40,G20.15)'), $
+        # String('Rev Hyperboloid focal discance c^2: ', $
+        # AFOCI^2, Format='(A40,G20.15)'), $
+        # String('Rev Hyperboloid excentricity: ', $
+        # ECCENT, Format='(A40,G20.15)'), $
+        # 'Mirror BRANCH: '+String(branch), $
+        # 'Mirror center at: '+vect2string([0,YCEN,ZCEN]), $
+        # 'Mirror normal: '+vect2string(RNCEN), $
+        # 'Mirror tangent: '+vect2string(RTCEN) ]
+        if verbose:
+            txt = ""
+            txt += "p=%f, q=%f, theta_grazing=%f rad, theta_normal=%f rad\n" % (SSOUR, SIMAG, theta_grazing, theta)
+            txt += 'Hyperboloid of revolution a=%f \n' % AXMAJ
+            txt += 'Hyperboloid of revolution b=%f \n' % AXMIN
+            txt += 'Hyperboloid of revolution c=%f \n' % AFOCI
+            txt += 'Hyperboloid of revolution focal distance c^2=%f \n' % (AFOCI ** 2)
+            txt += 'Hyperboloid of revolution excentricity: %f \n' % ECCENT
+            txt += 'Optical element center at: [0,%f,%f]\n' % (YCEN, ZCEN)
+            txt += 'Optical element normal: [%f,%f,%f]\n' % (RNCEN[0], RNCEN[1], RNCEN[2])
+            txt += 'Optical element tangent: [%f,%f,%f]\n' % (RTCEN[0], RTCEN[1], RTCEN[2])
+            print(txt)
+        # ;C
+        # ;C Coefficients of the canonical form
+        # ;C
+        A = -1 / AXMIN ** 2
+        B = 1 / AXMAJ ** 2
+        C = A
+        # ;C
+        # ;C Rotate now in the mirror RF. The equations are the same as for the
+        # ;C ellipse case.
+        # ;C
+        self.ccc[0] = A
+        self.ccc[1] = B * RTCEN[2 - 1] ** 2 + C * RTCEN[3 - 1] ** 2
+        self.ccc[2] = B * RNCEN[2 - 1] ** 2 + C * RNCEN[3 - 1] ** 2
+        self.ccc[3] = 0.0
+        self.ccc[4] = 2 * (B * RNCEN[2 - 1] * RTCEN[2 - 1] + C * RNCEN[3 - 1] * RTCEN[3 - 1])
+        self.ccc[5] = 0.0
+        self.ccc[6] = 0.0
+        self.ccc[7] = 0.0
+        self.ccc[8] = 2 * (B * YCEN * RNCEN[2 - 1] + C * ZCEN * RNCEN[3 - 1])
+        self.ccc[9] = 0.0
+
+    @classmethod
+    def calculate_ellipsoid_parameters_from_focal_distances(cls,ssour, simag, theta_grazing, verbose=True):
+        theta = (numpy.pi/2) - theta_grazing
+        COSTHE = numpy.cos(theta)
+        SINTHE = numpy.sin(theta)
+
+        AXMAJ = ( ssour + simag )/2
+        AXMIN = numpy.sqrt( simag * ssour) * COSTHE
+
+
+        AFOCI = numpy.sqrt( AXMAJ**2 - AXMIN**2 )
+        ECCENT = AFOCI/AXMAJ
+        # ;C
+        # ;C The center is computed on the basis of the object and image positions
+        # ;C
+        YCEN  = (ssour - simag) * 0.5 / ECCENT
+        ZCEN  = -numpy.sqrt( 1 - YCEN**2 / AXMAJ**2) * AXMIN
+        # ;C
+        # ;C Computes now the normal in the mirror center.
+        # ;C
+        RNCEN = numpy.zeros(3)
+        RNCEN[1-1] =  0.0
+        RNCEN[2-1] = -2 * YCEN / AXMAJ**2
+        RNCEN[3-1] = -2 * ZCEN / AXMIN**2
+        # ;CALL NORM(RNCEN,RNCEN)
+        RNCEN = RNCEN / numpy.sqrt((RNCEN**2).sum())
+        # ;C
+        # ;C Computes the tangent versor in the mirror center.
+        # ;C
+        RTCEN = numpy.zeros(3)
+        RTCEN[1-1] =  0.0
+        RTCEN[2-1] =  RNCEN[3-1]
+        RTCEN[3-1] = -RNCEN[2-1]
+
+        # new
+
+        ELL_THE = numpy.arctan( ZCEN / YCEN)
+
+        YCEN2  = AXMAJ*AXMIN
+        YCEN2  = YCEN2/numpy.sqrt(AXMIN**2+AXMAJ**2*numpy.tan(ELL_THE)**2)
+        ZCEN2  = YCEN2*numpy.tan(ELL_THE)
+        ZCEN2  = - numpy.abs(ZCEN2)
+        if (numpy.cos(ELL_THE) < 0):
+            YCEN2 = - numpy.abs(YCEN2)
+        else:
+            YCEN2 = numpy.abs(YCEN2)
+
+        print("YCEN2,ZCEN2: ",YCEN2,ZCEN2)
+
+        if verbose:
+            txt = ""
+            txt += "p=%f, q=%f, theta_grazing=%f rad, theta_normal=%f rad\n" % (ssour, simag, theta_grazing, theta)
+            txt += 'Ellipsoid of revolution a=%f \n'%AXMAJ
+            txt += 'Ellipsoid of revolution b=%f \n'%AXMIN
+            txt += 'Ellipsoid of revolution c=sqrt(a^2-b^2)=%f \n'%AFOCI
+            txt += 'Ellipsoid of revolution focal distance c^2=%f \n'%(AFOCI**2)
+            txt += 'Ellipsoid of revolution excentricity: %f \n'%ECCENT
+            txt += 'Optical element center at: [0,%f,%f]\n'%(YCEN,ZCEN)
+            txt += 'Optical element normal: [%f,%f,%f]\n'%(RNCEN[0],RNCEN[1],RNCEN[2])
+            txt += 'Optical element tangent: [%f,%f,%f]\n'%(RTCEN[0],RTCEN[1],RTCEN[2])
+            print(txt)
+        return {
+            "ssour":ssour, "simag":simag, "theta_grazing":theta_grazing, "theta":theta,
+            "AXMAJ":AXMAJ, "AXMIN":AXMIN, "ELL_THE":ELL_THE,
+            "AFOCI":AFOCI, "YCEN":YCEN, "ZCEN":ZCEN, "YCEN2":YCEN2, "ZCEN2":ZCEN2, "RNCEN":RNCEN, "RTCEN":RTCEN}
+
+
+    # todo: remove and use shadow4.tools.arrayofvectors.vector_reflection
+    def vector_reflection(self, v1, normal):
+        # \vec{r} = \vec{i} - 2 (\vec{i} \vec{n}) \vec{n}
+        # \vec{r} = \vec{i} - 2 tmp3
+        tmp = v1 * normal
+        tmp2 = tmp[0, :] + tmp[1, :] + tmp[2, :]
+        tmp3 = normal.copy()
+
+        for jj in (0, 1, 2):
+            tmp3[jj, :] = tmp3[jj, :] * tmp2
+
+        v2 = v1 - 2 * tmp3
+        v2mod = numpy.sqrt(v2[0, :] ** 2 + v2[1, :] ** 2 + v2[2, :] ** 2)
+        v2 /= v2mod
+
+        return v2
+
+    def apply_specular_reflection_on_beam(self, newbeam):
+
+        # ;
+        # ; TRACING...
+        # ;
+
+        x1 = newbeam.get_columns([1, 2, 3])  # numpy.array(a3.getshcol([1,2,3]))
+        v1 = newbeam.get_columns([4, 5, 6])  # numpy.array(a3.getshcol([4,5,6]))
+        flag = newbeam.get_column(10)  # numpy.array(a3.getshonecol(10))
+        optical_path = newbeam.get_column(13)
+
+        t1, t2 = self.calculate_intercept(x1, v1)
+        t, iflag = self.choose_solution(t1, t2, reference_distance=-newbeam.get_column(2).mean())
+
+        # for i in range(t.size):
+        #     print(">>>> solutions: ",t1[i],t2[i],t[i])
+
+        x2 = x1 + v1 * t
+        for i in range(flag.size):
+            if iflag[i] < 0: flag[i] = -100
+
+        # ;
+        # ; Calculates the normal at each intercept [see shadow's normal.F]
+        # ;
+
+        normal = self.get_normal(x2)
+
+        # ;
+        # ; reflection
+        # ;
+
+        v2 = self.vector_reflection(v1, normal)
+
+        # ;
+        # ; writes the mirr.XX file
+        # ;
+
+        newbeam.set_column(1, x2[0])
+        newbeam.set_column(2, x2[1])
+        newbeam.set_column(3, x2[2])
+        newbeam.set_column(4, v2[0])
+        newbeam.set_column(5, v2[1])
+        newbeam.set_column(6, v2[2])
+        newbeam.set_column(10, flag)
+        newbeam.set_column(13, optical_path + t)
+
+        return newbeam, normal
+
+    #
+    # refractor routines
+    #
+
+
+    def apply_refraction_on_beam(self, newbeam, refraction_index_object, refraction_index_image):
+
+        # ;
+        # ; TRACING...
+        # ;
+
+        x1 = newbeam.get_columns([1, 2, 3])  # numpy.array(3, npoints)
+        v1 = newbeam.get_columns([4, 5, 6])  # numpy.array(3, npoints)
+        flag = newbeam.get_column(10)
+        optical_path = newbeam.get_column(13)
+
+        t1, t2 = self.calculate_intercept(x1, v1)
+        t, iflag = self.choose_solution(t1, t2, reference_distance=-newbeam.get_column(2).mean())
+
+        # for i in range(t.size):
+        #     print(">>>> solutions: ",t1[i],t2[i],t[i])
+
+        x2 = x1 + v1 * t
+        for i in range(flag.size):
+            if iflag[i] < 0: flag[i] = -100
+
+        # ;
+        # ; Calculates the normal at each intercept [see shadow's normal.F]
+        # ;
+
+        normal = self.get_normal(x2)
+        print(">>>>>> apply_refraction_on_beam, normal=", normal.shape, normal)
+
+        # ;
+        # ; refraction
+        # ;
+
+        v2t = vector_refraction(v1.T, normal.T, refraction_index_object, refraction_index_image)  # TODO...
+        v2 = v2t.T
+
+        print(">>> x1: ", x1.T[100, :])
+        print(">>> x2: ", x2.T[100, :])
+        print(">>> v1: ", v1.T[100, :])
+        print(">>> v2: ", v2.T[100, :])
+        print(">>> n: ", normal.T[100, :])
+
+        # ;
+        # ; writes the mirr.XX file
+        # ;
+
+        newbeam.set_column(1, x2[0])
+        newbeam.set_column(2, x2[1])
+        newbeam.set_column(3, x2[2])
+        newbeam.set_column(4, v2[0])
+        newbeam.set_column(5, v2[1])
+        newbeam.set_column(6, v2[2])
+        newbeam.set_column(10, flag)
+        newbeam.set_column(13, optical_path + t)
+
+        return newbeam, normal
+
 
 
 if __name__ == "__main__":
