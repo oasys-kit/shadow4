@@ -1027,6 +1027,7 @@ class S4Conic(object):
         x1 = newbeam.get_columns([1, 2, 3])  # numpy.array(3, npoints)
         v1 = newbeam.get_columns([4, 5, 6])  # numpy.array(3, npoints)
         flag = newbeam.get_column(10)
+        k_in_mod = newbeam.get_column(11)
         optical_path = newbeam.get_column(13)
 
         t1, t2 = self.calculate_intercept(x1, v1)
@@ -1070,7 +1071,8 @@ class S4Conic(object):
         newbeam.set_column(5, v2[1])
         newbeam.set_column(6, v2[2])
         newbeam.set_column(10, flag)
-        newbeam.set_column(13, optical_path + t)
+        newbeam.set_column(11, k_in_mod * refraction_index_image / refraction_index_object)
+        newbeam.set_column(13, optical_path + t * refraction_index_object)
 
         return newbeam, normal
 

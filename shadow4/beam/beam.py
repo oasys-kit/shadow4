@@ -929,7 +929,7 @@ class Beam(object):
             self.rays[:,newtoroti[1]] = -a1[:,newtoroti[0]] * sinth + a1[:,newtoroti[1]] * costh
             self.rays[:,newaxisi]     =  a1[:,newaxisi]
 
-    def change_to_image_reference_system(self, theta, T_IMAGE, rad=True):
+    def change_to_image_reference_system(self, theta, T_IMAGE, rad=True, refraction_index=1.0):
         """
         Implements the propagation from the mirror reference frame to the screen (image) reference.
         Mimics IMREF and IMAGE1 subrutines in shadow3
@@ -1014,7 +1014,7 @@ class Beam(object):
             self.rays[:, i - 1 + 2] = a1[:, i - 1 + 0] * VZIM_x   + a1[:, i - 1 + 1] * VZIM_y   + a1[:, i - 1 + 2] * VZIM_z
 
         # optical path col 13
-        self.rays[:, 12] += numpy.abs(DIST)
+        self.rays[:, 12] += numpy.abs(DIST) * refraction_index
     #
     # crop
     #

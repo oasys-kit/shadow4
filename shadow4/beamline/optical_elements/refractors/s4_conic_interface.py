@@ -11,12 +11,31 @@ class S4ConicInterface(S4Interface, S4ConicOpticalElement):
                  boundary_shape=None,
                  material_object=None,
                  material_image=None,
+                 f_r_ind=0,
+                 r_ind_obj=1.0,
+                 r_ind_ima=1.0,
+                 r_attenuation_obj=0.0,
+                 r_attenuation_ima=0.0,
+                 file_r_ind_obj="",
+                 file_r_ind_ima="",
                  conic_coefficients=[0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
                  ):
 
         S4ConicOpticalElement.__init__(self, conic_coefficients)
-        S4Interface.__init__(self, name, boundary_shape, self._conic_surface_shape,
-                          material_object=material_object, material_image=material_image)
+        S4Interface.__init__(self,
+                             name,
+                             boundary_shape,
+                             self._conic_surface_shape,
+                             material_object=material_object,
+                             material_image=material_image,
+                             f_r_ind=f_r_ind,
+                             r_ind_obj=r_ind_obj,
+                             r_ind_ima=r_ind_ima,
+                             r_attenuation_obj=r_attenuation_obj,
+                             r_attenuation_ima=r_attenuation_ima,
+                             file_r_ind_obj=file_r_ind_obj,
+                             file_r_ind_ima=file_r_ind_ima,
+                          )
 
 class S4ConicInterfaceElement(S4InterfaceElement):
     def __init__(self, optical_element=None, coordinates=None):
@@ -28,23 +47,11 @@ class S4ConicInterfaceElement(S4InterfaceElement):
     def apply_local_refraction(self, beam):
         surface_shape = self.get_optical_element().get_surface_shape()
 
-        print(">>>>> Conic refractive interface", surface_shape)
-
         ccc = S4Conic.initialize_from_coefficients(surface_shape.get_conic_coefficients())
 
-        mat1 = self.get_optical_element().get_material_object()
-        mat2 = self.get_optical_element().get_material_image()
-        print(">>>>>>> materials: ", mat1, mat2, type(mat1))
+        oe = self.get_optical_element()
+        refraction_index_object, refraction_index_image = oe.get_refraction_indices()
 
-        if isinstance(mat1,float) or isinstance(mat1, int):
-            refraction_index_object = mat1
-        else:
-            raise Exception("Not implemented")
-
-        if isinstance(mat2,float) or isinstance(mat1, int):
-            refraction_index_image = mat2
-        else:
-            raise Exception("Not implemented")
 
         beam_mirr, normal = ccc.apply_refraction_on_beam(beam, refraction_index_object, refraction_index_image)
 
