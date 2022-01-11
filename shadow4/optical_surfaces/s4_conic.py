@@ -1045,7 +1045,12 @@ class S4Conic(object):
         # ;
 
         normal = self.get_normal(x2)
-        print(">>>>>> apply_refraction_on_beam, normal=", normal.shape, normal)
+
+        # if surface is convex normal_z > 0;  if concave normal_z < 0
+        # we always want normal_z > 0:
+        if normal[2,:].mean() < 0:
+            normal *= (-1.0)
+            print("Warning: o.e. NORMAL INVERTED")
 
         # ;
         # ; refraction
@@ -1053,12 +1058,6 @@ class S4Conic(object):
 
         v2t = vector_refraction(v1.T, normal.T, refraction_index_object, refraction_index_image)  # TODO...
         v2 = v2t.T
-
-        print(">>> x1: ", x1.T[100, :])
-        print(">>> x2: ", x2.T[100, :])
-        print(">>> v1: ", v1.T[100, :])
-        print(">>> v2: ", v2.T[100, :])
-        print(">>> n: ", normal.T[100, :])
 
         # ;
         # ; writes the mirr.XX file
