@@ -24,7 +24,7 @@ class S4Crystal(Crystal):
                  miller_index_l=1,
                  asymmetry_angle=0.0,
                  thickness=0.010, ###########################
-                 f_central=True,
+                 f_central=False,
                  f_phot_cent=0,
                  phot_cent=8000.0,
                  file_refl="",
@@ -82,20 +82,22 @@ class S4Crystal(Crystal):
         self._f_ext = f_ext
         self._r_johansson = r_johansson
 
-    # def get_refraction_indices(self):
-    #     if self._f_r_ind == 0:
-    #         refraction_index_object = self._r_ind_obj
-    #         refraction_index_image  = self._r_ind_ima
-    #     elif self._f_r_ind == 1:
-    #         raise Exception(NotImplementedError)
-    #     elif self._f_r_ind == 2:
-    #         raise Exception(NotImplementedError)
-    #     elif self._f_r_ind == 3:
-    #         raise Exception(NotImplementedError)
-    #     else:
-    #         raise Exception(NotImplementedError)
-    #
-    #     return refraction_index_object, refraction_index_image
+        if self._f_central:
+            self.align_crystal()
+
+        if self._f_johansson and self._f_ext:
+            self.set_default_johansson_radius()
+
+    def load_material_file(self):
+        raise Exception(NotImplementedError)
+
+    def align_crystal(self):
+        raise Exception(NotImplementedError)
+
+    def set_default_johansson_radius(self):
+        raise Exception(NotImplementedError)
+
+
 
 class S4CrystalElement(S4BeamlineElement):
     
@@ -123,14 +125,11 @@ class S4CrystalElement(S4BeamlineElement):
         #
         # reflect beam in the mirror surface
         #
-        soe = self.get_optical_element() #._optical_element_syned
-        # print(">>> CCC", soe.get_surface_shape().get_conic_coefficients())
+        soe = self.get_optical_element()
 
-        # TODO: no check for total reflection is done...
-        # TODO: implement correctly in shadow4 via Fresnel equations for the transmitted beam
 
-        if not isinstance(soe, Interface): # undefined
-            raise Exception("Undefined refractive interface")
+        if not isinstance(soe, Crystal): # undefined
+            raise Exception("Undefined Crystal")
         else:
             beam_mirr, normal = self.apply_crystal_diffraction(beam)
 
@@ -148,8 +147,7 @@ class S4CrystalElement(S4BeamlineElement):
         #
 
         beam_out = beam_mirr.duplicate()
-        n1, n2 = self.get_optical_element().get_refraction_indices()
-        beam_out.change_to_image_reference_system(theta_grazing2, q, refraction_index=n2)
+        beam_out.change_to_image_reference_system(theta_grazing2, q)
 
         return beam_out, beam_mirr
 
