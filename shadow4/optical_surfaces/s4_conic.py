@@ -965,6 +965,11 @@ class S4Conic(object):
 
         return v2
 
+    #
+    # mirror routines
+    #
+
+    # warning, input newbeam is changed... TODO: change this behaviour making a copy?
     def apply_specular_reflection_on_beam(self, newbeam):
 
         # ;
@@ -1075,6 +1080,56 @@ class S4Conic(object):
 
         return newbeam, normal
 
+    #
+    # crystal routines
+    #
+    def apply_crystal_diffraction_bragg_symmetric_on_beam(self, newbeam):
+
+        # ;
+        # ; TRACING... (copied from mirror reflection)
+        # ;
+        return self.apply_specular_reflection_on_beam(newbeam)
+        # x1 = newbeam.get_columns([1, 2, 3])  # numpy.array(a3.getshcol([1,2,3]))
+        # v1 = newbeam.get_columns([4, 5, 6])  # numpy.array(a3.getshcol([4,5,6]))
+        # flag = newbeam.get_column(10)  # numpy.array(a3.getshonecol(10))
+        # optical_path = newbeam.get_column(13)
+        #
+        # t1, t2 = self.calculate_intercept(x1, v1)
+        # t, iflag = self.choose_solution(t1, t2, reference_distance=-newbeam.get_column(2).mean())
+        #
+        # # for i in range(t.size):
+        # #     print(">>>> solutions: ",t1[i],t2[i],t[i])
+        #
+        # x2 = x1 + v1 * t
+        # for i in range(flag.size):
+        #     if iflag[i] < 0: flag[i] = -100
+        #
+        # # ;
+        # # ; Calculates the normal at each intercept [see shadow's normal.F]
+        # # ;
+        #
+        # normal = self.get_normal(x2)
+        #
+        # # ;
+        # # ; reflection
+        # # ;
+        #
+        # v2 = self.vector_reflection(v1, normal)
+        #
+        # # ;
+        # # ; writes the mirr.XX file
+        # # ;
+        #
+        # newbeam.set_column(1, x2[0])
+        # newbeam.set_column(2, x2[1])
+        # newbeam.set_column(3, x2[2])
+        # newbeam.set_column(4, v2[0])
+        # newbeam.set_column(5, v2[1])
+        # newbeam.set_column(6, v2[2])
+        # newbeam.set_column(10, flag)
+        # newbeam.set_column(13, optical_path + t)
+        #
+        # return newbeam, normal
 
 
 if __name__ == "__main__":

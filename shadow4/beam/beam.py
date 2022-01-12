@@ -1252,6 +1252,9 @@ class Beam(object):
         -------
 
         """
+        if numpy.iscomplexobj(Rs):
+            print(">>> Warning: using complex reflectivities. Use apply_complex_reflectivity_s() instead")
+
         self.rays[:, 6] *= Rs
         self.rays[:, 7] *= Rs
         self.rays[:, 8] *= Rs
@@ -1267,6 +1270,10 @@ class Beam(object):
         -------
 
         """
+
+        if numpy.iscomplexobj(Rp):
+            print(">>> Warning: using complex reflectivities. Use apply_complex_reflectivity_p() instead")
+
         self.rays[:, 15] *= Rp
         self.rays[:, 16] *= Rp
         self.rays[:, 17] *= Rp
@@ -1286,7 +1293,65 @@ class Beam(object):
         self.apply_reflectivity_s(Rs)
         self.apply_reflectivity_p(Rp)
 
+    # complex reflectivities...
 
+    def apply_complex_reflectivity_s(self, Rs):
+        """
+
+        Parameters
+        ----------
+        Rs
+
+        Returns
+        -------
+
+        """
+        self.rays[:, 6] *= numpy.abs(Rs)
+        self.rays[:, 7] *= numpy.abs(Rs)
+        self.rays[:, 8] *= numpy.abs(Rs)
+        self.rays[:, 13] += numpy.angle(Rs)
+
+    def apply_complex_reflectivity_p(self, Rp):
+        """
+
+        Parameters
+        ----------
+        Rp
+
+        Returns
+        -------
+
+        """
+        self.rays[:, 15] *= numpy.abs(Rp)
+        self.rays[:, 16] *= numpy.abs(Rp)
+        self.rays[:, 17] *= numpy.abs(Rp)
+        self.rays[:, 14] += numpy.angle(Rp)
+
+    def apply_complex_reflectivities(self, Rs, Rp):
+        """
+
+        Parameters
+        ----------
+        Rs
+        Rp
+
+        Returns
+        -------
+
+        """
+        self.apply_complex_reflectivity_s(Rs)
+        self.apply_complex_reflectivity_p(Rp)
+
+    # phases
+    def add_phase_s(self, phase):
+        self.rays[:, 13] += phase
+
+    def add_phase_p(self, phase):
+        self.rays[:, 14] += phase
+
+    def add_phases(self, phase_s, phase_p):
+        self.add_phase_s(phase_s)
+        self.add_phase_p(phase_p)
     #
     #  interfaces like in shadow3
     #

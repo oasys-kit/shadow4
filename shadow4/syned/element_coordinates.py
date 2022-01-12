@@ -67,3 +67,11 @@ class ElementCoordinates(SynedObject):
 
     def get_p_and_q(self):
         return self.p(), self.q()
+
+    def set_angles(self, angle_radial=0.0, angle_radial_out=None, angle_azimuthal=0.0):
+        self._angle_radial = angle_radial
+        self._angle_radial_out = angle_radial_out
+        self._angle_azimuthal = angle_azimuthal
+
+    def get_angles(self):
+        return self.angle_radial(), self.angle_radial_out(), self.angle_azimuthal()
