@@ -120,9 +120,6 @@ class S4CrystalElement(S4BeamlineElement):
         coor = self.get_coordinates()
 
 
-        print(">>>>>> aligning crystal")
-
-
         print("\nCreating a diffraction setup...")
         diffraction_setup = DiffractionSetup(geometry_type=BraggDiffraction(),  # todo: use oe._diffraction_geometry
                                              crystal_name=oe._material,  # string
@@ -144,12 +141,12 @@ class S4CrystalElement(S4BeamlineElement):
                 energy = codata.h * codata.c / codata.e * 1e2 / (oe._phot_cent * 1e-8)
                 raise Exception(NotImplementedError)
 
-            bragg_angle = diffraction_setup.angleBragg(energy)
+            setting_angle = diffraction_setup.angleBraggCorrected(energy)
 
-            print("Bragg angle for E=%f eV is %f deg" % (energy, bragg_angle * 180.0 / numpy.pi))
+            print("Bragg angle for E=%f eV is %f deg" % (energy, setting_angle * 180.0 / numpy.pi))
 
-            coor.set_angles(angle_radial=numpy.pi/2-bragg_angle,
-                            angle_radial_out=numpy.pi/2-bragg_angle,
+            coor.set_angles(angle_radial=numpy.pi/2-setting_angle,
+                            angle_radial_out=numpy.pi/2-setting_angle,
                             angle_azimuthal=0.0)
         else:
             print("Info: nothing to align: f_central=0")
@@ -198,19 +195,15 @@ class S4CrystalElement(S4BeamlineElement):
         nrays = beam_mirr.get_number_of_rays()
         energy = 8000.0  # eV
 
-        #
-        # gets Bragg angle needed to create deviation's scan
-        #
-        bragg_angle = self._crystalpy_diffraction_setup.angleBragg(energy)
-
-        print("Bragg angle for E=%f eV is %f deg" % (energy, bragg_angle * 180.0 / numpy.pi))
-
         # Create a Diffraction object (the calculator)
         diffraction = Diffraction()
 
 
         scan_type = 1 # 0=scan, 1=loop on rays, 2=bunch of photons (not functional)  # TODO: delete 0,2
         if scan_type == 0: # scan
+            # setting_angle = self._crystalpy_diffraction_setup.angleBragg(energy)
+            setting_angle = self._crystalpy_diffraction_setup.angleBraggCorrected(energy)
+
             angle_deviation_points = nrays
             # initialize arrays for storing outputs
             intensityS = numpy.zeros(nrays)
@@ -222,14 +215,14 @@ class S4CrystalElement(S4BeamlineElement):
             deviations = numpy.zeros(angle_deviation_points)
             for ia in range(angle_deviation_points):
                 deviation = angle_deviation_min + ia * angle_step
-                angle = deviation + bragg_angle
+                angle = deviation + setting_angle
 
                 # calculate the components of the unitary vector of the incident photon scan
                 # Note that diffraction plane is YZ
                 yy = numpy.cos(angle)
                 zz = - numpy.abs(numpy.sin(angle))
                 photon = Photon(energy_in_ev=energy, direction_vector=Vector(0.0, yy, zz))
-                if ia < 10: print(ia, 0.0, yy, zz)
+                # if ia < 10: print(ia, 0.0, yy, zz)
 
                 # perform the calculation
                 coeffs = diffraction.calculateDiffractedComplexAmplitudes(self._crystalpy_diffraction_setup, photon)
@@ -250,10 +243,9 @@ class S4CrystalElement(S4BeamlineElement):
             energies = beam_in_crystal_frame_before_reflection.get_photon_energy_eV()
             for ia in range(nrays):
                 photon = Photon(energy_in_ev=energies[ia], direction_vector=Vector(xp[ia], yp[ia], zp[ia]))
-                if ia < 10: print(ia, xp[ia], yp[ia], zp[ia])
+                # if ia < 10: print(ia, xp[ia], yp[ia], zp[ia])
                 # perform the calculation
                 coeffs = diffraction.calculateDiffractedComplexAmplitudes(self._crystalpy_diffraction_setup, photon)
-
                 # store results
                 complex_reflectivity_S[ia] = coeffs['S'].complexAmplitude()
                 complex_reflectivity_P[ia] = coeffs['P'].complexAmplitude()
@@ -261,7 +253,7 @@ class S4CrystalElement(S4BeamlineElement):
             beam_mirr.apply_complex_reflectivities(complex_reflectivity_S, complex_reflectivity_P)
         elif scan_type == 2: # from beam, bunch
             # this is complicated... and not faster...
-            # todo: in crystalpy create calculateDiffractedComplexAmplitudes for a PhotonBunch
+            # todo: accelerate crystalpy create calculateDiffractedComplexAmplitudes for a PhotonBunch
 
             # we retrieve data from "beam" meaning the beam before reflection, in the crystal frame (incident beam...)
             xp = beam_in_crystal_frame_before_reflection.get_column(4)
@@ -287,15 +279,6 @@ class S4CrystalElement(S4BeamlineElement):
             bunch_out_dict = bunch_out.toDictionary()
             reflectivity_S = numpy.sqrt(numpy.array(bunch_out_dict["intensityS"]))
             reflectivity_P = numpy.sqrt(numpy.array(bunch_out_dict["intensityP"]))
-            # for ia in range(nrays):
-            #     photon = Photon(energy_in_ev=energies[ia], direction_vector=Vector(xp[ia], yp[ia], zp[ia]))
-            #     if ia < 10: print(ia, xp[ia], yp[ia], zp[ia])
-            #     # perform the calculation
-            #     coeffs = diffraction.calculateDiffractedComplexAmplitudes(self._crystalpy_diffraction_setup, photon)
-            #
-            #     # store results
-            #     complex_reflectivity_S[ia] = coeffs['S'].complexAmplitude()
-            #     complex_reflectivity_P[ia] = coeffs['P'].complexAmplitude()
 
             beam_mirr.apply_reflectivities(reflectivity_S, reflectivity_P)
             beam_mirr.add_phases(numpy.array(bunch_out_dict["intensityS"]),
@@ -311,7 +294,7 @@ class S4CrystalElement(S4BeamlineElement):
         beam_out = beam_mirr.duplicate()
         beam_out.change_to_image_reference_system(theta_grazing2, q)
 
-        # plot results <<<<<<<>>>>>>>>>>>>>>>>>>>>>
+        # plot results
         if scan_type == 0:
             pass
         else:
@@ -319,15 +302,15 @@ class S4CrystalElement(S4BeamlineElement):
             intensityS = beam_out.get_column(24)
             intensityP = beam_out.get_column(25)
 
-        from srxraylib.plot.gol import plot
-        plot(1e6 * deviations, intensityS,
-             1e6 * deviations, intensityP,
-             xtitle="deviation angle [urad]",
-             ytitle="Reflectivity",
-             legend=["Sigma-polarization", "Pi-polarization"],
-             linestyle=['',''],
-             marker=['+','.'])
-
+        if True:
+            from srxraylib.plot.gol import plot
+            plot(1e6 * deviations, intensityS,
+                 1e6 * deviations, intensityP,
+                 xtitle="deviation angle [urad]",
+                 ytitle="Reflectivity",
+                 legend=["Sigma-polarization", "Pi-polarization"],
+                 linestyle=['',''],
+                 marker=['+','.'])
 
         return beam_out, beam_mirr
 
