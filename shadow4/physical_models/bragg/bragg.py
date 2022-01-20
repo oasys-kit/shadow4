@@ -1,10 +1,12 @@
+# todo: DELETE? this class is not used... use crystalpy instead...
 #
 # Bragg() a class to manipulate the shadow bragg preprocessor file v1
 #
-#  to cerate it
+#  uses xoppylib that contains bragg preprocessor readers
 #
 import numpy
 import scipy.constants as codata
+from xoppylib.crystals.bragg_preprocessor_file_io import bragg_preprocessor_file_v1_read
 
 class Bragg(object):
     def __init__(self, preprocessor_file=None, preprocessor_dictionary=None):
@@ -33,114 +35,8 @@ class Bragg(object):
         return out
 
     def load_preprocessor_file(self):
-        filename = self._preprocessor_file
-
-        try:
-            f = open(filename, 'r')
-            lines = f.read().splitlines()
-            f.close()
-        except:
-            print("Fail to read file: %s " %  filename)
-            raise Exception("Fail to read file: %s " %  filename)
-        out_dict = {}
-
-        line_index = 0
-        variables = self.__parse_line(lines[line_index])
-        out_dict["i_latt"] = int(variables[0])
-        out_dict["one_over_volume_times_electron_radius_in_cm"] = float(variables[1])
-        out_dict["dspacing_in_cm"] = float(variables[2])
-
-        line_index += 1
-        variables = self.__parse_line(lines[line_index])
-        out_dict["zeta_a"] = int(variables[0])
-        out_dict["zeta_b"] = int(variables[1])
-        out_dict["temper"] = float(variables[2])
-
-        # line_index += 1
-
-        line_index += 1
-        variables = self.__parse_line(lines[line_index], remove=["(",")",","])
-        out_dict["ga.real"] = float(variables[0])
-        out_dict["ga.imag"] = float(variables[1])
-
-        line_index += 1
-        # print(">>>>>>>>>> variables", variables)
-        variables = self.__parse_line(lines[line_index], remove=["(", ")", ","])
-        out_dict["ga_bar.real"] = float(variables[0])
-        out_dict["ga_bar.imag"] = float(variables[1])
-
-        line_index += 1
-        # print(">>>>>>>>>> variables", variables)
-        variables = self.__parse_line(lines[line_index], remove=["(", ")", ","])
-        out_dict["gb.real"] = float(variables[0])
-        out_dict["gb.imag"] = float(variables[1])
-
-        line_index += 1
-        line = lines[line_index]
-        line = line.replace("(", "")
-        line = line.replace(")", "")
-        line = line.replace(" ", "")
-        variables = line.split(",")
-        # print(">>>>>>>>>> variables", variables)
-        out_dict["gb_bar.real"] = float(variables[0])
-        out_dict["gb_bar.imag"] = float(variables[1])
-
-        line_index += 1
-        variables = self.__parse_line(lines[line_index])
-        # print(">>>>>>>>>> variables", variables)
-        out_dict["fit_a"] = []
-        for variable in variables:
-            out_dict["fit_a"].append(float(variable))
-
-        line_index += 1
-        variables = self.__parse_line(lines[line_index])
-        # print(">>>>>>>>>> variables", variables)
-        out_dict["fit_b"] = []
-        for variable in variables:
-            out_dict["fit_b"].append(float(variable))
-
-        line_index += 1
-        variables = self.__parse_line(lines[line_index])
-        npoint = int(variables[0])
-        out_dict["npoint"] = npoint
-
-        line_index += 1
-        variables = self.__parse_line(" ".join(lines[line_index:]))
-
-
-        Energy = numpy.zeros(npoint)
-        F1a = numpy.zeros(npoint)
-        F2a = numpy.zeros(npoint)
-        F1b = numpy.zeros(npoint)
-        F2b = numpy.zeros(npoint)
-        iacc = -1
-        for i in range(npoint):
-            iacc += 1
-            Energy[i] = variables[iacc]
-            iacc += 1
-            F1a[i] = variables[iacc]
-            iacc += 1
-            F2a[i] = variables[iacc]
-            iacc += 1
-            F1b[i] = variables[iacc]
-            iacc += 1
-            F2b[i] = variables[iacc]
-
-        out_dict["Energy"] = Energy
-        out_dict["F1a"] = F1a
-        out_dict["F2a"] = F2a
-        out_dict["F1b"] = F1b
-        out_dict["F2b"] = F2b
-
+        out_dict = bragg_preprocessor_file_v1_read(self._preprocessor_file)
         self._preprocessor_dictionary = out_dict
-
-    def __parse_line(self, line, remove=[]):
-        if len(remove) > 0:
-            for str1 in remove:
-                line = line.replace(str1, " ")
-        line = " ".join(line.split())
-        variables = line.split(" ")
-        return variables
 
     #
     # extract values
@@ -360,8 +256,19 @@ class Bragg(object):
 
 if __name__ == "__main__":
     import numpy
+    import xraylib
 
-    b = Bragg.create_from_preprocessor_file("bragg.dat")
+
+    from xoppylib.crystals.create_bragg_preprocessor_file_v1 import create_bragg_preprocessor_file_v1
+
+    SHADOW_FILE = "bragg_v1_xraylib.dat"
+    tmp = create_bragg_preprocessor_file_v1(interactive=False, DESCRIPTOR="Si", H_MILLER_INDEX=1,
+                                                           K_MILLER_INDEX=1, L_MILLER_INDEX=1,
+                                                           TEMPERATURE_FACTOR=1.0, E_MIN=5000.0, E_MAX=15000.0,
+                                                           E_STEP=100.0, SHADOW_FILE=SHADOW_FILE,
+                                                           material_constants_library=xraylib)
+
+    b = Bragg.create_from_preprocessor_file(SHADOW_FILE)
     tmp = b.get_preprocessor_dictionary()
 
     for key in tmp.keys():
