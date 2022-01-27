@@ -9,8 +9,12 @@ from shadow4.physical_models.prerefl.prerefl import PreRefl
 
 from shadow4.beamline.s4_beamline_element import S4BeamlineElement
 
-from crystalpy.diffraction.GeometryType import BraggDiffraction
 from crystalpy.diffraction.DiffractionSetup import DiffractionSetup
+from crystalpy.diffraction.DiffractionSetupDabax import DiffractionSetupDabax
+from crystalpy.diffraction.DiffractionSetupShadowPreprocessorV1 import DiffractionSetupShadowPreprocessorV1
+from crystalpy.diffraction.DiffractionSetupShadowPreprocessorV2 import DiffractionSetupShadowPreprocessorV2
+
+from crystalpy.diffraction.GeometryType import BraggDiffraction
 from crystalpy.diffraction.Diffraction import Diffraction
 from crystalpy.util.Vector import Vector
 from crystalpy.util.Photon import Photon
@@ -46,7 +50,9 @@ class S4Crystal(Crystal):
                  f_mosaic=False,
                  spread_mos=0.4*numpy.pi/180,
                  f_ext=0,
-
+                 material_constants_library_flag=0, # 0=xraylib, 1=dabax
+                                                    # 2=shadow preprocessor file v1
+                                                    # 3=shadow preprocessor file v1
                  ):
 
         """
@@ -92,6 +98,7 @@ class S4Crystal(Crystal):
         self._spread_mos = spread_mos
         self._f_ext = f_ext
         self._r_johansson = r_johansson
+        self._material_constants_library_flag = material_constants_library_flag
 
         self.congruence()
 
@@ -120,16 +127,50 @@ class S4CrystalElement(S4BeamlineElement):
         coor = self.get_coordinates()
 
 
-        print("\nCreating a diffraction setup...")
-        diffraction_setup = DiffractionSetup(geometry_type=BraggDiffraction(),  # todo: use oe._diffraction_geometry
-                                             crystal_name=oe._material,  # string
-                                             thickness=oe._thickness,  # meters
-                                             miller_h=oe._miller_index_h,  # int
-                                             miller_k=oe._miller_index_k,  # int
-                                             miller_l=oe._miller_index_l,  # int
-                                             asymmetry_angle=oe._asymmetry_angle,
-                                             # 10.0*numpy.pi/180.,                              # radians
-                                             azimuthal_angle=0.0)
+        if oe._material_constants_library_flag == 0:
+            print("\nCreating a diffraction setup (XRAYLIB)...")
+            diffraction_setup = DiffractionSetup(geometry_type=BraggDiffraction(),  # todo: use oe._diffraction_geometry
+                                                 crystal_name=oe._material,  # string
+                                                 thickness=oe._thickness,  # meters
+                                                 miller_h=oe._miller_index_h,  # int
+                                                 miller_k=oe._miller_index_k,  # int
+                                                 miller_l=oe._miller_index_l,  # int
+                                                 asymmetry_angle=oe._asymmetry_angle,                            # radians
+                                                 azimuthal_angle=0.0)
+        elif oe._material_constants_library_flag == 1:
+            print("\nCreating a diffraction setup (DABAX)...")
+            diffraction_setup = DiffractionSetupDabax(geometry_type=BraggDiffraction(),  # todo: use oe._diffraction_geometry
+                                                 crystal_name=oe._material,  # string
+                                                 thickness=oe._thickness,  # meters
+                                                 miller_h=oe._miller_index_h,  # int
+                                                 miller_k=oe._miller_index_k,  # int
+                                                 miller_l=oe._miller_index_l,  # int
+                                                 asymmetry_angle=oe._asymmetry_angle,  # radians
+                                                 azimuthal_angle=0.0)
+        elif oe._material_constants_library_flag == 2:
+            print("\nCreating a diffraction setup (shadow preprocessor file V1)...")
+            diffraction_setup = DiffractionSetupShadowPreprocessorV1(geometry_type=BraggDiffraction(),  # todo: use oe._diffraction_geometry
+                                                 crystal_name=oe._material,            # string
+                                                 thickness=oe._thickness,              # meters
+                                                 miller_h=oe._miller_index_h,          # int
+                                                 miller_k=oe._miller_index_k,          # int
+                                                 miller_l=oe._miller_index_l,          # int
+                                                 asymmetry_angle=oe._asymmetry_angle,  # radians
+                                                 azimuthal_angle=0.0,
+                                                 preprocessor_file=oe._file_refl)
+        elif oe._material_constants_library_flag == 3:
+            print("\nCreating a diffraction setup (shadow preprocessor file V2)...")
+            diffraction_setup = DiffractionSetupShadowPreprocessorV2(geometry_type=BraggDiffraction(),  # todo: use oe._diffraction_geometry
+                                                 crystal_name=oe._material,            # string
+                                                 thickness=oe._thickness,              # meters
+                                                 miller_h=oe._miller_index_h,          # int
+                                                 miller_k=oe._miller_index_k,          # int
+                                                 miller_l=oe._miller_index_l,          # int
+                                                 asymmetry_angle=oe._asymmetry_angle,  # radians
+                                                 azimuthal_angle=0.0,
+                                                 preprocessor_file=oe._file_refl)
+        else:
+            raise NotImplementedError
 
         self._crystalpy_diffraction_setup = diffraction_setup
 
@@ -295,14 +336,14 @@ class S4CrystalElement(S4BeamlineElement):
         beam_out.change_to_image_reference_system(theta_grazing2, q)
 
         # plot results
-        if scan_type == 0:
-            pass
-        else:
-            deviations = beam_out.get_column(6)
-            intensityS = beam_out.get_column(24)
-            intensityP = beam_out.get_column(25)
+        if False:
+            if scan_type == 0:
+                pass
+            else:
+                deviations = beam_out.get_column(6)
+                intensityS = beam_out.get_column(24)
+                intensityP = beam_out.get_column(25)
 
-        if True:
             from srxraylib.plot.gol import plot
             plot(1e6 * deviations, intensityS,
                  1e6 * deviations, intensityP,

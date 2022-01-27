@@ -76,11 +76,12 @@ if __name__ == "__main__":
     #
 
 
-    syned_electron_beam = ElectronBeam(energy_in_GeV=1.9,current=0.4,
-                                       moment_xx=(39e-6)**2,
-                                       moment_xpxp=(2000e-12 / 51e-6)**2,
-                                       moment_yy=(31e-6)**2,
-                                       moment_ypyp=(30e-12 / 31e-6)**2,
+    syned_electron_beam = ElectronBeam(energy_in_GeV=1.9,
+                                       current=0.4,
+                                       moment_xx  =  (39e-6)**2             ,
+                                       moment_xpxp=  (2000e-12 / 51e-6)**2  ,
+                                       moment_yy  =  (31e-6)**2             ,
+                                       moment_ypyp=  (30e-12 / 31e-6)**2    ,
                                        )
 
     # B from file

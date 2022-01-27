@@ -31,6 +31,9 @@ class S4PlaneCrystal(S4Crystal, S4ConicOpticalElement):
                  f_mosaic=False,
                  spread_mos=0.4 * numpy.pi / 180,
                  f_ext=0,
+                 material_constants_library_flag=0,  # 0=xraylib, 1=dabax
+                                                     # 2=shadow preprocessor file v1
+                                                     # 3=shadow preprocessor file v1
                  ):
 
         S4ConicOpticalElement.__init__(self, [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, -1.0, 0.0])
@@ -56,6 +59,7 @@ class S4PlaneCrystal(S4Crystal, S4ConicOpticalElement):
                            f_mosaic=f_mosaic,
                            spread_mos=spread_mos,
                            f_ext=f_ext,
+                           material_constants_library_flag=material_constants_library_flag,
                            )
 
 class S4PlaneCrystalElement(S4CrystalElement):

@@ -41,12 +41,29 @@ def crystal_diffraction_with_collimated_beam(do_plot=True):
     # crystal definition
     #
 
+    if True: # create preprocessor file
+        descriptor = 'YB66'
+        SCANFROM = 0  # in microradiants
+        SCANTO = 100  # in microradiants
+        TEMPER = 1.0
+        ENERGY = 8040.0
+        SCANPOINTS = 200
+
+        print("Using crystal descriptor: ", descriptor)
+        from xoppylib.crystals.tools import bragg_calc2
+        from dabax.dabax_xraylib import DabaxXraylib
+        bragg_dictionary = bragg_calc2(descriptor=descriptor,
+                                       hh=4, kk=0, ll=0,
+                                       temper=1.0,
+                                       emin=ENERGY - 100.0, emax=ENERGY + 100.0,
+                                       estep=(SCANTO - SCANFROM) / SCANPOINTS, fileout="xcrystal.bra",
+                                       material_constants_library=DabaxXraylib())
 
     crystal1 = S4PlaneCrystalElement(
                                 optical_element=S4PlaneCrystal(
                                     name="Plane crystal",
                                     boundary_shape=None,
-                                    material="Si",
+                                    material="YB66",
                                     diffraction_geometry=DiffractionGeometry.BRAGG,  # ?? not supposed to be in syned...
                                     miller_index_h=1,
                                     miller_index_k=1,
@@ -56,14 +73,16 @@ def crystal_diffraction_with_collimated_beam(do_plot=True):
                                     f_central=True,
                                     f_phot_cent=0,
                                     phot_cent=8000.0,
-                                    file_refl="",
+                                    file_refl="xcrystal.bra",
                                     f_bragg_a=False,
                                     # a_bragg=0.0,
                                     f_johansson=False,
                                     r_johansson=1.0,
                                     f_mosaic=False,
                                     spread_mos=0.4 * numpy.pi / 180,
-                                    f_ext=0,                                    ),
+                                    f_ext=0,
+                                    material_constants_library_flag=3,
+                                ),
                                 coordinates=ElementCoordinates(p=0.0, q=5000.0e-3,
                                             angle_radial=0.0, angle_azimuthal=0.0, angle_radial_out=0.0))
 
@@ -77,7 +96,6 @@ def crystal_diffraction_with_collimated_beam(do_plot=True):
 
     if do_plot:
         plotxy(beam2, 6, 23, nbins=100, title="INTENSITY VS Z'")
-
     #
     # #
     # if do_plot:
