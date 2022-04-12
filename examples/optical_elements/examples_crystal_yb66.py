@@ -65,9 +65,9 @@ def crystal_diffraction_with_collimated_beam(do_plot=True):
                                     boundary_shape=None,
                                     material="YB66",
                                     diffraction_geometry=DiffractionGeometry.BRAGG,  # ?? not supposed to be in syned...
-                                    miller_index_h=1,
-                                    miller_index_k=1,
-                                    miller_index_l=1,
+                                    miller_index_h=4,
+                                    miller_index_k=4,
+                                    miller_index_l=0,
                                     asymmetry_angle=0.0,
                                     thickness=0.010,  ###########################
                                     f_central=True,
@@ -81,7 +81,9 @@ def crystal_diffraction_with_collimated_beam(do_plot=True):
                                     f_mosaic=False,
                                     spread_mos=0.4 * numpy.pi / 180,
                                     f_ext=0,
-                                    material_constants_library_flag=3,
+                                    material_constants_library_flag=3, # 0=xraylib, 1=dabax
+                                    # 2=shadow preprocessor file v1
+                                    # 3=shadow preprocessor file v2
                                 ),
                                 coordinates=ElementCoordinates(p=0.0, q=5000.0e-3,
                                             angle_radial=0.0, angle_azimuthal=0.0, angle_radial_out=0.0))

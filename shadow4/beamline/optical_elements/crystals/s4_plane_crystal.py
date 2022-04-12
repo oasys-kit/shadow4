@@ -33,7 +33,7 @@ class S4PlaneCrystal(S4Crystal, S4ConicOpticalElement):
                  f_ext=0,
                  material_constants_library_flag=0,  # 0=xraylib, 1=dabax
                                                      # 2=shadow preprocessor file v1
-                                                     # 3=shadow preprocessor file v1
+                                                     # 3=shadow preprocessor file v2
                  ):
 
         S4ConicOpticalElement.__init__(self, [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, -1.0, 0.0])
