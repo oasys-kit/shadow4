@@ -26,17 +26,8 @@ class S4SurfaceDataMirror(S4Mirror, S4SurfaceDataOpticalElement):
         S4Mirror.__init__(self, name, boundary_shape, self._curved_surface_shape,
                           f_reflec, f_refl, file_refl, refraction_index)
 
-import os
-
-class S4SurfaceDataMirrorElement(S4MirrorElement):
-    def __init__(self, optical_element=None, coordinates=None):
-        super().__init__(optical_element if optical_element is not None else S4SurfaceDataMirror(),
-                         coordinates if coordinates is not None else ElementCoordinates())
-        if not isinstance(self.get_optical_element().get_surface_shape(), SurfaceData):
-            raise ValueError("Wrong Optical Element: only Surface Data shape is accepted")
-
-    def apply_local_reflection(self, beam):
-        surface_shape = self.get_optical_element().get_surface_shape()
+    def apply_geometrical_model(self, beam):
+        surface_shape = self.get_surface_shape()
 
         print(">>>>> SurfaceData mirror")
         num_mesh = S4Mesh()
@@ -52,3 +43,15 @@ class S4SurfaceDataMirrorElement(S4MirrorElement):
         mirr, normal, _, _, _, _, _ = num_mesh.apply_specular_reflection_on_beam(beam)
 
         return mirr, normal
+
+import os
+
+class S4SurfaceDataMirrorElement(S4MirrorElement):
+    def __init__(self, optical_element=None, coordinates=None):
+        super().__init__(optical_element if optical_element is not None else S4SurfaceDataMirror(),
+                         coordinates if coordinates is not None else ElementCoordinates())
+        if not isinstance(self.get_optical_element().get_surface_shape(), SurfaceData):
+            raise ValueError("Wrong Optical Element: only Surface Data shape is accepted")
+
+    def apply_local_reflection(self, beam):
+        return self.get_optical_element().apply_geometrical_model(beam)

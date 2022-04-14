@@ -65,7 +65,8 @@ class S4Mirror(Mirror):
     def set_boundaries_rectangle(self, x_left=-1e3, x_right=1e3, y_bottom=-1e3, y_top=1e3):
         self._boundary_shape = Rectangle(x_left=x_left, x_right=x_right, y_bottom=y_bottom, y_top=y_top)
 
-
+    def apply_geometrical_model(self, beam):
+        raise NotImplementedError()
 
 class S4MirrorElement(S4BeamlineElement):
     

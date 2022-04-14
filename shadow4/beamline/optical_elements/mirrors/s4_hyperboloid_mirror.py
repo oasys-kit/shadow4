@@ -34,17 +34,8 @@ class S4HyperboloidMirror(S4Mirror, S4HyperboloidOpticalElement):
         S4Mirror.__init__(self, name, boundary_shape, self._curved_surface_shape,
                           f_reflec, f_refl, file_refl, refraction_index)
 
-
-class S4HyperboloidMirrorElement(S4MirrorElement):
-    def __init__(self, optical_element=None, coordinates=None):
-        super().__init__(optical_element if optical_element is not None else S4HyperboloidMirror(),
-                         coordinates if coordinates is not None else ElementCoordinates())
-        if not (isinstance(self.get_optical_element().get_surface_shape(), HyperbolicCylinder) or
-                isinstance(self.get_optical_element().get_surface_shape(), Hyperboloid)):
-            raise ValueError("Wrong Optical Element: only Hyperboloid or Hyperbolic Cylinder shape is accepted")
-
-    def apply_local_reflection(self, beam):
-        surface_shape = self.get_optical_element().get_surface_shape()
+    def apply_geometrical_model(self, beam):
+        surface_shape = self.get_surface_shape()
 
         switch_convexity = 0 if surface_shape.get_convexity() == Convexity.UPWARD else 1
 
@@ -64,9 +55,21 @@ class S4HyperboloidMirrorElement(S4MirrorElement):
 
         return mirr, normal
 
-from shadow4.syned.shape import Rectangle
+class S4HyperboloidMirrorElement(S4MirrorElement):
+    def __init__(self, optical_element=None, coordinates=None):
+        super().__init__(optical_element if optical_element is not None else S4HyperboloidMirror(),
+                         coordinates if coordinates is not None else ElementCoordinates())
+        if not (isinstance(self.get_optical_element().get_surface_shape(), HyperbolicCylinder) or
+                isinstance(self.get_optical_element().get_surface_shape(), Hyperboloid)):
+            raise ValueError("Wrong Optical Element: only Hyperboloid or Hyperbolic Cylinder shape is accepted")
+
+    def apply_local_reflection(self, beam):
+        return self.get_optical_element().apply_geometrical_model(beam)
+
 
 if __name__=="__main__":
+    from shadow4.syned.shape import Rectangle
+
     angle_radial = 88.0
 
     el = S4HyperboloidMirrorElement(optical_element=S4HyperboloidMirror(boundary_shape=Rectangle(),

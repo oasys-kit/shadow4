@@ -21,6 +21,15 @@ class S4PlaneMirror(S4Mirror, S4PlaneOpticalElement):
         S4PlaneOpticalElement.__init__(self)
         S4Mirror.__init__(self, name, boundary_shape, self._plane_surface_shape, f_reflec, f_refl, file_refl, refraction_index)
 
+    def apply_geometrical_model(self, beam):
+
+        print(">>>>> Plane mirror")
+
+        ccc = S4Conic.initialize_as_plane()
+        mirr, normal = ccc.apply_specular_reflection_on_beam(beam)
+
+        return mirr, normal
+
 class S4PlaneMirrorElement(S4MirrorElement):
     def __init__(self, optical_element=None, coordinates=None):
         super().__init__(optical_element if optical_element is not None else S4PlaneMirror(),
@@ -29,10 +38,4 @@ class S4PlaneMirrorElement(S4MirrorElement):
             raise ValueError("Wrong Optical Element: only Plane shape is accepted")
 
     def apply_local_reflection(self, beam):
-        print(">>>>> Plane mirror")
-
-        ccc = S4Conic.initialize_as_plane()
-
-        mirr, normal = ccc.apply_specular_reflection_on_beam(beam)
-
-        return mirr, normal
+        return self.get_optical_element().apply_geometrical_model(beam)

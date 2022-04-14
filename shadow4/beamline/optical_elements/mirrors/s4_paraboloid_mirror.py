@@ -35,16 +35,8 @@ class S4ParaboloidMirror(S4Mirror, S4ParaboloidOpticalElement):
         S4Mirror.__init__(self, name, boundary_shape, self._curved_surface_shape,
                           f_reflec, f_refl, file_refl, refraction_index)
 
-class S4ParaboloidMirrorElement(S4MirrorElement):
-    def __init__(self, optical_element=None, coordinates=None):
-        super().__init__(optical_element if optical_element is not None else S4ParaboloidMirror(),
-                         coordinates if coordinates is not None else ElementCoordinates())
-        if not (isinstance(self.get_optical_element().get_surface_shape(), ParabolicCylinder) or
-                isinstance(self.get_optical_element().get_surface_shape(), Paraboloid)):
-            raise ValueError("Wrong Optical Element: only Paraboloid or Parabolic Cylinder shape is accepted")
-
-    def apply_local_reflection(self, beam):
-        surface_shape = self.get_optical_element().get_surface_shape()
+    def apply_geometrical_model(self, beam):
+        surface_shape = self.get_surface_shape()
 
         switch_convexity = 0 if surface_shape.get_convexity() == Convexity.UPWARD else 1
 
@@ -69,3 +61,14 @@ class S4ParaboloidMirrorElement(S4MirrorElement):
         mirr, normal = ccc.apply_specular_reflection_on_beam(beam)
 
         return mirr, normal
+
+class S4ParaboloidMirrorElement(S4MirrorElement):
+    def __init__(self, optical_element=None, coordinates=None):
+        super().__init__(optical_element if optical_element is not None else S4ParaboloidMirror(),
+                         coordinates if coordinates is not None else ElementCoordinates())
+        if not (isinstance(self.get_optical_element().get_surface_shape(), ParabolicCylinder) or
+                isinstance(self.get_optical_element().get_surface_shape(), Paraboloid)):
+            raise ValueError("Wrong Optical Element: only Paraboloid or Parabolic Cylinder shape is accepted")
+
+    def apply_local_reflection(self, beam):
+        return self.get_optical_element().apply_geometrical_model(beam)
