@@ -123,6 +123,9 @@ class S4WigglerLightSource(LightSource, S4LightSource):
             psi_interval_number_of_points=psi_interval_number_of_points,
             verbose=verbose))
 
+    def get_trajectory(self):
+        return self.__result_trajectory, self.__result_parameters
+
     def info(self,debug=False):
         electron_beam = self.get_electron_beam()
         magnetic_structure = self.get_magnetic_structure()

@@ -482,7 +482,7 @@ class Beam(object):
             x = self.get_column(col, nolost=nolost)
             w = numpy.ones(len(x))
         else:
-            x, w = self.getshcol((col, ref), nolost=nolost)
+            x, w = self.get_columns((col, ref), nolost=nolost)
 
         if factor != 1.0: x *= factor
 
