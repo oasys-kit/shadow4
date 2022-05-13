@@ -95,6 +95,8 @@ class S4Undulator(Undulator):
         # txt += "-----------------------------------------------------\n"
         return txt
 
+    def get_flag_emittance(self):
+        return self._FLAG_EMITTANCE
 
     def set_energy_monochromatic(self,emin):
         """

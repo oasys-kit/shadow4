@@ -11,3 +11,6 @@ class S4LightSource(object):
 
     def get_beam(self, **params):
         raise NotImplementedError()
+
+    def calculate_spectrum(self, **params):
+        raise NotImplementedError()

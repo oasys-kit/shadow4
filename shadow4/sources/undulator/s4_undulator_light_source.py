@@ -33,14 +33,17 @@ from syned.storage_ring.electron_beam import ElectronBeam
 
 from shadow4.beam.beam import Beam
 
-from shadow4.sources.undulator.source_undulator_factory import SourceUndulatorFactory
-from shadow4.sources.undulator.source_undulator_factory_srw import SourceUndulatorFactorySrw
-from shadow4.sources.undulator.source_undulator_factory_pysru import SourceUndulatorFactoryPysru
+from shadow4.sources.undulator.source_undulator_factory import calculate_undulator_emission # SourceUndulatorFactory
+from shadow4.sources.undulator.source_undulator_factory_srw import calculate_undulator_emission_SRW # SourceUndulatorFactorySrw
+from shadow4.sources.undulator.source_undulator_factory_pysru import calculate_undulator_emission_pySRU # SourceUndulatorFactoryPysru
 
 from shadow4.sources.undulator.s4_undulator import S4Undulator
 
 from syned.storage_ring.light_source import LightSource
 from shadow4.sources.s4_light_source import S4LightSource
+
+from shadow4.sources.source_geometrical.source_gaussian import SourceGaussian
+import scipy.constants as codata
 
 INTEGRATION_METHOD = 1 # 0=sum, 1=trapz
 
@@ -166,36 +169,36 @@ class S4UndulatorLightSource(LightSource, S4LightSource):
         # take 3*sigma - _MAXANGLE is in RAD
         self._MAXANGLE = 3 * 0.69 * self.syned_undulator.gaussian_central_cone_aperture(self.syned_electron_beam.gamma(),harmonic_number)
 
-    def set_energy_monochromatic(self,emin):
-        """
-        Sets a single energy line for the source (monochromatic)
-        :param emin: the energy in eV
-        :return:
-        """
-        self._EMIN = emin
-        self._EMAX = emin
-        self._NG_E = 1
-
-
-    def set_energy_box(self,emin,emax,npoints=None):
-        """
-        Sets a box for photon energy distribution for the source
-        :param emin:  Photon energy scan from energy (in eV)
-        :param emax:  Photon energy scan to energy (in eV)
-        :param npoints:  Photon energy scan number of points (optinal, if not set no changes)
-        :return:
-        """
-        self._EMIN = emin
-        self._EMAX = emax
-        if npoints != None:
-            self._NG_E = npoints
-
-    def get_energy_box(self):
-        """
-        Gets the limits of photon energy distribution for the source
-        :return: emin,emax,number_of_points
-        """
-        return self._EMIN,self._EMAX,self._NG_E
+    # def set_energy_monochromatic(self,emin):
+    #     """
+    #     Sets a single energy line for the source (monochromatic)
+    #     :param emin: the energy in eV
+    #     :return:
+    #     """
+    #     self._EMIN = emin
+    #     self._EMAX = emin
+    #     self._NG_E = 1
+    #
+    #
+    # def set_energy_box(self,emin,emax,npoints=None):
+    #     """
+    #     Sets a box for photon energy distribution for the source
+    #     :param emin:  Photon energy scan from energy (in eV)
+    #     :param emax:  Photon energy scan to energy (in eV)
+    #     :param npoints:  Photon energy scan number of points (optinal, if not set no changes)
+    #     :return:
+    #     """
+    #     self._EMIN = emin
+    #     self._EMAX = emax
+    #     if npoints != None:
+    #         self._NG_E = npoints
+    #
+    # def get_energy_box(self):
+    #     """
+    #     Gets the limits of photon energy distribution for the source
+    #     :return: emin,emax,number_of_points
+    #     """
+    #     return self._EMIN,self._EMAX,self._NG_E
 
 
     def __calculate_radiation(self):
@@ -224,43 +227,49 @@ class S4UndulatorLightSource(LightSource, S4LightSource):
 
         # undul_phot
         if undulator.code_undul_phot == 'internal':
-            undul_phot_dict = SourceUndulatorFactory.calculate_undulator_emission(electron_energy= syned_electron_beam.energy(),
-                                                                                  electron_current= syned_electron_beam.current(),
-                                                                                  undulator_period= undulator.period_length(),
-                                                                                  undulator_nperiods= undulator.number_of_periods(),
-                                                                                  K         = undulator.K(),
-                                                                                  photon_energy= undulator._EMIN,
-                                                                                  EMAX      = undulator._EMAX,
-                                                                                  NG_E      = undulator._NG_E,
-                                                                                  MAXANGLE  = undulator._MAXANGLE,
-                                                                                  number_of_points= undulator._NG_T,
-                                                                                  NG_P      = undulator._NG_P,
-                                                                                  number_of_trajectory_points = undulator._NG_J)
+            undul_phot_dict = calculate_undulator_emission(
+                electron_energy= syned_electron_beam.energy(),
+                electron_current= syned_electron_beam.current(),
+                undulator_period= undulator.period_length(),
+                undulator_nperiods= undulator.number_of_periods(),
+                K         = undulator.K(),
+                photon_energy= undulator._EMIN,
+                EMAX      = undulator._EMAX,
+                NG_E      = undulator._NG_E,
+                MAXANGLE  = undulator._MAXANGLE,
+                number_of_points= undulator._NG_T,
+                NG_P      = undulator._NG_P,
+                number_of_trajectory_points = undulator._NG_J,
+                )
 
         elif undulator.code_undul_phot == 'pysru' or  undulator.code_undul_phot == 'pySRU':
-            undul_phot_dict = SourceUndulatorFactoryPysru.calculate_undulator_emission(electron_energy= syned_electron_beam.energy(),
-                                                                                       electron_current= syned_electron_beam.current(),
-                                                                                       undulator_period= undulator.period_length(),
-                                                                                       undulator_nperiods= undulator.number_of_periods(),
-                                                                                       K         = undulator.K(),
-                                                                                       photon_energy= undulator._EMIN,
-                                                                                       EMAX      = undulator._EMAX,
-                                                                                       NG_E      = undulator._NG_E,
-                                                                                       MAXANGLE  = undulator._MAXANGLE,
-                                                                                       number_of_points= undulator._NG_T,
-                                                                                       NG_P      = undulator._NG_P, )
+            undul_phot_dict = calculate_undulator_emission_pySRU(
+                electron_energy= syned_electron_beam.energy(),
+                electron_current= syned_electron_beam.current(),
+                undulator_period= undulator.period_length(),
+                undulator_nperiods= undulator.number_of_periods(),
+                K         = undulator.K(),
+                photon_energy= undulator._EMIN,
+                EMAX      = undulator._EMAX,
+                NG_E      = undulator._NG_E,
+                MAXANGLE  = undulator._MAXANGLE,
+                number_of_points= undulator._NG_T,
+                NG_P      = undulator._NG_P,
+                )
         elif undulator.code_undul_phot == 'srw' or  undulator.code_undul_phot == 'SRW':
-            undul_phot_dict = SourceUndulatorFactorySrw.calculate_undulator_emission(electron_energy= self.syned_electron_beam.energy(),
-                                                                                     electron_current= syned_electron_beam.current(),
-                                                                                     undulator_period= undulator.period_length(),
-                                                                                     undulator_nperiods= undulator.number_of_periods(),
-                                                                                     K         = undulator.K(),
-                                                                                     photon_energy= undulator._EMIN,
-                                                                                     EMAX      = undulator._EMAX,
-                                                                                     NG_E      = undulator._NG_E,
-                                                                                     MAXANGLE  = undulator._MAXANGLE,
-                                                                                     number_of_points= undulator._NG_T,
-                                                                                     NG_P      = undulator._NG_P, )
+            undul_phot_dict = calculate_undulator_emission_SRW(
+                electron_energy= syned_electron_beam.energy(),
+                electron_current= syned_electron_beam.current(),
+                undulator_period= undulator.period_length(),
+                undulator_nperiods= undulator.number_of_periods(),
+                K         = undulator.K(),
+                photon_energy= undulator._EMIN,
+                EMAX      = undulator._EMAX,
+                NG_E      = undulator._NG_E,
+                MAXANGLE  = undulator._MAXANGLE,
+                number_of_points= undulator._NG_T,
+                NG_P      = undulator._NG_P,
+                )
         else:
             raise Exception("Not implemented undul_phot code: "+undulator.code_undul_phot)
 
@@ -829,6 +838,100 @@ class S4UndulatorLightSource(LightSource, S4LightSource):
 
         return sampled_photon_energy,sampled_theta,sampled_phi
 
+    def get_beam_in_gaussian_approximation(self, NRAYS=1000, SEED=12345):
+        emin, emax, npoints = self.get_magnetic_structure().get_energy_box()
+
+        if self.get_magnetic_structure().get_flag_emittance():
+            sigma_x, sigdi_x, sigma_z, sigdi_z = self.get_electron_beam().get_sigmas_all()
+            Sx, Sz, Spx, Spz = self.get_undulator_photon_beam_sizes_by_convolution(
+                sigma_x=sigma_x,
+                sigma_z=sigma_z,
+                sigdi_x=sigdi_x,
+                sigdi_z=sigdi_z,
+                undulator_E0=0.5*(emin+emax),
+                undulator_length=self.get_magnetic_structure().length(),
+            )
+            a = SourceGaussian.initialize_from_keywords(number_of_rays=NRAYS,
+                                                        sigmaX=Sx,
+                                                        sigmaY=0,
+                                                        sigmaZ=Sz,
+                                                        sigmaXprime=Spx,
+                                                        sigmaZprime=Spz,
+                                                        real_space_center=[0.0, 0.0, 0.0],
+                                                        direction_space_center=[0.0, 0.0])
+        else:
+            s, sp = self.get_undulator_photon_beam_sizes(
+                undulator_E0=0.5*(emin+emax),
+                undulator_length=self.get_magnetic_structure().length(),
+            )
+            a = SourceGaussian.initialize_from_keywords(number_of_rays=NRAYS,
+                                                        sigmaX=s,
+                                                        sigmaY=0,
+                                                        sigmaZ=s,
+                                                        sigmaXprime=sp,
+                                                        sigmaZprime=sp,
+                                                        real_space_center=[0.0, 0.0, 0.0],
+                                                        direction_space_center=[0.0, 0.0])
+
+
+        print(a.info())
+        beam = a.get_beam()
+        if emax != emin:
+            e = numpy.random.random(NRAYS) * (emax - emin) + emin
+            beam.set_photon_energy_eV(e)
+
+        return beam
+
+    @classmethod
+    def get_undulator_photon_beam_sizes(cls,
+                                        undulator_E0=15000.0,
+                                        undulator_length=4.0):
+        m2ev = codata.c * codata.h / codata.e
+        lambda1 = m2ev / undulator_E0
+        # calculate sizes of the photon undulator beam
+        # see formulas 25 & 30 in Elleaume (Onaki & Elleaume)
+        s_phot = 2.740/(4e0*numpy.pi)*numpy.sqrt(undulator_length*lambda1)
+        sp_phot = 0.69*numpy.sqrt(lambda1/undulator_length)
+        return s_phot, sp_phot
+
+    @classmethod
+    def get_undulator_photon_beam_sizes_by_convolution(cls,
+                                                       sigma_x=1e-4,
+                                                       sigma_z=1e-4,
+                                                       sigdi_x=1e-6,
+                                                       sigdi_z=1e-6,
+                                                       undulator_E0=15000.0,
+                                                       undulator_length=4.0):
+
+        user_unit_to_m = 1.0
+
+        s_phot, sp_phot = cls.get_undulator_photon_beam_sizes(undulator_E0=undulator_E0, undulator_length=undulator_length)
+
+        photon_h = numpy.sqrt(numpy.power(sigma_x*user_unit_to_m,2) + numpy.power(s_phot,2) )
+        photon_v = numpy.sqrt(numpy.power(sigma_z*user_unit_to_m,2) + numpy.power(s_phot,2) )
+        photon_hp = numpy.sqrt(numpy.power(sigdi_x,2) + numpy.power(sp_phot,2) )
+        photon_vp = numpy.sqrt(numpy.power(sigdi_z,2) + numpy.power(sp_phot,2) )
+
+        m2ev = codata.c * codata.h / codata.e
+        lambda1 = m2ev / undulator_E0
+        txt = ""
+        txt += "Photon single electron emission at wavelength %f A: \n"%(lambda1*1e10)
+        txt += "    sigma_u:      %g um \n"%(1e6*s_phot)
+        txt += "    sigma_uprime: %g urad \n" %(1e6*sp_phot)
+        txt += "Electron sizes: \n"
+        txt += "    sigma_x: %g um \n"%(1e6*sigma_x*user_unit_to_m)
+        txt += "    sigma_z: %g um \n" %(1e6*sigma_z*user_unit_to_m)
+        txt += "    sigma_x': %g urad \n"%(1e6*sigdi_x)
+        txt += "    sigma_z': %g urad \n" %(1e6*sigdi_z)
+        txt += "Photon source sizes (convolution): \n"
+        txt += "    Sigma_x: %g um \n"%(1e6*photon_h)
+        txt += "    Sigma_z: %g um \n" %(1e6*photon_v)
+        txt += "    Sigma_x': %g urad \n"%(1e6*photon_hp)
+        txt += "    Sigma_z': %g urad \n" %(1e6*photon_vp)
+
+        print(txt)
+
+        return (photon_h/user_unit_to_m, photon_v/user_unit_to_m, photon_hp, photon_vp)
 
 if __name__ == "__main__":
 
@@ -836,7 +939,11 @@ if __name__ == "__main__":
 
     do_plots = True
 
-    su = S4Undulator(K_vertical=0.25,period_length=0.032,number_of_periods=50)
+    su = S4Undulator(K_vertical=0.25,
+                     period_length=0.032,
+                     number_of_periods=50,
+                     code_undul_phot='SRW',
+                     )
 
     ebeam = ElectronBeam(energy_in_GeV=6.04,
                  energy_spread = 0.0,

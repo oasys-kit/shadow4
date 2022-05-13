@@ -879,6 +879,22 @@ class S4WigglerLightSource(LightSource, S4LightSource):
         #
         return 0,0,0
 
+    def calculate_spectrum(self, output_file=""):
+        traj, pars = self.get_trajectory()
+        wig = self.get_magnetic_structure()
+        e_min, e_max, ne = wig.get_energy_box()
+        ring = self.get_electron_beam()
+        if traj is not None:
+            e, f, w = wiggler_spectrum(traj,
+                          enerMin=e_min,
+                          enerMax=e_max,
+                          nPoints=ne,
+                          electronCurrent=ring.current(),
+                          outFile=output_file,
+                          elliptical=False)
+            return e,f,w
+        else:
+            raise Exception("Cannot compute spectrum")
 
 if __name__ == "__main__":
     from srxraylib.plot.gol import plot_scatter, set_qt
