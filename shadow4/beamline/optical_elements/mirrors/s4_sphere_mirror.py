@@ -10,11 +10,11 @@ class S4SphereMirror(S4Mirror, S4SphereOpticalElement):
     def __init__(self,
                  name="Sphere Mirror",
                  boundary_shape=None,
-                 surface_calculation=SurfaceCalculation.INTERNAL,
+                 surface_calculation=SurfaceCalculation.EXTERNAL,
                  is_cylinder=False,
                  cylinder_direction=Direction.TANGENTIAL,
                  convexity=Convexity.UPWARD,
-                 radius=0.0,
+                 radius=1.0,
                  p_focus=0.0,
                  q_focus=0.0,
                  grazing_angle=0.0,
@@ -36,7 +36,7 @@ class S4SphereMirror(S4Mirror, S4SphereOpticalElement):
     def apply_geometrical_model(self, beam):
         surface_shape = self.get_surface_shape()
 
-        switch_convexity = 0 if surface_shape.get_convexity() == Convexity.UPWARD else 1
+        switch_convexity = 0 if surface_shape.get_convexity() == Convexity.DOWNWARD else 1
 
         if isinstance(surface_shape, SphericalCylinder):
             print(">>>>> SphericalCylinder mirror", surface_shape)
@@ -50,6 +50,7 @@ class S4SphereMirror(S4Mirror, S4SphereOpticalElement):
         ccc = S4Conic.initialize_as_sphere_from_curvature_radius(surface_shape.get_radius(),
                                                                  cylindrical=cylindrical, cylangle=cylangle, switch_convexity=switch_convexity)
 
+        print(">>>>>>> ccc: ", ccc.info())
         mirr, normal = ccc.apply_specular_reflection_on_beam(beam)
 
         return mirr, normal

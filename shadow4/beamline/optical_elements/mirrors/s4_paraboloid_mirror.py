@@ -38,7 +38,7 @@ class S4ParaboloidMirror(S4Mirror, S4ParaboloidOpticalElement):
     def apply_geometrical_model(self, beam):
         surface_shape = self.get_surface_shape()
 
-        switch_convexity = 0 if surface_shape.get_convexity() == Convexity.UPWARD else 1
+        switch_convexity = 0 if surface_shape.get_convexity() == Convexity.DOWNWARD else 1
 
         if surface_shape.get_at_infinity() == Side.SOURCE:
             p = 1e20
@@ -56,7 +56,7 @@ class S4ParaboloidMirror(S4Mirror, S4ParaboloidOpticalElement):
             cylindrical = 0
             cylangle    = 0.0
 
-        ccc = S4Conic.initialize_as_paraboloid_from_focal_distances(p, q, surface_shape.get_grazing_angle(), cylindrical=cylindrical, cylangle=cylangle, switch_convexity=switch_convexity)
+        ccc = S4Conic.initialize_as_paraboloid_from_focal_distances(p, q, surface_shape.get_focusing_grazing_angle(), cylindrical=cylindrical, cylangle=cylangle, switch_convexity=switch_convexity)
 
         mirr, normal = ccc.apply_specular_reflection_on_beam(beam)
 

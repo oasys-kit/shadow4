@@ -37,7 +37,7 @@ class S4HyperboloidMirror(S4Mirror, S4HyperboloidOpticalElement):
     def apply_geometrical_model(self, beam):
         surface_shape = self.get_surface_shape()
 
-        switch_convexity = 0 if surface_shape.get_convexity() == Convexity.UPWARD else 1
+        switch_convexity = 0 if surface_shape.get_convexity() == Convexity.DOWNWARD else 1
 
         if isinstance(surface_shape, HyperbolicCylinder):
             print(">>>>> HyperbolicCylinder mirror", surface_shape)
@@ -48,7 +48,7 @@ class S4HyperboloidMirror(S4Mirror, S4HyperboloidOpticalElement):
             cylindrical = 0
             cylangle    = 0.0
 
-        ccc = S4Conic.initialize_as_hyperboloid_from_focal_distances(surface_shape.get_p_focus(), surface_shape.get_q_focus(), surface_shape.get_grazing_angle(),
+        ccc = S4Conic.initialize_as_hyperboloid_from_focal_distances(surface_shape.get_p_focus(), surface_shape.get_q_focus(), surface_shape.get_focusing_grazing_angle(),
                                                                      cylindrical=cylindrical, cylangle=cylangle, switch_convexity=switch_convexity)
 
         mirr, normal = ccc.apply_specular_reflection_on_beam(beam)
