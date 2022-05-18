@@ -29,7 +29,8 @@ import scipy.constants as codata
 from scipy import interpolate
 
 from syned.storage_ring.magnetic_structures.undulator import Undulator
-from syned.storage_ring.electron_beam import ElectronBeam
+# from syned.storage_ring.electron_beam import ElectronBeam
+from shadow4.sources.s4_electron_beam import S4ElectronBeam
 
 from shadow4.beam.beam import Beam
 
@@ -47,12 +48,12 @@ import scipy.constants as codata
 
 INTEGRATION_METHOD = 1 # 0=sum, 1=trapz
 
-class S4UndulatorLightSource(LightSource, S4LightSource):
+class S4UndulatorLightSource(S4LightSource):
 
-    def __init__(self, name="Undefined", electron_beam=None, undulator_magnetic_structure=None):
+    def __init__(self, name="Undefined", electron_beam=None, magnetic_structure=None):
         super().__init__(name,
-                         electron_beam=electron_beam if not electron_beam is None else ElectronBeam(),
-                         magnetic_structure=undulator_magnetic_structure if not undulator_magnetic_structure is None else S4Undulator())
+                         electron_beam=electron_beam if not electron_beam is None else S4ElectronBeam(),
+                         magnetic_structure=magnetic_structure if not magnetic_structure is None else S4Undulator())
 
 
         # results of calculations
@@ -66,98 +67,7 @@ class S4UndulatorLightSource(LightSource, S4LightSource):
             user_unit_to_m=user_unit_to_m, F_COHER=F_COHER, NRAYS=NRAYS, SEED=SEED
             ))
 
-    def info(self,debug=False):
-        syned_electron_beam = self.get_electron_beam()
-        undulator = self.get_magnetic_structure()
 
-        txt = ""
-
-        txt += "-----------------------------------------------------\n"
-
-        txt += "Input Electron parameters: \n"
-        txt += "        Electron energy: %f geV\n"%syned_electron_beam._energy_in_GeV
-        txt += "        Electron current: %f A\n"%syned_electron_beam._current
-        if undulator._FLAG_EMITTANCE:
-            sigmas = syned_electron_beam.get_sigmas_all()
-            txt += "        Electron sigmaX: %g [um]\n"%(1e6*sigmas[0])
-            txt += "        Electron sigmaZ: %g [um]\n"%(1e6*sigmas[2])
-            txt += "        Electron sigmaX': %f urad\n"%(1e6*sigmas[1])
-            txt += "        Electron sigmaZ': %f urad\n"%(1e6*sigmas[3])
-        txt += "Input Undulator parameters: \n"
-        txt += "        period: %f m\n"%undulator.period_length()
-        txt += "        number of periods: %d\n"%undulator.number_of_periods()
-        txt += "        K-value: %f\n"%undulator.K_vertical()
-
-        txt += "-----------------------------------------------------\n"
-
-        txt += "Lorentz factor (gamma): %f\n"%syned_electron_beam.gamma()
-        txt += "Electron velocity: %.12f c units\n"%(numpy.sqrt(1.0 - 1.0 / syned_electron_beam.gamma() ** 2))
-        txt += "Undulator length: %f m\n"%(undulator.period_length()*undulator.number_of_periods())
-        K_to_B = (2.0 * numpy.pi / undulator.period_length()) * codata.m_e * codata.c / codata.e
-
-        txt += "Undulator peak magnetic field: %f T\n"%(K_to_B*undulator.K_vertical())
-        txt += "Resonances: \n"
-        txt += "        harmonic number [n]                   %10d %10d %10d \n"%(1,3,5)
-        txt += "        wavelength [A]:                       %10.6f %10.6f %10.6f   \n"%(\
-                                                                1e10*undulator.resonance_wavelength(syned_electron_beam.gamma(),harmonic=1),
-                                                                1e10*undulator.resonance_wavelength(syned_electron_beam.gamma(),harmonic=3),
-                                                                1e10*undulator.resonance_wavelength(syned_electron_beam.gamma(),harmonic=5))
-        txt += "        energy [eV]   :                       %10.3f %10.3f %10.3f   \n"%(\
-                                                                undulator.resonance_energy(syned_electron_beam.gamma(),harmonic=1),
-                                                                undulator.resonance_energy(syned_electron_beam.gamma(),harmonic=3),
-                                                                undulator.resonance_energy(syned_electron_beam.gamma(),harmonic=5))
-        txt += "        frequency [Hz]:                       %10.3g %10.3g %10.3g   \n"%(\
-                                                                1e10*undulator.resonance_frequency(syned_electron_beam.gamma(),harmonic=1),
-                                                                1e10*undulator.resonance_frequency(syned_electron_beam.gamma(),harmonic=3),
-                                                                1e10*undulator.resonance_frequency(syned_electron_beam.gamma(),harmonic=5))
-        txt += "        central cone 'half' width [urad]:     %10.6f %10.6f %10.6f   \n"%(\
-                                                                1e6*undulator.gaussian_central_cone_aperture(syned_electron_beam.gamma(),1),
-                                                                1e6*undulator.gaussian_central_cone_aperture(syned_electron_beam.gamma(),3),
-                                                                1e6*undulator.gaussian_central_cone_aperture(syned_electron_beam.gamma(),5))
-        txt += "        first ring at [urad]:                 %10.6f %10.6f %10.6f   \n"%(\
-                                                                1e6*self.get_resonance_ring(1,1),
-                                                                1e6*self.get_resonance_ring(3,1),
-                                                                1e6*self.get_resonance_ring(5,1))
-
-        txt += "-----------------------------------------------------\n"
-        txt += "Grids: \n"
-        if undulator._NG_E == 1:
-            txt += "        photon energy %f eV\n"%(undulator._EMIN)
-        else:
-            txt += "        photon energy from %10.3f eV to %10.3f eV\n"%(undulator._EMIN,undulator._EMAX)
-        txt += "        number of points for the trajectory: %d\n"%(undulator._NG_J)
-        txt += "        number of energy points: %d\n"%(undulator._NG_E)
-        txt += "        maximum elevation angle: %f urad\n"%(1e6*undulator._MAXANGLE)
-        txt += "        number of angular elevation points: %d\n"%(undulator._NG_T)
-        txt += "        number of angular azimuthal points: %d\n"%(undulator._NG_P)
-        # txt += "        number of rays: %d\n"%(self.NRAYS)
-        # txt += "        random seed: %d\n"%(self.SEED)
-        txt += "-----------------------------------------------------\n"
-
-        txt += "calculation code: %s\n"%undulator.code_undul_phot
-        if self.__result_radiation is None:
-            txt += "radiation: NOT YET CALCULATED\n"
-        else:
-            txt += "radiation: CALCULATED\n"
-        txt += "Sampling: \n"
-        if undulator._FLAG_SIZE == 0:
-            flag = "point"
-        elif undulator._FLAG_SIZE == 1:
-            flag = "Gaussian"
-        elif undulator._FLAG_SIZE == 2:
-            flag = "Far field backpropagated"
-
-        txt += "        Photon source size sampling flag: %d (%s)\n"%(undulator._FLAG_SIZE,flag)
-        if undulator._FLAG_SIZE == 1:
-            if undulator.__result_photon_size_sigma is not None:
-                txt += "        Photon source size sigma (Gaussian): %6.3f um \n"%(1e6 * self.__result_photon_size_sigma)
-
-        txt += "-----------------------------------------------------\n"
-        return txt
-
-
-    def to_python_code(self):
-        return "# to be implemented..."
 
 
     def get_resonance_ring(self,harmonic_number=1, ring_order=1):
@@ -731,8 +641,8 @@ class S4UndulatorLightSource(LightSource, S4LightSource):
         from wofry.propagator.propagator import PropagationManager, PropagationElements, PropagationParameters
         from syned.beamline.beamline_element import BeamlineElement
         from shadow4.syned.element_coordinates import ElementCoordinates
-        from wofry.propagator.propagators1D.fresnel_zoom import FresnelZoom1D
-        from wofry.beamline.optical_elements.ideal_elements.screen import WOScreen1D
+        from wofryimpl.propagator.propagators1D.fresnel_zoom import FresnelZoom1D
+        from wofryimpl.beamline.optical_elements.ideal_elements.screen import WOScreen1D
 
 
         input_wavefront = GenericWavefront1D().initialize_wavefront_from_arrays(theta*distance,numpy.sqrt(radiation_flux)+0j)
@@ -933,6 +843,118 @@ class S4UndulatorLightSource(LightSource, S4LightSource):
 
         return (photon_h/user_unit_to_m, photon_v/user_unit_to_m, photon_hp, photon_vp)
 
+    ########################################
+    #
+    ########################################
+    def info(self,debug=False):
+        syned_electron_beam = self.get_electron_beam()
+        undulator = self.get_magnetic_structure()
+
+        txt = ""
+
+        txt += "-----------------------------------------------------\n"
+
+        txt += "Input Electron parameters: \n"
+        txt += "        Electron energy: %f geV\n"%syned_electron_beam._energy_in_GeV
+        txt += "        Electron current: %f A\n"%syned_electron_beam._current
+        if undulator._FLAG_EMITTANCE:
+            sigmas = syned_electron_beam.get_sigmas_all()
+            txt += "        Electron sigmaX: %g [um]\n"%(1e6*sigmas[0])
+            txt += "        Electron sigmaZ: %g [um]\n"%(1e6*sigmas[2])
+            txt += "        Electron sigmaX': %f urad\n"%(1e6*sigmas[1])
+            txt += "        Electron sigmaZ': %f urad\n"%(1e6*sigmas[3])
+        txt += "Input Undulator parameters: \n"
+        txt += "        period: %f m\n"%undulator.period_length()
+        txt += "        number of periods: %d\n"%undulator.number_of_periods()
+        txt += "        K-value: %f\n"%undulator.K_vertical()
+
+        txt += "-----------------------------------------------------\n"
+
+        txt += "Lorentz factor (gamma): %f\n"%syned_electron_beam.gamma()
+        txt += "Electron velocity: %.12f c units\n"%(numpy.sqrt(1.0 - 1.0 / syned_electron_beam.gamma() ** 2))
+        txt += "Undulator length: %f m\n"%(undulator.period_length()*undulator.number_of_periods())
+        K_to_B = (2.0 * numpy.pi / undulator.period_length()) * codata.m_e * codata.c / codata.e
+
+        txt += "Undulator peak magnetic field: %f T\n"%(K_to_B*undulator.K_vertical())
+        txt += "Resonances: \n"
+        txt += "        harmonic number [n]                   %10d %10d %10d \n"%(1,3,5)
+        txt += "        wavelength [A]:                       %10.6f %10.6f %10.6f   \n"%(\
+                                                                1e10*undulator.resonance_wavelength(syned_electron_beam.gamma(),harmonic=1),
+                                                                1e10*undulator.resonance_wavelength(syned_electron_beam.gamma(),harmonic=3),
+                                                                1e10*undulator.resonance_wavelength(syned_electron_beam.gamma(),harmonic=5))
+        txt += "        energy [eV]   :                       %10.3f %10.3f %10.3f   \n"%(\
+                                                                undulator.resonance_energy(syned_electron_beam.gamma(),harmonic=1),
+                                                                undulator.resonance_energy(syned_electron_beam.gamma(),harmonic=3),
+                                                                undulator.resonance_energy(syned_electron_beam.gamma(),harmonic=5))
+        txt += "        frequency [Hz]:                       %10.3g %10.3g %10.3g   \n"%(\
+                                                                1e10*undulator.resonance_frequency(syned_electron_beam.gamma(),harmonic=1),
+                                                                1e10*undulator.resonance_frequency(syned_electron_beam.gamma(),harmonic=3),
+                                                                1e10*undulator.resonance_frequency(syned_electron_beam.gamma(),harmonic=5))
+        txt += "        central cone 'half' width [urad]:     %10.6f %10.6f %10.6f   \n"%(\
+                                                                1e6*undulator.gaussian_central_cone_aperture(syned_electron_beam.gamma(),1),
+                                                                1e6*undulator.gaussian_central_cone_aperture(syned_electron_beam.gamma(),3),
+                                                                1e6*undulator.gaussian_central_cone_aperture(syned_electron_beam.gamma(),5))
+        txt += "        first ring at [urad]:                 %10.6f %10.6f %10.6f   \n"%(\
+                                                                1e6*self.get_resonance_ring(1,1),
+                                                                1e6*self.get_resonance_ring(3,1),
+                                                                1e6*self.get_resonance_ring(5,1))
+
+        txt += "-----------------------------------------------------\n"
+        txt += "Grids: \n"
+        if undulator._NG_E == 1:
+            txt += "        photon energy %f eV\n"%(undulator._EMIN)
+        else:
+            txt += "        photon energy from %10.3f eV to %10.3f eV\n"%(undulator._EMIN,undulator._EMAX)
+        txt += "        number of points for the trajectory: %d\n"%(undulator._NG_J)
+        txt += "        number of energy points: %d\n"%(undulator._NG_E)
+        txt += "        maximum elevation angle: %f urad\n"%(1e6*undulator._MAXANGLE)
+        txt += "        number of angular elevation points: %d\n"%(undulator._NG_T)
+        txt += "        number of angular azimuthal points: %d\n"%(undulator._NG_P)
+        # txt += "        number of rays: %d\n"%(self.NRAYS)
+        # txt += "        random seed: %d\n"%(self.SEED)
+        txt += "-----------------------------------------------------\n"
+
+        txt += "calculation code: %s\n"%undulator.code_undul_phot
+        if self.__result_radiation is None:
+            txt += "radiation: NOT YET CALCULATED\n"
+        else:
+            txt += "radiation: CALCULATED\n"
+        txt += "Sampling: \n"
+        if undulator._FLAG_SIZE == 0:
+            flag = "point"
+        elif undulator._FLAG_SIZE == 1:
+            flag = "Gaussian"
+        elif undulator._FLAG_SIZE == 2:
+            flag = "Far field backpropagated"
+
+        txt += "        Photon source size sampling flag: %d (%s)\n"%(undulator._FLAG_SIZE,flag)
+        if undulator._FLAG_SIZE == 1:
+            if undulator.__result_photon_size_sigma is not None:
+                txt += "        Photon source size sigma (Gaussian): %6.3f um \n"%(1e6 * self.__result_photon_size_sigma)
+
+        txt += "-----------------------------------------------------\n"
+        return txt
+
+
+
+    def to_python_code(self, data=None):
+        script = ''
+        try:
+            script += self.get_electron_beam().to_python_code()
+        except:
+            script += "\n\n#Error retrieving electron_beam code"
+
+        try:
+            script += self.get_magnetic_structure().to_python_code()
+        except:
+            script += "\n\n#Error retrieving magnetic structure code"
+
+
+        script += "\n\n\nfrom shadow4.sources.undulator.s4_undulator_light_source import S4UndulatorLightSource"
+        script += "\nlight_source = S4UndulatorLightSource(name='%s', electron_beam=electron_beam, magnetic_structure=source)" % \
+                                                          (self.get_name())
+        return script
+
 if __name__ == "__main__":
 
     import numpy
@@ -945,7 +967,7 @@ if __name__ == "__main__":
                      code_undul_phot='SRW',
                      )
 
-    ebeam = ElectronBeam(energy_in_GeV=6.04,
+    ebeam = S4ElectronBeam(energy_in_GeV=6.04,
                  energy_spread = 0.0,
                  current = 0.2,
                  number_of_bunches = 400,
@@ -956,9 +978,10 @@ if __name__ == "__main__":
                  moment_yyp=0.0,
                  moment_ypyp=(4e-6)**2 )
 
-    ls = S4UndulatorLightSource(name="", electron_beam=ebeam, undulator_magnetic_structure=su)
-
-    print(ls.info())
+    ls = S4UndulatorLightSource(name="", electron_beam=ebeam, magnetic_structure=su)
 
     beam =  ls.get_beam()
+
+    print(ls.info())
+    print(ls.to_python_code())
 

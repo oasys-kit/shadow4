@@ -130,10 +130,50 @@ class S4Undulator(Undulator):
         """
         return self._EMIN,self._EMAX,self._NG_E
 
+    def to_python_code(self):
+        script_template = """
+from shadow4.sources.undulator.s4_undulator import S4Undulator
+source = S4Undulator(
+             K_vertical=1.0,             # syned Undulator parameter
+             period_length=0.01,         # syned Undulator parameter
+             number_of_periods=100,      # syned Undulator parameter
+             emin=10000.0,               # Photon energy scan from energy (in eV)
+             emax=11000.0,               # Photon energy scan to energy (in eV)
+             ng_e=11,                    # Photon energy scan number of points
+             maxangle=50e-6,             # Maximum radiation semiaperture in RADIANS
+             ng_t=31,                    # Number of points in angle theta
+             ng_p=21,                    # Number of points in angle phi
+             ng_j=20,                    # Number of points in electron trajectory (per period) for internal calculation only
+             code_undul_phot="internal", # internal, pysru, srw
+             flag_emittance=0,           # when sampling rays: Use emittance (0=No, 1=Yes)
+             flag_size=0,                # when sampling rays: 0=point,1=Gaussian,2=FT(Divergences)
+    )"""
+
+
+        script_dict = {
+            "K_vertical"               : self.K_vertical(),
+            "period_length"            : self.period_length(),
+            "number_of_periods"        : self.number_of_periods(),
+            "emin"                     : self._EMIN            ,
+            "emax"                     : self._EMAX            ,
+            "ng_e"                     : self._NG_E            ,
+            "maxangle"                 : self._MAXANGLE,
+            "ng_t"                     : self._NG_T,
+            "ng_p"                     : self._NG_P,
+            "ng_j"                     : self._NG_J,
+            "code_undul_phot"          : self.code_undul_phot,
+            "flag_emittance"           : self._FLAG_EMITTANCE  ,
+            "flag_size"                : self._FLAG_SIZE,
+        }
+
+        script = script_template.format_map(script_dict)
+
+        return script
 
 if __name__ == "__main__":
 
     u = S4Undulator()
     print(u.info())
+    print(u.to_python_code())
 
 

@@ -153,6 +153,47 @@ class S4Wiggler(Wiggler):
         else:
             raise Exception("Invalid value for keyword velocity_label")
 
+    def to_python_code(self):
+        script_template = """
+from shadow4.sources.wiggler.s4_wiggler import S4Wiggler
+source = S4Wiggler(
+    magnetic_field_periodic  = {magnetic_field_periodic},   # 0=external, 1=periodic
+    file_with_magnetic_field = "{file_with_magnetic_field}",  # useful if magnetic_field_periodic=0
+    K_vertical        = {K_vertical},
+    period_length     = {period_length},
+    number_of_periods = {number_of_periods}, # syned Wiggler pars: useful if magnetic_field_periodic=1
+    emin              = {emin},     # Photon energy scan from energy (in eV)
+    emax              = {emax},     # Photon energy scan to energy (in eV)
+    ng_e              = {ng_e},            # Photon energy scan number of points
+    ng_j              = {ng_j} ,          # Number of points in electron trajectory (per period) for internal calculation only
+    flag_emittance    = {flag_emittance}, # Use emittance (0=No, 1=Yes)
+    shift_x_flag      = {shift_x_flag},
+    shift_x_value     = {shift_x_value},
+    shift_betax_flag  = {shift_betax_flag},
+    shift_betax_value = {shift_betax_value},
+    )"""
+
+
+        script_dict = {
+            "magnetic_field_periodic"  : self._magnetic_field_periodic ,
+            "file_with_magnetic_field" : self._file_with_magnetic_field,
+            "K_vertical"               : self.K_vertical()       ,
+            "period_length"            : self.period_length()    ,
+            "number_of_periods"        : self.number_of_periods(),
+            "emin"                     : self._EMIN            ,
+            "emax"                     : self._EMAX            ,
+            "ng_e"                     : self._NG_E            ,
+            "ng_j"                     : self._NG_J            ,
+            "flag_emittance"           : self._FLAG_EMITTANCE  ,
+            "shift_x_flag"             : self._shift_x_flag     ,
+            "shift_x_value"            : self._shift_x_value    ,
+            "shift_betax_flag"         : self._shift_betax_flag ,
+            "shift_betax_value"        : self._shift_betax_value,
+        }
+
+        script = script_template.format_map(script_dict)
+
+        return script
 
 if __name__ == "__main__":
 
@@ -205,7 +246,7 @@ if __name__ == "__main__":
                  shift_x_flag=0, shift_x_value=0.0, shift_betax_flag=0, shift_betax_value=0.0,) # ele)
     print(sw.info())
 
-
+    print(sw.to_python_code())
 
     # #
     # # syned

@@ -1,4 +1,5 @@
 from syned.beamline.beamline import Beamline
+from shadow4.beamline.s4_beamline_element import S4BeamlineElement
 
 
 class S4Beamline(Beamline):
@@ -18,6 +19,23 @@ class S4Beamline(Beamline):
 
     def run_beamline(self, **params):
         raise NotImplementedError()
+
+    def duplicate(self):
+        beamline_elements_list = []
+        for beamline_element in self._beamline_elements_list:
+            beamline_elements_list.append(beamline_element)
+
+        return S4Beamline(light_source=self._light_source,
+                        beamline_elements_list = beamline_elements_list)
+
+    # copied from syned. May be removed when updating syned
+
+    def append_beamline_element(self, beamline_element=S4BeamlineElement()):
+        if not isinstance(beamline_element,S4BeamlineElement):
+            raise Exception("Input class must be of type: "+S4BeamlineElement.__name__)
+        else:
+            self._beamline_elements_list.append(beamline_element)
+
 
 
 

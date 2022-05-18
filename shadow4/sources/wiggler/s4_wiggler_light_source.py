@@ -14,9 +14,6 @@ The radiation is calculating using sr-xraylib
 
 import numpy
 
-from syned.storage_ring.light_source import LightSource
-from syned.storage_ring.electron_beam import ElectronBeam
-
 from srxraylib.util.inverse_method_sampler import Sampler1D
 from srxraylib.sources.srfunc import wiggler_trajectory, wiggler_spectrum, wiggler_cdf, sync_f
 
@@ -24,6 +21,7 @@ import scipy
 from scipy.interpolate import interp1d
 import scipy.constants as codata
 
+from shadow4.sources.s4_electron_beam import S4ElectronBeam
 from shadow4.sources.s4_light_source import S4LightSource
 from shadow4.sources.wiggler.s4_wiggler import S4Wiggler
 from shadow4.beam.beam import Beam
@@ -94,12 +92,12 @@ def sync_f_sigma_and_pi(rAngle, rEnergy):
     return efe_sigma**2,efe_pi**2
 
 
-class S4WigglerLightSource(LightSource, S4LightSource):
+class S4WigglerLightSource(S4LightSource):
 
-    def __init__(self, name="Undefined", electron_beam=None, wiggler_magnetic_structure=None):
+    def __init__(self, name="Undefined", electron_beam=None, magnetic_structure=None):
         super().__init__(name,
-                         electron_beam=electron_beam if not electron_beam is None else ElectronBeam(),
-                         magnetic_structure=wiggler_magnetic_structure if not wiggler_magnetic_structure is None else S4Wiggler())
+                         electron_beam=electron_beam if not electron_beam is None else S4ElectronBeam(),
+                         magnetic_structure=magnetic_structure if not magnetic_structure is None else S4Wiggler())
 
         # results of calculations
         self.__result_trajectory = None
@@ -107,54 +105,14 @@ class S4WigglerLightSource(LightSource, S4LightSource):
         self.__result_cdf = None
 
 
-    def get_beam(self, user_unit_to_m=1.0,F_COHER=0,NRAYS=5000,SEED=123456,EPSI_DX=0.0,EPSI_DZ=0.0,
-                       psi_interval_in_units_one_over_gamma=None,
-                       psi_interval_number_of_points=1001,
-                       verbose=True):
-
-        return Beam.initialize_from_array(self.__calculate_rays(
-            user_unit_to_m=user_unit_to_m,
-            F_COHER=F_COHER,
-            NRAYS=NRAYS,
-            SEED=SEED,
-            EPSI_DX=EPSI_DX,
-            EPSI_DZ=EPSI_DZ,
-            psi_interval_in_units_one_over_gamma=psi_interval_in_units_one_over_gamma,
-            psi_interval_number_of_points=psi_interval_number_of_points,
-            verbose=verbose))
-
     def get_trajectory(self):
         return self.__result_trajectory, self.__result_parameters
 
-    def info(self,debug=False):
-        electron_beam = self.get_electron_beam()
-        magnetic_structure = self.get_magnetic_structure()
-
-        txt = ""
-        txt += "-----------------------------------------------------\n"
-
-        txt += "Input Electron parameters: \n"
-        txt += "        Electron energy: %f geV\n"%electron_beam.energy()
-        txt += "        Electron current: %f A\n"%electron_beam.current()
-        if magnetic_structure._FLAG_EMITTANCE:
-            sigmas = electron_beam.get_sigmas_all()
-            txt += "        Electron sigmaX: %g [um]\n"%(1e6*sigmas[0])
-            txt += "        Electron sigmaZ: %g [um]\n"%(1e6*sigmas[2])
-            txt += "        Electron sigmaX': %f urad\n"%(1e6*sigmas[1])
-            txt += "        Electron sigmaZ': %f urad\n"%(1e6*sigmas[3])
-
-        txt += "Lorentz factor (gamma): %f\n"%electron_beam.gamma()
-
-        txt2 = magnetic_structure.info()
-        return (txt + "\n\n" + txt2)
-
-    def to_python_code(self):
-        return "# to be implemented..."
 
     def __calculate_radiation(self):
 
         wiggler = self.get_magnetic_structure()
-        syned_electron_beam = self.get_electron_beam()
+        electron_beam = self.get_electron_beam()
 
         if wiggler._magnetic_field_periodic == 1:
 
@@ -162,7 +120,7 @@ class S4WigglerLightSource(LightSource, S4LightSource):
                                                      inData="",
                                                      nPer=wiggler.number_of_periods(),
                                                      nTrajPoints=wiggler._NG_J,
-                                                     ener_gev=syned_electron_beam._energy_in_GeV,
+                                                     ener_gev=electron_beam._energy_in_GeV,
                                                      per=wiggler.period_length(),
                                                      kValue=wiggler.K_vertical(),
                                                      trajFile="",)
@@ -181,7 +139,7 @@ class S4WigglerLightSource(LightSource, S4LightSource):
                                                      inData=wiggler._file_with_magnetic_field,
                                                      nPer=1,
                                                      nTrajPoints=wiggler._NG_J,
-                                                     ener_gev=syned_electron_beam._energy_in_GeV,
+                                                     ener_gev=electron_beam._energy_in_GeV,
                                                      # per=self.syned_wiggler.period_length(),
                                                      # kValue=self.syned_wiggler.K_vertical(),
                                                      trajFile="",
@@ -879,6 +837,25 @@ class S4WigglerLightSource(LightSource, S4LightSource):
         #
         return 0,0,0
 
+    ############################################################################
+    #
+    ############################################################################
+    def get_beam(self, user_unit_to_m=1.0,F_COHER=0,NRAYS=5000,SEED=123456,EPSI_DX=0.0,EPSI_DZ=0.0,
+                       psi_interval_in_units_one_over_gamma=None,
+                       psi_interval_number_of_points=1001,
+                       verbose=True):
+
+        return Beam.initialize_from_array(self.__calculate_rays(
+            user_unit_to_m=user_unit_to_m,
+            F_COHER=F_COHER,
+            NRAYS=NRAYS,
+            SEED=SEED,
+            EPSI_DX=EPSI_DX,
+            EPSI_DZ=EPSI_DZ,
+            psi_interval_in_units_one_over_gamma=psi_interval_in_units_one_over_gamma,
+            psi_interval_number_of_points=psi_interval_number_of_points,
+            verbose=verbose))
+
     def calculate_spectrum(self, output_file=""):
         traj, pars = self.get_trajectory()
         wig = self.get_magnetic_structure()
@@ -896,6 +873,45 @@ class S4WigglerLightSource(LightSource, S4LightSource):
         else:
             raise Exception("Cannot compute spectrum")
 
+    def info(self,debug=False):
+        electron_beam = self.get_electron_beam()
+        magnetic_structure = self.get_magnetic_structure()
+
+        txt = ""
+        txt += "-----------------------------------------------------\n"
+
+        txt += "Input Electron parameters: \n"
+        txt += "        Electron energy: %f geV\n"%electron_beam.energy()
+        txt += "        Electron current: %f A\n"%electron_beam.current()
+        if magnetic_structure._FLAG_EMITTANCE:
+            sigmas = electron_beam.get_sigmas_all()
+            txt += "        Electron sigmaX: %g [um]\n"%(1e6*sigmas[0])
+            txt += "        Electron sigmaZ: %g [um]\n"%(1e6*sigmas[2])
+            txt += "        Electron sigmaX': %f urad\n"%(1e6*sigmas[1])
+            txt += "        Electron sigmaZ': %f urad\n"%(1e6*sigmas[3])
+
+        txt += "Lorentz factor (gamma): %f\n"%electron_beam.gamma()
+
+        txt2 = magnetic_structure.info()
+        return (txt + "\n\n" + txt2)
+
+    def to_python_code(self, data=None):
+        script = ''
+        try:
+            script += self.get_electron_beam().to_python_code()
+        except:
+            script += "\n\n#Error retrieving electron_beam code"
+
+        try:
+            script += self.get_magnetic_structure().to_python_code()
+        except:
+            script += "\n\n#Error retrieving magnetic structure code"
+
+
+        script += "\n\n\nfrom shadow4.sources.wiggler.s4_wiggler_light_source import S4WigglerLightSource"
+        script += "\nlight_source = S4WigglerLightSource(name='%s', electron_beam=electron_beam, magnetic_structure=source)" % \
+                                                          (self.get_name())
+        return script
 if __name__ == "__main__":
     from srxraylib.plot.gol import plot_scatter, set_qt
     set_qt()
@@ -930,16 +946,16 @@ if __name__ == "__main__":
     # syned
     #
 
-    syned_electron_beam = ElectronBeam(energy_in_GeV=6.04,
-                 energy_spread = 0.0,
-                 current = 0.2,
-                 number_of_bunches = 400,
-                 moment_xx=(400e-6)**2,
-                 moment_xxp=0.0,
-                 moment_xpxp=(10e-6)**2,
-                 moment_yy=(10e-6)**2,
-                 moment_yyp=0.0,
-                 moment_ypyp=(4e-6)**2 )
+    electron_beam = S4ElectronBeam(energy_in_GeV=6.04,
+                                   energy_spread = 0.0,
+                                   current = 0.2,
+                                   number_of_bunches = 400,
+                                   moment_xx=(400e-6)**2,
+                                   moment_xxp=0.0,
+                                   moment_xpxp=(10e-6)**2,
+                                   moment_yy=(10e-6)**2,
+                                   moment_yyp=0.0,
+                                   moment_ypyp=(4e-6)**2)
 
 
     w = S4Wiggler(K_vertical=kValue,period_length=per,number_of_periods=nPer,
@@ -950,7 +966,7 @@ if __name__ == "__main__":
 
     # print(w.info())
 
-    ls = S4WigglerLightSource(name="Undefined", electron_beam=syned_electron_beam, wiggler_magnetic_structure=w)
+    ls = S4WigglerLightSource(name="Undefined", electron_beam=electron_beam, magnetic_structure=w)
 
     print(ls.info())
 

@@ -75,6 +75,7 @@ INSTALL_REQUIRES = (
     'scipy',
     'syned>=1.0.19',
     'srxraylib',
+    'wofryimpl',
 )
 
 

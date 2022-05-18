@@ -14,7 +14,7 @@ from shadow4.sources.bending_magnet.s4_bending_magnet import S4BendingMagnet
 from shadow4.beam.beam import Beam
 from shadow4.sources.s4_light_source import S4LightSource
 
-class S4BendingMagnetLightSource(LightSource, S4LightSource):
+class S4BendingMagnetLightSource(S4LightSource):
 
     def __init__(self, name="Undefined", electron_beam=None, bending_magnet_magnetic_structure=None):
         super().__init__(name,
