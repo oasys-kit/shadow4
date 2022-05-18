@@ -840,10 +840,15 @@ class S4WigglerLightSource(S4LightSource):
     ############################################################################
     #
     ############################################################################
-    def get_beam(self, user_unit_to_m=1.0,F_COHER=0,NRAYS=5000,SEED=123456,EPSI_DX=0.0,EPSI_DZ=0.0,
-                       psi_interval_in_units_one_over_gamma=None,
-                       psi_interval_number_of_points=1001,
-                       verbose=True):
+    def get_beam(self, NRAYS=5000,SEED=123456):
+
+        user_unit_to_m = 1.0
+        F_COHER = 0
+        EPSI_DX = 0.0
+        EPSI_DZ = 0.0
+        psi_interval_in_units_one_over_gamma = None
+        psi_interval_number_of_points = 1001
+        verbose = True
 
         return Beam.initialize_from_array(self.__calculate_rays(
             user_unit_to_m=user_unit_to_m,
@@ -907,10 +912,12 @@ class S4WigglerLightSource(S4LightSource):
         except:
             script += "\n\n#Error retrieving magnetic structure code"
 
-
-        script += "\n\n\nfrom shadow4.sources.wiggler.s4_wiggler_light_source import S4WigglerLightSource"
+        script += "\n\n\n#light source\nfrom shadow4.sources.wiggler.s4_wiggler_light_source import S4WigglerLightSource"
         script += "\nlight_source = S4WigglerLightSource(name='%s', electron_beam=electron_beam, magnetic_structure=source)" % \
                                                           (self.get_name())
+
+        script += "\n\n\n#beamline\nfrom shadow4.beamline.s4_beamline import S4Beamline"
+        script += "\nbeamline = S4Beamline(light_source=light_source)"
         return script
 if __name__ == "__main__":
     from srxraylib.plot.gol import plot_scatter, set_qt

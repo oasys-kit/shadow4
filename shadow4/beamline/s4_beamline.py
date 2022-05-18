@@ -10,15 +10,7 @@ class S4Beamline(Beamline):
         super().__init__(light_source=light_source, beamline_elements_list=beamline_elements_list)
 
 
-    def to_python_code(self, data=None):
-        text_code  =  "# to be implemented "
-        return text_code
 
-    def info(self):
-        return "Beamline info: to be implemented"
-
-    def run_beamline(self, **params):
-        raise NotImplementedError()
 
     def duplicate(self):
         beamline_elements_list = []
@@ -37,10 +29,44 @@ class S4Beamline(Beamline):
             self._beamline_elements_list.append(beamline_element)
 
 
+    def to_python_code(self, data=None):
+        script = ''
+        try:
+            script += self.get_light_source().to_python_code()
+        except:
+            script +=  "\n\n\n# Error getting python code for S4Beamline S4LightSource "
+
+        for i,element in enumerate(self.get_beamline_elements()):
+            try:
+                script += element.to_python_code()
+            except:
+                script += "\n\n\n# Error getting python code for S4Beamline S4BeamlineElement # %d " % (i+1)
+
+        return script
+
+
+
+    def run_beamline(self, **params):
+        try:
+            beam0 = self.get_light_source().get_beam(**params)
+            mirr0 = None
+        except:
+            raise Exception("Error running beamline light source")
+
+        for i,element in enumerate(self.get_beamline_elements()):
+            try:
+                beam1, mirr1 = element.trace_beam(beam_in=beam0, **params)
+            except:
+                raise Exception("Error running beamline element # %d" % (i+1) )
+
+            beam0 = beam1
+            mirr0 = mirr1
+
+        return beam0, mirr0
 
 
 if __name__ == "__main__":
-    from shadow4.beamline.optical_elements.mirrors import S4Mirror, S4MirrorElement
+    from shadow4.beamline.optical_elements.mirrors.s4_mirror import S4Mirror, S4MirrorElement
     from shadow4.syned.element_coordinates import ElementCoordinates
 
     m1 = S4Mirror()
@@ -51,4 +77,9 @@ if __name__ == "__main__":
 
     bl = S4Beamline(beamline_elements_list=[e1,e2])
 
+    print(bl.info())
+
+    print(bl.to_python_code())
+
+    # print(bl.run_beamline())
 

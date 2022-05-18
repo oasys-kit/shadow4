@@ -62,12 +62,17 @@ class S4UndulatorLightSource(S4LightSource):
         self.__result_photon_size_distribution = None
         self.__result_photon_size_sigma = None
 
-    def get_beam(self,user_unit_to_m=1.0,F_COHER=0,NRAYS=5000,SEED=123456):
-        return Beam.initialize_from_array(self.__calculate_rays(
-            user_unit_to_m=user_unit_to_m, F_COHER=F_COHER, NRAYS=NRAYS, SEED=SEED
-            ))
+    def get_beam(self, NRAYS=5000, SEED=123456):
+        user_unit_to_m = 1.0
+        F_COHER = 0
+        # use_gaussian_approximation = False
 
-
+        if self.get_magnetic_structure().use_gaussian_approximation():
+            return self.get_beam_in_gaussian_approximation(NRAYS=NRAYS, SEED=SEED)
+        else:
+            return Beam.initialize_from_array(self.__calculate_rays(
+                user_unit_to_m=user_unit_to_m, F_COHER=F_COHER, NRAYS=NRAYS, SEED=SEED
+                ))
 
 
     def get_resonance_ring(self,harmonic_number=1, ring_order=1):
@@ -950,9 +955,12 @@ class S4UndulatorLightSource(S4LightSource):
             script += "\n\n#Error retrieving magnetic structure code"
 
 
-        script += "\n\n\nfrom shadow4.sources.undulator.s4_undulator_light_source import S4UndulatorLightSource"
+        script += "\n\n\n# light source\nfrom shadow4.sources.undulator.s4_undulator_light_source import S4UndulatorLightSource"
         script += "\nlight_source = S4UndulatorLightSource(name='%s', electron_beam=electron_beam, magnetic_structure=source)" % \
                                                           (self.get_name())
+
+        script += "\n\n\n#beamline\nfrom shadow4.beamline.s4_beamline import S4Beamline"
+        script += "\nbeamline = S4Beamline(light_source=light_source)"
         return script
 
 if __name__ == "__main__":
@@ -965,6 +973,7 @@ if __name__ == "__main__":
                      period_length=0.032,
                      number_of_periods=50,
                      code_undul_phot='SRW',
+                     use_gaussian_approximation=1,
                      )
 
     ebeam = S4ElectronBeam(energy_in_GeV=6.04,

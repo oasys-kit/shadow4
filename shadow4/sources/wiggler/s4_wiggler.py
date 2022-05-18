@@ -155,6 +155,8 @@ class S4Wiggler(Wiggler):
 
     def to_python_code(self):
         script_template = """
+        
+#magnetic structure
 from shadow4.sources.wiggler.s4_wiggler import S4Wiggler
 source = S4Wiggler(
     magnetic_field_periodic  = {magnetic_field_periodic},   # 0=external, 1=periodic
