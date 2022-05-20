@@ -106,19 +106,21 @@ def example_branch_2(do_plot=True):
     rwidx2 = 0.05
 
 
-    main_element = S4ToroidalMirror(name="M1",
-                                                        surface_calculation=SurfaceCalculation.EXTERNAL,
-                                                        min_radius=0.157068,
-                                                        maj_radius=358.124803 - 0.157068,
-                                                        boundary_shape=boundary_shape)
+
 
     error_element = S4SurfaceDataMirror(name="M1",
                                           surface_data_file="../../../../oasys_workspaces/test_shadow4.hdf5",
                                           boundary_shape=Rectangle(x_left=-rwidx2, x_right=rwidx1, y_bottom=-rlen2,
                                                                    y_top=rlen1))
 
+    added_element = S4ToroidalMirror(name="M1",
+                                                        surface_calculation=SurfaceCalculation.EXTERNAL,
+                                                        min_radius=0.157068,
+                                                        maj_radius=358.124803 - 0.157068,
+                                                        boundary_shape=boundary_shape)
+
     mirror1 = S4AdditiveElement(optical_element=S4Additive(name="",optical_elements_list=
-                                      [main_element, error_element]
+                                      [error_element, added_element]
                                       ),
                                       coordinates=ElementCoordinates(p = 10.0,
                                                                      q = 6.0,

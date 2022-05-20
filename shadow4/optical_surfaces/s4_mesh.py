@@ -3,70 +3,109 @@
 
 # https://www.reddit.com/r/matlab/comments/pd7rr/finding_the_point_of_intersection_between_a_line/
 
-from scipy.optimize import fsolve
+# from scipy.optimize import fsolve
+from scipy.optimize import root
 from scipy import interpolate
 from srxraylib.plot.gol import plot,plot_image, plot_surface, plot_scatter
 import sys
-
+import time
 import numpy
 
 
-#
-# rays[index,column]
-# vector[xyz,index]
-#
-
-
-def plot_surface_and_line(Z,x,y,zz,xx,yy,show=True):
-
-    import matplotlib.pylab as plt
-    from mpl_toolkits.mplot3d import Axes3D
-    from matplotlib import cm
-    from matplotlib.ticker import LinearLocator, FormatStrFormatter
-
-    #
-    # plot
-    #
-
-    X = numpy.outer(x,numpy.ones_like(y))
-    Y = numpy.outer(numpy.ones_like(x),y)
-
-    fig = plt.figure(figsize=None)
-    ax = fig.gca(projection='3d')
-    #
-
-    cmap = cm.coolwarm
-
-    ax = fig.gca(projection='3d')
-    ax.plot(xx, yy, zz, label='parametric curve')
-    ax.set_xlim(y.min(),y.max())
-    ax.set_ylim(y.min(),y.max())
-
-    surf = ax.plot_surface(X, Y, Z, rstride=1, cstride=1, cmap=cmap, linewidth=0, antialiased=False)
-
-    ax.set_zlim(zz.min(),zz.max())
-    ax.zaxis.set_major_locator(LinearLocator(10))
-    ax.zaxis.set_major_formatter(FormatStrFormatter('%.02f'))
-    fig.colorbar(surf, shrink=0.5, aspect=5)
-
-    plt.title("")
-    ax.set_xlabel("X")
-    ax.set_ylabel("Y")
-    ax.set_zlabel("Z")
-
-    ax.legend()
-
-    if show:
-        plt.show()
-
-    return fig
-
 class S4Mesh(object):
-    def __init__(self, surface=None):
+    def __init__(self, surface=None, mesh_x=None, mesh_y=None, mesh_z=None, kind='cubic'):
         self.__x0 = [0.0,0.0,0.0]
         self.__v0 = [0.0,0.0,0.0]
-        self.surface = surface
+        self.surface = surface # Surface must be the function defining height(x,y) or a scipy.interpolate.interp2d instance
+        self.mesh_x = mesh_x # not used if surface is defined
+        self.mesh_y = mesh_y # not used if surface is defined
+        self.mesh_z = mesh_z # not used if surface is defined
+        self.kind = kind
 
+        if (surface is None) and (mesh_z is not None) and (mesh_x is not None) and (mesh_x is not None):
+            self.calculate_surface_from_mesh()
+
+    def set_ray(self,x0,v0):
+        self.__x0 = x0
+        self.__v0 = v0
+
+    def set_surface(self, surface):
+        if isinstance(surface, interpolate.interp2d):
+            self.surface = surface
+        else:
+            try:
+                z = surface(0, 0)
+                self.surface = surface
+            except:
+                raise Exception("Surface must be the function defining height(x,y) or a scipy.interpolate.interp2d instance")
+
+    def set_mesh(self, z, x, y):
+        if (z.shape[0] != x.size) or (z.shape[1] != y.size):
+            raise Exception("Bad input. It must be z[n,m], x[n], y[m]")
+        self.mesh_x = x
+        self.mesh_y = y
+        self.mesh_z = z
+        self.surface = None # reset
+
+    def get_mesh_x_y(self):
+        return self.mesh_x, self.mesh_z
+
+    def get_mesh_z(self):
+        return self.mesh_z
+
+    def calculate_surface_from_mesh(self):
+        self.surface = interpolate.interp2d(self.mesh_x, self.mesh_y, self.mesh_z.T, kind=self.kind)
+
+    def add_to_mesh(self, z1):
+        if self.mesh_z is None:
+            raise Exception("Cannot add to None")
+
+        if z1.shape != self.mesh_z.shape:
+            raise Exception("Cannot add array [%,%] to mesh_z[%d,%d]" % (z1.mesh[0],
+                                                                         z1.mesh[1],
+                                                                         self.mesh_z.shape[0],
+                                                                         self.mesh_z.shape[1]))
+        self.mesh_z += z1
+        self.calculate_surface_from_mesh()
+
+
+
+    def load_h5file(self,filename,kind='cubic'):
+        x,y,z = self.read_surface_error_h5file(filename)
+        self.mesh_x = x
+        self.mesh_y = y
+        self.mesh_z = z
+        self.calculate_surface_from_mesh()
+        # self.surface = interpolate.interp2d(x,y,z.T, kind=kind)
+
+    def load_surface_data(self, surface_data_object):
+        self.mesh_x = surface_data_object._xx.copy()
+        self.mesh_y = surface_data_object._yy.copy()
+        self.mesh_z = surface_data_object._zz.copy().T
+        self.calculate_surface_from_mesh()
+
+        # self.surface = interpolate.interp2d(surface_data_object._xx, surface_data_object._yy, surface_data_object._zz, kind=kind)
+
+    def load_surface_data_arrays(self,x,y,Z):
+        self.mesh_x = x
+        self.mesh_y = y
+        self.mesh_z = Z
+        self.calculate_surface_from_mesh()
+
+        # self.surface = interpolate.interp2d(x,y,Z.T, kind=kind)
+
+    def load_file(self,filename):
+        x,y,z = self.read_surface_error_file(filename)
+        self.mesh_x = x
+        self.mesh_y = y
+        self.mesh_z = z
+        self.calculate_surface_from_mesh()
+
+        # self.surface = interpolate.interp2d(x,y,z.T, kind=kind)
+
+    #
+    #
+    #
     def line(self,t):
         return (self.__x0[0] + self.__v0[0] * t,
                 self.__x0[1] + self.__v0[1] * t,
@@ -83,31 +122,44 @@ class S4Mesh(object):
         y1 = self.__x0[1] + self.__v0[1] * t
         return x1,y1,self.surface(x1,y1)
 
+    def equation_to_solve(self, t):
+        # return self.surface_z_vs_t(t)-self.line_z(t)
+
+        t = numpy.array(t)
+        # surface height
+        x1 = self.__x0[0] + self.__v0[0] * t
+        y1 = self.__x0[1] + self.__v0[1] * t
+
+        if t.size == 1:
+            z1 =  self.surface(x1,y1)
+        else:
+            z1 = numpy.zeros_like(x1)
+            for i in range(z1.size):
+                tmp = self.surface(x1[i],y1[i])
+                z1[i] = tmp
+
+        # line vs t
+        l1 = self.__x0[2] + self.__v0[2] * t
+
+        return z1 - l1
+
     def solve(self,x_start):
-        t_solution = fsolve(lambda t:self.surface_z_vs_t(t)-self.line_z(t), x_start)
-        return t_solution[0]
+        # t_solution = fsolve(lambda t:self.surface_z_vs_t(t)-self.line_z(t), x_start)
+        # return t_solution[0]
 
-    def set_ray(self,x0,v0):
-        self.__x0 = x0
-        self.__v0 = v0
+        # t_solution = fsolve(self.equation_to_solve, x_start)
+        # return t_solution[0]
 
-    def set_surface(self,surface):
-        self.surface = surface
+        # t_solution = brentq(self.equation_to_solve, 0, 200)
+        # return t_solution
 
-    def load_h5file(self,filename,kind='cubic'):
-        x,y,z = self.read_surface_error_h5file(filename)
-        self.surface = interpolate.interp2d(x,y,z.T, kind=kind)
+        t_solution = root(self.equation_to_solve, x_start, method='hybr')
+        return t_solution['x']
 
-    def load_surface_data(self, surface_data_object, kind='cubic'):
-        self.surface = interpolate.interp2d(surface_data_object._xx, surface_data_object._yy, surface_data_object._zz, kind=kind)
 
-    def load_surface_data_arrays(self,x,y,Z,kind='cubic'):
-        self.surface = interpolate.interp2d(x,y,Z.T, kind=kind)
-
-    def load_file(self,filename,kind='cubic'):
-        x,y,z = self.read_surface_error_file(filename)
-        self.surface = interpolate.interp2d(x,y,z.T, kind=kind)
-
+    #
+    #
+    #
     @classmethod
     def read_surface_error_h5file(cls, filename):
         import h5py
@@ -239,7 +291,8 @@ class S4Mesh(object):
         i_flag = numpy.ones(npoints)
 
 
-        print(">>>>> main loop to find solutions (slow...)")
+        print("\n\n>>>>> main loop to find solutions (slow...)")
+        t0 = time.time()
         for i in range(npoints):
             self.__x0 = XIN[:,i]
             self.__v0 = VIN[:,i]
@@ -248,7 +301,10 @@ class S4Mesh(object):
                 answer[i] = t_solution
             except:
                 i_flag[i] = -1
-        print(">>>>> done main loop to find solutions (Thanks for waiting!)")
+        t1 = time.time()
+        print(">>>>", answer)
+        print(">>>>> done main loop to find solutions (Thanks for waiting!) Spent: %g s for %d rays (%g ms/ray)\n\n" % \
+              (t1-t0, npoints, 1000 * (t1-t0) / npoints))
         return answer,i_flag
 
     def apply_specular_reflection_on_beam(self,newbeam):
@@ -313,12 +369,66 @@ class S4Mesh(object):
 
         return v2
 
-def sphere(x, y, radius=5.0):
-        return radius - numpy.sqrt(radius**2 - x**2 - y**2)
+#
+# rays[index,column]
+# vector[xyz,index]
+#
+
+
+def plot_surface_and_line(Z,x,y,zz,xx,yy,show=True):
+
+    import matplotlib.pylab as plt
+    from mpl_toolkits.mplot3d import Axes3D
+    from matplotlib import cm
+    from matplotlib.ticker import LinearLocator, FormatStrFormatter
+
+    #
+    # plot
+    #
+
+    X = numpy.outer(x,numpy.ones_like(y))
+    Y = numpy.outer(numpy.ones_like(x),y)
+
+    fig = plt.figure(figsize=None)
+    ax = fig.gca(projection='3d')
+    #
+
+    cmap = cm.coolwarm
+
+    ax = fig.gca(projection='3d')
+    ax.plot(xx, yy, zz, label='parametric curve')
+    ax.set_xlim(y.min(),y.max())
+    ax.set_ylim(y.min(),y.max())
+
+    surf = ax.plot_surface(X, Y, Z, rstride=1, cstride=1, cmap=cmap, linewidth=0, antialiased=False)
+
+    ax.set_zlim(zz.min(),zz.max())
+    ax.zaxis.set_major_locator(LinearLocator(10))
+    ax.zaxis.set_major_formatter(FormatStrFormatter('%.02f'))
+    fig.colorbar(surf, shrink=0.5, aspect=5)
+
+    plt.title("")
+    ax.set_xlabel("X")
+    ax.set_ylabel("Y")
+    ax.set_zlabel("Z")
+
+    ax.legend()
+
+    if show:
+        plt.show()
+
+    return fig
+
+
+
 
 if __name__ == "__main__":
     from srxraylib.plot.gol import set_qt
     set_qt()
+
+
+    def sphere(x, y, radius=5.0):
+        return radius - numpy.sqrt(radius ** 2 - x ** 2 - y ** 2)
 
     x = numpy.linspace(-0.25,0.25,20)
     y = numpy.linspace(-0.5,0.5,100)
@@ -359,4 +469,4 @@ if __name__ == "__main__":
     # print(z.min(),z.max())
     # plot_surface(z,x,y)
 
-    mm.load_file("test_mesh_conic.dat")
+    # mm.load_file("test_mesh_conic.dat")

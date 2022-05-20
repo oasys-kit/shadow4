@@ -5,6 +5,8 @@ from syned.beamline.optical_element import OpticalElement
 from shadow4.beamline.s4_optical_element import S4OpticalElement
 from shadow4.beamline.s4_beamline_element import S4BeamlineElement
 
+from shadow4.beamline.optical_elements.mirrors.s4_surface_data_mirror import S4SurfaceDataMirror, S4SurfaceDataMirrorElement
+
 
 class S4Additive(OpticalElement, S4OpticalElement):
     def __init__(self, name="Undefined",optical_elements_list=[]):
@@ -30,6 +32,9 @@ class S4AdditiveElement(S4BeamlineElement):
 
         if len(oe_list) == 1:
             print(">>> only 1 oe in additive")
+
+        if not isinstance(oe_list[0], S4SurfaceDataMirror):
+            raise Exception("First element in additive list must be S4SurfaceDataMirror")
 
         p, q, angle_radial, angle_radial_out, angle_azimuthal = self.get_coordinates().get_positions()
 
