@@ -48,7 +48,7 @@ class S4Mesh(object):
         self.surface = None # reset
 
     def get_mesh_x_y(self):
-        return self.mesh_x, self.mesh_z
+        return self.mesh_x, self.mesh_y
 
     def get_mesh_z(self):
         return self.mesh_z
@@ -60,12 +60,22 @@ class S4Mesh(object):
         if self.mesh_z is None:
             raise Exception("Cannot add to None")
 
-        if z1.shape != self.mesh_z.shape:
-            raise Exception("Cannot add array [%,%] to mesh_z[%d,%d]" % (z1.mesh[0],
-                                                                         z1.mesh[1],
-                                                                         self.mesh_z.shape[0],
-                                                                         self.mesh_z.shape[1]))
-        self.mesh_z += z1
+        if isinstance(z1, float):
+            self.mesh_z += z1
+        elif isinstance(z1, int):
+            self.mesh_z += z1
+        elif isinstance(z1, numpy.ndarray):
+            if z1.shape != self.mesh_z.shape:
+                raise Exception("Cannot add array [%,%] to mesh_z[%d,%d]" % (z1.mesh[0],
+                                                                             z1.mesh[1],
+                                                                             self.mesh_z.shape[0],
+                                                                             self.mesh_z.shape[1]))
+            self.mesh_z += z1
+        else:
+            print(">>>>Entered data type: ", type(z1) )
+            raise Exception("Entry type not supported")
+
+
         self.calculate_surface_from_mesh()
 
 

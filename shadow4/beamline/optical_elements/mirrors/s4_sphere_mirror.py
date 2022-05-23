@@ -33,7 +33,26 @@ class S4SphereMirror(S4Mirror, S4SphereOpticalElement):
         S4Mirror.__init__(self, name, boundary_shape, self._curved_surface_shape,
                           f_reflec, f_refl, file_refl, refraction_index)
 
-    def apply_geometrical_model(self, beam):
+    def get_optical_surface_instance(self):
+
+        surface_shape = self.get_surface_shape()
+
+        switch_convexity = 0 if surface_shape.get_convexity() == Convexity.DOWNWARD else 1
+
+        if isinstance(surface_shape, SphericalCylinder):
+            print(">>>>> SphericalCylinder mirror", surface_shape)
+            cylindrical = 1
+            cylangle = 0.0 if surface_shape.get_cylinder_direction() == Direction.TANGENTIAL else (0.5 * numpy.pi)
+        elif isinstance(surface_shape, Sphere):
+            print(">>>>> Sphere mirror", surface_shape)
+            cylindrical = 0
+            cylangle    = 0.0
+
+        return S4Conic.initialize_as_sphere_from_curvature_radius(surface_shape.get_radius(),
+                                                                 cylindrical=cylindrical, cylangle=cylangle, switch_convexity=switch_convexity)
+
+
+    def apply_geometrical_model(self, beam): # todo: use here get_optical_surface_instance()
         surface_shape = self.get_surface_shape()
 
         switch_convexity = 0 if surface_shape.get_convexity() == Convexity.DOWNWARD else 1

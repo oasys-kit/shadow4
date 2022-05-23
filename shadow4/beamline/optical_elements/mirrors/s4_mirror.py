@@ -68,6 +68,9 @@ class S4Mirror(Mirror):
     def apply_geometrical_model(self, beam):
         raise NotImplementedError()
 
+    def get_optical_surface_instance(self): # returns a copy of the S4Conic, S4Toroid, or S4mesh
+        raise Exception("To be implemented in the superclass")
+
 class S4MirrorElement(S4BeamlineElement):
     
     def __init__(self, optical_element=None, coordinates=None):

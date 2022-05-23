@@ -1,3 +1,4 @@
+import os
 from shadow4.syned.shape import SurfaceData
 from shadow4.beamline.optical_elements.mirrors.s4_mirror import S4MirrorElement, S4Mirror, ElementCoordinates
 from shadow4.optical_surfaces.s4_mesh import S4Mesh
@@ -44,8 +45,6 @@ class S4SurfaceDataMirror(S4Mirror, S4SurfaceDataOpticalElement):
 
         return mirr, normal
 
-import os
-
 class S4SurfaceDataMirrorElement(S4MirrorElement):
     def __init__(self, optical_element=None, coordinates=None):
         super().__init__(optical_element if optical_element is not None else S4SurfaceDataMirror(),
@@ -55,3 +54,9 @@ class S4SurfaceDataMirrorElement(S4MirrorElement):
 
     def apply_local_reflection(self, beam):
         return self.get_optical_element().apply_geometrical_model(beam)
+
+
+if __name__ == "__main__":
+    pass
+
+

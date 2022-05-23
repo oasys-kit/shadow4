@@ -159,4 +159,15 @@ class S4SurfaceDataOpticalElement(S4CurvedOpticalElement):
     def __init__(self, xx=None, yy=None, zz=None, surface_data_file=None):
         S4CurvedOpticalElement.__init__(self, surface_calculation=SurfaceCalculation.INTERNAL, is_cylinder=False)
 
-        self._curved_surface_shape = SurfaceData(xx, yy, xx, surface_data_file)
+        self._curved_surface_shape = SurfaceData(xx, yy, zz, surface_data_file)
+
+class S4AdditiveSurfaceDataOpticalElement(S4CurvedOpticalElement):
+    def __init__(self, xx=None, yy=None, zz=None, surface_data_file=None, base_surface_function=None):
+        S4CurvedOpticalElement.__init__(self, surface_calculation=SurfaceCalculation.INTERNAL, is_cylinder=False)
+
+        self._curved_surface_shape = SurfaceData(xx, yy, zz, surface_data_file)
+
+        if base_surface_function is None:
+            self._base_surface_function = lambda x,y: 0.0
+        else:
+            self._base_surface_function = base_surface_function

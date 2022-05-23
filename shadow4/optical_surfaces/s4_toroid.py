@@ -333,12 +333,12 @@ class S4Toroid(object):
 
 
     def set_cylindrical(self,CIL_ANG):
-        pass
+        raise Exception("Cannot set_cylindrical() in a Toroid")
 
 
 
     def switch_convexity(self):
-        pass
+        raise Exception("Cannot switch_convexity() in a Toroid")
 
 
 

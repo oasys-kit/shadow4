@@ -1105,16 +1105,16 @@ if __name__ == "__main__":
     # ccc = Conic.initialize_as_hyperboloid_from_focal_distances(p, q, theta1, cylindrical=0, cylangle=0.0, switch_convexity=0)
     # print(ccc.info())
 
-    y = numpy.linspace(-0.15,0.15,100)
+    y = numpy.linspace(-0.25, 0.25, 200)
     z = ccc.height(y)
     from srxraylib.plot.gol import plot
-    plot(y,z)
+    plot(y,z,xtitle="y",ytitle="z")
 
     #
     #
     #
 
-    y = numpy.linspace(-0.15, 0.15, 200)
+
     x = numpy.linspace(-0.15, 0.15, 100)
     Y = numpy.outer(numpy.ones_like(x),y)
     X = numpy.outer(x,numpy.ones_like(y))
