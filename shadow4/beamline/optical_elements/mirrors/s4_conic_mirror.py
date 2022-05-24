@@ -23,10 +23,13 @@ class S4ConicMirror(S4Mirror, S4ConicOpticalElement):
         S4Mirror.__init__(self, name, boundary_shape, self._conic_surface_shape,
                           f_reflec, f_refl, file_refl, refraction_index)
 
-    def apply_geometrical_model(self, beam):
+    def get_optical_surface_instance(self):
         surface_shape = self.get_surface_shape()
         print(">>>>> Conic mirror")
-        ccc = S4Conic.initialize_from_coefficients(surface_shape.get_conic_coefficients())
+        return S4Conic.initialize_from_coefficients(surface_shape.get_conic_coefficients())
+
+    def apply_geometrical_model(self, beam):
+        ccc = self.get_optical_surface_instance()
         mirr, normal = ccc.apply_specular_reflection_on_beam(beam)
         return mirr, normal
 

@@ -29,13 +29,24 @@ class S4ToroidalMirror(S4Mirror, S4ToroidalOpticalElement):
         S4Mirror.__init__(self, name, boundary_shape, self._curved_surface_shape,
                           f_reflec, f_refl, file_refl, refraction_index)
 
-    def apply_geometrical_model(self, beam):
+    def get_optical_surface_instance(self):
         surface_shape = self.get_surface_shape()
 
         print(">>>>> Toroidal mirror", surface_shape._min_radius, surface_shape._maj_radius)
 
         toroid = S4Toroid()
-        toroid.set_toroid_radii(surface_shape._maj_radius, surface_shape._min_radius)
+        toroid.set_toroid_radii(surface_shape.get_maj_radius(), surface_shape.get_min_radius())
+        return toroid
+
+    def apply_geometrical_model(self, beam):
+        # surface_shape = self.get_surface_shape()
+        #
+        # print(">>>>> Toroidal mirror", surface_shape._min_radius, surface_shape._maj_radius)
+        #
+        # toroid = S4Toroid()
+        # toroid.set_toroid_radii(surface_shape._maj_radius, surface_shape._min_radius)
+
+        toroid = self.get_optical_surface_instance()
 
         mirr, normal = toroid.apply_specular_reflection_on_beam(beam)
 

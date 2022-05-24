@@ -66,10 +66,10 @@ class S4Mirror(Mirror):
         self._boundary_shape = Rectangle(x_left=x_left, x_right=x_right, y_bottom=y_bottom, y_top=y_top)
 
     def apply_geometrical_model(self, beam):
-        raise NotImplementedError()
+        raise Exception("To be implemented in the children class")
 
     def get_optical_surface_instance(self): # returns a copy of the S4Conic, S4Toroid, or S4mesh
-        raise Exception("To be implemented in the superclass")
+        raise Exception("To be implemented in the children class")
 
 class S4MirrorElement(S4BeamlineElement):
     

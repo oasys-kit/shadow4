@@ -27,7 +27,7 @@ class S4SurfaceDataMirror(S4Mirror, S4SurfaceDataOpticalElement):
         S4Mirror.__init__(self, name, boundary_shape, self._curved_surface_shape,
                           f_reflec, f_refl, file_refl, refraction_index)
 
-    def apply_geometrical_model(self, beam):
+    def get_optical_surface_instance(self):
         surface_shape = self.get_surface_shape()
 
         print(">>>>> SurfaceData mirror")
@@ -38,11 +38,16 @@ class S4SurfaceDataMirror(S4Mirror, S4SurfaceDataOpticalElement):
         elif surface_shape.has_surface_data_file():
             filename, file_extension = os.path.splitext(surface_shape._surface_data_file)
 
-            if file_extension.lower() in [".h5", ".hdf", ".hdf5"]: num_mesh.load_h5file(surface_shape._surface_data_file)
-            else:                                                  num_mesh.load_file(surface_shape._surface_data_file) # 3 columns ASCII
+            if file_extension.lower() in [".h5", ".hdf", ".hdf5"]:
+                num_mesh.load_h5file(surface_shape._surface_data_file)
+            else:
+                num_mesh.load_file(surface_shape._surface_data_file) # 3 columns ASCII
 
+        return num_mesh
+
+    def apply_geometrical_model(self, beam):
+        num_mesh = self.get_optical_surface_instance()
         mirr, normal, _, _, _, _, _ = num_mesh.apply_specular_reflection_on_beam(beam)
-
         return mirr, normal
 
 class S4SurfaceDataMirrorElement(S4MirrorElement):

@@ -168,6 +168,6 @@ class S4AdditiveSurfaceDataOpticalElement(S4CurvedOpticalElement):
         self._curved_surface_shape = SurfaceData(xx, yy, zz, surface_data_file)
 
         if base_surface_function is None:
-            self._base_surface_function = lambda x,y: 0.0
+            self._base_surface_function = lambda x,y: x * 0.0
         else:
             self._base_surface_function = base_surface_function

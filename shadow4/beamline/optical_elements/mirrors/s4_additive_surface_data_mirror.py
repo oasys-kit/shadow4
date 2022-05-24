@@ -1,4 +1,5 @@
 import os
+import numpy
 from shadow4.syned.shape import SurfaceData
 from shadow4.beamline.optical_elements.mirrors.s4_mirror import S4MirrorElement, S4Mirror, ElementCoordinates
 from shadow4.optical_surfaces.s4_mesh import S4Mesh
@@ -28,7 +29,7 @@ class S4AdditiveSurfaceDataMirror(S4Mirror, S4AdditiveSurfaceDataOpticalElement)
         S4Mirror.__init__(self, name, boundary_shape, self._curved_surface_shape,
                           f_reflec, f_refl, file_refl, refraction_index)
 
-    def apply_geometrical_model(self, beam):
+    def get_optical_surface_instance(self):
         surface_shape = self.get_surface_shape()
 
         print(">>>>> SurfaceData mirror")
@@ -49,11 +50,17 @@ class S4AdditiveSurfaceDataMirror(S4Mirror, S4AdditiveSurfaceDataOpticalElement)
         z = num_mesh.get_mesh_z()
         Y = numpy.outer(numpy.ones_like(x), y)
         X = numpy.outer(x, numpy.ones_like(y))
-        print(">>>>>>", z.shape, x.shape, y.shape, X.shape, Y.shape)
-        num_mesh.add_to_mesh( self._base_surface_function(Y, X))
 
+        zadd = self._base_surface_function(X, Y)
+        print(">>>>", X.shape, Y.shape, zadd.shape)
+        # from srxraylib.plot.gol import plot_surface
+        # plot_surface(zadd, x, y, xtitle="x")
+        num_mesh.add_to_mesh( zadd )
+        return num_mesh
+
+    def apply_geometrical_model(self, beam):
+        num_mesh = self.get_optical_surface_instance()
         mirr, normal, _, _, _, _, _ = num_mesh.apply_specular_reflection_on_beam(beam)
-
         return mirr, normal
 
 class S4AdditiveSurfaceDataMirrorElement(S4MirrorElement):
@@ -71,7 +78,7 @@ if __name__ == "__main__":
     import numpy
 
     from shadow4.sources.source_geometrical.source_gaussian import SourceGaussian
-    from shadow4.beamline.optical_elements.additive_elements.s4_additive import S4Additive, S4AdditiveElement
+
     from shadow4.beam.beam import Beam
 
     from shadow4.beamline.optical_elements.ideal_elements.s4_ideal_lens import S4IdealLens, S4IdealLensElement
@@ -123,7 +130,7 @@ if __name__ == "__main__":
     #                                 boundary_shape=Rectangle(x_left=-rwidx2, x_right=rwidx1, y_bottom=-rlen2,
     #                                                          y_top=rlen1))
 
-    base_surface_function = base_element.get_optical_surface_instance().height
+    base_surface_function = base_element.get_optical_surface_instance().surface_height
 
     mesh_element = S4AdditiveSurfaceDataMirror(name="M1",
                                        surface_data_file="../../../../oasys_workspaces/test_shadow4.hdf5",

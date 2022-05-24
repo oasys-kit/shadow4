@@ -1,19 +1,20 @@
-
 import numpy
+
+from shadow4.optical_surfaces.s4_optical_surface import S4OpticalSurface
 
 from numpy.testing import assert_equal, assert_almost_equal
 
-class S4Toroid(object):
+class S4Toroid(S4OpticalSurface):
 
     def __init__(self, coeff=None):
 
-        self.r_maj = 1e10 # initialize as plane
+        self.r_maj = 1e10 # initialize as plane  Nota bene: r_maj is not the tangential radius!!!
         self.r_min = 1e10 # initialize as plane
 
-        if coeff is not None:
-            self.coeff = coeff.copy()
-        else:
+        if coeff is None:
             self.coeff = numpy.zeros(5)
+        else:
+            self.coeff = coeff.copy()
 
         self.f_torus = 0        # - for fmirr=3; mirror pole location:
                                 #  lower/outer (concave/concave) (0),
@@ -185,9 +186,34 @@ class S4Toroid(object):
 
         return normal
 
+    def surface_height(self, X, Y, solution_index=3, method=0):
+
+        if method == 0: # fast
+            Rt, Rs = self.get_tangential_and_sagittal_radii()
+            if solution_index == 0:
+                return Rt + Rs + numpy.sqrt(Rt ** 2 - Y ** 2) + numpy.sqrt(Rs ** 2 - X ** 2)
+            elif solution_index == 1:
+                return Rt + Rs + numpy.sqrt(Rt ** 2 - Y ** 2) - numpy.sqrt(Rs ** 2 - X ** 2)
+            elif solution_index == 2:
+                return Rt + Rs - numpy.sqrt(Rt ** 2 - Y ** 2) + numpy.sqrt(Rs ** 2 - X ** 2)
+            elif solution_index == 3:
+                return Rt + Rs - numpy.sqrt(Rt**2 - Y**2) - numpy.sqrt(Rs**2 - X**2)
+        else: # using calculate_intercept
+            xx = X.flatten()
+            yy = Y.flatten()
+            zz = numpy.zeros_like(xx)
+
+            XIN = numpy.vstack((xx, yy, zz))
+            VIN = numpy.vstack((zz, zz, numpy.ones_like(xx)))
+
+            HEIGHT, i_res = self.calculate_intercept(XIN, VIN, return_all_solutions=True)
+
+            height = HEIGHT[solution_index,:]
+            height.shape = X.shape
+            return height
 
 
-    def calculate_intercept(self,XIN,VIN,keep=0):
+    def calculate_intercept(self, XIN, VIN, keep=0, return_all_solutions=False):
 
         P1 = XIN[0,:]
         P2 = XIN[1,:]
@@ -201,6 +227,11 @@ class S4Toroid(object):
         # ! C
         # ! C move the ref. frame to the torus one.
         # ! C
+        # self.f_torus = 0        # - for fmirr=3; mirror pole location:
+                                  #  lower/outer (concave/concave) (0),
+                                  # lower/inner (concave/convex) (1),
+                                  # upper/inner (convex/concave) (2),
+                                  # upper/outer (convex/convex) (3).
 
         if self.f_torus == 0:
             P3 = P3 - self.r_maj - self.r_min
@@ -273,8 +304,9 @@ class S4Toroid(object):
 
         i_res = numpy.ones_like(AA)
         answer = numpy.ones_like(AA)
+        ANSWERS = numpy.zeros((4, AA.size))
         for k in range(AA.size):
-            # print("coeff: ",i,1.0,AA[i],BB[i],CC[i],DD[i])
+            # print("coeff: ",k,1.0,AA[k],BB[k],CC[k],DD[k])
             coeff = numpy.array([1.0,AA[k],BB[k],CC[k],DD[k]])
             # print("coeff: ",i,coeff.shape,coeff)
             h_output = numpy.roots(coeff)
@@ -303,6 +335,8 @@ class S4Toroid(object):
                 #! C
                 #! C Sort the real intercept in ascending order.
                 #! C
+                for ii in range(len(Answers)):
+                    ANSWERS[ii,k] = numpy.array(Answers[ii])
 
                 Answers = numpy.sort(numpy.array(Answers))
 
@@ -326,21 +360,21 @@ class S4Toroid(object):
                 elif self.f_torus == 3:
                     answer[k] = Answers[0]
 
+        if return_all_solutions:
+            return ANSWERS, i_res
+        else:
+            return answer, i_res
 
-        return answer,i_res
 
 
 
-
-    def set_cylindrical(self,CIL_ANG):
+    def set_cylindrical(self, CIL_ANG):
         raise Exception("Cannot set_cylindrical() in a Toroid")
 
 
 
     def switch_convexity(self):
         raise Exception("Cannot switch_convexity() in a Toroid")
-
-
 
 
 
@@ -364,12 +398,12 @@ class S4Toroid(object):
         # txt += "  ccc[0]*X^2 + ccc[1]*Y^2 + ccc[2]*Z^2  \n"
         # txt += "  ccc[3]*X*Y + ccc[4]*Y*Z + ccc[5]*X*Z  \n"
         # txt += "  ccc[6]*X   + ccc[7]*Y   + ccc[8]*Z + ccc[9] = 0 \n"
-        txt += " with \n"
-        # txt += " c[0] = %f \n "%self.ccc[0]
-        # txt += " c[1] = %f \n "%self.ccc[1]
-        # txt += " c[2] = %f \n "%self.ccc[2]
-        # txt += " c[3] = %f \n "%self.ccc[3]
-        # txt += " c[4] = %f \n "%self.ccc[4]
+        txt += " with\n"
+        txt += "  t[0] = %f \n "%self.coeff[0]
+        txt += " t[1] = %f \n "%self.coeff[1]
+        txt += " t[2] = %f \n "%self.coeff[2]
+        txt += " t[3] = %f \n "%self.coeff[3]
+        txt += " t[4] = %f \n "%self.coeff[4]
         # txt += " c[5] = %f \n "%self.ccc[5]
         # txt += " c[6] = %f \n "%self.ccc[6]
         # txt += " c[7] = %f \n "%self.ccc[7]
@@ -434,5 +468,20 @@ class S4Toroid(object):
 if __name__ == "__main__":
 
     t = S4Toroid()
-
+    t.set_from_focal_distances(30.0, 10.0, 0.003)
     print(t.info())
+
+    print("Rmaj, Rmin", t.get_toroid_radii())
+    print("Rtan, Rsag", t.get_tangential_and_sagittal_radii())
+
+    from srxraylib.plot.gol import plot_surface
+
+    x = numpy.linspace(-0.01, 0.01, 100)
+    y = numpy.linspace(-0.03, 0.03, 200)
+    X = numpy.outer(x,numpy.ones_like(y))
+    Y = numpy.outer(numpy.ones_like(x),y)
+
+    Z = t.surface_height(X, Y)
+    plot_surface(Z, x, y, xtitle="x")
+
+

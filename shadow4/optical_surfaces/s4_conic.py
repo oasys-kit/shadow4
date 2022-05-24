@@ -1,6 +1,8 @@
 
 import numpy
 
+from shadow4.optical_surfaces.s4_optical_surface import S4OpticalSurface
+
 from shadow4.tools.arrayofvectors import vector_refraction
 
 from numpy.testing import assert_equal, assert_almost_equal
@@ -11,7 +13,7 @@ from numpy.testing import assert_equal, assert_almost_equal
 #      ccc[6]*X   + ccc[7]*Y   + ccc[8]*Z + ccc[9] = 0
 
 
-class S4Conic(object):
+class S4Conic(S4OpticalSurface):
 
     def __init__(self, ccc=numpy.zeros(10)):
 
@@ -503,6 +505,9 @@ class S4Conic(object):
         c9 = self.ccc[2] * z0**2 + self.ccc[9] - self.ccc[8] * z0
 
         self.ccc = numpy.array([self.ccc[0], self.ccc[1], self.ccc[2], self.ccc[3], self.ccc[4], self.ccc[5], c6, c7, c8, c9])
+
+    def surface_height(self, x, y, return_solution=0):
+        return self.height(y, x, return_solution=return_solution)
 
     def height(self,y=0,x=0,return_solution=0):
         """

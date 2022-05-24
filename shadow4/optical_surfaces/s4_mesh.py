@@ -1,3 +1,4 @@
+from shadow4.optical_surfaces.s4_optical_surface import S4OpticalSurface
 
 # https://stackoverflow.com/questions/13360062/python-curves-intersection-with-fsolve-and-function-arguments-using-numpy
 
@@ -12,7 +13,7 @@ import time
 import numpy
 
 
-class S4Mesh(object):
+class S4Mesh(S4OpticalSurface):
     def __init__(self, surface=None, mesh_x=None, mesh_y=None, mesh_z=None, kind='cubic'):
         self.__x0 = [0.0,0.0,0.0]
         self.__v0 = [0.0,0.0,0.0]
@@ -55,6 +56,10 @@ class S4Mesh(object):
 
     def calculate_surface_from_mesh(self):
         self.surface = interpolate.interp2d(self.mesh_x, self.mesh_y, self.mesh_z.T, kind=self.kind)
+
+    def surface_height(self, x, y):
+        return self.surface(x, y)
+
 
     def add_to_mesh(self, z1):
         if self.mesh_z is None:
@@ -459,10 +464,19 @@ if __name__ == "__main__":
 
     plot_surface_and_line(Z,x,y,zz,xx,yy)
 
+    #
+    # mesh object
+    #
     mm = S4Mesh()
     mm.set_ray(x0,v0)
     mm.set_surface(sphere)
 
+    zz = mm.surface_height(X, Y)
+    plot_surface(zz, x, y, xtitle="X")
+
+    #
+    # intercept
+    #
     x_start = 0.4
 
     t_solution = mm.solve(x_start)

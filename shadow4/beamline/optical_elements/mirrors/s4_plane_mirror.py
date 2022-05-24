@@ -21,13 +21,13 @@ class S4PlaneMirror(S4Mirror, S4PlaneOpticalElement):
         S4PlaneOpticalElement.__init__(self)
         S4Mirror.__init__(self, name, boundary_shape, self._plane_surface_shape, f_reflec, f_refl, file_refl, refraction_index)
 
-    def apply_geometrical_model(self, beam):
-
+    def get_optical_surface_instance(self):
         print(">>>>> Plane mirror")
+        return S4Conic.initialize_as_plane()
 
-        ccc = S4Conic.initialize_as_plane()
+    def apply_geometrical_model(self, beam):
+        ccc = self.get_optical_surface_instance()
         mirr, normal = ccc.apply_specular_reflection_on_beam(beam)
-
         return mirr, normal
 
 class S4PlaneMirrorElement(S4MirrorElement):
