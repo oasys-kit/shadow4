@@ -5,7 +5,7 @@ from shadow4.optical_surfaces.s4_optical_surface import S4OpticalSurface
 # https://www.reddit.com/r/matlab/comments/pd7rr/finding_the_point_of_intersection_between_a_line/
 
 # from scipy.optimize import fsolve
-from scipy.optimize import root
+from scipy.optimize import root, root_scalar, brentq
 from scipy import interpolate
 from srxraylib.plot.gol import plot,plot_image, plot_surface, plot_scatter
 import sys
@@ -62,6 +62,7 @@ class S4Mesh(S4OpticalSurface):
 
 
     def add_to_mesh(self, z1):
+        print(">>>>>>>>>>>>>>ADDING TO MESH", z1.shape, self.mesh_z.shape, z1, self.mesh_z)
         if self.mesh_z is None:
             raise Exception("Cannot add to None")
 
@@ -168,8 +169,24 @@ class S4Mesh(S4OpticalSurface):
         # t_solution = brentq(self.equation_to_solve, 0, 200)
         # return t_solution
 
-        t_solution = root(self.equation_to_solve, x_start, method='hybr')
+        # t_solution = root(self.equation_to_solve, x_start, method='hybr')                 # 6.2955/5.742
+        # t_solution = root(self.equation_to_solve, x_start, method='hybr', tol=1e-11)      # 5.795/5.742
+        # t_solution = root(self.equation_to_solve, x_start, method='broyden2', tol=1e-11)  # 6.084/5.742
+        # t_solution = root(self.equation_to_solve, x_start, method='anderson')             # 5.82/5.742
+        # t_solution = root(self.equation_to_solve, x_start, method='Krylov')             # 8.12/5.742
+        # t_solution = root(self.equation_to_solve, x_start, method='Krylov', tol=1e-11)  # 6.284/5.742
+        # t_solution = root(self.equation_to_solve, x_start, method='diagbroyden', tol=1e-11)  # 6.08/5.742
+
+
+        # t_solution = root(self.equation_to_solve, x_start, method='hybr', tol=1e-11)  # 6.17/5.27
+        # t_solution = root(self.equation_to_solve, x_start, method='hybr')  # 6.17/5.27
+        # t_solution = root(self.equation_to_solve, x_start, method='anderson') # 6.36/5.27
+        t_solution = root(self.equation_to_solve, x_start, method='hybr', tol=1e-13)  # 6.07/5.27
+
+
+        # print(t_solution['message'])
         return t_solution['x']
+
 
 
     #
@@ -477,7 +494,7 @@ if __name__ == "__main__":
     #
     # intercept
     #
-    x_start = 0.4
+    x_start = 0
 
     t_solution = mm.solve(x_start)
 

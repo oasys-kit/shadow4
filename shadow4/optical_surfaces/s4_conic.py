@@ -1101,45 +1101,65 @@ if __name__ == "__main__":
     from srxraylib.plot.gol import set_qt
     set_qt()
 
-    p = 13.73 + 13.599
-    q = 2.64
-    theta1 = 0.02181
-    # ccc = Conic.initialize_as_sphere_from_focal_distances(p, q, theta1, cylindrical=0, cylangle=0.0, switch_convexity=0)
-    ccc = S4Conic.initialize_as_ellipsoid_from_focal_distances(p, q, theta1, cylindrical=0, cylangle=0.0, switch_convexity=0)
-    # ccc = Conic.initialize_as_paraboloid_from_focal_distances(p, q, theta1, cylindrical=0, cylangle=0.0, switch_convexity=0)
-    # ccc = Conic.initialize_as_hyperboloid_from_focal_distances(p, q, theta1, cylindrical=0, cylangle=0.0, switch_convexity=0)
-    # print(ccc.info())
+    if False:
+        p = 13.73 + 13.599
+        q = 2.64
+        theta1 = 0.02181
+        # ccc = Conic.initialize_as_sphere_from_focal_distances(p, q, theta1, cylindrical=0, cylangle=0.0, switch_convexity=0)
+        ccc = S4Conic.initialize_as_ellipsoid_from_focal_distances(p, q, theta1, cylindrical=0, cylangle=0.0, switch_convexity=0)
+        # ccc = Conic.initialize_as_paraboloid_from_focal_distances(p, q, theta1, cylindrical=0, cylangle=0.0, switch_convexity=0)
+        # ccc = Conic.initialize_as_hyperboloid_from_focal_distances(p, q, theta1, cylindrical=0, cylangle=0.0, switch_convexity=0)
+        # print(ccc.info())
 
-    y = numpy.linspace(-0.25, 0.25, 200)
-    z = ccc.height(y)
-    from srxraylib.plot.gol import plot
-    plot(y,z,xtitle="y",ytitle="z")
+        y = numpy.linspace(-0.25, 0.25, 200)
+        z = ccc.height(y)
+        from srxraylib.plot.gol import plot
+        plot(y,z,xtitle="y",ytitle="z")
 
-    #
-    #
-    #
-
-
-    x = numpy.linspace(-0.15, 0.15, 100)
-    Y = numpy.outer(numpy.ones_like(x),y)
-    X = numpy.outer(x,numpy.ones_like(y))
-    Z = ccc.height(Y,X)
-
-    from srxraylib.plot.gol import plot_image
-    plot_image(Z,x,y)
-    print(ccc.info())
-    print("Ellipsoid parameters: ")
-    tkt = S4Conic.calculate_ellipsoid_parameters_from_focal_distances(p, q, theta1)
-
-    # using external parameters
-    ccc2 = S4Conic()
-    ccc2.set_ellipsoid_from_external_parameters(AXMAJ=tkt["AXMAJ"],AXMIN=tkt["AXMIN"],ELL_THE=tkt["ELL_THE"])
-    # for key in tkt.keys():
-    #     print(key,tkt[key])
-
-    for i in range(10):
-        print(ccc.get_coefficients()[i], ccc2.get_coefficients()[i])
+        #
+        #
+        #
 
 
+        x = numpy.linspace(-0.15, 0.15, 100)
+        Y = numpy.outer(numpy.ones_like(x),y)
+        X = numpy.outer(x,numpy.ones_like(y))
+        Z = ccc.height(Y,X)
+
+        from srxraylib.plot.gol import plot_image
+        plot_image(Z,x,y)
+        print(ccc.info())
+        print("Ellipsoid parameters: ")
+        tkt = S4Conic.calculate_ellipsoid_parameters_from_focal_distances(p, q, theta1)
+
+        # using external parameters
+        ccc2 = S4Conic()
+        ccc2.set_ellipsoid_from_external_parameters(AXMAJ=tkt["AXMAJ"],AXMIN=tkt["AXMIN"],ELL_THE=tkt["ELL_THE"])
+        # for key in tkt.keys():
+        #     print(key,tkt[key])
+
+        for i in range(10):
+            print(ccc.get_coefficients()[i], ccc2.get_coefficients()[i])
+
+
+    if True:
+        p = 40.0
+        q = 10.0
+        theta1 = 0.003
+        ccc = S4Conic.initialize_as_ellipsoid_from_focal_distances(p, q, theta1, cylindrical=0, cylangle=0.0, switch_convexity=0)
+
+        y = numpy.linspace(-0.2, 0.2, 5000)
+        x = numpy.linspace(-0.001, 0.001, 100)
+
+        Y = numpy.outer(numpy.ones_like(x),y)
+        X = numpy.outer(x,numpy.ones_like(y))
+        Z = ccc.surface_height(X, Y)
+
+        from srxraylib.plot.gol import plot_image
+        plot_image(Z, x, y, aspect='auto')
+
+        print(Z.shape, x.shape, y.shape)
+        ccc.write_mesh_file(x, y,   filename="../oasys_workspaces/mirror111.dat")
+        ccc.write_mesh_h5file(x, y, filename="../oasys_workspaces/mirror111.h5")
 
 
