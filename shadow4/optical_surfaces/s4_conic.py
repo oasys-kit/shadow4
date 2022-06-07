@@ -365,15 +365,19 @@ class S4Conic(S4OpticalSurface):
 
     def z_vs_xy(self,x,y):
 
+        if isinstance(x, numpy.ndarray):
+            pass
+        else:
+            x = numpy.ndarray([x])
+            y = numpy.ndarray([y])
+
         ccc = self.ccc
 
         AA 	= ccc[2] * numpy.ones_like(x)
         BB = ccc[4] * y + ccc[5] * x + ccc[8]
         CC = ccc[0]*x**2 + ccc[1]*y**2 + ccc[3]*x*y + ccc[6]*x + ccc[7]*y  + ccc[9]
 
-
         shape_x =  x.shape
-
 
         AAf = AA.flatten()
         BBf = BB.flatten()
