@@ -32,7 +32,7 @@ class S4ParaboloidMirror(S4Mirror, S4ParaboloidOpticalElement):
                  ):
         S4ParaboloidOpticalElement.__init__(self, surface_calculation, is_cylinder, cylinder_direction, convexity,
                                             parabola_parameter, at_infinity, pole_to_focus, p_focus, q_focus, grazing_angle)
-        S4Mirror.__init__(self, name, boundary_shape, self._curved_surface_shape,
+        S4Mirror.__init__(self, name, boundary_shape, self.get_surface_shape_instance(),
                           f_reflec, f_refl, file_refl, refraction_index)
 
     def get_optical_surface_instance(self):

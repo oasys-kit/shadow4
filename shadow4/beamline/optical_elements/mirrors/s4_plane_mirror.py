@@ -19,7 +19,7 @@ class S4PlaneMirror(S4Mirror, S4PlaneOpticalElement):
                  refraction_index=1.0  # refraction index (complex) for f_refl=1
                  ):
         S4PlaneOpticalElement.__init__(self)
-        S4Mirror.__init__(self, name, boundary_shape, self._plane_surface_shape, f_reflec, f_refl, file_refl, refraction_index)
+        S4Mirror.__init__(self, name, boundary_shape, self.get_surface_shape_instance(), f_reflec, f_refl, file_refl, refraction_index)
 
     def get_optical_surface_instance(self):
         print(">>>>> Plane mirror")
@@ -39,3 +39,7 @@ class S4PlaneMirrorElement(S4MirrorElement):
 
     def apply_local_reflection(self, beam):
         return self.get_optical_element().apply_geometrical_model(beam)
+
+if __name__ == "__main__":
+    m = S4PlaneMirror()
+    me = S4PlaneMirrorElement(optical_element=m, coordinates=ElementCoordinates())

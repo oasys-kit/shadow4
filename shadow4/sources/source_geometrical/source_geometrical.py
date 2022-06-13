@@ -387,7 +387,12 @@ class SourceGeometrical(object):
                 rays[:,10] = self._energy_to_wavenumber(sampled_values)
             else:
                 rays[:,10] = self._wavelength_to_wavenumber(sampled_values)
-
+        elif self.energy_distribution == "Uniform":
+            sampled_values = self.__ph[0] + (self.__ph[1]-self.__ph[0]) * numpy.random.rand(N)
+            if self.__f_phot == 0:
+                rays[:,10] = self._energy_to_wavenumber(sampled_values)
+            else:
+                rays[:,10] = self._wavelength_to_wavenumber(sampled_values)
         elif self.energy_distribution == "Gaussian":
             sampled_values = numpy.random.normal(loc=self.__ph[0], scale=self.__ph[1], size=N)
             if self.__f_phot == 0:

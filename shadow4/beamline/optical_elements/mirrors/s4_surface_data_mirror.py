@@ -24,7 +24,7 @@ class S4SurfaceDataMirror(S4Mirror, S4SurfaceDataOpticalElement):
                  refraction_index=1.0  # refraction index (complex) for f_refl=1
                  ):
         S4SurfaceDataOpticalElement.__init__(self, xx, yy, zz, surface_data_file)
-        S4Mirror.__init__(self, name, boundary_shape, self._curved_surface_shape,
+        S4Mirror.__init__(self, name, boundary_shape, self.get_surface_shape_instance(),
                           f_reflec, f_refl, file_refl, refraction_index)
 
     def get_optical_surface_instance(self):

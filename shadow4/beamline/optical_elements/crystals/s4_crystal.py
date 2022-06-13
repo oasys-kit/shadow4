@@ -180,7 +180,6 @@ class S4CrystalElement(S4BeamlineElement):
                 energy = oe._phot_cent
             else:
                 energy = codata.h * codata.c / codata.e * 1e2 / (oe._phot_cent * 1e-8)
-                raise Exception(NotImplementedError)
 
             setting_angle = diffraction_setup.angleBraggCorrected(energy)
 
@@ -234,7 +233,7 @@ class S4CrystalElement(S4BeamlineElement):
         # TODO" apply crystal reflectivity
         #
         nrays = beam_mirr.get_number_of_rays()
-        energy = 8000.0  # eV
+        # energy = 8000.0  # eV
 
         # Create a Diffraction object (the calculator)
         diffraction = Diffraction()
@@ -242,6 +241,7 @@ class S4CrystalElement(S4BeamlineElement):
 
         scan_type = 1 # 0=scan, 1=loop on rays, 2=bunch of photons (not functional)  # TODO: delete 0,2
         if scan_type == 0: # scan
+            energy = 8000.0  # eV
             # setting_angle = self._crystalpy_diffraction_setup.angleBragg(energy)
             setting_angle = self._crystalpy_diffraction_setup.angleBraggCorrected(energy)
 

@@ -16,6 +16,9 @@ class S4OpticalElement(object):
     def to_python_code(self, data=None):
         raise NotImplementedError()
 
+    def get_surface_shape_instance(self):
+        raise NotImplementedError()
+
 
 class SurfaceCalculation:
     INTERNAL = 0
@@ -27,6 +30,9 @@ class S4PlaneOpticalElement(S4OpticalElement):
         S4OpticalElement.__init__(self)
 
         self._plane_surface_shape = Plane()
+
+    def get_surface_shape_instance(self):
+        return self._plane_surface_shape
 
 class S4CurvedOpticalElement(S4OpticalElement):
 
@@ -41,6 +47,9 @@ class S4CurvedOpticalElement(S4OpticalElement):
         self._curved_surface_shape = None # auxiliary field
 
     def get_curved_surface_shape(self):
+        return self._curved_surface_shape
+
+    def get_surface_shape_instance(self):
         return self._curved_surface_shape
 
 ##################################################
@@ -131,7 +140,7 @@ class S4ConicOpticalElement(S4CurvedOpticalElement):
     def __init__(self, conic_coefficients=[0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]):
         S4CurvedOpticalElement.__init__(self, surface_calculation=SurfaceCalculation.INTERNAL, is_cylinder=False)
 
-        self._conic_surface_shape = Conic(conic_coefficients=conic_coefficients)
+        self._curved_surface_shape = Conic(conic_coefficients=conic_coefficients)
 
 class S4ParaboloidOpticalElement(S4CurvedOpticalElement):
     def __init__(self,

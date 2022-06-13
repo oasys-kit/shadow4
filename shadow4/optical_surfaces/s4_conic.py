@@ -1099,7 +1099,12 @@ class S4Conic(S4OpticalSurface):
         # ;
         return self.apply_specular_reflection_on_beam(newbeam)
 
+    def apply_grating_diffraction_on_beam(self, newbeam):
 
+        # ;
+        # ; TRACING... (copied from mirror reflection)
+        # ;
+        return self.apply_specular_reflection_on_beam(newbeam)
 
 if __name__ == "__main__":
     from srxraylib.plot.gol import set_qt

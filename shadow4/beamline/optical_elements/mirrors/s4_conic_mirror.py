@@ -20,7 +20,7 @@ class S4ConicMirror(S4Mirror, S4ConicOpticalElement):
                  refraction_index=1.0  # refraction index (complex) for f_refl=1
                  ):
         S4ConicOpticalElement.__init__(self, conic_coefficients)
-        S4Mirror.__init__(self, name, boundary_shape, self._conic_surface_shape,
+        S4Mirror.__init__(self, name, boundary_shape, self.get_surface_shape_instance(),
                           f_reflec, f_refl, file_refl, refraction_index)
 
     def get_optical_surface_instance(self):

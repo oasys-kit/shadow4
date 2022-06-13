@@ -31,7 +31,7 @@ class S4HyperboloidMirror(S4Mirror, S4HyperboloidOpticalElement):
                  ):
         S4HyperboloidOpticalElement.__init__(self, surface_calculation, is_cylinder, cylinder_direction, convexity,
                                              min_axis, maj_axis, p_focus, q_focus, grazing_angle)
-        S4Mirror.__init__(self, name, boundary_shape, self._curved_surface_shape,
+        S4Mirror.__init__(self, name, boundary_shape, self.get_surface_shape_instance(),
                           f_reflec, f_refl, file_refl, refraction_index)
 
     def get_optical_surface_instance(self):

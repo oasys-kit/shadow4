@@ -3,12 +3,13 @@ from shadow4.syned.shape import Conic, Plane
 from shadow4.beamline.optical_elements.crystals.s4_crystal import S4CrystalElement, S4Crystal
 from shadow4.syned.element_coordinates import ElementCoordinates
 from shadow4.optical_surfaces.s4_conic import S4Conic
+from shadow4.syned.shape import Plane
 
-from shadow4.beamline.s4_optical_element import S4ConicOpticalElement
+from shadow4.beamline.s4_optical_element import S4PlaneOpticalElement
 
 from syned.beamline.optical_elements.crystals.crystal import DiffractionGeometry
 
-class S4PlaneCrystal(S4Crystal, S4ConicOpticalElement):
+class S4PlaneCrystal(S4Crystal, S4PlaneOpticalElement):
     def __init__(self,
                  name="Plane crystal",
                  boundary_shape=None,
@@ -36,11 +37,11 @@ class S4PlaneCrystal(S4Crystal, S4ConicOpticalElement):
                                                      # 3=shadow preprocessor file v2
                  ):
 
-        S4ConicOpticalElement.__init__(self, [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, -1.0, 0.0])
+        S4PlaneOpticalElement.__init__(self)
         S4Crystal.__init__(self,
                            name=name,
                            boundary_shape=boundary_shape,
-                           surface_shape=Conic(conic_coefficients=[0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, -1.0, 0.0]),
+                           surface_shape=self.get_surface_shape_instance(),
                            material=material,
                            diffraction_geometry=diffraction_geometry,  # ?? not supposed to be in syned...
                            miller_index_h=miller_index_h,
@@ -66,15 +67,15 @@ class S4PlaneCrystalElement(S4CrystalElement):
     def __init__(self, optical_element=None, coordinates=None):
         super().__init__(optical_element if optical_element is not None else S4Crystal(),
                          coordinates if coordinates is not None else ElementCoordinates())
-        if not isinstance(self.get_optical_element().get_surface_shape(), Conic):
-            raise ValueError("Wrong Optical Element: only Conic shape is accepted")
+        if not isinstance(self.get_optical_element().get_surface_shape(), Plane):
+            raise ValueError("Wrong Optical Element: only Plane shape is accepted")
 
 
 
     def apply_crystal_diffraction(self, beam):
         surface_shape = self.get_optical_element().get_surface_shape()
 
-        ccc = S4Conic.initialize_from_coefficients(surface_shape.get_conic_coefficients())
+        ccc = S4Conic.initialize_as_plane()
 
         oe = self.get_optical_element()
 
