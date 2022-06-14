@@ -1,10 +1,6 @@
-import numpy
-
 from shadow4.syned.shape import Ellipsoid, EllipticalCylinder, Convexity, Direction
-
 from shadow4.beamline.s4_optical_element import SurfaceCalculation, S4EllipsoidOpticalElement
 from shadow4.beamline.optical_elements.mirrors.s4_mirror import S4MirrorElement, S4Mirror, ElementCoordinates
-from shadow4.optical_surfaces.s4_conic import S4Conic
 
 class S4EllipsoidMirror(S4Mirror, S4EllipsoidOpticalElement):
     def __init__(self,
@@ -34,27 +30,6 @@ class S4EllipsoidMirror(S4Mirror, S4EllipsoidOpticalElement):
         S4Mirror.__init__(self, name, boundary_shape, self.get_surface_shape_instance(),
                           f_reflec, f_refl, file_refl, refraction_index)
 
-    def get_optical_surface_instance(self):
-        surface_shape = self.get_surface_shape()
-
-        switch_convexity = 0 if surface_shape.get_convexity() == Convexity.DOWNWARD else 1
-
-        if isinstance(surface_shape, EllipticalCylinder):
-            print(">>>>> EllipticalCylinder mirror", surface_shape)
-            cylindrical = 1
-            cylangle = 0.0 if surface_shape.get_cylinder_direction() == Direction.TANGENTIAL else (0.5 * numpy.pi)
-        elif isinstance(surface_shape, Ellipsoid):
-            print(">>>>> Ellipsoid mirror", surface_shape)
-            cylindrical = 0
-            cylangle    = 0.0
-
-        return S4Conic.initialize_as_ellipsoid_from_focal_distances(surface_shape.get_p_focus(),
-                                                                    surface_shape.get_q_focus(),
-                                                                    surface_shape.get_grazing_angle(),
-                                                                    cylindrical=cylindrical,
-                                                                    cylangle=cylangle,
-                                                                    switch_convexity=switch_convexity)
-
 
     def apply_geometrical_model(self, beam):
         ccc = self.get_optical_surface_instance()
@@ -69,5 +44,3 @@ class S4EllipsoidMirrorElement(S4MirrorElement):
                 isinstance(self.get_optical_element().get_surface_shape(), Ellipsoid)):
             raise ValueError("Wrong Optical Element: only Ellipsoid or Elliptical Cylinder shape is accepted")
 
-    def apply_local_reflection(self, beam):
-        return self.get_optical_element().apply_geometrical_model(beam)

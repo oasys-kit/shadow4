@@ -25,6 +25,7 @@ class S4PlaneGrating(S4Grating, S4PlaneOpticalElement):
                  f_reflec=0,
                  material_constants_library_flag=0,  # 0=xraylib, 1=dabax, 2=shadow preprocessor
                  file_refl="",
+                 order=0,
                  ):
 
         # S4ConicOpticalElement.__init__(self, [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, -1.0, 0.0])
@@ -46,7 +47,11 @@ class S4PlaneGrating(S4Grating, S4PlaneOpticalElement):
                            phot_cent=phot_cent,
                            material_constants_library_flag=material_constants_library_flag,  # 0=xraylib, 1=dabax, 2=shadow preprocessor
                            file_refl=file_refl,
+                           order=order,
                            )
+
+    # def get_optical_surface_instance(self):
+    #     return S4Conic.initialize_as_plane()
 
 class S4PlaneGratingElement(S4GratingElement):
     def __init__(self, optical_element=None, coordinates=None):
@@ -57,16 +62,16 @@ class S4PlaneGratingElement(S4GratingElement):
 
 
 
-    def apply_grating_diffraction(self, beam):
-        surface_shape = self.get_optical_element().get_surface_shape()
-
-        ccc = S4Conic.initialize_as_plane()
-
-        oe = self.get_optical_element()
-
-        beam_mirr, normal = ccc.apply_grating_diffraction_on_beam(beam)
-
-        return beam_mirr, normal
+    # def apply_grating_diffraction(self, beam):
+    #     surface_shape = self.get_optical_element().get_surface_shape()
+    #
+    #     ccc = S4Conic.initialize_as_plane()
+    #
+    #     oe = self.get_optical_element()
+    #
+    #     beam_mirr, normal = ccc.apply_grating_diffraction_on_beam(beam)
+    #
+    #     return beam_mirr, normal
 
 
 if __name__ == "__main__":
@@ -114,6 +119,7 @@ if __name__ == "__main__":
         phot_cent=8000.0,
         material_constants_library_flag=0,  # 0=xraylib, 1=dabax, 2=shadow preprocessor
         file_refl="",
+        order=0,
         )
 
     coordinates_syned = ElementCoordinates(p = 10.0,

@@ -7,6 +7,9 @@ from shadow4.syned.element_coordinates import ElementCoordinates # TODO from sha
 from shadow4.beamline.s4_optical_element import S4OpticalElement
 from shadow4.beamline.s4_beamline_element import S4BeamlineElement
 
+from shadow4.optical_surfaces.s4_conic import S4Conic
+from shadow4.syned.shape import Plane, Sphere
+
 import scipy.constants as codata
 
 class S4Grating(GratingVLS, S4OpticalElement):
@@ -31,6 +34,8 @@ class S4Grating(GratingVLS, S4OpticalElement):
                  f_reflec=0,  # reflectivity of surface: 0=no reflectivity, 1=full polarization
                  material_constants_library_flag=0,  # 0=xraylib, 1=dabax, 2=shadow preprocessor
                  file_refl="",
+                 # inputs related to observation direction
+                 order=0,
                  # inputs NOT USED ANYMORE....
                  # f_ruling=0,    # - for f_grating=1 - ruling type: (0) constant on X-Y plane (0)
                  #                # constant on mirror surface (1),
@@ -66,6 +71,7 @@ class S4Grating(GratingVLS, S4OpticalElement):
         self._f_reflec = f_reflec
         self._material_constants_library_flag = material_constants_library_flag
         self._file_refl = file_refl
+        self._order = order
 
         self.congruence()
 
@@ -180,10 +186,33 @@ class S4GratingElement(S4BeamlineElement):
         oe = self.get_optical_element()
 
 
-        ccc = oe.get_surface_shape_instance()
+        ssi = oe.get_surface_shape_instance()
 
+        print(">>>>>>surface_shape_instalce: ", ssi)
+        ccc = oe.get_optical_surface_instance()
 
-        beam_mirr, normal = ccc.apply_grating_diffraction_on_beam(beam)
+        if isinstance(ssi, Plane):
+
+            beam_mirr, normal = ccc.apply_grating_diffraction_on_beam(
+                beam,
+                ruling=[oe._ruling,
+                        oe._ruling_coeff_linear,
+                        oe._ruling_coeff_quadratic,
+                        oe._ruling_coeff_cubic,
+                        oe._ruling_coeff_quartic],
+                order=oe._order)
+        elif isinstance(ssi, Sphere):
+            ccc = S4Conic.initialize_as_plane()
+            beam_mirr, normal = ccc.apply_grating_diffraction_on_beam(
+                beam,
+                ruling=[oe._ruling,
+                        oe._ruling_coeff_linear,
+                        oe._ruling_coeff_quadratic,
+                        oe._ruling_coeff_cubic,
+                        oe._ruling_coeff_quartic],
+                order=oe._order)
+        else:
+            raise NotImplementedError
 
         return beam_mirr, normal
 
@@ -238,6 +267,7 @@ if __name__ == "__main__":
         phot_cent=8000.0,
         material_constants_library_flag=0,  # 0=xraylib, 1=dabax, 2=shadow preprocessor
         file_refl="",
+        order=0,
         )
 
     coordinates_syned = ElementCoordinates(p = 10.0,

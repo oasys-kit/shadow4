@@ -1,10 +1,6 @@
-import numpy
-
 from shadow4.syned.shape import Paraboloid, ParabolicCylinder, Convexity, Direction, Side
-
 from shadow4.beamline.s4_optical_element import SurfaceCalculation, S4ParaboloidOpticalElement
 from shadow4.beamline.optical_elements.mirrors.s4_mirror import S4MirrorElement, S4Mirror, ElementCoordinates
-from shadow4.optical_surfaces.s4_conic import S4Conic
 
 class S4ParaboloidMirror(S4Mirror, S4ParaboloidOpticalElement):
     def __init__(self,
@@ -35,29 +31,6 @@ class S4ParaboloidMirror(S4Mirror, S4ParaboloidOpticalElement):
         S4Mirror.__init__(self, name, boundary_shape, self.get_surface_shape_instance(),
                           f_reflec, f_refl, file_refl, refraction_index)
 
-    def get_optical_surface_instance(self):
-        surface_shape = self.get_surface_shape()
-
-        switch_convexity = 0 if surface_shape.get_convexity() == Convexity.DOWNWARD else 1
-
-        if surface_shape.get_at_infinity() == Side.SOURCE:
-            p = 1e20
-            q = surface_shape.get_pole_to_focus()
-        else:
-            q = 1e20
-            p = surface_shape.get_pole_to_focus()
-
-        if isinstance(surface_shape, ParabolicCylinder):
-            print(">>>>> ParabolicCylinder mirror", surface_shape)
-            cylindrical = 1
-            cylangle = 0.0 if surface_shape.get_cylinder_direction() == Direction.TANGENTIAL else (0.5 * numpy.pi)
-        elif isinstance(surface_shape, Paraboloid):
-            print(">>>>> Paraboloid mirror", surface_shape)
-            cylindrical = 0
-            cylangle    = 0.0
-
-        return S4Conic.initialize_as_paraboloid_from_focal_distances(p, q, surface_shape.get_grazing_angle(), cylindrical=cylindrical, cylangle=cylangle, switch_convexity=switch_convexity)
-
     def apply_geometrical_model(self, beam):
         ccc = self.get_optical_surface_instance()
         mirr, normal = ccc.apply_specular_reflection_on_beam(beam)
@@ -71,5 +44,3 @@ class S4ParaboloidMirrorElement(S4MirrorElement):
                 isinstance(self.get_optical_element().get_surface_shape(), Paraboloid)):
             raise ValueError("Wrong Optical Element: only Paraboloid or Parabolic Cylinder shape is accepted")
 
-    def apply_local_reflection(self, beam):
-        return self.get_optical_element().apply_geometrical_model(beam)

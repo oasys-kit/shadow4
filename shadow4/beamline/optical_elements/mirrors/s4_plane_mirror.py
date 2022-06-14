@@ -1,8 +1,7 @@
 from shadow4.syned.shape import Plane
-
 from shadow4.beamline.s4_optical_element import S4PlaneOpticalElement
 from shadow4.beamline.optical_elements.mirrors.s4_mirror import S4MirrorElement, S4Mirror, ElementCoordinates
-from shadow4.optical_surfaces.s4_conic import S4Conic
+
 
 class S4PlaneMirror(S4Mirror, S4PlaneOpticalElement):
     def __init__(self,
@@ -21,9 +20,6 @@ class S4PlaneMirror(S4Mirror, S4PlaneOpticalElement):
         S4PlaneOpticalElement.__init__(self)
         S4Mirror.__init__(self, name, boundary_shape, self.get_surface_shape_instance(), f_reflec, f_refl, file_refl, refraction_index)
 
-    def get_optical_surface_instance(self):
-        print(">>>>> Plane mirror")
-        return S4Conic.initialize_as_plane()
 
     def apply_geometrical_model(self, beam):
         ccc = self.get_optical_surface_instance()
@@ -37,8 +33,6 @@ class S4PlaneMirrorElement(S4MirrorElement):
         if not isinstance(self.get_optical_element().get_surface_shape(), Plane):
             raise ValueError("Wrong Optical Element: only Plane shape is accepted")
 
-    def apply_local_reflection(self, beam):
-        return self.get_optical_element().apply_geometrical_model(beam)
 
 if __name__ == "__main__":
     m = S4PlaneMirror()

@@ -1,10 +1,6 @@
-import numpy
-
 from shadow4.syned.shape import Sphere, SphericalCylinder, Convexity, Direction
-
 from shadow4.beamline.s4_optical_element import SurfaceCalculation, S4SphereOpticalElement
 from shadow4.beamline.optical_elements.mirrors.s4_mirror import S4MirrorElement, S4Mirror, ElementCoordinates
-from shadow4.optical_surfaces.s4_conic import S4Conic
 
 class S4SphereMirror(S4Mirror, S4SphereOpticalElement):
     def __init__(self,
@@ -33,27 +29,8 @@ class S4SphereMirror(S4Mirror, S4SphereOpticalElement):
         S4Mirror.__init__(self, name, boundary_shape, self.get_surface_shape_instance(),
                           f_reflec, f_refl, file_refl, refraction_index)
 
-    def get_optical_surface_instance(self):
-        surface_shape = self.get_surface_shape()
-
-        switch_convexity = 0 if surface_shape.get_convexity() == Convexity.DOWNWARD else 1
-
-        if isinstance(surface_shape, SphericalCylinder):
-            print(">>>>> SphericalCylinder mirror", surface_shape)
-            cylindrical = 1
-            cylangle = 0.0 if surface_shape.get_cylinder_direction() == Direction.TANGENTIAL else (0.5 * numpy.pi)
-        elif isinstance(surface_shape, Sphere):
-            print(">>>>> Sphere mirror", surface_shape)
-            cylindrical = 0
-            cylangle    = 0.0
-
-        return S4Conic.initialize_as_sphere_from_curvature_radius(surface_shape.get_radius(),
-                                                                 cylindrical=cylindrical, cylangle=cylangle, switch_convexity=switch_convexity)
-
-
     def apply_geometrical_model(self, beam):
         ccc = self.get_optical_surface_instance()
-        print(">>>>>>> ccc: ", ccc.info())
         mirr, normal = ccc.apply_specular_reflection_on_beam(beam)
         return mirr, normal
 
@@ -65,6 +42,4 @@ class S4SphereMirrorElement(S4MirrorElement):
                 isinstance(self.get_optical_element().get_surface_shape(), Sphere)):
             raise ValueError("Wrong Optical Element: only Sphere or Spherical Cylinder shape is accepted")
 
-    def apply_local_reflection(self, beam):
-        return self.get_optical_element().apply_geometrical_model(beam)
 

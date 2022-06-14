@@ -1,6 +1,5 @@
 from shadow4.syned.shape import Conic
 from shadow4.beamline.optical_elements.mirrors.s4_mirror import S4MirrorElement, S4Mirror, ElementCoordinates
-from shadow4.optical_surfaces.s4_conic import S4Conic
 
 from shadow4.beamline.s4_optical_element import S4ConicOpticalElement
 
@@ -23,11 +22,6 @@ class S4ConicMirror(S4Mirror, S4ConicOpticalElement):
         S4Mirror.__init__(self, name, boundary_shape, self.get_surface_shape_instance(),
                           f_reflec, f_refl, file_refl, refraction_index)
 
-    def get_optical_surface_instance(self):
-        surface_shape = self.get_surface_shape()
-        print(">>>>> Conic mirror")
-        return S4Conic.initialize_from_coefficients(surface_shape.get_conic_coefficients())
-
     def apply_geometrical_model(self, beam):
         ccc = self.get_optical_surface_instance()
         mirr, normal = ccc.apply_specular_reflection_on_beam(beam)
@@ -40,5 +34,3 @@ class S4ConicMirrorElement(S4MirrorElement):
         if not isinstance(self.get_optical_element().get_surface_shape(), Conic):
             raise ValueError("Wrong Optical Element: only Conic shape is accepted")
 
-    def apply_local_reflection(self, beam):
-        return self.get_optical_element().apply_geometrical_model(beam)

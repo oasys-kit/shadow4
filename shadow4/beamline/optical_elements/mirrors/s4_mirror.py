@@ -68,9 +68,6 @@ class S4Mirror(Mirror):
     def apply_geometrical_model(self, beam):
         raise Exception("To be implemented in the children class")
 
-    def get_optical_surface_instance(self): # returns a copy of the S4Conic, S4Toroid, or S4mesh
-        raise Exception("To be implemented in the children class")
-
 class S4MirrorElement(S4BeamlineElement):
     
     def __init__(self, optical_element=None, coordinates=None):
@@ -241,7 +238,7 @@ class S4MirrorElement(S4BeamlineElement):
         return beam_out, mirr
 
     def apply_local_reflection(self, beam):
-        raise NotImplementedError()
+        return self.get_optical_element().apply_geometrical_model(beam)
 
     #
     # i/o utilities

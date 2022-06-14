@@ -1,7 +1,5 @@
 from shadow4.syned.shape import Toroid
 from shadow4.beamline.optical_elements.mirrors.s4_mirror import S4MirrorElement, S4Mirror, ElementCoordinates
-from shadow4.optical_surfaces.s4_toroid import S4Toroid
-
 from shadow4.beamline.s4_optical_element import SurfaceCalculation, S4ToroidalOpticalElement
 
 class S4ToroidalMirror(S4Mirror, S4ToroidalOpticalElement):
@@ -29,27 +27,10 @@ class S4ToroidalMirror(S4Mirror, S4ToroidalOpticalElement):
         S4Mirror.__init__(self, name, boundary_shape, self.get_surface_shape_instance(),
                           f_reflec, f_refl, file_refl, refraction_index)
 
-    def get_optical_surface_instance(self):
-        surface_shape = self.get_surface_shape()
-
-        print(">>>>> Toroidal mirror", surface_shape._min_radius, surface_shape._maj_radius)
-
-        toroid = S4Toroid()
-        toroid.set_toroid_radii(surface_shape.get_maj_radius(), surface_shape.get_min_radius())
-        return toroid
 
     def apply_geometrical_model(self, beam):
-        # surface_shape = self.get_surface_shape()
-        #
-        # print(">>>>> Toroidal mirror", surface_shape._min_radius, surface_shape._maj_radius)
-        #
-        # toroid = S4Toroid()
-        # toroid.set_toroid_radii(surface_shape._maj_radius, surface_shape._min_radius)
-
         toroid = self.get_optical_surface_instance()
-
         mirr, normal = toroid.apply_specular_reflection_on_beam(beam)
-
         return mirr, normal
 
 
@@ -60,5 +41,3 @@ class S4ToroidalMirrorElement(S4MirrorElement):
         if not isinstance(self.get_optical_element().get_surface_shape(), Toroid):
             raise ValueError("Wrong Optical Element: only Toroid shape is accepted")
 
-    def apply_local_reflection(self, beam):
-        return self.get_optical_element().apply_geometrical_model(beam)

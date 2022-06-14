@@ -55,29 +55,29 @@ class S4SphereGrating(S4Grating, S4SphereOpticalElement):
                            file_refl="",
                            )
 
-    def get_optical_surface_instance(self):
-        surface_shape = self.get_surface_shape()
+    # def get_optical_surface_instance(self):
+    #     surface_shape = self.get_surface_shape()
+    #
+    #     switch_convexity = 0 if surface_shape.get_convexity() == Convexity.DOWNWARD else 1
+    #
+    #     if isinstance(surface_shape, SphericalCylinder):
+    #         print(">>>>> SphericalCylinder mirror", surface_shape)
+    #         cylindrical = 1
+    #         cylangle = 0.0 if surface_shape.get_cylinder_direction() == Direction.TANGENTIAL else (0.5 * numpy.pi)
+    #     elif isinstance(surface_shape, Sphere):
+    #         print(">>>>> Sphere mirror", surface_shape)
+    #         cylindrical = 0
+    #         cylangle    = 0.0
+    #
+    #     return S4Conic.initialize_as_sphere_from_curvature_radius(surface_shape.get_radius(),
+    #                                                              cylindrical=cylindrical, cylangle=cylangle, switch_convexity=switch_convexity)
 
-        switch_convexity = 0 if surface_shape.get_convexity() == Convexity.DOWNWARD else 1
 
-        if isinstance(surface_shape, SphericalCylinder):
-            print(">>>>> SphericalCylinder mirror", surface_shape)
-            cylindrical = 1
-            cylangle = 0.0 if surface_shape.get_cylinder_direction() == Direction.TANGENTIAL else (0.5 * numpy.pi)
-        elif isinstance(surface_shape, Sphere):
-            print(">>>>> Sphere mirror", surface_shape)
-            cylindrical = 0
-            cylangle    = 0.0
-
-        return S4Conic.initialize_as_sphere_from_curvature_radius(surface_shape.get_radius(),
-                                                                 cylindrical=cylindrical, cylangle=cylangle, switch_convexity=switch_convexity)
-
-
-    def apply_grating_diffraction(self, beam):
-        ccc = self.get_optical_surface_instance()
-        print(">>>>>>> ccc: ", ccc.info())
-        mirr, normal = ccc.apply_grating_diffraction_on_beam(beam)
-        return mirr, normal
+    # def apply_grating_diffraction(self, beam):
+    #     ccc = self.get_optical_surface_instance()
+    #     print(">>>>>>> ccc: ", ccc.info())
+    #     mirr, normal = ccc.apply_grating_diffraction_on_beam(beam)
+    #     return mirr, normal
 
 class S4SphereGratingElement(S4GratingElement):
     def __init__(self, optical_element=None, coordinates=None):
@@ -87,8 +87,8 @@ class S4SphereGratingElement(S4GratingElement):
                 isinstance(self.get_optical_element().get_surface_shape(), Sphere)):
             raise ValueError("Wrong Optical Element: only Sphere or Spherical Cylinder shape is accepted")
 
-    def apply_grating_diffraction(self, beam):
-        return self.get_optical_element().apply_grating_diffraction(beam)
+    # def apply_grating_diffraction(self, beam):
+    #     return self.get_optical_element().apply_grating_diffraction(beam)
 
 if __name__ == "__main__":
 

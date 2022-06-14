@@ -1,8 +1,5 @@
-import os
-import numpy
 from shadow4.syned.shape import SurfaceData
 from shadow4.beamline.optical_elements.mirrors.s4_mirror import S4MirrorElement, S4Mirror, ElementCoordinates
-from shadow4.optical_surfaces.s4_mesh import S4Mesh
 
 from shadow4.beamline.s4_optical_element import S4AdditiveSurfaceDataOpticalElement
 
@@ -29,35 +26,6 @@ class S4AdditiveSurfaceDataMirror(S4Mirror, S4AdditiveSurfaceDataOpticalElement)
         S4Mirror.__init__(self, name, boundary_shape, self._curved_surface_shape,
                           f_reflec, f_refl, file_refl, refraction_index)
 
-    def get_optical_surface_instance(self):
-        surface_shape = self.get_surface_shape()
-
-        print(">>>>> SurfaceData mirror")
-        num_mesh = S4Mesh()
-
-        if surface_shape.has_surface_data():
-            num_mesh.load_surface_data(surface_shape)
-        elif surface_shape.has_surface_data_file():
-            filename, file_extension = os.path.splitext(surface_shape._surface_data_file)
-
-            if file_extension.lower() in [".h5", ".hdf", ".hdf5"]:
-                num_mesh.load_h5file(surface_shape._surface_data_file)
-            else:
-                num_mesh.load_file(surface_shape._surface_data_file) # 3 columns ASCII
-
-        # TODO: add mesh with evaluated surface
-        x, y = num_mesh.get_mesh_x_y()
-        z = num_mesh.get_mesh_z()
-        Y = numpy.outer(numpy.ones_like(x), y)
-        X = numpy.outer(x, numpy.ones_like(y))
-
-        zadd = self._base_surface_function(X, Y)
-        print(">>>>", X.shape, Y.shape, zadd.shape)
-        # from srxraylib.plot.gol import plot_surface
-        # plot_surface(zadd, x, y, xtitle="x")
-        num_mesh.add_to_mesh( zadd )
-        return num_mesh
-
     def apply_geometrical_model(self, beam):
         num_mesh = self.get_optical_surface_instance()
         mirr, normal, _, _, _, _, _ = num_mesh.apply_specular_reflection_on_beam(beam)
@@ -70,8 +38,6 @@ class S4AdditiveSurfaceDataMirrorElement(S4MirrorElement):
         if not isinstance(self.get_optical_element().get_surface_shape(), SurfaceData):
             raise ValueError("Wrong Optical Element: only Surface Data shape is accepted")
 
-    def apply_local_reflection(self, beam):
-        return self.get_optical_element().apply_geometrical_model(beam)
 
 
 if __name__ == "__main__":
