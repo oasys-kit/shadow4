@@ -16,7 +16,8 @@ class SourceGaussian(object):
                  sigmaXprime,
                  sigmaZprime,
                  real_space_center,
-                 direction_space_center
+                 direction_space_center,
+                 seed=123456,
                  ):
 
         self._number_of_rays = number_of_rays
@@ -27,6 +28,10 @@ class SourceGaussian(object):
         self._sigmaZprime = sigmaZprime
         self._real_space_center = real_space_center
         self._direction_space_center = direction_space_center
+        self._seed = seed
+
+        if seed != 0:
+            numpy.random.seed(seed)
 
 
     @classmethod

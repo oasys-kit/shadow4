@@ -14,11 +14,17 @@ class SourceGeometrical(object):
                     spatial_type="Point",
                     angular_distribution = "Flat",
                     energy_distribution = "Single line",
+                    seed = 123456,
                  ):
 
         self.set_spatial_type_by_name(spatial_type)
         self.set_angular_distribution_by_name(angular_distribution)
         self.set_energy_distribution_by_name(energy_distribution)
+
+        self._seed = seed
+
+        if seed != 0:
+            numpy.random.seed(seed)
 
 
     #

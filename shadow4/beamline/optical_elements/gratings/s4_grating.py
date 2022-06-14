@@ -181,18 +181,13 @@ class S4GratingElement(S4BeamlineElement):
         return beam_out, beam_mirr
 
     def apply_grating_diffraction(self, beam):  # to be implemented in the children classes
-        surface_shape = self.get_optical_element().get_surface_shape()
 
         oe = self.get_optical_element()
-
-
         ssi = oe.get_surface_shape_instance()
-
         print(">>>>>>surface_shape_instalce: ", ssi)
         ccc = oe.get_optical_surface_instance()
 
         if isinstance(ssi, Plane):
-
             beam_mirr, normal = ccc.apply_grating_diffraction_on_beam(
                 beam,
                 ruling=[oe._ruling,

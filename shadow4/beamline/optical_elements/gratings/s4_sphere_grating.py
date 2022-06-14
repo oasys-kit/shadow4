@@ -23,6 +23,7 @@ class S4SphereGrating(S4Grating, S4SphereOpticalElement):
                  f_reflec=0,
                  material_constants_library_flag=0,  # 0=xraylib, 1=dabax, 2=shadow preprocessor
                  file_refl="",
+                 order=0,
                  #
                  surface_calculation=SurfaceCalculation.EXTERNAL,
                  is_cylinder=False,
@@ -47,12 +48,13 @@ class S4SphereGrating(S4Grating, S4SphereOpticalElement):
                            ruling_coeff_quartic=ruling_coeff_quartic,
                            coating=coating,
                            coating_thickness=coating_thickness,
-                           f_central=False,
-                           f_phot_cent=0,
-                           phot_cent=8000.0,
-                           f_reflec=0,
-                           material_constants_library_flag=0,
-                           file_refl="",
+                           f_central=f_central,
+                           f_phot_cent=f_phot_cent,
+                           phot_cent=phot_cent,
+                           f_reflec=f_reflec,
+                           material_constants_library_flag=material_constants_library_flag,
+                           file_refl=file_refl,
+                           order=order,
                            )
 
     # def get_optical_surface_instance(self):
@@ -94,6 +96,7 @@ if __name__ == "__main__":
 
     from shadow4.sources.source_geometrical.source_geometrical import SourceGeometrical
     from shadow4.beam.beam import Beam
+    from shadow4.tools.graphics import plotxy
 
     #
     # source
@@ -134,6 +137,7 @@ if __name__ == "__main__":
         phot_cent=8000.0,
         material_constants_library_flag=0,  # 0=xraylib, 1=dabax, 2=shadow preprocessor
         file_refl="",
+        order=1,
         #
         surface_calculation=SurfaceCalculation.EXTERNAL,
         is_cylinder=False,
@@ -158,3 +162,5 @@ if __name__ == "__main__":
     print(ge.info())
 
     beam_out = ge.trace_beam(beam)
+
+    plotxy(beam_out[0], 1, 3, title="Image 0", nbins=201)

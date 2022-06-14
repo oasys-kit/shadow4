@@ -72,19 +72,19 @@ class S4PlaneCrystalElement(S4CrystalElement):
 
 
 
-    def apply_crystal_diffraction(self, beam):
-        surface_shape = self.get_optical_element().get_surface_shape()
-
-        ccc = S4Conic.initialize_as_plane()
-
-        oe = self.get_optical_element()
-
-        if oe._diffraction_geometry == DiffractionGeometry.BRAGG and oe._asymmetry_angle == 0.0:
-            beam_mirr, normal = ccc.apply_crystal_diffraction_bragg_symmetric_on_beam(beam)
-        else:
-            raise Exception(NotImplementedError)
-
-        return beam_mirr, normal
+    # def apply_crystal_diffraction(self, beam):
+    #     surface_shape = self.get_optical_element().get_surface_shape()
+    #
+    #     ccc = S4Conic.initialize_as_plane()
+    #
+    #     oe = self.get_optical_element()
+    #
+    #     if oe._diffraction_geometry == DiffractionGeometry.BRAGG and oe._asymmetry_angle == 0.0:
+    #         beam_mirr, normal = ccc.apply_crystal_diffraction_bragg_symmetric_on_beam(beam)
+    #     else:
+    #         raise Exception(NotImplementedError)
+    #
+    #     return beam_mirr, normal
 
 
 if __name__ == "__main__":

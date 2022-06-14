@@ -7,6 +7,10 @@ from shadow4.tools.arrayofvectors import vector_refraction
 
 from numpy.testing import assert_equal, assert_almost_equal
 
+
+from shadow4.tools.arrayofvectors import vector_cross, vector_dot, vector_multiply_scalar, vector_sum, vector_diff
+from shadow4.tools.arrayofvectors import vector_modulus_square, vector_norm
+
 # OE surface in form of conic equation:
 #      ccc[0]*X^2 + ccc[1]*Y^2 + ccc[2]*Z^2 +
 #      ccc[3]*X*Y + ccc[4]*Y*Z + ccc[5]*X*Z  +
@@ -1104,10 +1108,177 @@ class S4Conic(S4OpticalSurface):
         # ;
         # ; TRACING... (copied from mirror reflection)
         # ;
-        if order == 0:
-            return self.apply_specular_reflection_on_beam(newbeam)
-        else:
-            raise NotImplementedError
+        # ;
+        # ; TRACING...
+        # ;
+
+        x1 = newbeam.get_columns([1, 2, 3])  # numpy.array(a3.getshcol([1,2,3]))
+        v1 = newbeam.get_columns([4, 5, 6])  # numpy.array(a3.getshcol([4,5,6]))
+        flag = newbeam.get_column(10)  # numpy.array(a3.getshonecol(10))
+        kin = newbeam.get_column(11)
+        optical_path = newbeam.get_column(13)
+        nrays = flag.size
+
+        t1, t2 = self.calculate_intercept(x1, v1)
+        t, iflag = self.choose_solution(t1, t2, reference_distance=-newbeam.get_column(2).mean())
+
+        # for i in range(t.size):
+        #     print(">>>> solutions: ",t1[i],t2[i],t[i])
+
+        x2 = x1 + v1 * t
+        for i in range(flag.size):
+            if iflag[i] < 0: flag[i] = -100
+
+        # ;
+        # ; Calculates the normal at each intercept [see shadow's normal.F]
+        # ;
+
+        normal = self.get_normal(x2)
+
+        # ;
+        # ; reflection
+        # ;
+        print(">>>> normal: ", normal[:,0:10])
+        v2 =  v1.T - 2 * vector_multiply_scalar(normal.T, vector_dot(v1.T, normal.T))
+        V_OUT = v2.copy()
+        v2 = v2.T
+
+
+        # ;
+        # ; grating scattering
+        # ;
+        if True:
+            DIST = x2[1]
+            RDENS = 0.0
+            for n in range(len(ruling)):
+                RDENS += ruling[n] * DIST**n
+
+            PHASE = optical_path + 2 * numpy.pi * order * DIST * RDENS / kin
+            G_MOD = 2 * numpy.pi * RDENS * order
+
+
+            # capilatized vectors are [:,3] as required for vector_* operations
+            VNOR = normal.T
+            VNOR = vector_multiply_scalar(VNOR, -1.0) # outward normal
+
+            # versors
+            X_VRS = numpy.zeros((nrays,3))
+            X_VRS[:,0] = 1
+            Y_VRS = numpy.zeros((nrays, 3))
+            Y_VRS[:,1] = 1
+
+            G_FAC = vector_dot(VNOR, Y_VRS)
+            G_FAC = numpy.sqrt(1 - G_FAC**2)
+
+            # G_FAC = 1  # todo: recalculate for F_RULING=0 (uniform in XY plane)
+            G_MODR = G_MOD * G_FAC
+
+            print(">>>>G_MODR: ", G_MODR)
+
+
+            K_IN = vector_multiply_scalar(v1.T, kin)
+            K_IN_NOR = vector_multiply_scalar(VNOR, vector_dot(K_IN, VNOR) )
+            K_IN_PAR = vector_diff(K_IN, K_IN_NOR)
+
+            #
+            #
+            #
+            VTAN = vector_cross(VNOR, X_VRS)
+
+            K_OUT_PAR = vector_sum(K_IN_PAR, vector_multiply_scalar(VTAN, G_MODR))
+            K_OUT_NOR = vector_multiply_scalar(VNOR,  numpy.sqrt(kin**2 - vector_modulus_square(K_OUT_PAR)))
+            print(">>>> sqrt", numpy.sqrt(kin**2 - vector_modulus_square(K_OUT_PAR)), (kin**2 - vector_modulus_square(K_OUT_PAR)))
+            print(">>>> VTAN", VTAN)
+            print(">>>> G_MODR", G_MODR)
+            print(">>>> VNOR", VNOR)
+            print(">>>> K_IN_NOR", K_IN_NOR)
+            print(">>>> K_OUT_NOR", K_OUT_NOR)
+            print(">>>> K_IN_PAR", K_IN_PAR)
+            print(">>>> K_OUT_PAR", K_OUT_PAR)
+            K_OUT = vector_sum(K_OUT_PAR, K_OUT_NOR)
+            V_OUT = vector_norm(K_OUT)
+
+            """
+            CALL	CROSS	(VNOR,X_VRS,VTAN)
+            CALL	NORM	(VTAN,VTAN)
+            ! C
+            ! C Compute now the adjustment to the surface line density at the point
+            ! C of intercept
+            ! C
+                        CALL	DOT	(VNOR,Y_VRS,G_FAC)
+                        G_FAC	=   SQRT (1.0D0 - G_FAC**2)
+            ! C
+            ! C Computes distance of intercept projection on basal plane from
+            ! C origin.
+            ! C
+            
+            ! Bug in Varied Line Spherical Grating (polynomial ruling)
+            ! Noticed by Vladimir N. Strocov, Giacomo Ghiringhelli, Ruben Renninger
+            ! Fixed by Fan Jian and Franco Cerrina
+            ! Checked by Ruben Renninger
+            ! see http://ftp.esrf.fr/pub/scisoft/shadow/user_contributions/VLSgrating_fix2010-07-02.txt
+            !!     		TTEMP	=   PPOUT(3)/VVIN(3)
+            !!		DIST	=   PPOUT(2) + VVIN(2)*TTEMP
+                    DIST = PPOUT(2)
+            
+            ! C
+            ! C Test for sign flag
+            ! C
+                        IF (F_RUL_ABS.EQ.0) DIST = ABS(DIST)
+            !		RDENS	=   RULING + RUL_A1*DIST + RUL_A2*DIST**2 &
+            !     				+ RUL_A3*DIST**3 + RUL_A4*DIST**4
+                            RDENS = RULING + &
+                                    RUL_A1*(DIST*user_units_to_cm) + &
+                                    RUL_A2*(DIST*user_units_to_cm)**2 + &
+                                    RUL_A3*(DIST*user_units_to_cm)**3 + &
+                                    RUL_A4*(DIST*user_units_to_cm)**4
+                    G_MODR	=   RDENS*TWOPI*ORDER*G_FAC
+                  END IF
+                  
+            CALL	SCALAR	(VTAN,G_MODR,GSCATTER)
+            
+            CALL SCALAR	(VVIN,Q_IN_MOD,Q_IN)
+            CALL PROJ	(Q_IN,VNOR,VTEMP)
+            CALL VECTOR 	(VTEMP,Q_IN,K_PAR)
+            
+            CALL vSUM	(K_PAR,GSCATTER,Q_OUT)
+            CALL DOT	(Q_OUT,Q_OUT,Q_OUT_MOD)
+            VALUE  =   Q_IN_MOD**2 - Q_OUT_MOD
+            IF (VALUE.LT.0.0D0) THEN
+                IF (f_scatter_rough.eq.1) THEN
+                    GOTO 450
+                ELSE
+                    RAY(10,ITIK)	= - 1.010101D6
+                    GO TO 10000
+                END IF
+            ELSE
+                VALUE  =   SQRT( VALUE )
+                CALL SCALAR	(VNOR,VALUE,VTEMP)
+                CALL vSUM	(VTEMP,Q_OUT,Q_OUT)
+                CALL NORM	(Q_OUT,Q_OUT)
+    
+            """
+
+
+        # ;
+        # ; writes the mirr.XX file
+        # ;
+
+        newbeam.set_column(1, x2[0])
+        newbeam.set_column(2, x2[1])
+        newbeam.set_column(3, x2[2])
+        newbeam.set_column(4, V_OUT.T[0])
+        newbeam.set_column(5, V_OUT.T[1])
+        newbeam.set_column(6, V_OUT.T[2])
+        newbeam.set_column(10, flag)
+        newbeam.set_column(13, optical_path + t)
+
+        return newbeam, normal
+
+        # if order == 0:
+        #     return self.apply_specular_reflection_on_beam(newbeam)
+        # else:
+        #     raise NotImplementedError
 
 if __name__ == "__main__":
     from srxraylib.plot.gol import set_qt

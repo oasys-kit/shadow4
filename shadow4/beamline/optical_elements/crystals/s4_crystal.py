@@ -21,7 +21,7 @@ from crystalpy.util.Photon import Photon
 from crystalpy.util.ComplexAmplitudePhoton import ComplexAmplitidePhoton
 from crystalpy.util.ComplexAmplitudePhotonBunch import ComplexAmplitudePhotonBunch
 
-
+from shadow4.syned.shape import Plane
 
 
 import scipy.constants as codata
@@ -355,8 +355,23 @@ class S4CrystalElement(S4BeamlineElement):
 
         return beam_out, beam_mirr
 
-    def apply_crystal_diffraction(self, beam): # to be implemented in the children classes
-        raise NotImplementedError()
+    def apply_crystal_diffraction(self, beam):
+
+        oe = self.get_optical_element()
+        ssi = oe.get_surface_shape_instance()
+        print(">>>>>>surface_shape_instalce: ", ssi)
+        ccc = oe.get_optical_surface_instance()
+
+        if isinstance(ssi, Plane):
+            if oe._diffraction_geometry == DiffractionGeometry.BRAGG and oe._asymmetry_angle == 0.0:
+                beam_mirr, normal = ccc.apply_crystal_diffraction_bragg_symmetric_on_beam(beam)
+            else:
+                raise Exception(NotImplementedError)
+        else:
+            raise NotImplementedError
+
+        return beam_mirr, normal
+
 
 
 if __name__ == "__main__":

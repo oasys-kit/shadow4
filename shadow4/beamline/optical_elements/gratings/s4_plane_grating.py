@@ -78,6 +78,7 @@ if __name__ == "__main__":
 
     from shadow4.sources.source_geometrical.source_gaussian import SourceGaussian
     from shadow4.beam.beam import Beam
+    from shadow4.tools.graphics import plotxy
 
     #
     # source
@@ -135,3 +136,5 @@ if __name__ == "__main__":
     print(ge.info())
 
     beam_out = ge.trace_beam(beam)
+    plotxy(beam_out[0], 1, 3, title="Image 0", nbins=201)
+

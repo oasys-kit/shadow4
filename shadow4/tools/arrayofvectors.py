@@ -13,6 +13,12 @@ def vector_cross(u ,v):
 
     return w
 
+def vector_modulus(u):
+    return numpy.sqrt( u[: ,0 ]**2 + u[: ,1 ]**2 + u[: ,2 ]**2)
+
+def vector_modulus_square(u):
+    return ( u[: ,0 ]**2 + u[: ,1 ]**2 + u[: ,2 ]**2)
+
 def vector_norm(u):
     # w = u / |u|
     u_norm = numpy.zeros_like(u)
