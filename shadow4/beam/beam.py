@@ -869,7 +869,7 @@ class Beam(object):
 
         """
 
-        print(">>>>translation: ", qdist1)
+        # print(">>>>translation: ", qdist1)
         if numpy.array(qdist1).size != 3:
             raise Exception("Input must be a vector [x,y,z]")
 
@@ -954,7 +954,7 @@ class Beam(object):
 
         a1 = self.rays.copy()
 
-        print(">>>>> rotate_imref T_REFLECTION = ", T_REFLECTION, T_REFLECTION * 180 / numpy.pi)
+        # print(">>>>> rotate_imref T_REFLECTION = ", T_REFLECTION, T_REFLECTION * 180 / numpy.pi)
 
         nrays = self.rays.shape[0]
         UXIM_x = numpy.ones(nrays)

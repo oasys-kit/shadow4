@@ -4,7 +4,6 @@ from shadow4.syned.shape import Sphere, SphericalCylinder, Convexity, Direction
 
 from shadow4.beamline.s4_optical_element import SurfaceCalculation, S4SphereOpticalElement
 from shadow4.beamline.optical_elements.gratings.s4_grating import S4GratingElement, S4Grating, ElementCoordinates
-from shadow4.optical_surfaces.s4_conic import S4Conic
 
 class S4SphereGrating(S4Grating, S4SphereOpticalElement):
     def __init__(self,
@@ -24,11 +23,12 @@ class S4SphereGrating(S4Grating, S4SphereOpticalElement):
                  material_constants_library_flag=0,  # 0=xraylib, 1=dabax, 2=shadow preprocessor
                  file_refl="",
                  order=0,
+                 f_ruling=0,
                  #
                  surface_calculation=SurfaceCalculation.EXTERNAL,
                  is_cylinder=False,
                  cylinder_direction=Direction.TANGENTIAL,
-                 convexity=Convexity.UPWARD,
+                 convexity=Convexity.DOWNWARD,
                  radius=1.0,
                  p_focus=0.0,
                  q_focus=0.0,
@@ -55,31 +55,8 @@ class S4SphereGrating(S4Grating, S4SphereOpticalElement):
                            material_constants_library_flag=material_constants_library_flag,
                            file_refl=file_refl,
                            order=order,
+                           f_ruling=f_ruling,
                            )
-
-    # def get_optical_surface_instance(self):
-    #     surface_shape = self.get_surface_shape()
-    #
-    #     switch_convexity = 0 if surface_shape.get_convexity() == Convexity.DOWNWARD else 1
-    #
-    #     if isinstance(surface_shape, SphericalCylinder):
-    #         print(">>>>> SphericalCylinder mirror", surface_shape)
-    #         cylindrical = 1
-    #         cylangle = 0.0 if surface_shape.get_cylinder_direction() == Direction.TANGENTIAL else (0.5 * numpy.pi)
-    #     elif isinstance(surface_shape, Sphere):
-    #         print(">>>>> Sphere mirror", surface_shape)
-    #         cylindrical = 0
-    #         cylangle    = 0.0
-    #
-    #     return S4Conic.initialize_as_sphere_from_curvature_radius(surface_shape.get_radius(),
-    #                                                              cylindrical=cylindrical, cylangle=cylangle, switch_convexity=switch_convexity)
-
-
-    # def apply_grating_diffraction(self, beam):
-    #     ccc = self.get_optical_surface_instance()
-    #     print(">>>>>>> ccc: ", ccc.info())
-    #     mirr, normal = ccc.apply_grating_diffraction_on_beam(beam)
-    #     return mirr, normal
 
 class S4SphereGratingElement(S4GratingElement):
     def __init__(self, optical_element=None, coordinates=None):
@@ -95,7 +72,6 @@ class S4SphereGratingElement(S4GratingElement):
 if __name__ == "__main__":
 
     from shadow4.sources.source_geometrical.source_geometrical import SourceGeometrical
-    from shadow4.beam.beam import Beam
     from shadow4.tools.graphics import plotxy
 
     #
@@ -142,7 +118,7 @@ if __name__ == "__main__":
         surface_calculation=SurfaceCalculation.EXTERNAL,
         is_cylinder=False,
         cylinder_direction=Direction.TANGENTIAL,
-        convexity=Convexity.UPWARD,
+        convexity=Convexity.DOWNWARD,
         radius=635757.0e-3,
         p_focus=0.0,
         q_focus=0.0,

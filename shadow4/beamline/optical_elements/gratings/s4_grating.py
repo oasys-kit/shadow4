@@ -1,19 +1,15 @@
 import numpy
+import scipy.constants as codata
 
 from syned.beamline.optical_elements.gratings.grating import GratingVLS
-
-
+from shadow4.syned.shape import Plane, Sphere
 from shadow4.syned.element_coordinates import ElementCoordinates # TODO from shadow4.syned.element_coordinates
+
 from shadow4.beamline.s4_optical_element import S4OpticalElement
 from shadow4.beamline.s4_beamline_element import S4BeamlineElement
 
-from shadow4.optical_surfaces.s4_conic import S4Conic
-from shadow4.syned.shape import Plane, Sphere
-
-import scipy.constants as codata
 
 class S4Grating(GratingVLS, S4OpticalElement):
-
     def __init__(self,
                  # inputs related tosyned
                  name="Undefined",
@@ -36,13 +32,13 @@ class S4Grating(GratingVLS, S4OpticalElement):
                  file_refl="",
                  # inputs related to observation direction
                  order=0,
+                 f_ruling=0,    # - for f_grating=1 - ruling type: (0) constant on X-Y plane (0)
+                                # constant on mirror surface (1),
+                                # holographic (2),
+                                # fan type	(3),
+                                # reserved (4),
+                                # polynomial line density (5).
                  # inputs NOT USED ANYMORE....
-                 # f_ruling=0,    # - for f_grating=1 - ruling type: (0) constant on X-Y plane (0)
-                 #                # constant on mirror surface (1),
-                 #                # holographic (2),
-                 #                # fan type	(3),
-                 #                # reserved (4),
-                 #                # polynomial line density (5).
                  # f_mono=0,      #- f_grating, f_central=1 - monochromator type:
                  #                # TGM / Seya(0)
                  #                # ERG(1),
@@ -72,11 +68,13 @@ class S4Grating(GratingVLS, S4OpticalElement):
         self._material_constants_library_flag = material_constants_library_flag
         self._file_refl = file_refl
         self._order = order
+        self._f_ruling = f_ruling
 
         self.congruence()
 
     def congruence(self):
-        pass
+        if not self._f_ruling in [0,1,5]:
+            raise Exception("Not implemented grating with f_ruling=%d" % self._fruling)
 
 
 class S4GratingElement(S4BeamlineElement):
@@ -184,39 +182,36 @@ class S4GratingElement(S4BeamlineElement):
 
         oe = self.get_optical_element()
         ssi = oe.get_surface_shape_instance()
-        print(">>>>>>surface_shape_instalce: ", ssi)
         ccc = oe.get_optical_surface_instance()
+
+        if oe._f_ruling == 5:
+            ruling = [oe._ruling,
+                        oe._ruling_coeff_linear,
+                        oe._ruling_coeff_quadratic,
+                        oe._ruling_coeff_cubic,
+                        oe._ruling_coeff_quartic]
+        else:
+            ruling = [oe._ruling]
 
         if isinstance(ssi, Plane):
             beam_mirr, normal = ccc.apply_grating_diffraction_on_beam(
                 beam,
-                ruling=[oe._ruling,
-                        oe._ruling_coeff_linear,
-                        oe._ruling_coeff_quadratic,
-                        oe._ruling_coeff_cubic,
-                        oe._ruling_coeff_quartic],
-                order=oe._order)
+                ruling=ruling,
+                order=oe._order,
+                f_ruling=oe._f_ruling)
         elif isinstance(ssi, Sphere):
-            ccc = S4Conic.initialize_as_plane()
             beam_mirr, normal = ccc.apply_grating_diffraction_on_beam(
                 beam,
-                ruling=[oe._ruling,
-                        oe._ruling_coeff_linear,
-                        oe._ruling_coeff_quadratic,
-                        oe._ruling_coeff_cubic,
-                        oe._ruling_coeff_quartic],
-                order=oe._order)
+                ruling=ruling,
+                order=oe._order,
+                f_ruling=oe._f_ruling)
         else:
             raise NotImplementedError
 
         return beam_mirr, normal
 
 
-
-
 if __name__ == "__main__":
-
-
     from shadow4.sources.source_geometrical.source_gaussian import SourceGaussian
     from shadow4.beam.beam import Beam
 

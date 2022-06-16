@@ -1,10 +1,9 @@
 import numpy
-from shadow4.syned.shape import Conic, Plane
-from shadow4.beamline.optical_elements.gratings.s4_grating import S4GratingElement, S4Grating
+
 from shadow4.syned.element_coordinates import ElementCoordinates
 from shadow4.syned.shape import Plane
 
-from shadow4.optical_surfaces.s4_conic import S4Conic
+from shadow4.beamline.optical_elements.gratings.s4_grating import S4GratingElement, S4Grating
 from shadow4.beamline.s4_optical_element import S4PlaneOpticalElement
 
 
@@ -26,9 +25,9 @@ class S4PlaneGrating(S4Grating, S4PlaneOpticalElement):
                  material_constants_library_flag=0,  # 0=xraylib, 1=dabax, 2=shadow preprocessor
                  file_refl="",
                  order=0,
+                 f_ruling=0,
                  ):
 
-        # S4ConicOpticalElement.__init__(self, [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, -1.0, 0.0])
         S4PlaneOpticalElement.__init__(self)
         S4Grating.__init__(self,
                            name=name,
@@ -48,6 +47,7 @@ class S4PlaneGrating(S4Grating, S4PlaneOpticalElement):
                            material_constants_library_flag=material_constants_library_flag,  # 0=xraylib, 1=dabax, 2=shadow preprocessor
                            file_refl=file_refl,
                            order=order,
+                           f_ruling=f_ruling,
                            )
 
     # def get_optical_surface_instance(self):
@@ -59,19 +59,6 @@ class S4PlaneGratingElement(S4GratingElement):
                          coordinates if coordinates is not None else ElementCoordinates())
         if not isinstance(self.get_optical_element().get_surface_shape(), Plane):
             raise ValueError("Wrong Optical Element: only Plane shape is accepted")
-
-
-
-    # def apply_grating_diffraction(self, beam):
-    #     surface_shape = self.get_optical_element().get_surface_shape()
-    #
-    #     ccc = S4Conic.initialize_as_plane()
-    #
-    #     oe = self.get_optical_element()
-    #
-    #     beam_mirr, normal = ccc.apply_grating_diffraction_on_beam(beam)
-    #
-    #     return beam_mirr, normal
 
 
 if __name__ == "__main__":
@@ -121,6 +108,7 @@ if __name__ == "__main__":
         material_constants_library_flag=0,  # 0=xraylib, 1=dabax, 2=shadow preprocessor
         file_refl="",
         order=0,
+        f_ruling=0,
         )
 
     coordinates_syned = ElementCoordinates(p = 10.0,

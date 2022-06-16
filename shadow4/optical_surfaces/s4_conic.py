@@ -64,6 +64,10 @@ class S4Conic(S4OpticalSurface):
         # ;
         # ; Calculates the normal at intercept points x2 [see shadow's normal.F]
         # ;
+        # VOUT(1) = 2*CCC(1)*X_IN +  CCC(4)*Y_IN + CCC(6)*Z_IN + CCC(7)
+        # VOUT(2) = 2*CCC(2)*Y_IN +  CCC(4)*X_IN + CCC(5)*Z_IN + CCC(8)
+        # VOUT(3) = 2*CCC(3)*Z_IN +  CCC(5)*Y_IN + CCC(6)*X_IN + CCC(9)
+
         normal = numpy.zeros_like(x2)
 
         normal[0,:] = 2 * self.ccc[1-1] * x2[0,:] + self.ccc[4-1] * x2[1,:] + self.ccc[6-1] * x2[2,:] + self.ccc[7-1]
@@ -1103,7 +1107,7 @@ class S4Conic(S4OpticalSurface):
         # ;
         return self.apply_specular_reflection_on_beam(newbeam)
 
-    def apply_grating_diffraction_on_beam(self, newbeam, ruling=[0.0], order=0):
+    def apply_grating_diffraction_on_beam(self, newbeam, ruling=[0.0], order=0, f_ruling=0):
 
         # ;
         # ; TRACING... (copied from mirror reflection)
@@ -1115,7 +1119,7 @@ class S4Conic(S4OpticalSurface):
         x1 = newbeam.get_columns([1, 2, 3])  # numpy.array(a3.getshcol([1,2,3]))
         v1 = newbeam.get_columns([4, 5, 6])  # numpy.array(a3.getshcol([4,5,6]))
         flag = newbeam.get_column(10)  # numpy.array(a3.getshonecol(10))
-        kin = newbeam.get_column(11)
+        kin = newbeam.get_column(11) * 1e2 # in m^-1
         optical_path = newbeam.get_column(13)
         nrays = flag.size
 
@@ -1135,13 +1139,13 @@ class S4Conic(S4OpticalSurface):
 
         normal = self.get_normal(x2)
 
+
         # ;
         # ; reflection
         # ;
-        print(">>>> normal: ", normal[:,0:10])
-        v2 =  v1.T - 2 * vector_multiply_scalar(normal.T, vector_dot(v1.T, normal.T))
-        V_OUT = v2.copy()
-        v2 = v2.T
+        # v2 =  v1.T - 2 * vector_multiply_scalar(normal.T, vector_dot(v1.T, normal.T))
+        # V_OUT = v2.copy()
+        # v2 = v2.T
 
 
         # ;
@@ -1161,104 +1165,41 @@ class S4Conic(S4OpticalSurface):
             VNOR = normal.T
             VNOR = vector_multiply_scalar(VNOR, -1.0) # outward normal
 
+
+            # print(">>>> VNOR: (%20.18g,%20.18g,%20.18f) mod: %20.18f" % (VNOR[-1, 0], VNOR[-1, 1], VNOR[-1, 2],
+            #                                          (VNOR[-1, 0]**2 + VNOR[-1, 1]**2 + VNOR[-1, 2]**2)))
+
             # versors
             X_VRS = numpy.zeros((nrays,3))
             X_VRS[:,0] = 1
             Y_VRS = numpy.zeros((nrays, 3))
             Y_VRS[:,1] = 1
 
-            G_FAC = vector_dot(VNOR, Y_VRS)
-            G_FAC = numpy.sqrt(1 - G_FAC**2)
+            if f_ruling == 0:
+                G_FAC = vector_dot(VNOR, Y_VRS)
+                G_FAC = numpy.sqrt(1 - G_FAC**2)
+            elif f_ruling == 1:
+                G_FAC = 1.0
+            elif f_ruling == 5:
+                G_FAC = vector_dot(VNOR, Y_VRS)
+                G_FAC = numpy.sqrt(1 - G_FAC**2)
 
-            # G_FAC = 1  # todo: recalculate for F_RULING=0 (uniform in XY plane)
             G_MODR = G_MOD * G_FAC
-
-            print(">>>>G_MODR: ", G_MODR)
 
 
             K_IN = vector_multiply_scalar(v1.T, kin)
             K_IN_NOR = vector_multiply_scalar(VNOR, vector_dot(K_IN, VNOR) )
             K_IN_PAR = vector_diff(K_IN, K_IN_NOR)
 
-            #
-            #
-            #
-            VTAN = vector_cross(VNOR, X_VRS)
 
-            K_OUT_PAR = vector_sum(K_IN_PAR, vector_multiply_scalar(VTAN, G_MODR))
+            VTAN = vector_cross(VNOR, X_VRS)
+            GSCATTER = vector_multiply_scalar(VTAN, G_MODR)
+
+
+            K_OUT_PAR = vector_sum(K_IN_PAR, GSCATTER)
             K_OUT_NOR = vector_multiply_scalar(VNOR,  numpy.sqrt(kin**2 - vector_modulus_square(K_OUT_PAR)))
-            print(">>>> sqrt", numpy.sqrt(kin**2 - vector_modulus_square(K_OUT_PAR)), (kin**2 - vector_modulus_square(K_OUT_PAR)))
-            print(">>>> VTAN", VTAN)
-            print(">>>> G_MODR", G_MODR)
-            print(">>>> VNOR", VNOR)
-            print(">>>> K_IN_NOR", K_IN_NOR)
-            print(">>>> K_OUT_NOR", K_OUT_NOR)
-            print(">>>> K_IN_PAR", K_IN_PAR)
-            print(">>>> K_OUT_PAR", K_OUT_PAR)
             K_OUT = vector_sum(K_OUT_PAR, K_OUT_NOR)
             V_OUT = vector_norm(K_OUT)
-
-            """
-            CALL	CROSS	(VNOR,X_VRS,VTAN)
-            CALL	NORM	(VTAN,VTAN)
-            ! C
-            ! C Compute now the adjustment to the surface line density at the point
-            ! C of intercept
-            ! C
-                        CALL	DOT	(VNOR,Y_VRS,G_FAC)
-                        G_FAC	=   SQRT (1.0D0 - G_FAC**2)
-            ! C
-            ! C Computes distance of intercept projection on basal plane from
-            ! C origin.
-            ! C
-            
-            ! Bug in Varied Line Spherical Grating (polynomial ruling)
-            ! Noticed by Vladimir N. Strocov, Giacomo Ghiringhelli, Ruben Renninger
-            ! Fixed by Fan Jian and Franco Cerrina
-            ! Checked by Ruben Renninger
-            ! see http://ftp.esrf.fr/pub/scisoft/shadow/user_contributions/VLSgrating_fix2010-07-02.txt
-            !!     		TTEMP	=   PPOUT(3)/VVIN(3)
-            !!		DIST	=   PPOUT(2) + VVIN(2)*TTEMP
-                    DIST = PPOUT(2)
-            
-            ! C
-            ! C Test for sign flag
-            ! C
-                        IF (F_RUL_ABS.EQ.0) DIST = ABS(DIST)
-            !		RDENS	=   RULING + RUL_A1*DIST + RUL_A2*DIST**2 &
-            !     				+ RUL_A3*DIST**3 + RUL_A4*DIST**4
-                            RDENS = RULING + &
-                                    RUL_A1*(DIST*user_units_to_cm) + &
-                                    RUL_A2*(DIST*user_units_to_cm)**2 + &
-                                    RUL_A3*(DIST*user_units_to_cm)**3 + &
-                                    RUL_A4*(DIST*user_units_to_cm)**4
-                    G_MODR	=   RDENS*TWOPI*ORDER*G_FAC
-                  END IF
-                  
-            CALL	SCALAR	(VTAN,G_MODR,GSCATTER)
-            
-            CALL SCALAR	(VVIN,Q_IN_MOD,Q_IN)
-            CALL PROJ	(Q_IN,VNOR,VTEMP)
-            CALL VECTOR 	(VTEMP,Q_IN,K_PAR)
-            
-            CALL vSUM	(K_PAR,GSCATTER,Q_OUT)
-            CALL DOT	(Q_OUT,Q_OUT,Q_OUT_MOD)
-            VALUE  =   Q_IN_MOD**2 - Q_OUT_MOD
-            IF (VALUE.LT.0.0D0) THEN
-                IF (f_scatter_rough.eq.1) THEN
-                    GOTO 450
-                ELSE
-                    RAY(10,ITIK)	= - 1.010101D6
-                    GO TO 10000
-                END IF
-            ELSE
-                VALUE  =   SQRT( VALUE )
-                CALL SCALAR	(VNOR,VALUE,VTEMP)
-                CALL vSUM	(VTEMP,Q_OUT,Q_OUT)
-                CALL NORM	(Q_OUT,Q_OUT)
-    
-            """
-
 
         # ;
         # ; writes the mirr.XX file
@@ -1275,10 +1216,6 @@ class S4Conic(S4OpticalSurface):
 
         return newbeam, normal
 
-        # if order == 0:
-        #     return self.apply_specular_reflection_on_beam(newbeam)
-        # else:
-        #     raise NotImplementedError
 
 if __name__ == "__main__":
     from srxraylib.plot.gol import set_qt
@@ -1325,7 +1262,7 @@ if __name__ == "__main__":
             print(ccc.get_coefficients()[i], ccc2.get_coefficients()[i])
 
 
-    if True:
+    if False:
         p = 40.0
         q = 10.0
         theta1 = 0.003
@@ -1345,4 +1282,6 @@ if __name__ == "__main__":
         ccc.write_mesh_file(x, y,   filename="../oasys_workspaces/mirror111.dat")
         ccc.write_mesh_h5file(x, y, filename="../oasys_workspaces/mirror111.h5")
 
-
+    if True:
+        a = S4Conic.initialize_as_sphere_from_curvature_radius(100)
+        print(a.info())

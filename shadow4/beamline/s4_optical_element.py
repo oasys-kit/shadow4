@@ -93,17 +93,19 @@ class S4SphereOpticalElement(S4CurvedOpticalElement):
 
         switch_convexity = 0 if surface_shape.get_convexity() == Convexity.DOWNWARD else 1
 
+        radius = surface_shape.get_radius()
         if isinstance(surface_shape, SphericalCylinder):
-            print(">>>>> SphericalCylinder optical element", surface_shape)
             cylindrical = 1
             cylangle = 0.0 if surface_shape.get_cylinder_direction() == Direction.TANGENTIAL else (0.5 * numpy.pi)
+
         elif isinstance(surface_shape, Sphere):
-            print(">>>>> Sphere optical element", surface_shape)
             cylindrical = 0
             cylangle    = 0.0
 
-        return S4Conic.initialize_as_sphere_from_curvature_radius(surface_shape.get_radius(),
-                                                                 cylindrical=cylindrical, cylangle=cylangle, switch_convexity=switch_convexity)
+        print(">>>>> S4SphereOpticalElement.get_optical_surface_instance(): R, cyl, cyl_angle, optical element, ", radius, cylindrical, cylangle, surface_shape)
+
+        return S4Conic.initialize_as_sphere_from_curvature_radius(radius, cylindrical=cylindrical, cylangle=cylangle,
+                                                                  switch_convexity=switch_convexity)
 
 
 
