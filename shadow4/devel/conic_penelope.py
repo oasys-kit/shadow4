@@ -1,0 +1,468 @@
+import numpy
+
+"""
+C  *********************************************************************
+C                       SUBROUTINE ROTSHF
+C  *********************************************************************
+      SUBROUTINE ROTSHF(OMEGA,THETA,PHI,DX,DY,DZ,
+     1                  AXX,AXY,AXZ,AYY,AYZ,AZZ,AX,AY,AZ,A0)
+C
+C     This subroutine rotates and shifts a quadric surface.
+CC  *********************************************************************
+C                       SUBROUTINE ROTSHF
+C  *********************************************************************
+      SUBROUTINE ROTSHF(OMEGA,THETA,PHI,DX,DY,DZ,
+     1                  AXX,AXY,AXZ,AYY,AYZ,AZZ,AX,AY,AZ,A0)
+C
+C     This subroutine rotates and shifts a quadric surface.
+C
+C  Input parameters:
+C     OMEGA, THETA, PHI ... Euler rotation angles,
+C     DX, DY, DZ .......... components of the displacement vector,
+C     AXX, ..., A0 ........ coefficients of the initial quadric.
+C
+C  Output parameters:
+C     AXX, ..., A0 ........ coefficients of the transformed quadric.
+C
+      IMPLICIT DOUBLE PRECISION (A-H,O-Z), INTEGER*4 (I-N)
+      DIMENSION R(3,3),A2(3,3),B2(3,3),A1(3),B1(3),D1(3)
+C
+C  ****  Initial quadric.
+C
+      B2(1,1)=AXX
+      B2(1,2)=0.5D0*AXY
+      B2(1,3)=0.5D0*AXZ
+      B2(2,1)=B2(1,2)
+      B2(2,2)=AYY
+      B2(2,3)=0.5D0*AYZ
+      B2(3,1)=B2(1,3)
+      B2(3,2)=B2(2,3)
+      B2(3,3)=AZZ
+      B1(1)=AX
+      B1(2)=AY
+      B1(3)=AZ
+      B0=A0
+      D1(1)=DX
+      D1(2)=DY
+
+C  Input parameters:
+C     OMEGA, THETA, PHI ... Euler rotation angles,
+C     DX, DY, DZ .......... components of the displacement vector,
+C     AXX, ..., A0 ........ coefficients of the initial quadric.
+C
+C  Output parameters:
+C     AXX, ..., A0 ........ coefficients of the transformed quadric.
+C
+      IMPLICIT DOUBLE PRECISION (A-H,O-Z), INTEGER*4 (I-N)
+      DIMENSION R(3,3),A2(3,3),B2(3,3),A1(3),B1(3),D1(3)
+C
+C  ****  Initial quadric.
+C
+      B2(1,1)=AXX
+      B2(1,2)=0.5D0*AXY
+      B2(1,3)=0.5D0*AXZ
+      B2(2,1)=B2(1,2)
+      B2(2,2)=AYY
+      B2(2,3)=0.5D0*AYZ
+      B2(3,1)=B2(1,3)
+      B2(3,2)=B2(2,3)
+      B2(3,3)=AZZ
+      B1(1)=AX
+      B1(2)=AY
+      B1(3)=AZ
+      B0=A0
+      D1(1)=DX
+      D1(2)=DY
+      D1(3)=DZ
+C
+C  ****  Rotation matrix.
+C
+      STHETA=SIN(THETA)
+      CTHETA=COS(THETA)
+      SPHI=SIN(PHI)
+      CPHI=COS(PHI)
+      SOMEGA=SIN(OMEGA)
+      COMEGA=COS(OMEGA)
+C
+      R(1,1)=CPHI*CTHETA*COMEGA-SPHI*SOMEGA
+      R(1,2)=-CPHI*CTHETA*SOMEGA-SPHI*COMEGA
+      R(1,3)=CPHI*STHETA
+      R(2,1)=SPHI*CTHETA*COMEGA+CPHI*SOMEGA
+      R(2,2)=-SPHI*CTHETA*SOMEGA+CPHI*COMEGA
+      R(2,3)=SPHI*STHETA
+      R(3,1)=-STHETA*COMEGA
+      R(3,2)=STHETA*SOMEGA
+      R(3,3)=CTHETA
+C
+C  ****  Rotated quadric.
+C
+      DO I=1,3
+        A1(I)=0.0D0
+        DO J=1,3
+          A1(I)=A1(I)+R(I,J)*B1(J)
+          A2(I,J)=0.0D0
+          DO M=1,3
+            DO K=1,3
+              A2(I,J)=A2(I,J)+R(I,K)*B2(K,M)*R(J,M)
+            ENDDO
+          ENDDO
+        ENDDO
+      ENDDO
+C
+C  ****  Shifted-rotated quadric.
+C
+      DO I=1,3
+        A2D=0.0D0
+        DO J=1,3
+          A2D=A2D+A2(I,J)*D1(J)
+        ENDDO
+        B1(I)=A1(I)-2.0D0*A2D
+        B0=B0+D1(I)*(A2D-A1(I))
+      ENDDO
+C
+      AXX=A2(1,1)
+      IF(ABS(AXX).LT.1.0D-15) AXX=0.0D0
+      AXY=A2(1,2)+A2(2,1)
+      IF(ABS(AXY).LT.1.0D-15) AXY=0.0D0
+      AXZ=A2(1,3)+A2(3,1)
+      IF(ABS(AXZ).LT.1.0D-15) AXZ=0.0D0
+      AYY=A2(2,2)
+      IF(ABS(AYY).LT.1.0D-15) AYY=0.0D0
+      AYZ=A2(2,3)+A2(3,2)
+      IF(ABS(AYZ).LT.1.0D-15) AYZ=0.0D0
+      AZZ=A2(3,3)
+      IF(ABS(AZZ).LT.1.0D-15) AZZ=0.0D0
+      AX=B1(1)
+      IF(ABS(AX).LT.1.0D-15) AX=0.0D0
+      AY=B1(2)
+      IF(ABS(AY).LT.1.0D-15) AY=0.0D0
+      AZ=B1(3)
+      IF(ABS(AZ).LT.1.0D-15) AZ=0.0D0
+      A0=B0
+      IF(ABS(A0).LT.1.0D-15) A0=0.0D0
+      RETURN
+      END
+
+"""
+
+def euler_rotation_matrix(omega,theta,phi):
+    STHETA = numpy.sin(theta)
+    CTHETA = numpy.cos(theta)
+    SPHI = numpy.sin(phi)
+    CPHI = numpy.cos(phi)
+    SOMEGA = numpy.sin(omega)
+    COMEGA = numpy.cos(omega)
+
+    # ibidm eq, 6.9
+    R = numpy.zeros((3,3))
+    R[1-1,1-1] = CPHI*CTHETA*COMEGA-SPHI*SOMEGA
+    R[1-1,2-1] = -CPHI*CTHETA*SOMEGA-SPHI*COMEGA
+    R[1-1,3-1] = CPHI*STHETA
+    R[2-1,1-1] = SPHI*CTHETA*COMEGA+CPHI*SOMEGA
+    R[2-1,2-1] = -SPHI*CTHETA*SOMEGA+CPHI*COMEGA
+    R[2-1,3-1] = SPHI*STHETA
+    R[3-1,1-1] = -STHETA*COMEGA
+    R[3-1,2-1] = STHETA*SOMEGA
+    R[3-1,3-1] = CTHETA
+
+    # print(">>>>R:")
+    # print(">>>>Row0:", R[0,:])
+    # print(">>>>Row1:", R[1,:])
+    # print(">>>>Row2:", R[2,:])
+    return R
+
+def rotate_and_shift_quartic(quartic_coefficients_list,
+                             omega=0.0, theta=0.0, phi=0.0,
+                             dx=0.0, dy=0.0, dz=0.0):
+
+#
+# initial quartic
+#
+    B2 = numpy.zeros((3,3))
+
+    AXX,AYY,AZZ,AXY,AYZ,AXZ,AX,AY,AZ,A0 = quartic_coefficients_list
+
+    B2[1-1,1-1] = AXX
+    B2[1-1,2-1] = 0.5 * AXY
+    B2[1-1,3-1] = 0.5 * AXZ
+    B2[2-1,1-1] = B2[1-1,2-1]
+    B2[2-1,2-1] = AYY
+    B2[2-1,3-1] = 0.5 * AYZ
+    B2[3-1,1-1] = B2[1-1,3-1]
+    B2[3-1,2-1] = B2[2-1,3-1]
+    B2[3-1,3-1] = AZZ
+
+    B1 = numpy.zeros((3))
+    B1[1-1] = AX
+    B1[2-1] = AY
+    B1[3-1] = AZ
+
+    B0 = A0
+
+    D1 = numpy.array([dx,dy,dz])
+    # D1(1) = DX
+    # D1(2) = DY
+    # D1(3) = DZ
+
+
+    #
+    #  ****  Rotation matrix.
+    #
+    R = euler_rotation_matrix(omega, theta, phi)
+
+    #
+    #  ****  Rotated quadric.
+    #
+    A1 = numpy.zeros(3)
+    A2 = numpy.zeros((3,3))
+    for I in range(3):
+        A1[I]=0.0
+        for J in range(3):
+            A1[I] = A1[I]+R[I,J]*B1[J]
+            A2[I,J] = 0.0
+            for M in range(3):
+                for K in range(3):
+                    A2[I,J]=A2[I,J]+R[I,K]*B2[K,M]*R[J,M]
+
+
+#
+#  ****  Shifted-rotated quadric.
+#
+    for I in range(3):
+        A2D = 0.0
+        for J in range(3):
+            A2D = A2D + A2[I,J] * D1[J]
+
+        B1[I] = A1[I] - 2.0 * A2D
+        B0 = B0 + D1[I] * (A2D-A1[I])
+
+
+    AXX = A2[1-1,1-1]
+    AXY = A2[1-1,2-1] + A2[2-1,1-1]
+    AXZ = A2[1-1,3-1] + A2[3-1,1-1]
+    AYY = A2[2-1,2-1]
+    AYZ = A2[2-1,3-1] + A2[3-1,2-1]
+    AZZ = A2[3-1,3-1]
+    AX = B1[1-1]
+    AY = B1[2-1]
+    AZ = B1[3-1]
+    A0 = B0
+
+    transformed_coefficients = [AXX,AYY,AZZ,AXY,AYZ,AXZ,AX,AY,AZ,A0]
+    for i in range(len(transformed_coefficients)):
+        if numpy.abs(transformed_coefficients[i]) < 1e-15:
+            transformed_coefficients[i] = 0.0
+
+    return transformed_coefficients
+
+
+def reduced_quadric(kind='plane'):
+    # I1 x^2 + I2 y^2 + I3 z^2 + I4 z + I5 = 0  (Eq 6.23 in Penelope Manual)
+
+    if kind == 'plane':  # (Ibid, table 6.1
+        return [0,0,0,1,-1]
+    elif kind == 'pair of parallel planes':
+        return [0,0,1,0,-1]
+    elif kind == 'sphere':
+        return [1,1,1,0,-1]
+    elif kind == 'cylinder':
+        return [1,1,0,0,-1]
+    elif kind == 'hyperbolic cylinder':
+        return [1,-1,0,0,-1]
+    elif kind == 'hyperbolic cylinder 2':
+        return [-1,1,0,0,-1]
+    elif kind == 'cone':
+        return [1,1,-1,0,0]
+    elif kind == 'one sheet hyperboloid':
+        return [1,1,-1,0,-1]
+    elif kind == 'two sheet hyperboloid':
+        return [1,1,-1,0,1]
+    elif kind == 'paraboloid':
+        return [1,1,0,-1,0]
+    elif kind == 'parabolic cylinder':
+        return [1,0,0,-1,0]
+    elif kind == 'parabolic cylinder 2':
+        return [0,1,0,-1,0]
+    elif kind == 'hyperbolic paraboloid':
+        return [1,-1,0,-1,0]
+    elif kind == 'hyperbolic paraboloid 2':
+        return [-1,1,0,-1,0]
+    else:
+        raise Exception('Invalid reduced-quadric name.')
+
+def scale_reduced_quadric(reduced_quadric, xscale=1.0, yscale=1.0, zscale=1.0, return_list=True):
+    # see ibid, eq 6.24
+    out = reduced_quadric.copy()
+    out[0] /= xscale**2
+    out[1] /= yscale**2
+    out[2] /= zscale**2
+    out[3] /= zscale
+    out[4] = float(out[4])
+
+    if return_list:
+        return out
+    else: # return 3 matrices (ibid, eq 6.26)
+        A33 = numpy.array( [[out[0],0,0],
+                            [0,out[1],0],
+                            [0,0,out[2]]])
+        A03 = numpy.array( [[0,0,out[3]]])
+        A00 = out[4]
+        return A33,A03,A00
+
+def expand_reduced_quadric(reduced_quadric_list):
+    # returns the 10 coefficients of the generic quartic from the 5 coeffs of the reduced quartic
+    """
+    C  ****  Expanded quadric.
+ 102  CONTINUE
+      QXX=KQ(1)/XSCALE**2
+      QXY=0.0D0
+      QXZ=0.0D0
+      QYY=KQ(2)/YSCALE**2
+      QYZ=0.0D0
+      QZZ=KQ(3)/ZSCALE**2
+      QX=0.0D0
+      QY=0.0D0
+      QZ=KQ(4)/ZSCALE
+      Q0=KQ(5)
+    """
+
+    QXX=reduced_quadric_list[0]
+    QXY=0.0
+    QXZ=0.0
+    QYY=reduced_quadric_list[1]
+    QYZ=0.0
+    QZZ=reduced_quadric_list[2]
+    QX=0.0
+    QY=0.0
+    QZ=reduced_quadric_list[3]
+    Q0=reduced_quadric_list[4]
+
+    return [QXX,QYY,QZZ,QXY,QYZ,QXZ,QX,QY,QZ,Q0]
+
+
+
+def sphere(ssour=10,simag=3,theta_grazing=3e-3):
+    theta = (numpy.pi / 2) - theta_grazing
+    rmirr = ssour * simag * 2 / numpy.cos(theta) / (ssour + simag)
+
+    s1 = reduced_quadric('sphere')
+    s2 = scale_reduced_quadric(s1, xscale=rmirr, yscale=rmirr, zscale=rmirr, return_list=True)
+    s3 = expand_reduced_quadric(s2)
+    s4 = rotate_and_shift_quartic(s3,
+                             omega=0.0, theta=0.0, phi=0.0,
+                             dx=0.0, dy=0.0, dz=rmirr)
+    s5 = s4.copy()
+    for i in range(10):
+        s5[i] /= s4[0]
+
+    print("Sphere: ")
+    print("   R: ", rmirr)
+    print("   reduced: ", s1)
+    print("   scaled: ", s2)
+    print("   expanded: ", s3)
+    print("   rotated and shifted: ", s4)
+    print("   normalized: ", s5)
+    return s5
+
+def ellipsoid(ssour=10,simag=3,theta_grazing=3e-3):
+    theta = (numpy.pi / 2) - theta_grazing
+    COSTHE = numpy.cos(theta)
+    SINTHE = numpy.sin(theta)
+
+    AXMAJ = (ssour + simag) / 2
+    AXMIN = numpy.sqrt(simag * ssour) * COSTHE
+
+    AFOCI = numpy.sqrt(AXMAJ ** 2 - AXMIN ** 2)
+    ECCENT = AFOCI / AXMAJ
+    # ;C
+    # ;C The center is computed on the basis of the object and image positions
+    # ;C
+    YCEN = (ssour - simag) * 0.5 / ECCENT
+    ZCEN = -numpy.sqrt(1 - YCEN ** 2 / AXMAJ ** 2) * AXMIN
+
+    RNCEN = numpy.zeros(3)
+    RNCEN[1 - 1] = 0.0
+    RNCEN[2 - 1] = -2 * YCEN / AXMAJ ** 2
+    RNCEN[3 - 1] = -2 * ZCEN / AXMIN ** 2
+    # ;CALL NORM(RNCEN,RNCEN)
+    RNCEN = RNCEN / numpy.sqrt((RNCEN ** 2).sum())
+
+    # Theta = numpy.arccos(RNCEN[2])
+
+    # Euler angles
+    #
+    omega = 0
+    theta = numpy.arccos(RNCEN[3-1])
+    phi = 3/2 * numpy.pi
+
+
+    print("N: ", RNCEN)
+    print("Euler-rotated 001: ", numpy.dot(euler_rotation_matrix(omega,theta,phi),[0,0,1]))
+    print( " or: ",
+          numpy.cos(phi)*numpy.sin(theta),
+          numpy.sin(phi) * numpy.sin(theta),
+          numpy.cos(theta))
+
+    print("Angle [deg]: ", theta*180/numpy.pi)
+
+    # omega = numpy.arccos(-RNCEN[2-1]/numpy.sqrt(1-RNCEN[3-1]**2))
+    # theta = numpy.arccos(RNCEN[3-1])
+    # Y3 = numpy.sin(theta) * numpy.cos()
+    # phi = numpy.arccos(RNCEN[3-1]/numpy.sqrt(1-RNCEN[3-1]**2))
+
+    # print("Euler omega, theta, phi: ", omega*180/numpy.pi, theta*180/numpy.pi, phi*180/numpy.pi)
+    s1 = reduced_quadric('sphere')
+    s2 = scale_reduced_quadric(s1, xscale=AXMIN, yscale=AXMAJ, zscale=AXMIN, return_list=True)
+    s3 = expand_reduced_quadric(s2)
+    s4 = rotate_and_shift_quartic(s3,
+                             omega=omega, theta=theta, phi=phi,
+                             dx=0.0, dy=YCEN, dz=ZCEN)
+    s5 = s4.copy()
+    # for i in range(10):
+    #     s5[i] /= s4[0]
+
+    print("Ellipsoid: ")
+    print("   a,b, theta[deg]: ", AXMAJ, AXMIN, theta*180/numpy.pi)
+    print("   reduced: ", s1)
+    print("   scaled: ", s2)
+    print("   expanded: ", s3)
+    print("   rotated and shifted: ", s4)
+    print("   normalized: ", s5)
+    return s5
+
+def sphete_check():
+    s5 = sphere(ssour=10,simag=3,theta_grazing=3e-3)
+    c=numpy.zeros(10)
+    c[1-1]= 1
+    c[2-1]= 1
+    c[3-1]= 1
+    c[4-1]= 0
+    c[5-1]= 0
+    c[6-1]= 0
+    c[7-1]= 0
+    c[8-1]= 0
+    c[9-1]= -3076.93
+    c[10-1]= 0
+
+    for i in range(10):
+        print(s5[i] , c[i])
+        assert(numpy.abs(s5[i] - c[i]) < 1e-2)
+
+
+
+if __name__ == "__main__":
+    print(reduced_quadric('plane'))
+    print(scale_reduced_quadric(reduced_quadric('plane'), xscale=2, yscale=3, zscale=4))
+    A33, A03, A00 = scale_reduced_quadric(reduced_quadric('plane'), xscale=2, yscale=3, zscale=4, return_list=False)
+    print(A33)
+    print(A03)
+    print(A00)
+    print(A03.T)
+    ccc = expand_reduced_quadric(scale_reduced_quadric(reduced_quadric('plane'), xscale=2, yscale=3, zscale=4))
+    print(ccc)
+    print(rotate_and_shift_quartic(ccc))
+
+    # tmp = sphere()
+    sphete_check()
+
+    tmp = ellipsoid()
