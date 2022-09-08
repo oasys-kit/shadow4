@@ -3,6 +3,89 @@ import numpy
 from shadow4.optical_surfaces.s4_conic import S4Conic
 from conic_viewer import view_conic, compare_conics
 
+def quartic_coefficients_matrices_to_list(A2,A1,A0, fix_zeros=False):
+    AXX = A2[1-1,1-1]
+    AXY = A2[1-1,2-1] + A2[2-1,1-1]
+    AXZ = A2[1-1,3-1] + A2[3-1,1-1]
+    AYY = A2[2-1,2-1]
+    AYZ = A2[2-1,3-1] + A2[3-1,2-1]
+    AZZ = A2[3-1,3-1]
+    AX = A1[1-1]
+    AY = A1[2-1]
+    AZ = A1[3-1]
+    out_list = [AXX, AYY, AZZ, AXY, AYZ, AXZ, AX, AY, AZ, A0]
+
+    if fix_zeros:
+        for i in range(len(out_list)):
+            if numpy.abs(out_list[i]) < 1e-15:
+                out_list[i] = 0.0
+
+    return out_list
+
+def quadric_coefficients_list_to_matrices(quartic_coefficients_list):
+
+    AXX, AYY, AZZ, AXY, AYZ, AXZ, AX, AY, AZ, A0 = quartic_coefficients_list
+
+    B2 = numpy.zeros((3, 3))
+    # ibid eq. 6.18
+    B2[1 - 1, 1 - 1] = AXX
+    B2[1 - 1, 2 - 1] = 0.5 * AXY
+    B2[1 - 1, 3 - 1] = 0.5 * AXZ
+    B2[2 - 1, 1 - 1] = B2[1 - 1, 2 - 1]
+    B2[2 - 1, 2 - 1] = AYY
+    B2[2 - 1, 3 - 1] = 0.5 * AYZ
+    B2[3 - 1, 1 - 1] = B2[1 - 1, 3 - 1]
+    B2[3 - 1, 2 - 1] = B2[2 - 1, 3 - 1]
+    B2[3 - 1, 3 - 1] = AZZ
+
+    B1 = numpy.zeros((3))
+    B1[1 - 1] = AX
+    B1[2 - 1] = AY
+    B1[3 - 1] = AZ
+
+    B0 = A0
+
+    return B2,B1,B0
+
+
+def rotate_and_shift_quartic_NEW(quartic_coefficients_list,
+                             omega=0.0, theta=0.0, phi=0.0,
+                             D=[0,0,0]):
+    #
+    # initial quartic in matrix format
+    #
+
+    # so far, input [or scaled] F(x,y,z) can be written in matrix form (ibid, eq. 6.25)
+    # notation: X=(x,y,z) ; B1=(AX,AY,AZ)
+    # F = X' . (B2 X) + B1 . X + B0
+    B2, B1, B0 = quadric_coefficients_list_to_matrices(quartic_coefficients_list)
+
+    #
+    #  ****  Rotation matrix.
+    #
+    R = euler_rotation_matrix(omega, theta, phi)
+
+    #
+    #  ****  Shifted-rotated quadric.
+    #
+
+    D1 = numpy.array(D)
+
+    # first equation 6.29
+    A2 = numpy.dot(R, numpy.dot(B2,R.T))
+
+    # 2nd equation 6.29
+    A1_first_term = numpy.dot(R, B1)
+    A1 = A1_first_term - 2 * numpy.dot(A2,D1)
+
+    # 3rd equation 6.29
+    A0 = B0 + numpy.dot(D1.T,
+                    (numpy.dot(A2, D1) - numpy.dot(R, B1)))
+
+    transformed_coefficients = quartic_coefficients_matrices_to_list(A2,A1,A0,fix_zeros=True)
+    return transformed_coefficients
+
+
 
 """
 C  *********************************************************************
@@ -187,7 +270,6 @@ def euler_rotation_matrix(omega,theta,phi, shortcut=False):
 def rotate_and_shift_quartic(quartic_coefficients_list,
                              omega=0.0, theta=0.0, phi=0.0,
                              D=[0,0,0]):
-
 #
 # initial quartic
 #
@@ -369,6 +451,9 @@ def reduced_quadric(kind='plane'):
     else:
         raise Exception('Invalid reduced-quadric name.')
 
+
+
+
 def scale_reduced_quadric(reduced_quadric, xscale=1.0, yscale=1.0, zscale=1.0, return_list=True):
     # see ibid, eq 6.24
     out = reduced_quadric.copy()
@@ -499,7 +584,7 @@ def ellipsoid(ssour=10,simag=3,theta_grazing=3e-3):
     s1 = reduced_quadric('sphere')
     s2 = scale_reduced_quadric(s1, xscale=AXMIN, yscale=AXMAJ, zscale=AXMIN, return_list=True)
     s3 = expand_reduced_quadric(s2)
-    s4 = rotate_and_shift_quartic(s3,
+    s4 = rotate_and_shift_quartic_NEW(s3,
                              omega=omega, theta=theta, phi=phi,
                              D=-ROTATED_CENTER)
     s5 = s4.copy()
