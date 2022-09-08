@@ -1,5 +1,9 @@
 import numpy
 
+from shadow4.optical_surfaces.s4_conic import S4Conic
+from conic_viewer import view_conic, compare_conics
+
+
 """
 C  *********************************************************************
 C                       SUBROUTINE ROTSHF
@@ -145,7 +149,8 @@ C
 
 """
 
-def euler_rotation_matrix(omega,theta,phi):
+def euler_rotation_matrix(omega,theta,phi, shortcut=False):
+
     STHETA = numpy.sin(theta)
     CTHETA = numpy.cos(theta)
     SPHI = numpy.sin(phi)
@@ -155,25 +160,33 @@ def euler_rotation_matrix(omega,theta,phi):
 
     # ibidm eq, 6.9
     R = numpy.zeros((3,3))
-    R[1-1,1-1] = CPHI*CTHETA*COMEGA-SPHI*SOMEGA
-    R[1-1,2-1] = -CPHI*CTHETA*SOMEGA-SPHI*COMEGA
-    R[1-1,3-1] = CPHI*STHETA
-    R[2-1,1-1] = SPHI*CTHETA*COMEGA+CPHI*SOMEGA
-    R[2-1,2-1] = -SPHI*CTHETA*SOMEGA+CPHI*COMEGA
-    R[2-1,3-1] = SPHI*STHETA
-    R[3-1,1-1] = -STHETA*COMEGA
-    R[3-1,2-1] = STHETA*SOMEGA
-    R[3-1,3-1] = CTHETA
 
-    # print(">>>>R:")
-    # print(">>>>Row0:", R[0,:])
-    # print(">>>>Row1:", R[1,:])
-    # print(">>>>Row2:", R[2,:])
+    if shortcut:
+        R[1-1,1-1] = 1
+        R[1-1,2-1] = 0
+        R[1-1,3-1] = 0
+        R[2-1,1-1] = 0
+        R[2-1,2-1] = CTHETA
+        R[2-1,3-1] = -STHETA
+        R[3-1,1-1] = 0
+        R[3-1,2-1] = STHETA
+        R[3-1,3-1] = CTHETA
+    else:
+        R[1-1,1-1] = CPHI*CTHETA*COMEGA-SPHI*SOMEGA
+        R[1-1,2-1] = -CPHI*CTHETA*SOMEGA-SPHI*COMEGA
+        R[1-1,3-1] = CPHI*STHETA
+        R[2-1,1-1] = SPHI*CTHETA*COMEGA+CPHI*SOMEGA
+        R[2-1,2-1] = -SPHI*CTHETA*SOMEGA+CPHI*COMEGA
+        R[2-1,3-1] = SPHI*STHETA
+        R[3-1,1-1] = -STHETA*COMEGA
+        R[3-1,2-1] = STHETA*SOMEGA
+        R[3-1,3-1] = CTHETA
+
     return R
 
 def rotate_and_shift_quartic(quartic_coefficients_list,
                              omega=0.0, theta=0.0, phi=0.0,
-                             dx=0.0, dy=0.0, dz=0.0):
+                             D=[0,0,0]):
 
 #
 # initial quartic
@@ -182,6 +195,23 @@ def rotate_and_shift_quartic(quartic_coefficients_list,
 
     AXX,AYY,AZZ,AXY,AYZ,AXZ,AX,AY,AZ,A0 = quartic_coefficients_list
 
+      # B2(1,1)=AXX
+      # B2(1,2)=0.5D0*AXY
+      # B2(1,3)=0.5D0*AXZ
+      # B2(2,1)=B2(1,2)
+      # B2(2,2)=AYY
+      # B2(2,3)=0.5D0*AYZ
+      # B2(3,1)=B2(1,3)
+      # B2(3,2)=B2(2,3)
+      # B2(3,3)=AZZ
+      # B1(1)=AX
+      # B1(2)=AY
+      # B1(3)=AZ
+      # B0=A0
+      # D1(1)=DX
+      # D1(2)=DY
+
+    # ibid eq. 6.18
     B2[1-1,1-1] = AXX
     B2[1-1,2-1] = 0.5 * AXY
     B2[1-1,3-1] = 0.5 * AXZ
@@ -199,11 +229,11 @@ def rotate_and_shift_quartic(quartic_coefficients_list,
 
     B0 = A0
 
-    D1 = numpy.array([dx,dy,dz])
-    # D1(1) = DX
-    # D1(2) = DY
-    # D1(3) = DZ
+    # so far, input [or acaled] F(x,y,z) can be written in matrix form (ibid, eq. 6.25)
+    # notation: X=(x,y,z) ; B1=(AX,AY,AZ)
+    # F = X' . (B2 X) + B1 . X + B0
 
+    D1 = numpy.array(D)
 
     #
     #  ****  Rotation matrix.
@@ -213,28 +243,77 @@ def rotate_and_shift_quartic(quartic_coefficients_list,
     #
     #  ****  Rotated quadric.
     #
+      # DO I=1,3
+      #   A1(I)=0.0D0
+      #   DO J=1,3
+      #     A1(I)=A1(I)+R(I,J)*B1(J)
+      #     A2(I,J)=0.0D0
+      #     DO M=1,3
+      #       DO K=1,3
+      #         A2(I,J)=A2(I,J)+R(I,K)*B2(K,M)*R(J,M)
+      #       ENDDO
+      #     ENDDO
+      #   ENDDO
+      # ENDDO
     A1 = numpy.zeros(3)
     A2 = numpy.zeros((3,3))
     for I in range(3):
-        A1[I]=0.0
+        A1[I] = 0.0
         for J in range(3):
-            A1[I] = A1[I]+R[I,J]*B1[J]
+            A1[I] = A1[I] + R[I,J] * B1[J]
             A2[I,J] = 0.0
             for M in range(3):
                 for K in range(3):
-                    A2[I,J]=A2[I,J]+R[I,K]*B2[K,M]*R[J,M]
+                    A2[I,J] = A2[I,J] + R[I,K] * B2[K,M] * R[J,M]
+
+    # The loop before can be splited in
+    # first equation 6.29
+    # for I in range(3):
+    #     for J in range(3):
+    #         A2[I,J] = 0.0
+    #         for M in range(3):
+    #             for K in range(3):
+    #                 A2[I,J] = A2[I,J] + R[I,K] * B2[K,M] * R[J,M]
+    # First term (R A) of the 2nd equation 6.29
+    # for I in range(3):
+    #     A1[I] = 0.0
+    #     for J in range(3):
+    #         A1[I] = A1[I] + R[I,J] * B1[J]
 
 
-#
-#  ****  Shifted-rotated quadric.
-#
+    #
+    #  ****  Shifted-rotated quadric.
+    #
+
+
+#       DO I=1,3
+#         A2D=0.0D0
+#         DO J=1,3
+#           A2D=A2D+A2(I,J)*D1(J)
+#         ENDDO
+#         B1(I)=A1(I)-2.0D0*A2D
+#         B0=B0+D1(I)*(A2D-A1(I))
+#       ENDDO
+    # 3rd equation 6.29 and complete the second equation
     for I in range(3):
         A2D = 0.0
         for J in range(3):
             A2D = A2D + A2[I,J] * D1[J]
 
         B1[I] = A1[I] - 2.0 * A2D
-        B0 = B0 + D1[I] * (A2D-A1[I])
+        B0 = B0 + D1[I] * (A2D - A1[I])
+
+
+    #       AXX=A2(1,1)
+    #       AXY=A2(1,2)+A2(2,1)
+    #       AXZ=A2(1,3)+A2(3,1)
+    #       AYY=A2(2,2)
+    #       AYZ=A2(2,3)+A2(3,2)
+    #       AZZ=A2(3,3)
+    #       AX=B1(1)
+    #       AY=B1(2)
+    #       AZ=B1(3)
+    #       A0=B0
 
 
     AXX = A2[1-1,1-1]
@@ -326,16 +405,16 @@ def expand_reduced_quadric(reduced_quadric_list):
       Q0=KQ(5)
     """
 
-    QXX=reduced_quadric_list[0]
-    QXY=0.0
-    QXZ=0.0
-    QYY=reduced_quadric_list[1]
-    QYZ=0.0
-    QZZ=reduced_quadric_list[2]
-    QX=0.0
-    QY=0.0
-    QZ=reduced_quadric_list[3]
-    Q0=reduced_quadric_list[4]
+    QXX = reduced_quadric_list[0]
+    QYY = reduced_quadric_list[1]
+    QZZ = reduced_quadric_list[2]
+    QXY = 0.0
+    QYZ = 0.0
+    QXZ = 0.0
+    QX = 0.0
+    QY = 0.0
+    QZ = reduced_quadric_list[3]
+    Q0 = reduced_quadric_list[4]
 
     return [QXX,QYY,QZZ,QXY,QYZ,QXZ,QX,QY,QZ,Q0]
 
@@ -350,7 +429,7 @@ def sphere(ssour=10,simag=3,theta_grazing=3e-3):
     s3 = expand_reduced_quadric(s2)
     s4 = rotate_and_shift_quartic(s3,
                              omega=0.0, theta=0.0, phi=0.0,
-                             dx=0.0, dy=0.0, dz=rmirr)
+                             D=[0.0,0.0,rmirr])
     s5 = s4.copy()
     for i in range(10):
         s5[i] /= s4[0]
@@ -387,14 +466,14 @@ def ellipsoid(ssour=10,simag=3,theta_grazing=3e-3):
     # ;CALL NORM(RNCEN,RNCEN)
     RNCEN = RNCEN / numpy.sqrt((RNCEN ** 2).sum())
 
-    # Theta = numpy.arccos(RNCEN[2])
 
     # Euler angles
     #
-    omega = 0
+    omega = 1/2 * numpy.pi
     theta = numpy.arccos(RNCEN[3-1])
     phi = 3/2 * numpy.pi
 
+    # Theta = numpy.arccos(RNCEN[2])
 
     print("N: ", RNCEN)
     print("Euler-rotated 001: ", numpy.dot(euler_rotation_matrix(omega,theta,phi),[0,0,1]))
@@ -403,7 +482,13 @@ def ellipsoid(ssour=10,simag=3,theta_grazing=3e-3):
           numpy.sin(phi) * numpy.sin(theta),
           numpy.cos(theta))
 
-    print("Angle [deg]: ", theta*180/numpy.pi)
+
+    print("Center: ", 0,YCEN, ZCEN)
+    CENTER = numpy.array([0, YCEN, ZCEN])
+    ROTATED_CENTER = numpy.dot(euler_rotation_matrix(omega, theta, phi), CENTER)
+    # ROTATED_CENTER = numpy.array([0, YCEN, ZCEN])
+    # ROTATED_CENTER = numpy.dot(euler_rotation_matrix(-phi, theta, -omega), [0, YCEN, ZCEN])
+    print("Euler-rotated Center: ", ROTATED_CENTER)
 
     # omega = numpy.arccos(-RNCEN[2-1]/numpy.sqrt(1-RNCEN[3-1]**2))
     # theta = numpy.arccos(RNCEN[3-1])
@@ -416,7 +501,7 @@ def ellipsoid(ssour=10,simag=3,theta_grazing=3e-3):
     s3 = expand_reduced_quadric(s2)
     s4 = rotate_and_shift_quartic(s3,
                              omega=omega, theta=theta, phi=phi,
-                             dx=0.0, dy=YCEN, dz=ZCEN)
+                             D=-ROTATED_CENTER)
     s5 = s4.copy()
     # for i in range(10):
     #     s5[i] /= s4[0]
@@ -430,7 +515,7 @@ def ellipsoid(ssour=10,simag=3,theta_grazing=3e-3):
     print("   normalized: ", s5)
     return s5
 
-def sphete_check():
+def sphere_check():
     s5 = sphere(ssour=10,simag=3,theta_grazing=3e-3)
     c=numpy.zeros(10)
     c[1-1]= 1
@@ -448,21 +533,59 @@ def sphete_check():
         print(s5[i] , c[i])
         assert(numpy.abs(s5[i] - c[i]) < 1e-2)
 
+def ellipsoid_check(ssour=10,simag=3,theta_grazing=3e-3, do_plot=False):
+
+
+    ccc = S4Conic.initialize_as_ellipsoid_from_focal_distances(ssour, simag, theta_grazing,
+                                        cylindrical=0, cylangle=0.0, switch_convexity=0)
+    print("ccc: ", ccc.get_coefficients())
+
+    s5 = ellipsoid(ssour=ssour,simag=simag,theta_grazing=theta_grazing)
+
+    print("ccc: ", ccc.get_coefficients())
+    print("s5: ", s5)
+
+    for i in range(10):
+        print(i, ccc.get_coefficients()[i], s5[i])
+
+    # view_conic(s5, x_min=-0.01, x_max=0.01, y_min=-0.1, y_max=0.1)
+    if do_plot:
+        compare_conics(s5, ccc.get_coefficients(), x_min=-0.01, x_max=0.01, y_min=-0.1, y_max=0.1,
+                       titles=['s5','ccc'])
 
 
 if __name__ == "__main__":
-    print(reduced_quadric('plane'))
-    print(scale_reduced_quadric(reduced_quadric('plane'), xscale=2, yscale=3, zscale=4))
-    A33, A03, A00 = scale_reduced_quadric(reduced_quadric('plane'), xscale=2, yscale=3, zscale=4, return_list=False)
-    print(A33)
-    print(A03)
-    print(A00)
-    print(A03.T)
-    ccc = expand_reduced_quadric(scale_reduced_quadric(reduced_quadric('plane'), xscale=2, yscale=3, zscale=4))
-    print(ccc)
-    print(rotate_and_shift_quartic(ccc))
+    # print(reduced_quadric('plane'))
+    # print(scale_reduced_quadric(reduced_quadric('plane'), xscale=2, yscale=3, zscale=4))
+    # A33, A03, A00 = scale_reduced_quadric(reduced_quadric('plane'), xscale=2, yscale=3, zscale=4, return_list=False)
+    # print(A33)
+    # print(A03)
+    # print(A00)
+    # print(A03.T)
+    # ccc = expand_reduced_quadric(scale_reduced_quadric(reduced_quadric('plane'), xscale=2, yscale=3, zscale=4))
+    # print(ccc)
+    # print(rotate_and_shift_quartic(ccc))
+    #
+    # # tmp = sphere()
+    # sphere_check()
 
-    # tmp = sphere()
-    sphete_check()
 
-    tmp = ellipsoid()
+
+
+    # ssour = 10
+    # simag = 3
+    # theta_grazing = 3e-3
+    # s5 = ellipsoid(ssour=ssour,simag=simag,theta_grazing=theta_grazing)
+    #
+    # # view_conic(s5, x_min=-0.01, x_max=0.01, y_min=-0.1, y_max=0.1)
+    #
+    #
+    #
+    #
+    # ccc = S4Conic.initialize_as_ellipsoid_from_focal_distances(ssour, simag, theta_grazing,
+    #                                     cylindrical=0, cylangle=0.0, switch_convexity=0)
+    # print("ccc: ", ccc.get_coefficients())
+    # # compare_conics(s5, ccc, x_min=-0.01, x_max=0.01, y_min=-0.1, y_max=0.1)
+
+    # sphere_check()
+    ellipsoid_check(do_plot=True)
