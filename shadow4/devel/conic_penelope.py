@@ -528,6 +528,90 @@ def sphere(ssour=10,simag=3,theta_grazing=3e-3):
     print("   normalized: ", s5)
     return s5
 
+def paraboloid(ssour=10,simag=3,theta_grazing=3e-3, verbose=True):
+
+    theta = (numpy.pi / 2) - theta_grazing
+
+
+    if ssour >= simag: # focusing
+        a = simag * numpy.sin(theta_grazing)**2
+        YCEN = - simag * numpy.sin(2 * theta_grazing)
+        ZCEN = simag * numpy.cos(theta_grazing)**2
+        # Euler angles
+        omega = 1 / 2 * numpy.pi
+        theta = numpy.pi / 2 - theta_grazing
+        phi = 3 / 2 * numpy.pi
+    else: # collimating
+        a = ssour * numpy.sin(theta_grazing)**2
+        YCEN = - ssour * numpy.sin(2 * theta_grazing)
+        ZCEN = ssour * numpy.cos(theta_grazing)**2
+        # Euler angles
+        omega = 1 / 2 * numpy.pi
+        theta = numpy.pi / 2 - theta_grazing #+ numpy.pi
+        phi = 3 / 2 * numpy.pi
+
+
+    CENTER = numpy.array([0,YCEN, ZCEN])
+
+
+    NORMAL = numpy.array((0, -2 * YCEN, 4 * a))
+    NORMAL_MOD = numpy.sqrt(NORMAL[0]**2 + NORMAL[1]**2 + NORMAL[2]**2)
+    NORMAL /= NORMAL_MOD
+
+
+    PARAM = 2 * a
+    if verbose:
+        txt = ""
+        if ssour >= simag:
+            txt += "Source is at infinity\n"
+            txt += "q=%f, theta_grazing=%f rad, theta_normal=%f rad\n" % (simag, theta_grazing, theta)
+        else:
+            txt += "Image is at infinity\n"
+            txt += "p=%f, theta_grazing=%f rad, theta_normal=%f rad\n" % (ssour, theta_grazing, theta)
+        txt += 'Parabloid of revolution PARAM=%f \n' % PARAM
+        txt += '4 * a=%f \n' % (4 * a)
+        txt += 'Optical element center at: (%f,%f,%f)\n' % (CENTER[0],CENTER[1],CENTER[2])
+
+        txt += 'Normal: (%f,%f,%f) \n' % (NORMAL[0],NORMAL[1],NORMAL[2])
+        print(txt)
+
+
+    print("Euler-rotated 010: ", numpy.dot(euler_rotation_matrix(omega,theta,phi),[0,1,0]))
+
+
+    ROTATED_CENTER = numpy.dot(euler_rotation_matrix(omega, theta, phi), CENTER)
+    print("Euler-rotated Center: ", ROTATED_CENTER)
+
+    s1 = reduced_quadric('paraboloid')
+    s2 = scale_reduced_quadric(s1, xscale=1.0, yscale=1.0, zscale=(1/4/a), return_list=True)
+    s3 = expand_reduced_quadric(s2)
+
+    if ssour >= simag: # focusing
+        s4 = rotate_and_shift_quartic_NEW(s3,
+                                          omega=omega, theta=theta, phi=phi,
+                                          D=-ROTATED_CENTER)
+    else: # collimating
+        s4 = rotate_and_shift_quartic_NEW(s3,
+                                          omega=omega, theta=theta, phi=phi,
+                                          D=-ROTATED_CENTER)
+        s4 = rotate_and_shift_quartic_NEW(s4,
+                                          omega=numpy.pi, theta=0.0, phi=0.0,
+                                          D=[0,0,0])
+
+    s5 = s4.copy()
+    # for i in range(10):
+    #     s5[i] /= s4[0]
+
+    print("Paraboloid: ")
+    print("   a, theta[deg]: ", PARAM, theta*180/numpy.pi)
+    print("   reduced: ", s1)
+    print("   scaled: ", s2)
+    print("   expanded: ", s3)
+    print("   rotated and shifted: ", s4)
+    print("   normalized: ", s5)
+    return s5
+
+
 def ellipsoid(ssour=10,simag=3,theta_grazing=3e-3):
     theta = (numpy.pi / 2) - theta_grazing
     COSTHE = numpy.cos(theta)
@@ -638,39 +722,39 @@ def ellipsoid_check(ssour=10,simag=3,theta_grazing=3e-3, do_plot=False):
         compare_conics(s5, ccc.get_coefficients(), x_min=-0.01, x_max=0.01, y_min=-0.1, y_max=0.1,
                        titles=['s5','ccc'])
 
+def parabola_check(ssour=10,simag=10,theta_grazing=3e-3, do_plot=False):
+
+
+    ccc = S4Conic.initialize_as_paraboloid_from_focal_distances(ssour, simag, theta_grazing,
+                                        cylindrical=0, cylangle=0.0, switch_convexity=0)
+    print("ccc: ", ccc.get_coefficients())
+
+    s5 = paraboloid(ssour=ssour,simag=simag,theta_grazing=theta_grazing)
+
+    print("ccc: ", ccc.get_coefficients())
+    print("s5: ", s5)
+
+    c = ccc.get_coefficients()
+    for i in range(10):
+        print(i, c[i], s5[i])
+
+    for i in range(10):
+        print(s5[i] , c[i])
+        assert(numpy.abs(s5[i] - c[i]) < 1e-2)
+
+    # view_conic(s5, x_min=-0.01, x_max=0.01, y_min=-0.1, y_max=0.1)
+    if do_plot:
+        compare_conics(s5, ccc.get_coefficients(), x_min=-0.01, x_max=0.01, y_min=-0.1, y_max=0.1,
+                       titles=['s5','ccc'])
 
 if __name__ == "__main__":
-    # print(reduced_quadric('plane'))
-    # print(scale_reduced_quadric(reduced_quadric('plane'), xscale=2, yscale=3, zscale=4))
-    # A33, A03, A00 = scale_reduced_quadric(reduced_quadric('plane'), xscale=2, yscale=3, zscale=4, return_list=False)
-    # print(A33)
-    # print(A03)
-    # print(A00)
-    # print(A03.T)
-    # ccc = expand_reduced_quadric(scale_reduced_quadric(reduced_quadric('plane'), xscale=2, yscale=3, zscale=4))
-    # print(ccc)
-    # print(rotate_and_shift_quartic(ccc))
-    #
-    # # tmp = sphere()
-    # sphere_check()
-
-
-
-
-    # ssour = 10
-    # simag = 3
-    # theta_grazing = 3e-3
-    # s5 = ellipsoid(ssour=ssour,simag=simag,theta_grazing=theta_grazing)
-    #
-    # # view_conic(s5, x_min=-0.01, x_max=0.01, y_min=-0.1, y_max=0.1)
-    #
-    #
-    #
-    #
-    # ccc = S4Conic.initialize_as_ellipsoid_from_focal_distances(ssour, simag, theta_grazing,
-    #                                     cylindrical=0, cylangle=0.0, switch_convexity=0)
-    # print("ccc: ", ccc.get_coefficients())
-    # # compare_conics(s5, ccc, x_min=-0.01, x_max=0.01, y_min=-0.1, y_max=0.1)
 
     # sphere_check()
-    ellipsoid_check(do_plot=True)
+
+
+    # sphere_check()
+    # ellipsoid_check(do_plot=True)
+
+
+    parabola_check(ssour=1e8,simag=10,theta_grazing=3e-3, do_plot=0)
+    parabola_check(ssour=10,simag=1e9,theta_grazing=3e-3, do_plot=0)
