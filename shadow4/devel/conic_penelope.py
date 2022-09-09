@@ -50,7 +50,7 @@ def quadric_coefficients_list_to_matrices(quartic_coefficients_list):
 
 def rotate_and_shift_quartic_NEW(quartic_coefficients_list,
                              omega=0.0, theta=0.0, phi=0.0,
-                             D=[0,0,0]):
+                             D=[0.0,0.0,0.0]):
     #
     # initial quartic in matrix format
     #
@@ -77,6 +77,13 @@ def rotate_and_shift_quartic_NEW(quartic_coefficients_list,
     # 2nd equation 6.29
     A1_first_term = numpy.dot(R, B1)
     A1 = A1_first_term - 2 * numpy.dot(A2,D1)
+
+    print(">>>>>>>>>>>>>> B2", B2)
+    print(">>>>>>>>>>>>>> R",R)
+    print(">>>>>>>>>>>>>> R.T", R.T)
+    print(">>>>>>>>>>>>>> B1 ", B1)
+    print(">>>>>>>>>>>>>> first term ", A1_first_term)
+    print(">>>>>>>>>>>>>> second term ", - 2 * numpy.dot(A2,D1))
 
     # 3rd equation 6.29
     A0 = B0 + numpy.dot(D1.T,
@@ -232,7 +239,7 @@ C
 
 """
 
-def euler_rotation_matrix(omega,theta,phi, shortcut=False):
+def euler_rotation_matrix(omega,theta,phi, shortcut=False, fix_zeros=True):
 
     STHETA = numpy.sin(theta)
     CTHETA = numpy.cos(theta)
@@ -264,6 +271,12 @@ def euler_rotation_matrix(omega,theta,phi, shortcut=False):
         R[3-1,1-1] = -STHETA*COMEGA
         R[3-1,2-1] = STHETA*SOMEGA
         R[3-1,3-1] = CTHETA
+
+    if fix_zeros:
+        for i in range(3):
+            for j in range(3):
+                if numpy.abs(R[i,j]) < 1e-15:
+                    R[i,j] = 0.0
 
     return R
 
@@ -571,7 +584,6 @@ def paraboloid(ssour=10,simag=3,theta_grazing=3e-3, verbose=True):
         txt += 'Parabloid of revolution PARAM=%f \n' % PARAM
         txt += '4 * a=%f \n' % (4 * a)
         txt += 'Optical element center at: (%f,%f,%f)\n' % (CENTER[0],CENTER[1],CENTER[2])
-
         txt += 'Normal: (%f,%f,%f) \n' % (NORMAL[0],NORMAL[1],NORMAL[2])
         print(txt)
 
@@ -612,52 +624,84 @@ def paraboloid(ssour=10,simag=3,theta_grazing=3e-3, verbose=True):
     return s5
 
 
-def ellipsoid(ssour=10,simag=3,theta_grazing=3e-3):
-    theta = (numpy.pi / 2) - theta_grazing
-    COSTHE = numpy.cos(theta)
-    SINTHE = numpy.sin(theta)
+def ellipsoid(ssour=10, simag=3, theta_grazing=3e-3, verbose=True):
 
-    AXMAJ = (ssour + simag) / 2
-    AXMIN = numpy.sqrt(simag * ssour) * COSTHE
-
-    AFOCI = numpy.sqrt(AXMAJ ** 2 - AXMIN ** 2)
-    ECCENT = AFOCI / AXMAJ
-    # ;C
-    # ;C The center is computed on the basis of the object and image positions
-    # ;C
-    YCEN = (ssour - simag) * 0.5 / ECCENT
-    ZCEN = -numpy.sqrt(1 - YCEN ** 2 / AXMAJ ** 2) * AXMIN
-
-    RNCEN = numpy.zeros(3)
-    RNCEN[1 - 1] = 0.0
-    RNCEN[2 - 1] = -2 * YCEN / AXMAJ ** 2
-    RNCEN[3 - 1] = -2 * ZCEN / AXMIN ** 2
-    # ;CALL NORM(RNCEN,RNCEN)
-    RNCEN = RNCEN / numpy.sqrt((RNCEN ** 2).sum())
+    theta_normal = (numpy.pi / 2) - theta_grazing
 
 
+    a = 0.5 * (ssour + simag)
+    b = numpy.sqrt(ssour * simag) * numpy.sin(theta_grazing)
+    c = numpy.sqrt(a**2 - b**2)
+
+    YCEN = (ssour**2 - simag**2) / 4 / c
+    ZCEN = -b * numpy.sqrt(1 - YCEN**2 / a**2)
+    CENTER = numpy.array([0,YCEN, ZCEN])
+
+    NORMAL = numpy.array((0, -2 * YCEN / a**2, -2 * ZCEN / b**2))
+    NORMAL_MOD = numpy.sqrt(NORMAL[0]**2 + NORMAL[1]**2 + NORMAL[2]**2)
+    NORMAL /= NORMAL_MOD
+
+
+    AXMAJ = a
+    AXMIN = b
+    AFOCI = c
+    ECCENT = c / a
+
+    #
+    #
+    #
+    # theta_normal = (numpy.pi / 2) - theta_grazing
+    # COSTHE = numpy.cos(theta_normal)
+    # SINTHE = numpy.sin(theta_normal)
+    #
+    # AXMAJ = (ssour + simag) / 2
+    # AXMIN = numpy.sqrt(simag * ssour) * COSTHE
+    #
+    # AFOCI = numpy.sqrt(AXMAJ ** 2 - AXMIN ** 2)
+    # ECCENT = AFOCI / AXMAJ
+    # # ;C
+    # # ;C The center is computed on the basis of the object and image positions
+    # # ;C
+    # YCEN = (ssour - simag) * 0.5 / ECCENT
+    # YCEN = (ssour**2 - simag**2) / 4 / AFOCI
+    # ZCEN = -numpy.sqrt(1 - YCEN ** 2 / AXMAJ ** 2) * AXMIN
+    #
+    # RNCEN = numpy.zeros(3)
+    # RNCEN[1 - 1] = 0.0
+    # RNCEN[2 - 1] = -2 * YCEN / AXMAJ ** 2
+    # RNCEN[3 - 1] = -2 * ZCEN / AXMIN ** 2
+    # # ;CALL NORM(RNCEN,RNCEN)
+    # RNCEN = RNCEN / numpy.sqrt((RNCEN ** 2).sum())
+    #
+    # CENTER = numpy.array([0,YCEN, ZCEN])
+    #
+    # NORMAL = RNCEN
+
+    if verbose:
+        txt = ""
+        txt += "** p=%f, q=%f, theta_grazing=%f rad, theta_normal=%f rad\n" % (ssour, simag, theta_grazing, (numpy.pi / 2) - theta_grazing)
+        txt += '** Ellipsoid of revolution a=%f \n' % AXMAJ
+        txt += '** Ellipsoid of revolution b=%f \n' % AXMIN
+        txt += '** Ellipsoid of revolution 1/a**2=%f \n' % (1/AXMAJ**2)
+        txt += '** Ellipsoid of revolution 1/b**2=%f \n' % (1/AXMIN**2)
+        txt += '** Ellipsoid of revolution c=sqrt(a^2-b^2)=%f \n' % AFOCI
+        txt += '** Ellipsoid of revolution focal distance c^2=%f \n' % (AFOCI ** 2)
+        txt += '** Ellipsoid of revolution excentricity: %f \n' % ECCENT
+        txt += '** Optical element center at: [%f,%f,%f]\n' % (CENTER[0], CENTER[1], CENTER[2])
+        txt += '** Optical element normal: [%f,%f,%f]\n' % (NORMAL[0], NORMAL[1], NORMAL[2])
+        txt += '** Optical element tangent: [%f,%f,%f]\n' % (NORMAL[0], NORMAL[2], -NORMAL[1])
+        print(txt)
+
+        print(txt)
     # Euler angles
     #
     omega = 1/2 * numpy.pi
-    theta = numpy.arccos(RNCEN[3-1])
+    theta = theta_grazing # numpy.arccos(RNCEN[3-1])
     phi = 3/2 * numpy.pi
 
-    # Theta = numpy.arccos(RNCEN[2])
 
-    print("N: ", RNCEN)
-    print("Euler-rotated 001: ", numpy.dot(euler_rotation_matrix(omega,theta,phi),[0,0,1]))
-    print( " or: ",
-          numpy.cos(phi)*numpy.sin(theta),
-          numpy.sin(phi) * numpy.sin(theta),
-          numpy.cos(theta))
-
-
-    print("Center: ", 0,YCEN, ZCEN)
-    CENTER = numpy.array([0, YCEN, ZCEN])
-    ROTATED_CENTER = numpy.dot(euler_rotation_matrix(omega, theta, phi), CENTER)
-    # ROTATED_CENTER = numpy.array([0, YCEN, ZCEN])
-    # ROTATED_CENTER = numpy.dot(euler_rotation_matrix(-phi, theta, -omega), [0, YCEN, ZCEN])
-    print("Euler-rotated Center: ", ROTATED_CENTER)
+    # ROTATED_CENTER = numpy.dot(euler_rotation_matrix(omega, theta, phi), CENTER)
+    # print("** Euler-rotated Center: ", ROTATED_CENTER)
 
     # omega = numpy.arccos(-RNCEN[2-1]/numpy.sqrt(1-RNCEN[3-1]**2))
     # theta = numpy.arccos(RNCEN[3-1])
@@ -670,7 +714,10 @@ def ellipsoid(ssour=10,simag=3,theta_grazing=3e-3):
     s3 = expand_reduced_quadric(s2)
     s4 = rotate_and_shift_quartic_NEW(s3,
                              omega=omega, theta=theta, phi=phi,
-                             D=-ROTATED_CENTER)
+                             D=-numpy.dot(euler_rotation_matrix(omega, theta, phi), CENTER))
+    # s4 = rotate_and_shift_quartic_NEW(s4,
+    #                          omega=numpy.pi, theta=0, phi=0,
+    #                          D=[0,0,0])
     s5 = s4.copy()
     # for i in range(10):
     #     s5[i] /= s4[0]
@@ -749,12 +796,29 @@ def parabola_check(ssour=10,simag=10,theta_grazing=3e-3, do_plot=False):
 
 if __name__ == "__main__":
 
-    # sphere_check()
+    sphere_check()
 
 
     # sphere_check()
-    # ellipsoid_check(do_plot=True)
+    ellipsoid_check(do_plot=0)
 
 
-    parabola_check(ssour=1e8,simag=10,theta_grazing=3e-3, do_plot=0)
-    parabola_check(ssour=10,simag=1e9,theta_grazing=3e-3, do_plot=0)
+    # parabola_check(ssour=1e8,simag=10,theta_grazing=3e-3, do_plot=0)
+    # parabola_check(ssour=10,simag=1e9,theta_grazing=3e-3, do_plot=0)
+
+    theta = 3e-3
+    s = numpy.sin(theta)
+    c = numpy.cos(theta)
+    cxx = 3703.7148148348147
+    cyy = 0.023668639053254437
+    czz = 3703.7148148348147
+    cxy = 0
+    cxz = 0
+    cyz = 0
+    print("Axx,Ayy,Azz: ",cxx,
+          c**2 * cyy + s**2 * czz - 2 * s * c * cyz,
+          s**2 * cyy + c**2 * czz + c * s * cyz)
+    print("Axy,Ayz,Axz: ",
+          c * cxy - s * cxz,
+          s * cxy + c * cxz,
+          2 * c * s * (cyy - czz))
