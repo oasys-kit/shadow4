@@ -78,12 +78,12 @@ def rotate_and_shift_quartic_NEW(quartic_coefficients_list,
     A1_first_term = numpy.dot(R, B1)
     A1 = A1_first_term - 2 * numpy.dot(A2,D1)
 
-    print(">>>>>>>>>>>>>> B2", B2)
-    print(">>>>>>>>>>>>>> R",R)
-    print(">>>>>>>>>>>>>> R.T", R.T)
-    print(">>>>>>>>>>>>>> B1 ", B1)
-    print(">>>>>>>>>>>>>> first term ", A1_first_term)
-    print(">>>>>>>>>>>>>> second term ", - 2 * numpy.dot(A2,D1))
+    # print(">>>>>>>>>>>>>> B2", B2)
+    # print(">>>>>>>>>>>>>> R",R)
+    # print(">>>>>>>>>>>>>> R.T", R.T)
+    # print(">>>>>>>>>>>>>> B1 ", B1)
+    # print(">>>>>>>>>>>>>> first term ", A1_first_term)
+    # print(">>>>>>>>>>>>>> second term ", - 2 * numpy.dot(A2,D1))
 
     # 3rd equation 6.29
     A0 = B0 + numpy.dot(D1.T,
@@ -677,6 +677,12 @@ def ellipsoid(ssour=10, simag=3, theta_grazing=3e-3, verbose=True):
     #
     # NORMAL = RNCEN
 
+    # Euler angles
+    #
+    omega = 1/2 * numpy.pi
+    theta = numpy.arcsin(NORMAL[1]) # -theta_grazing # numpy.arccos(RNCEN[3-1])
+    phi = 3/2 * numpy.pi
+
     if verbose:
         txt = ""
         txt += "** p=%f, q=%f, theta_grazing=%f rad, theta_normal=%f rad\n" % (ssour, simag, theta_grazing, (numpy.pi / 2) - theta_grazing)
@@ -690,14 +696,13 @@ def ellipsoid(ssour=10, simag=3, theta_grazing=3e-3, verbose=True):
         txt += '** Optical element center at: [%f,%f,%f]\n' % (CENTER[0], CENTER[1], CENTER[2])
         txt += '** Optical element normal: [%f,%f,%f]\n' % (NORMAL[0], NORMAL[1], NORMAL[2])
         txt += '** Optical element tangent: [%f,%f,%f]\n' % (NORMAL[0], NORMAL[2], -NORMAL[1])
+        txt += '** THETA from NORMAL %f deg\n' % (numpy.arcsin(NORMAL[1]) * 180 / numpy.pi)
+        txt += '** THETA from NORMAL %f deg\n' % (numpy.arccos(NORMAL[2]) * 180 / numpy.pi)
+        txt += '** THETA from EULER %f deg\n' % (theta * 180 / numpy.pi)
         print(txt)
 
         print(txt)
-    # Euler angles
-    #
-    omega = 1/2 * numpy.pi
-    theta = theta_grazing # numpy.arccos(RNCEN[3-1])
-    phi = 3/2 * numpy.pi
+
 
 
     # ROTATED_CENTER = numpy.dot(euler_rotation_matrix(omega, theta, phi), CENTER)
@@ -712,7 +717,8 @@ def ellipsoid(ssour=10, simag=3, theta_grazing=3e-3, verbose=True):
     s1 = reduced_quadric('sphere')
     s2 = scale_reduced_quadric(s1, xscale=AXMIN, yscale=AXMAJ, zscale=AXMIN, return_list=True)
     s3 = expand_reduced_quadric(s2)
-    s4 = rotate_and_shift_quartic_NEW(s3,
+    D=-numpy.dot(euler_rotation_matrix(omega, theta, phi), CENTER)
+    s4 = rotate_and_shift_quartic_MATHEMATICA(s3,
                              omega=omega, theta=theta, phi=phi,
                              D=-numpy.dot(euler_rotation_matrix(omega, theta, phi), CENTER))
     # s4 = rotate_and_shift_quartic_NEW(s4,
@@ -723,7 +729,9 @@ def ellipsoid(ssour=10, simag=3, theta_grazing=3e-3, verbose=True):
     #     s5[i] /= s4[0]
 
     print("Ellipsoid: ")
-    print("   a,b, theta[deg]: ", AXMAJ, AXMIN, theta*180/numpy.pi)
+    print("   a,b, theta_grazing[rad]: ", AXMAJ, AXMIN, theta_grazing)
+    print("   euler [deg]: ", omega * 180 / numpy.pi, theta * 180 / numpy.pi, phi * 180 / numpy.pi)
+    print("   D: ", D[0],D[1],D[2])
     print("   reduced: ", s1)
     print("   scaled: ", s2)
     print("   expanded: ", s3)
@@ -794,31 +802,93 @@ def parabola_check(ssour=10,simag=10,theta_grazing=3e-3, do_plot=False):
         compare_conics(s5, ccc.get_coefficients(), x_min=-0.01, x_max=0.01, y_min=-0.1, y_max=0.1,
                        titles=['s5','ccc'])
 
+
+
+def rotate_and_shift_quartic_MATHEMATICA(quartic_coefficients_list,
+                             omega=0.0, theta=0.0, phi=0.0,
+                             D=[0.0,0.0,0.0]):
+
+    from numpy import sin as Sin
+    from numpy import cos as Cos
+
+    cxx, cyy, czz, cxy, cyz, cxz, cx, cy, cz, c0 = quartic_coefficients_list
+
+    Amat = numpy.zeros((3,3))
+
+
+
+    Amat[0,0] = cxx
+    Amat[0,1] = (cxy*Cos(theta) - cxz*Sin(theta))/2.
+    Amat[0,2] = (cxz*Cos(theta) + cxy*Sin(theta))/2.
+    Amat[1,0] = (cxy*Cos(theta) - cxz*Sin(theta))/2.
+    Amat[1,1] = cyy*Cos(theta)**2 - cyz*Cos(theta)*Sin(theta) + czz*Sin(theta)**2
+    Amat[1,2] = (cyz*Cos(2*theta) + (cyy - czz)*Sin(2*theta))/2.
+    Amat[2,0] = (cxz*Cos(theta) + cxy*Sin(theta))/2.
+    Amat[2,1] = (cyz*Cos(2*theta) + (cyy - czz)*Sin(2*theta))/2.
+    Amat[2,2] = czz*Cos(theta)**2 + cyz*Cos(theta)*Sin(theta) + cyy*Sin(theta)**2
+
+
+    tx = D[0]
+    ty = D[1]
+    tz = D[2]
+
+    Avec = numpy.zeros(3)
+
+
+    Avec[0] = cx - 2*cxx*tx - (cxy*ty + cxz*tz)*Cos(theta) + (cxz*ty - cxy*tz)*Sin(theta)
+    Avec[1] = -((cyy + czz)*ty) + (cy - cxy*tx)*Cos(theta) - (cyy*ty - czz*ty + cyz*tz)*Cos(2*theta) + (-cz + cxz*tx)*Sin(theta) + (cyz*ty - cyy*tz + czz*tz)*Sin(2*theta)
+    Avec[2] = -((cyz*ty + 2*czz*tz)*Cos(theta)**2) + Sin(theta)*(cy - cxy*tx + (cyz*ty - 2*cyy*tz)*Sin(theta)) + Cos(theta)*(cz - cxz*tx - 2*(cyy*ty - czz*ty + cyz*tz)*Sin(theta))
+
+    A0 = c0 + \
+        tx*(-cx + cxx*tx + tz*((cxz*Cos(theta))/2. + (cxy*Sin(theta))/2.) + ty*((cxy*Cos(theta))/2. - (cxz*Sin(theta))/2.)) + \
+        tz*(-(cz*Cos(theta)) - cy*Sin(theta) + tx*((cxz*Cos(theta))/2. + (cxy*Sin(theta))/2.) + \
+        tz*(Sin(theta)*((cyz*Cos(theta))/2. + cyy*Sin(theta)) + Cos(theta)*(czz*Cos(theta) + (cyz*Sin(theta))/2.)) + \
+        ty*(Sin(theta)*(cyy*Cos(theta) - (cyz*Sin(theta))/2.) + Cos(theta)*((cyz*Cos(theta))/2. - czz*Sin(theta)))) + \
+        ty*(-(cy*Cos(theta)) + cz*Sin(theta) + tx*((cxy*Cos(theta))/2. - (cxz*Sin(theta))/2.) + \
+        tz*(Cos(theta)*((cyz*Cos(theta))/2. + cyy*Sin(theta)) - Sin(theta)*(czz*Cos(theta) + (cyz*Sin(theta))/2.)) + \
+        ty*(Cos(theta)*(cyy*Cos(theta) - (cyz*Sin(theta))/2.) - Sin(theta)*((cyz*Cos(theta))/2. - czz*Sin(theta))))
+
+    print(">>>", Amat)
+    print(">>>", Avec)
+    print(">>>", A0)
+    Alist = quartic_coefficients_matrices_to_list(Amat,Avec,A0, fix_zeros=True)
+    print(">>>", Alist)
+    return Alist
+
 if __name__ == "__main__":
 
-    sphere_check()
 
 
     # sphere_check()
-    ellipsoid_check(do_plot=0)
-
 
     # parabola_check(ssour=1e8,simag=10,theta_grazing=3e-3, do_plot=0)
     # parabola_check(ssour=10,simag=1e9,theta_grazing=3e-3, do_plot=0)
 
-    theta = 3e-3
-    s = numpy.sin(theta)
-    c = numpy.cos(theta)
-    cxx = 3703.7148148348147
-    cyy = 0.023668639053254437
-    czz = 3703.7148148348147
-    cxy = 0
-    cxz = 0
-    cyz = 0
-    print("Axx,Ayy,Azz: ",cxx,
-          c**2 * cyy + s**2 * czz - 2 * s * c * cyz,
-          s**2 * cyy + c**2 * czz + c * s * cyz)
-    print("Axy,Ayz,Axz: ",
-          c * cxy - s * cxz,
-          s * cxy + c * cxz,
-          2 * c * s * (cyy - czz))
+
+    ellipsoid_check(ssour=10,simag=3,theta_grazing=3e-3, do_plot=1)
+
+
+
+    # s3, theta, D = ellipsoid(ssour=10, simag=3, theta_grazing=3e-3, verbose=True)
+    # # theta = 3e-3
+    # s = numpy.sin(theta)
+    # c = numpy.cos(theta)
+    # cxx = 3703.7148148348147
+    # cyy = 0.023668639053254437
+    # czz = 3703.7148148348147
+    # cxy = 0
+    # cxz = 0
+    # cyz = 0
+    # print("Axx,Ayy,Azz: ",cxx,
+    #       c**2 * cyy + s**2 * czz - 2 * s * c * cyz,
+    #       s**2 * cyy + c**2 * czz + c * s * cyz)
+    # print("Axy,Ayz,Axz: ",
+    #       c * cxy - s * cxz,
+    #       s * cxy + c * cxz,
+    #       2 * c * s * (cyy - czz))
+    #
+    #
+    # print(s3)
+    # rotate_and_shift_quartic_MATHEMATICA(s3,
+    #                                      omega=0.0, theta=theta, phi=0.0,
+    #                                      D=D)
