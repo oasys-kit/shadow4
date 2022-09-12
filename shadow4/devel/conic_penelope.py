@@ -556,11 +556,11 @@ def paraboloid(ssour=10,simag=3,theta_grazing=3e-3, verbose=True):
         phi = 3 / 2 * numpy.pi
     else: # collimating
         a = ssour * numpy.sin(theta_grazing)**2
-        YCEN = - ssour * numpy.sin(2 * theta_grazing)
+        YCEN = + ssour * numpy.sin(2 * theta_grazing)
         ZCEN = ssour * numpy.cos(theta_grazing)**2
         # Euler angles
         omega = 1 / 2 * numpy.pi
-        theta = numpy.pi / 2 - theta_grazing #+ numpy.pi
+        theta = -(numpy.pi / 2 - theta_grazing) #+ numpy.pi
         phi = 3 / 2 * numpy.pi
 
 
@@ -598,17 +598,22 @@ def paraboloid(ssour=10,simag=3,theta_grazing=3e-3, verbose=True):
     s2 = scale_reduced_quadric(s1, xscale=1.0, yscale=1.0, zscale=(1/4/a), return_list=True)
     s3 = expand_reduced_quadric(s2)
 
-    if ssour >= simag: # focusing
-        s4 = rotate_and_shift_quartic_NEW(s3,
-                                          omega=omega, theta=theta, phi=phi,
-                                          D=-ROTATED_CENTER)
-    else: # collimating
-        s4 = rotate_and_shift_quartic_NEW(s3,
-                                          omega=omega, theta=theta, phi=phi,
-                                          D=-ROTATED_CENTER)
-        s4 = rotate_and_shift_quartic_NEW(s4,
-                                          omega=numpy.pi, theta=0.0, phi=0.0,
-                                          D=[0,0,0])
+    s4 = rotate_and_shift_quartic_NEW(s3,
+                                      omega=omega, theta=theta, phi=phi,
+                                      D=-ROTATED_CENTER)
+
+
+    # if ssour >= simag: # focusing
+    #     s4 = rotate_and_shift_quartic_NEW(s3,
+    #                                       omega=omega, theta=theta, phi=phi,
+    #                                       D=-ROTATED_CENTER)
+    # else: # collimating
+    #     s4 = rotate_and_shift_quartic_NEW(s3,
+    #                                       omega=omega, theta=theta, phi=phi,
+    #                                       D=-ROTATED_CENTER)
+        # s4 = rotate_and_shift_quartic_NEW(s4,
+        #                                   omega=numpy.pi, theta=0.0, phi=0.0,
+        #                                   D=[0,0,0])
 
     s5 = s4.copy()
     # for i in range(10):
@@ -699,6 +704,7 @@ def ellipsoid(ssour=10, simag=3, theta_grazing=3e-3, verbose=True):
         txt += '** THETA from NORMAL %f deg\n' % (numpy.arcsin(NORMAL[1]) * 180 / numpy.pi)
         txt += '** THETA from NORMAL %f deg\n' % (numpy.arccos(NORMAL[2]) * 180 / numpy.pi)
         txt += '** THETA from EULER %f deg\n' % (theta * 180 / numpy.pi)
+        txt += '** B nz ycen - A ny zcen: %f\n' % ((1/a**2) *CENTER[2] * YCEN - (1/b**2) * CENTER[2] * ZCEN)
         print(txt)
 
         print(txt)
@@ -718,7 +724,7 @@ def ellipsoid(ssour=10, simag=3, theta_grazing=3e-3, verbose=True):
     s2 = scale_reduced_quadric(s1, xscale=AXMIN, yscale=AXMAJ, zscale=AXMIN, return_list=True)
     s3 = expand_reduced_quadric(s2)
     D=-numpy.dot(euler_rotation_matrix(omega, theta, phi), CENTER)
-    s4 = rotate_and_shift_quartic_MATHEMATICA(s3,
+    s4 = rotate_and_shift_quartic_MATHEMATICAFULLEULER(s3,
                              omega=omega, theta=theta, phi=phi,
                              D=-numpy.dot(euler_rotation_matrix(omega, theta, phi), CENTER))
     # s4 = rotate_and_shift_quartic_NEW(s4,
@@ -855,17 +861,113 @@ def rotate_and_shift_quartic_MATHEMATICA(quartic_coefficients_list,
     print(">>>", Alist)
     return Alist
 
+def rotate_and_shift_quartic_MATHEMATICAFULLEULER(quartic_coefficients_list,
+                             omega=0.0, theta=0.0, phi=0.0,
+                             D=[0.0,0.0,0.0]):
+
+    from numpy import sin as Sin
+    from numpy import cos as Cos
+
+    cxx, cyy, czz, cxy, cyz, cxz, cx, cy, cz, c0 = quartic_coefficients_list
+
+    Amat = numpy.zeros((3,3))
+
+
+
+    # Amat[0,0] = cxx
+    # Amat[0,1] = (cxy*Cos(theta) - cxz*Sin(theta))/2.
+    # Amat[0,2] = (cxz*Cos(theta) + cxy*Sin(theta))/2.
+    # Amat[1,0] = (cxy*Cos(theta) - cxz*Sin(theta))/2.
+    # Amat[1,1] = cyy*Cos(theta)**2 - cyz*Cos(theta)*Sin(theta) + czz*Sin(theta)**2
+    # Amat[1,2] = (cyz*Cos(2*theta) + (cyy - czz)*Sin(2*theta))/2.
+    # Amat[2,0] = (cxz*Cos(theta) + cxy*Sin(theta))/2.
+    # Amat[2,1] = (cyz*Cos(2*theta) + (cyy - czz)*Sin(2*theta))/2.
+    # Amat[2,2] = czz*Cos(theta)**2 + cyz*Cos(theta)*Sin(theta) + cyy*Sin(theta)**2
+
+
+
+
+    Amat[0,0] = ((Cos(omega)*Cos(phi)*Cos(theta) - Sin(omega)*Sin(phi))*
+        (Cos(phi)*Cos(theta)*(2*cxx*Cos(omega) - cxy*Sin(omega)) - (cxy*Cos(omega) + 2*cxx*Sin(omega))*Sin(phi) + cxz*Cos(phi)*Sin(theta)) +
+        (Cos(phi)*Cos(theta)*Sin(omega) + Cos(omega)*Sin(phi))*(Cos(phi)*Cos(theta)*(-(cxy*Cos(omega)) + 2*cyy*Sin(omega)) + (2*cyy*Cos(omega) + cxy*Sin(omega))*Sin(phi) -
+        cyz*Cos(phi)*Sin(theta)) + Cos(phi)*Sin(theta)*(Cos(phi)*Cos(theta)*(cxz*Cos(omega) - cyz*Sin(omega)) - (cyz*Cos(omega) + cxz*Sin(omega))*Sin(phi) + 2*czz*Cos(phi)*Sin(theta))
+        )/2.
+
+    Amat[0,1] = (Cos(2*omega)*(4*cxy*Cos(2*phi)*Cos(theta) + (cxx - cyy)*(3 + Cos(2*theta))*Sin(2*phi)) +
+        4*Cos(2*phi)*((cxx - cyy)*Cos(theta)*Sin(2*omega) + (cyz*Cos(omega) + cxz*Sin(omega))*Sin(theta)) +
+        Sin(2*phi)*(-(cxy*(3 + Cos(2*theta))*Sin(2*omega)) - 2*(cxx + cyy - 2*czz)*Sin(theta)**2 + 2*(cxz*Cos(omega) - cyz*Sin(omega))*Sin(2*theta)))/8.
+
+
+    Amat[0,2] = (Cos(phi)*Cos(2*theta)*(cxz*Cos(omega) - cyz*Sin(omega)) - Cos(theta)*(cyz*Cos(omega) + cxz*Sin(omega))*Sin(phi) +
+        (cxy*Cos(2*omega) + (cxx - cyy)*Sin(2*omega))*Sin(phi)*Sin(theta) - (Cos(phi)*(cxx + cyy - 2*czz + (cxx - cyy)*Cos(2*omega) - cxy*Sin(2*omega))*Sin(2*theta))/2.)/2.
+
+
+    Amat[1,0] = (Cos(2*omega)*(4*cxy*Cos(2*phi)*Cos(theta) + (cxx - cyy)*(3 + Cos(2*theta))*Sin(2*phi)) +
+        4*Cos(2*phi)*((cxx - cyy)*Cos(theta)*Sin(2*omega) + (cyz*Cos(omega) + cxz*Sin(omega))*Sin(theta)) +
+        Sin(2*phi)*(-(cxy*(3 + Cos(2*theta))*Sin(2*omega)) - 2*(cxx + cyy - 2*czz)*Sin(theta)**2 + 2*(cxz*Cos(omega) - cyz*Sin(omega))*Sin(2*theta)))/8.
+
+
+    Amat[1,1] = ((Cos(phi)*Sin(omega) + Cos(omega)*Cos(theta)*Sin(phi))*(Cos(phi)*(cxy*Cos(omega) + 2*cxx*Sin(omega)) + Cos(theta)*(2*cxx*Cos(omega) - cxy*Sin(omega))*Sin(phi) +
+        cxz*Sin(phi)*Sin(theta)) + (Cos(omega)*Cos(phi) - Cos(theta)*Sin(omega)*Sin(phi))*
+        (cxy*Cos(phi)*Sin(omega) + Cos(omega)*(2*cyy*Cos(phi) + cxy*Cos(theta)*Sin(phi)) + Sin(phi)*(-2*cyy*Cos(theta)*Sin(omega) + cyz*Sin(theta))) +
+        Sin(phi)*Sin(theta)*(cxz*Cos(phi)*Sin(omega) + Cos(omega)*(cyz*Cos(phi) + cxz*Cos(theta)*Sin(phi)) + Sin(phi)*(-(cyz*Cos(theta)*Sin(omega)) + 2*czz*Sin(theta))))/2.
+
+
+    Amat[1,2] = ((Cos(phi)*Sin(omega) + Cos(omega)*Cos(theta)*Sin(phi))*(cxz*Cos(theta) + (-2*cxx*Cos(omega) + cxy*Sin(omega))*Sin(theta)) +
+        (Cos(omega)*Cos(phi) - Cos(theta)*Sin(omega)*Sin(phi))*(cyz*Cos(theta) + (-(cxy*Cos(omega)) + 2*cyy*Sin(omega))*Sin(theta)) +
+        Sin(phi)*Sin(theta)*(2*czz*Cos(theta) + (-(cxz*Cos(omega)) + cyz*Sin(omega))*Sin(theta)))/2.
+
+
+    Amat[2,0] = (Cos(phi)*Cos(2*theta)*(cxz*Cos(omega) - cyz*Sin(omega)) - Cos(theta)*(cyz*Cos(omega) + cxz*Sin(omega))*Sin(phi) +
+        (cxy*Cos(2*omega) + (cxx - cyy)*Sin(2*omega))*Sin(phi)*Sin(theta) - (Cos(phi)*(cxx + cyy - 2*czz + (cxx - cyy)*Cos(2*omega) - cxy*Sin(2*omega))*Sin(2*theta))/2.)/2.
+
+
+    Amat[2,1] = (Cos(phi)*Cos(theta)*(cyz*Cos(omega) + cxz*Sin(omega)) + Cos(2*theta)*(cxz*Cos(omega) - cyz*Sin(omega))*Sin(phi) -
+        Cos(phi)*(cxy*Cos(2*omega) + (cxx - cyy)*Sin(2*omega))*Sin(theta) - ((cxx + cyy - 2*czz + (cxx - cyy)*Cos(2*omega) - cxy*Sin(2*omega))*Sin(phi)*Sin(2*theta))/2.)/2.
+
+
+    Amat[2,2] = czz*Cos(theta)**2 + Cos(theta)*(-(cxz*Cos(omega)) + cyz*Sin(omega))*Sin(theta) + (cxx*Cos(omega)**2 - cxy*Cos(omega)*Sin(omega) + cyy*Sin(omega)**2)*Sin(theta)**2
+
+
+    tx = D[0]
+    ty = D[1]
+    tz = D[2]
+
+    Avec = numpy.zeros(3)
+
+
+    Avec[0] = cx - 2*cxx*tx - (cxy*ty + cxz*tz)*Cos(theta) + (cxz*ty - cxy*tz)*Sin(theta)
+    Avec[1] = -((cyy + czz)*ty) + (cy - cxy*tx)*Cos(theta) - (cyy*ty - czz*ty + cyz*tz)*Cos(2*theta) + (-cz + cxz*tx)*Sin(theta) + (cyz*ty - cyy*tz + czz*tz)*Sin(2*theta)
+    Avec[2] = -((cyz*ty + 2*czz*tz)*Cos(theta)**2) + Sin(theta)*(cy - cxy*tx + (cyz*ty - 2*cyy*tz)*Sin(theta)) + Cos(theta)*(cz - cxz*tx - 2*(cyy*ty - czz*ty + cyz*tz)*Sin(theta))
+
+    A0 = c0 + \
+        tx*(-cx + cxx*tx + tz*((cxz*Cos(theta))/2. + (cxy*Sin(theta))/2.) + ty*((cxy*Cos(theta))/2. - (cxz*Sin(theta))/2.)) + \
+        tz*(-(cz*Cos(theta)) - cy*Sin(theta) + tx*((cxz*Cos(theta))/2. + (cxy*Sin(theta))/2.) + \
+        tz*(Sin(theta)*((cyz*Cos(theta))/2. + cyy*Sin(theta)) + Cos(theta)*(czz*Cos(theta) + (cyz*Sin(theta))/2.)) + \
+        ty*(Sin(theta)*(cyy*Cos(theta) - (cyz*Sin(theta))/2.) + Cos(theta)*((cyz*Cos(theta))/2. - czz*Sin(theta)))) + \
+        ty*(-(cy*Cos(theta)) + cz*Sin(theta) + tx*((cxy*Cos(theta))/2. - (cxz*Sin(theta))/2.) + \
+        tz*(Cos(theta)*((cyz*Cos(theta))/2. + cyy*Sin(theta)) - Sin(theta)*(czz*Cos(theta) + (cyz*Sin(theta))/2.)) + \
+        ty*(Cos(theta)*(cyy*Cos(theta) - (cyz*Sin(theta))/2.) - Sin(theta)*((cyz*Cos(theta))/2. - czz*Sin(theta))))
+
+    print(">>>", Amat)
+    print(">>>", Avec)
+    print(">>>", A0)
+    Alist = quartic_coefficients_matrices_to_list(Amat,Avec,A0, fix_zeros=True)
+    print(">>>", Alist)
+    return Alist
+
+
 if __name__ == "__main__":
 
 
 
     # sphere_check()
 
-    # parabola_check(ssour=1e8,simag=10,theta_grazing=3e-3, do_plot=0)
-    # parabola_check(ssour=10,simag=1e9,theta_grazing=3e-3, do_plot=0)
+    parabola_check(ssour=1e8,simag=10,theta_grazing=3e-3, do_plot=0)
+    parabola_check(ssour=10,simag=1e9,theta_grazing=3e-3, do_plot=0)
 
 
-    ellipsoid_check(ssour=10,simag=3,theta_grazing=3e-3, do_plot=1)
+    # ellipsoid_check(ssour=10,simag=3,theta_grazing=3e-3, do_plot=1)
 
 
 
