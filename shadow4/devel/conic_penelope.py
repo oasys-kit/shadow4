@@ -625,39 +625,54 @@ def hyperboloid(ssour=10, simag=3, theta_grazing=3e-3, verbose=True):
     a = 0.5 * numpy.abs(ssour - simag)
     c = 0.5 * numpy.sqrt(ssour**2 + simag**2 - 2 * ssour * simag * numpy.cos(2 * theta_grazing))
     b = numpy.sqrt(c**2 - a**2)
-    # b = numpy.sqrt(ssour * simag) * numpy.sin(theta_grazing)
-    # c = numpy.sqrt(a**2 - b**2)
 
-    YCEN = (ssour**2 - simag**2) / 4 / c
-    ZCEN = -b * numpy.sqrt(YCEN**2 / a**2 - 1)
+    if ssour > simag: # select center in first quadrant
+        YCEN = (ssour**2 - simag**2) / 4 / c
+        ZCEN = b * numpy.sqrt(YCEN**2 / a**2 - 1)
+        NORMAL = numpy.array((0, -2 * YCEN / a ** 2, 2 * ZCEN / b ** 2))
+        NORMAL_MOD = numpy.sqrt(NORMAL[0] ** 2 + NORMAL[1] ** 2 + NORMAL[2] ** 2)
+        NORMAL /= NORMAL_MOD
+        #
+        # Euler angles
+        #
+        omega = 1 / 2 * numpy.pi
+        theta = numpy.arcsin(NORMAL[1])
+        phi = 3 / 2 * numpy.pi
+    else: # center in 2nd quadrant
+        YCEN = (ssour**2 - simag**2) / 4 / c
+        ZCEN = b * numpy.sqrt(YCEN**2 / a**2 - 1)
+        NORMAL = -numpy.array((0, -2 * YCEN / a ** 2, 2 * ZCEN / b ** 2))
+        NORMAL_MOD = numpy.sqrt(NORMAL[0] ** 2 + NORMAL[1] ** 2 + NORMAL[2] ** 2)
+        NORMAL /= NORMAL_MOD
+        #
+        # Euler angles
+        #
+        omega = 1 / 2 * numpy.pi
+        theta = -numpy.arccos(NORMAL[2])
+        phi = 3 / 2 * numpy.pi
+
     CENTER = numpy.array([0,YCEN, ZCEN])
 
-    NORMAL = numpy.array((0, -2 * YCEN / a**2, 2 * ZCEN / b**2))
-    NORMAL_MOD = numpy.sqrt(NORMAL[0]**2 + NORMAL[1]**2 + NORMAL[2]**2)
-    NORMAL /= NORMAL_MOD
+    ecc = c / a
 
-    AXMAJ = a
-    AXMIN = b
-    AFOCI = c
-    ECCENT = c / a
 
-    #
-    # Euler angles
-    #
-    omega = 1/2 * numpy.pi
-    theta = numpy.arcsin(NORMAL[1])# numpy.pi - numpy.abs(numpy.arcsin(NORMAL[1])) # numpy.arcsin(NORMAL[1]) # -theta_grazing # numpy.arccos(RNCEN[3-1])
-    phi = 3/2 * numpy.pi
+    # #
+    # # Euler angles
+    # #
+    # omega = 1/2 * numpy.pi
+    # theta = numpy.arcsin(NORMAL[1])# numpy.pi - numpy.abs(numpy.arcsin(NORMAL[1])) # numpy.arcsin(NORMAL[1]) # -theta_grazing # numpy.arccos(RNCEN[3-1])
+    # phi = 3/2 * numpy.pi
 
     if verbose:
         txt = ""
         txt += "** p=%f, q=%f, theta_grazing=%f rad, theta_normal=%f rad\n" % (ssour, simag, theta_grazing, (numpy.pi / 2) - theta_grazing)
-        txt += '** Hyperboloid of revolution a=%f \n' % AXMAJ
-        txt += '** Hyperboloid of revolution b=%f \n' % AXMIN
-        txt += '** Hyperboloid of revolution 1/a**2=%f \n' % (1/AXMAJ**2)
-        txt += '** Hyperboloid of revolution 1/b**2=%f \n' % (1/AXMIN**2)
-        txt += '** Hyperboloid of revolution c=sqrt(a^2+b^2)=%f \n' % AFOCI
-        txt += '** Hyperboloid of revolution focal distance c^2=%f \n' % (AFOCI ** 2)
-        txt += '** Hyperboloid of revolution excentricity: %f \n' % ECCENT
+        txt += '** Hyperboloid of revolution a=%f \n' % a
+        txt += '** Hyperboloid of revolution b=%f \n' % b
+        txt += '** Hyperboloid of revolution 1/a**2=%f \n' % (1/a**2)
+        txt += '** Hyperboloid of revolution 1/b**2=%f \n' % (1/b**2)
+        txt += '** Hyperboloid of revolution c=sqrt(a^2+b^2)=%f \n' % c
+        txt += '** Hyperboloid of revolution focal distance c^2=%f \n' % (c ** 2)
+        txt += '** Hyperboloid of revolution excentricity: %f \n' % ecc
         txt += '** Optical element center at: [%f,%f,%f]\n' % (CENTER[0], CENTER[1], CENTER[2])
         txt += '** Optical element normal: [%f,%f,%f]\n' % (NORMAL[0], NORMAL[1], NORMAL[2])
         txt += '** Optical element tangent: [%f,%f,%f]\n' % (NORMAL[0], NORMAL[2], -NORMAL[1])
@@ -671,27 +686,29 @@ def hyperboloid(ssour=10, simag=3, theta_grazing=3e-3, verbose=True):
 
 
     s1 = [-1,1,-1,0,-1] # reduced_quadric('one sheet hyperboloid')
-    s2 = scale_reduced_quadric(s1, xscale=AXMIN, yscale=AXMAJ, zscale=AXMIN, return_list=True)
+    s2 = scale_reduced_quadric(s1, xscale=b, yscale=a, zscale=b, return_list=True)
     s3 = expand_reduced_quadric(s2)
 
-    D = -numpy.dot(euler_rotation_matrix(omega, theta, phi, shortcut=1), CENTER)
+    D = -numpy.dot(euler_rotation_matrix(omega, theta, phi), CENTER)
     # D = numpy.dot(euler_rotation_matrix(0, numpy.pi, 0.0), D) # make the incident beam in the negative part
 
     s4 = rotate_and_shift_quartic_NEW(s3,
                              omega=omega, theta=theta, phi=phi,
                              D=D)
-    # make the incident beam in the negative part
-    s4 = rotate_and_shift_quartic_NEW(s4,
-                             omega=0.0, theta=numpy.pi, phi=0.0,
-                             D=[0,0,0])
+    # if ssour < simag:
+    #     # make the incident beam in the negative part
+    #     s4 = rotate_and_shift_quartic_NEW(s4,
+    #                              omega=numpy.pi/2, theta=numpy.pi, phi=numpy.pi*3/2,
+    #                              D=[0,0,0])
     s5 = s4.copy()
     # for i in range(10):
     #     s5[i] /= s4[0]
 
     print("**Hyperboloid: ")
-    print("**   a,b, theta_grazing[rad]: ", AXMAJ, AXMIN, theta_grazing)
+    print("**   a,b, theta_grazing[rad]: ", a, b, theta_grazing)
     print("**   euler [deg]: ", omega * 180 / numpy.pi, theta * 180 / numpy.pi, phi * 180 / numpy.pi)
     print("**   D: ", D[0],D[1],D[2])
+    print("**   rotated N: ", numpy.dot(euler_rotation_matrix(omega, theta, phi), NORMAL))
     print("**   reduced: ", s1)
     print("**   scaled: ", s2)
     print("**   expanded: ", s3)
@@ -745,25 +762,31 @@ def ellipsoid_check(ssour=10,simag=3,theta_grazing=3e-3, do_plot=False):
 def hyperboloid_check(ssour=10,simag=3,theta_grazing=3e-3, do_plot=False):
 
 
-    ccc = S4Conic.initialize_as_hyperboloid_from_focal_distances(ssour, simag, theta_grazing,
-                                        cylindrical=0, cylangle=0.0, switch_convexity=0)
-    print("ccc: ", ccc.get_coefficients())
+    # ccc = S4Conic.initialize_as_hyperboloid_from_focal_distances(ssour, simag, theta_grazing,
+    #                                     cylindrical=0, cylangle=0.0, switch_convexity=0)
+    # print("ccc: ", ccc.get_coefficients())
+
+    if ssour < simag:
+        c = [-3703.714814855263, -0.033333333332666124, -3703.5998488688692, 0.0, 41.269717460237345, 0.0, 0.0, 3.0795921368564905e-12, 190.47647619130197, 0.0]
+        branch = 0
+    else:
+        c = [-3703.714814855263, -0.03333333333333342, -3703.5998488688683, 0.0, -41.269717460357114, 0.0, 0.0, 0.0, -190.47647619130197, 0.0]
+        branch = 0
 
     s5 = hyperboloid(ssour=ssour,simag=simag,theta_grazing=theta_grazing)
 
-    c = ccc.get_coefficients()
     print("ccc: ", c)
     print("s5: ", s5)
 
 
     for i in range(10):
         print(i, c[i], s5[i])
-        # assert(numpy.abs(s5[i] - c[i]) < 1e-2)
+        assert(numpy.abs(s5[i] - c[i]) < 1e-2)
 
     # view_conic(s5, x_min=-0.01, x_max=0.01, y_min=-0.1, y_max=0.1)
     if do_plot:
-        compare_conics(s5, ccc.get_coefficients(), x_min=-0.01, x_max=0.01, y_min=-0.1, y_max=0.1,
-                       titles=['s5','ccc'])
+        compare_conics(s5, c, x_min=-0.01, x_max=0.01, y_min=-0.1, y_max=0.1,
+                       titles=['s5','ccc'], branch=branch)
 
     return s5
 
@@ -835,29 +858,25 @@ if __name__ == "__main__":
 
 
 
-    # sphere_check()
+    sphere_check()
+
+    parabola_check(ssour=1e8,simag=10,theta_grazing=3e-3, do_plot=0)
+    parabola_check(ssour=10,simag=1e9,theta_grazing=3e-3, do_plot=0)
+
+    ellipsoid_check(ssour=10,simag=3,theta_grazing=3e-3, do_plot=0)
+
+
+    hyperboloid_check(ssour=10,simag=3,theta_grazing=3e-3, do_plot=0)
+    hyperboloid_check(ssour=3, simag=10, theta_grazing=3e-3, do_plot=0)
+
+    # ccc = [-3703.714814855263, 0.08163265306122448, -3703.714814855263, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, -1.0]
+    # ccc = [-3703.714814855263, 0.08163265306122448, -3703.714814855263, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, -1.0]
+    # # ccc = rotate_and_shift_quartic_NEW(ccc, numpy.pi/2-0.004,numpy.pi,numpy.pi*3/2, D=[0,0,0])
+    # dd = 3
+    # yy = numpy.linspace(-(6.4999280+dd), -6.499928+dd,100)
+    # zz = height(ccc, y=yy, x=0, return_solution=1)
     #
-    # parabola_check(ssour=1e8,simag=10,theta_grazing=3e-3, do_plot=0)
-    # parabola_check(ssour=10,simag=1e9,theta_grazing=3e-3, do_plot=0)
-
-    # ellipsoid_check(ssour=10,simag=3,theta_grazing=3e-3, do_plot=0)
-
-    # p = 10
-    # q = 3
-    # theta = 3e-3
-    #
-    # a = numpy.abs((p - q) / 2)
-    # c = 0.5 * numpy.sqrt(p**2 + q**2 - 2 * p * q * numpy.cos(2 * theta))
-    # b = numpy.sqrt(c**2 - a**2)
-    # ecc = c / a
-    #
-    # print("a: ",a)
-    # print("b: ", b)
-    # print("c: ",c)
-    # print("ecc: ", ecc)
-
-    # hyperboloid_check(do_plot=1)
-
-    s5 = hyperboloid_check(ssour=10,simag=3,theta_grazing=3e-2, do_plot=0)
-
-    # z = height(s5, y=numpy.linspace(-0.1,0.1,100), x=numpy.linspace(-0.01,0.01,100), return_solution=0)
+    # from srxraylib.plot.gol import plot
+    # plot(yy,zz,
+    #      numpy.array([-6.499928,-6.499928]),numpy.array([-0.025714,-0.025714]),
+    #      marker=[None,'o'])

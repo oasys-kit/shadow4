@@ -295,20 +295,20 @@ class ShowSurfaceShapeDialog(QWidget):
 
         self.axis.mouse_init()
 
-def view_conic(ccc=[1.0,1.0,1.0,0.0,0.0,0.0,0.0,0.0,-764,0.0], x_min=-10, x_max=10, y_min=-10, y_max=10):
+def view_conic(ccc=[1.0,1.0,1.0,0.0,0.0,0.0,0.0,0.0,-764,0.0], x_min=-10, x_max=10, y_min=-10, y_max=10, branch=0):
     app = QApplication(sys.argv)
-    dialog = ShowSurfaceShapeDialog(ccc=ccc, x_min=x_min, x_max=x_max, y_min=y_min, y_max=y_max)
+    dialog = ShowSurfaceShapeDialog(ccc=ccc, x_min=x_min, x_max=x_max, y_min=y_min, y_max=y_max, branch=0)
     dialog.show()
     app.exec()
 
 def compare_conics(ccc1=[1.0,1.0,1.0,0.0,0.0,0.0,0.0,0.0,-764,0.0],
                    ccc2=[1.0,1.0,1.0,0.0,0.0,0.0,0.0,0.0,764,0.0],
                    x_min=-10, x_max=10, y_min=-10, y_max=10,
-                   titles=['','']):
+                   titles=['',''], branch=0):
     app = QApplication(sys.argv)
-    dialog = ShowSurfaceShapeDialog(ccc=ccc1, x_min=x_min, x_max=x_max, y_min=y_min, y_max=y_max, title=titles[0])
+    dialog = ShowSurfaceShapeDialog(ccc=ccc1, x_min=x_min, x_max=x_max, y_min=y_min, y_max=y_max, title=titles[0], branch=branch)
     dialog.show()
-    dialog2 = ShowSurfaceShapeDialog(ccc=ccc2, x_min=x_min, x_max=x_max, y_min=y_min, y_max=y_max, title=titles[1])
+    dialog2 = ShowSurfaceShapeDialog(ccc=ccc2, x_min=x_min, x_max=x_max, y_min=y_min, y_max=y_max, title=titles[1], branch=branch)
     dialog2.show()
 
 
