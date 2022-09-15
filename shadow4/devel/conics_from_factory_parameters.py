@@ -46,7 +46,80 @@ def ellipsoid(p=10,q=3,theta=3e-3):
     (2.*p*q*(p**2 + q**2 + 2*p*q*Cos(2*theta))),
             0]
 
+def hyperboloid(p=10,q=3,theta=3e-3):
+    if p >= q:
+        return hyperboloid_large_p(p=p,q=q,theta=theta)
+    else:
+        return hyperboloid_large_q(p=p, q=q, theta=theta)
 
+def hyperboloid_large_p(p=10,q=3,theta=3e-3):
+    if p < q:
+        raise Exception("p<q")
+    return [
+        -(Csc(theta)**2/(p*q)),-(((p**2 - 4*p*q + q**2 + 2*p*q*Cos(2*theta))*Csc(theta)**2)/
+        (p*q*(2*(p**2 + q**2) + (p - q)**2*Csc(theta)**2))),
+        (4*(p + q)**2 - ((p - q)**4*Csc(theta)**2*(1 + Csc(theta)**2))/(p*q))/((p - q)**2*(2*(p**2 + q**2) + (p - q)**2*Csc(theta)**2)),0,
+        (-2*(p + q)*(p**2 + q**2 - 2*p*q*Cos(2*theta))*Csc(theta)**2*Sqrt(1/(1 + (p + q)**2/((p - q)**2*(1 + Csc(theta)**2)))))/
+        (p*(p - q)**3*q*Sqrt(p**2 - 4*p*q + q**2 + 2*p*q*Cos(2*theta))*
+        Sqrt((2*(p**2 + q**2) + (p - q)**2*Csc(theta)**2)/((p - q)**2*(p**2 - 4*p*q + q**2 + 2*p*q*Cos(2*theta))))),0,0,
+        -2*((-2*(p + q)*Sqrt(1/(1 + (p + q)**2/((p - q)**2*(1 + Csc(theta)**2)))))/
+        ((p - q)*Sqrt(p**2 - 4*p*q + q**2 + 2*p*q*Cos(2*theta))) +
+        (Sqrt(2)*(-p**2 + q**2)*Sqrt(-((p*q*(-3 + Cos(2*theta)))/(p**2 - 4*p*q + q**2 + 2*p*q*Cos(2*theta))))*
+        Sqrt(p**2 - 4*p*q + q**2 + 2*p*q*Cos(2*theta))*
+        Sqrt((2*(p**2 + q**2) + (p - q)**2*Csc(theta)**2)/((p - q)**2*(p**2 - 4*p*q + q**2 + 2*p*q*Cos(2*theta))))*Sin(theta))/
+        (Sqrt(p*q)*(-2*(p**2 - p*q + q**2) + (p**2 + q**2)*Cos(2*theta)))),
+        -((((p + q)**2*(p**2 + q**2 - 2*p*q*Cos(2*theta))*Csc(theta)*Sqrt(1/(2 + (2*(p + q)**2)/((p - q)**2*(1 + Csc(theta)**2))))*
+        (4*Sqrt(p*q)*Sqrt(-((p*q*(-3 + Cos(2*theta)))/(p**2 - 4*p*q + q**2 + 2*p*q*Cos(2*theta)))) +
+        (p - q)**2*Sqrt(((p - q)**2*(-3 + Cos(2*theta)))/(-2*(p**2 - p*q + q**2) + (p**2 + q**2)*Cos(2*theta)))*Csc(theta)*
+        Sqrt((2*(p**2 + q**2) + (p - q)**2*Csc(theta)**2)/((p - q)**2*(p**2 - 4*p*q + q**2 + 2*p*q*Cos(2*theta))))))/(p*q) +
+        2*(4*(p + q)**2 - ((p - q)**4*Csc(theta)**2*(1 + Csc(theta)**2))/(p*q))*
+        ((p + q)**2/(2.*(p**2 - 4*p*q + q**2 + 2*p*q*Cos(2*theta))*
+        Sqrt((2*(p**2 + q**2) + (p - q)**2*Csc(theta)**2)/((p - q)**2*(p**2 - 4*p*q + q**2 + 2*p*q*Cos(2*theta))))) -
+        Sqrt(2)*Sqrt(p*q)*Sqrt(-((p*q*(-3 + Cos(2*theta)))/(p**2 - 4*p*q + q**2 + 2*p*q*Cos(2*theta))))*
+        Sqrt(1/(1 + (p + q)**2/((p - q)**2*(1 + Csc(theta)**2))))*Sin(theta)))/
+        ((p - q)**2*(2*(p**2 + q**2) + (p - q)**2*Csc(theta)**2))),0]
+
+def hyperboloid_large_q(p=3,q=10,theta=3e-3):
+    if p > q:
+        raise Exception("p>q")
+    return [
+        -(Csc(theta)**2/(p*q)),-(((p**2 - 4*p*q + q**2 + 2*p*q*Cos(2*theta))*Csc(theta)**2)/
+        (p*q*(2*(p**2 + q**2) + (p - q)**2*Csc(theta)**2))),
+        (4*(p + q)**2 - ((p - q)**4*Csc(theta)**2*(1 + Csc(theta)**2))/(p*q))/((p - q)**2*(2*(p**2 + q**2) + (p - q)**2*Csc(theta)**2)),0,
+        (2*(p**2 + q**2 - 2*p*q*Cos(2*theta))*Sqrt(-((p*q*(-3 + Cos(2*theta)))/(p**2 - 4*p*q + q**2 + 2*p*q*Cos(2*theta))))*Csc(theta)**3*
+        Sqrt((p + q)**2/(2*(p**2 + q**2) + (p - q)**2*Csc(theta)**2)))/
+        ((p - q)**2*(p*q)**1.5*Sqrt((4*(p**2 + q**2) + 2*(p - q)**2*Csc(theta)**2)/
+        ((p - q)**2*(p**2 - 4*p*q + q**2 + 2*p*q*Cos(2*theta))))),0,0,
+        -2*(-(Csc(theta)*(-4*p*q*Sqrt((p + q)**2/(2*(p**2 + q**2) + (p - q)**2*Csc(theta)**2)) +
+        ((p - q)*(p + q)*Csc(theta)**2)/
+        (Sqrt(p**2 - 4*p*q + q**2 + 2*p*q*Cos(2*theta))*
+        Sqrt((2*(p**2 + q**2) + (p - q)**2*Csc(theta)**2)/((p - q)**2*(p**2 - 4*p*q + q**2 + 2*p*q*Cos(2*theta))))))*
+        (1 + Sin(theta)**2))/
+        (2.*Sqrt(p*q)*(2*(p**2 + q**2) + (p - q)**2*Csc(theta)**2)*
+        Sqrt((p*q*(1 + Sin(theta)**2))/(p**2 - 4*p*q + q**2 + 2*p*q*Cos(2*theta)))) +
+        ((p**2 + q**2 - 2*p*q*Cos(2*theta))*Sqrt(-((p*q*(-3 + Cos(2*theta)))/(p**2 - 4*p*q + q**2 + 2*p*q*Cos(2*theta))))*Csc(theta)**3*
+        Sqrt((p + q)**2/(2*(p**2 + q**2) + (p - q)**2*Csc(theta)**2))*
+        ((-2*p*q*(-3 + Cos(2*theta)))/
+        ((p**2 - 4*p*q + q**2 + 2*p*q*Cos(2*theta))*
+        Sqrt((2*(p**2 + q**2) + (p - q)**2*Csc(theta)**2)/((p - q)**2*(p**2 - 4*p*q + q**2 + 2*p*q*Cos(2*theta))))) +
+        ((p - q)*(p + q)*Sqrt(((p + q)**2*Sin(theta)**2)/((p - q)**2 + 2*(p**2 + q**2)*Sin(theta)**2)))/
+        Sqrt(p**2 - 4*p*q + q**2 + 2*p*q*Cos(2*theta))))/
+        (2.*(p - q)**2*(p*q)**1.5*Sqrt((4*(p**2 + q**2) + 2*(p - q)**2*Csc(theta)**2)/
+        ((p - q)**2*(p**2 - 4*p*q + q**2 + 2*p*q*Cos(2*theta)))))),
+        -2*((2*(p + q)*((p + q)**2/(2*(p**2 + q**2) + (p - q)**2*Csc(theta)**2))**1.5)/
+        ((p - q)*Sqrt(p**2 - 4*p*q + q**2 + 2*p*q*Cos(2*theta))) +
+        ((p - q)*(-3 + Cos(2*theta))*(-2*(p**2 - p*q + q**2) + (p**2 + q**2)*Cos(2*theta))*Csc(theta)**4*
+        (p*(Sqrt((p + q)**2/(2*(p**2 + q**2) + (p - q)**2*Csc(theta)**2)) -
+        Sqrt(p**2 - 4*p*q + q**2 + 2*p*q*Cos(2*theta))*
+        Sqrt((2*(p**2 + q**2) + (p - q)**2*Csc(theta)**2)/((p - q)**2*(p**2 - 4*p*q + q**2 + 2*p*q*Cos(2*theta))))) +
+        q*(Sqrt((p + q)**2/(2*(p**2 + q**2) + (p - q)**2*Csc(theta)**2)) +
+        Sqrt(p**2 - 4*p*q + q**2 + 2*p*q*Cos(2*theta))*
+        Sqrt((2*(p**2 + q**2) + (p - q)**2*Csc(theta)**2)/((p - q)**2*(p**2 - 4*p*q + q**2 + 2*p*q*Cos(2*theta)))))))/
+        (Sqrt(p**2 - 4*p*q + q**2 + 2*p*q*Cos(2*theta))*(2*(p**2 + q**2) + (p - q)**2*Csc(theta)**2)**2)),0]
+
+#
+#
+#
 def ellipsoid_check(ssour=10,simag=3,theta_grazing=3e-3, do_plot=False):
 
 
@@ -99,12 +172,42 @@ def parabola_check(ssour=10,simag=10,theta_grazing=3e-3, do_plot=False):
         compare_conics(s5, ccc.get_coefficients(), x_min=-0.01, x_max=0.01, y_min=-0.1, y_max=0.1,
                        titles=['s5','ccc'])
 
+def hyperbola_check(ssour=10,simag=3,theta_grazing=3e-3, do_plot=False):
+
+    if ssour > simag:
+        s5 = hyperboloid_large_p(ssour, simag,theta_grazing)
+        c = [-3703.714814834814, -0.033331264034642545, -3703.599850917718, 0, -41.26934605862947, 0, 0, 2.220446049250313e-16, -190.48238875690424, 0]
+
+    else:
+        s5 = hyperboloid_large_q(ssour, simag,theta_grazing)
+        c = [-3703.714814834814, -0.033331264034642545, -3703.599850917718, 0, 41.26934605862948, 0, 0, 2.220446049250313e-16, 190.48238875690424, 0]
+
+
+    print("ccc: ", c)
+    print("s5: ", s5)
+
+    for i in range(10):
+        print(i, c[i], s5[i])
+
+    for i in range(10):
+        print(i, s5[i] , c[i])
+        assert(numpy.abs(s5[i] - c[i]) < 1e-2)
+
+    # view_conic(s5, x_min=-0.01, x_max=0.01, y_min=-0.1, y_max=0.1)
+    if do_plot:
+        compare_conics(s5, ccc.get_coefficients(), x_min=-0.01, x_max=0.01, y_min=-0.1, y_max=0.1,
+                       titles=['s5','ccc'])
 
 if __name__ == "__main__":
     print(ellipsoid(p=10,q=3,theta=3e-3))
     print(paraboloid_focusing(q=10,theta=3e-3))
     print(paraboloid_collimating(p=10, theta=3e-3))
+    print(hyperboloid_large_p(p=10, q=3, theta=3e-3))
+    print(hyperboloid_large_q(p=3, q=10, theta=3e-3))
 
     ellipsoid_check(ssour=10,simag=3,theta_grazing=3e-3, do_plot=False)
     parabola_check(ssour=10e10,simag=10,theta_grazing=3e-3, do_plot=False)
     parabola_check(ssour=10, simag=10e10, theta_grazing=3e-3, do_plot=False)
+    hyperbola_check(ssour=10, simag=3, theta_grazing=3e-3, do_plot=False)
+    hyperbola_check(ssour=3, simag=10, theta_grazing=3e-3, do_plot=False)
+

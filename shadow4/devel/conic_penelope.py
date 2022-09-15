@@ -626,29 +626,31 @@ def hyperboloid(ssour=10, simag=3, theta_grazing=3e-3, verbose=True):
     c = 0.5 * numpy.sqrt(ssour**2 + simag**2 - 2 * ssour * simag * numpy.cos(2 * theta_grazing))
     b = numpy.sqrt(c**2 - a**2)
 
+    # Large p (p>q)
     if ssour > simag: # select center in first quadrant
         YCEN = (ssour**2 - simag**2) / 4 / c
         ZCEN = b * numpy.sqrt(YCEN**2 / a**2 - 1)
-        NORMAL = numpy.array((0, -2 * YCEN / a ** 2, 2 * ZCEN / b ** 2))
+        NORMAL = numpy.array((0, -2 * YCEN / a ** 2, 2 * ZCEN / b ** 2)) #<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
         NORMAL_MOD = numpy.sqrt(NORMAL[0] ** 2 + NORMAL[1] ** 2 + NORMAL[2] ** 2)
         NORMAL /= NORMAL_MOD
         #
         # Euler angles
         #
         omega = 1 / 2 * numpy.pi
-        theta = numpy.arcsin(NORMAL[1])
+        theta = numpy.arcsin(NORMAL[1]) #<<<<<<<<<<<<<<<<<<<<<
         phi = 3 / 2 * numpy.pi
+    # Large q
     else: # center in 2nd quadrant
         YCEN = (ssour**2 - simag**2) / 4 / c
         ZCEN = b * numpy.sqrt(YCEN**2 / a**2 - 1)
-        NORMAL = -numpy.array((0, -2 * YCEN / a ** 2, 2 * ZCEN / b ** 2))
+        NORMAL = -numpy.array((0, -2 * YCEN / a ** 2, 2 * ZCEN / b ** 2)) #<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
         NORMAL_MOD = numpy.sqrt(NORMAL[0] ** 2 + NORMAL[1] ** 2 + NORMAL[2] ** 2)
         NORMAL /= NORMAL_MOD
         #
         # Euler angles
         #
         omega = 1 / 2 * numpy.pi
-        theta = -numpy.arccos(NORMAL[2])
+        theta = -numpy.arccos(NORMAL[2]) #<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
         phi = 3 / 2 * numpy.pi
 
     CENTER = numpy.array([0,YCEN, ZCEN])
@@ -714,6 +716,12 @@ def hyperboloid(ssour=10, simag=3, theta_grazing=3e-3, verbose=True):
     print("**   expanded: ", s3)
     print("**   rotated and shifted: ", s4)
     print("**   normalized: ", s5)
+    A = -1/b**2
+    B = 1/a**2
+    ny = NORMAL[1]
+    nz = NORMAL[2]
+    ccc = [A, A*ny**2+B*nz**2,A*nz**2+B*ny**2,0,2*(B-A)*ny*nz,0.,0.,0.,2*(B*ny*YCEN+A*nz*ZCEN),0.]
+    print("**   using SHADOW way: ", ccc)
     return s5
 #
 # TESTING ROUTINES
@@ -858,15 +866,15 @@ if __name__ == "__main__":
 
 
 
-    sphere_check()
+    # sphere_check()
+    #
+    # parabola_check(ssour=1e8,simag=10,theta_grazing=3e-3, do_plot=0)
+    # parabola_check(ssour=10,simag=1e9,theta_grazing=3e-3, do_plot=0)
+    #
+    # ellipsoid_check(ssour=10,simag=3,theta_grazing=3e-3, do_plot=0)
 
-    parabola_check(ssour=1e8,simag=10,theta_grazing=3e-3, do_plot=0)
-    parabola_check(ssour=10,simag=1e9,theta_grazing=3e-3, do_plot=0)
 
-    ellipsoid_check(ssour=10,simag=3,theta_grazing=3e-3, do_plot=0)
-
-
-    hyperboloid_check(ssour=10,simag=3,theta_grazing=3e-3, do_plot=0)
+    # hyperboloid_check(ssour=10,simag=3,theta_grazing=3e-3, do_plot=0)
     hyperboloid_check(ssour=3, simag=10, theta_grazing=3e-3, do_plot=0)
 
     # ccc = [-3703.714814855263, 0.08163265306122448, -3703.714814855263, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, -1.0]
