@@ -866,25 +866,15 @@ if __name__ == "__main__":
 
 
 
-    # sphere_check()
-    #
-    # parabola_check(ssour=1e8,simag=10,theta_grazing=3e-3, do_plot=0)
-    # parabola_check(ssour=10,simag=1e9,theta_grazing=3e-3, do_plot=0)
-    #
-    # ellipsoid_check(ssour=10,simag=3,theta_grazing=3e-3, do_plot=0)
+    sphere_check()
+
+    parabola_check(ssour=1e8,simag=10,theta_grazing=3e-3, do_plot=0)
+    parabola_check(ssour=10,simag=1e9,theta_grazing=3e-3, do_plot=0)
+
+    ellipsoid_check(ssour=10,simag=3,theta_grazing=3e-3, do_plot=0)
 
 
-    # hyperboloid_check(ssour=10,simag=3,theta_grazing=3e-3, do_plot=0)
+    hyperboloid_check(ssour=10,simag=3,theta_grazing=3e-3, do_plot=0)
     hyperboloid_check(ssour=3, simag=10, theta_grazing=3e-3, do_plot=0)
 
-    # ccc = [-3703.714814855263, 0.08163265306122448, -3703.714814855263, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, -1.0]
-    # ccc = [-3703.714814855263, 0.08163265306122448, -3703.714814855263, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, -1.0]
-    # # ccc = rotate_and_shift_quartic_NEW(ccc, numpy.pi/2-0.004,numpy.pi,numpy.pi*3/2, D=[0,0,0])
-    # dd = 3
-    # yy = numpy.linspace(-(6.4999280+dd), -6.499928+dd,100)
-    # zz = height(ccc, y=yy, x=0, return_solution=1)
-    #
-    # from srxraylib.plot.gol import plot
-    # plot(yy,zz,
-    #      numpy.array([-6.499928,-6.499928]),numpy.array([-0.025714,-0.025714]),
-    #      marker=[None,'o'])
+
