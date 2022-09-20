@@ -169,7 +169,6 @@ class S4Conic(S4OpticalSurface):
 
         # ;C Computes now the quadric coefficient with the mirror center
         # ;C located at (0,0,0) and normal along (0,0,1)
-        # ;C
 
         A = 1 / AXMIN ** 2
         B = 1 / AXMAJ ** 2
@@ -184,9 +183,6 @@ class S4Conic(S4OpticalSurface):
         self.ccc[7] = 0.0
         self.ccc[8] = 2 * (B * YCEN * RNCEN[2 - 1] + C * ZCEN * RNCEN[3 - 1])
         self.ccc[9] = 0.0
-
-
-
 
 
     #
@@ -399,9 +395,6 @@ class S4Conic(S4OpticalSurface):
             TPAR1[i] = roots[0]
             TPAR2[i] = roots[1]
             # print("Found solutions: ",TPAR1[i],TPAR2[i])
-
-
-
 
         TPAR2.shape = shape_x
 
@@ -663,51 +656,6 @@ class S4Conic(S4OpticalSurface):
 
     def set_ellipsoid_from_focal_distances(self, ssour, simag, theta_grazing, verbose=True):
 
-        # theta = (numpy.pi/2) - theta_grazing
-        # COSTHE = numpy.cos(theta)
-        # SINTHE = numpy.sin(theta)
-        #
-        # AXMAJ = ( ssour + simag )/2
-        # AXMIN = numpy.sqrt( simag * ssour) * COSTHE
-        #
-        #
-        # AFOCI = numpy.sqrt( AXMAJ**2 - AXMIN**2 )
-        # ECCENT = AFOCI/AXMAJ
-        # # ;C
-        # # ;C The center is computed on the basis of the object and image positions
-        # # ;C
-        # YCEN  = (ssour - simag) * 0.5 / ECCENT
-        # ZCEN  = -numpy.sqrt( 1 - YCEN**2 / AXMAJ**2) * AXMIN
-        # # ;C
-        # # ;C Computes now the normal in the mirror center.
-        # # ;C
-        # RNCEN = numpy.zeros(3)
-        # RNCEN[1-1] =  0.0
-        # RNCEN[2-1] = -2 * YCEN / AXMAJ**2
-        # RNCEN[3-1] = -2 * ZCEN / AXMIN**2
-        # # ;CALL NORM(RNCEN,RNCEN)
-        # RNCEN = RNCEN / numpy.sqrt((RNCEN**2).sum())
-        # # ;C
-        # # ;C Computes the tangent versor in the mirror center.
-        # # ;C
-        # RTCEN = numpy.zeros(3)
-        # RTCEN[1-1] =  0.0
-        # RTCEN[2-1] =  RNCEN[3-1]
-        # RTCEN[3-1] = -RNCEN[2-1]
-        #
-        # if verbose:
-        #     txt = ""
-        #     txt += "p=%f, q=%f, theta_grazing=%f rad, theta_normal=%f rad\n" % (ssour, simag, theta_grazing, theta)
-        #     txt += 'Ellipsoid of revolution a=%f \n'%AXMAJ
-        #     txt += 'Ellipsoid of revolution b=%f \n'%AXMIN
-        #     txt += 'Ellipsoid of revolution c=sqrt(a^2-b^2)=%f \n'%AFOCI
-        #     txt += 'Ellipsoid of revolution focal distance c^2=%f \n'%(AFOCI**2)
-        #     txt += 'Ellipsoid of revolution excentricity: %f \n'%ECCENT
-        #     txt += 'Optical element center at: [0,%f,%f]\n'%(YCEN,ZCEN)
-        #     txt += 'Optical element normal: [%f,%f,%f]\n'%(RNCEN[0],RNCEN[1],RNCEN[2])
-        #     txt += 'Optical element tangent: [%f,%f,%f]\n'%(RTCEN[0],RTCEN[1],RTCEN[2])
-        #     print(txt)
-
         tkt = self.calculate_ellipsoid_parameters_from_focal_distances(ssour, simag, theta_grazing, verbose=verbose)
 
         AXMAJ = tkt["AXMAJ"]
@@ -719,7 +667,6 @@ class S4Conic(S4OpticalSurface):
 
         # ;C Computes now the quadric coefficient with the mirror center
         # ;C located at (0,0,0) and normal along (0,0,1)
-        # ;C
 
         A = 1 / AXMIN ** 2
         B = 1 / AXMAJ ** 2
@@ -790,81 +737,30 @@ class S4Conic(S4OpticalSurface):
         COSTHE = numpy.cos(theta)
         SINTHE = numpy.sin(theta)
 
-        AXMAJ = (SSOUR - SIMAG) / 2
-        # ;C
-        # ;C If AXMAJ > 0, then we are on the left branch of the hyp. Else we
-        # ;C are onto the right one. We have to discriminate between the two cases
-        # ;C In particular, if AXMAJ.LT.0 then the hiperb. will be convex.
-        # ;C
-        AFOCI = 0.5 * numpy.sqrt(SSOUR ** 2 + SIMAG ** 2 + 2 * SSOUR * SIMAG * numpy.cos(2 * theta))
-        # ;; why this works better?
-        # ;;		AFOCI = 0.5D0*SQRT( SSOUR^2 + SIMAG^2 - 2*SSOUR*SIMAG*COS(2*THETA) )
+        AXMAJ = 0.5 * numpy.abs(SSOUR - SIMAG)
+        AFOCI = 0.5 * numpy.sqrt(SSOUR ** 2 + SIMAG ** 2 - 2 * SSOUR * SIMAG * numpy.cos(2 * theta_grazing))
         AXMIN = numpy.sqrt(AFOCI ** 2 - AXMAJ ** 2)
 
         ECCENT = AFOCI / numpy.abs(AXMAJ)
 
-        BRANCH = -1.0  # ; branch=+1,-1
-        # ;C
-        # ;C Computes the center coordinates in the hiperbola RF.
-        # ;C
-        # ;IF AXMAJ GT 0.0D0 THEN BEGIN
-        # ;  YCEN	=   ( AXMAJ - SSOUR )/ECCENT			; < 0
-        # ;ENDIF ELSE BEGIN
-        # ;  YCEN	=   ( SSOUR - AXMAJ )/ECCENT			; > 0
-        # ;ENDELSE
+        if SSOUR > SIMAG:
+            YCEN = (SSOUR**2 - SIMAG**2) / 4 / AFOCI
+            ZCEN = AXMIN * numpy.sqrt(YCEN ** 2 / AXMAJ ** 2 - 1.0)
 
-        if AXMAJ > 0:
-            YCEN = (SSOUR - AXMAJ) / ECCENT
+            RNCEN = numpy.array((0, -2 * YCEN / AXMAJ ** 2, 2 * ZCEN / AXMIN ** 2))  # <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+            RNCEN /= numpy.sqrt(RNCEN[0] ** 2 + RNCEN[1] ** 2 + RNCEN[2] ** 2)
+
+            RTCEN = numpy.array((0, RNCEN[3 - 1], -RNCEN[2 - 1]))
         else:
-            YCEN = (SSOUR - AXMAJ) / ECCENT
+            YCEN = (SSOUR**2 - SIMAG**2) / 4 / AFOCI
+            ZCEN = AXMIN * numpy.sqrt(YCEN ** 2 / AXMAJ ** 2 - 1.0)
 
-        # YCEN =   numpy.abs( SSOUR - AXMAJ ) / ECCENT * BRANCH
+            RNCEN = -numpy.array((0, -2 * YCEN / AXMAJ ** 2, 2 * ZCEN / AXMIN ** 2))  # <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+            RNCEN /= numpy.sqrt(RNCEN[0] ** 2 + RNCEN[1] ** 2 + RNCEN[2] ** 2)
 
-        ZCEN_ARG = numpy.abs(YCEN ** 2 / AXMAJ ** 2 - 1.0)
+            RTCEN = numpy.array((0, RNCEN[3 - 1], -RNCEN[2 - 1]))
 
-        if ZCEN_ARG > 1.0e-14:
-            ZCEN = -AXMIN * numpy.sqrt(ZCEN_ARG)  # < 0
-        else:
-            ZCEN = 0.0
 
-        # ;
-        # ; THIS GIVES BETTER LOOKING HYPERBOLA BUT WORSE TRACING. WHY?
-        # ;YCEN=ABS(YCEN)
-        # ;ZCEN=ABS(ZCEN)
-        # ;C
-        # ;C Computes now the normal in the same RF. The signs are forced to
-        # ;C suit our RF.
-        # ;C
-
-        RNCEN = numpy.zeros(3)
-        RNCEN[1 - 1] = 0.0
-        RNCEN[2 - 1] = -numpy.abs(YCEN) / AXMAJ ** 2  # < 0
-        RNCEN[3 - 1] = -ZCEN / AXMIN ** 2  # > 0
-
-        RNCEN = RNCEN / numpy.sqrt((RNCEN ** 2).sum())
-        # ;C
-        # ;C Computes the tangent in the same RF
-        # ;C
-        RTCEN = numpy.zeros(3)
-        RTCEN[1 - 1] = 0.0
-        RTCEN[2 - 1] = -RNCEN[3 - 1]  # > 0
-        RTCEN[3 - 1] = RNCEN[2 - 1]  # > 0
-
-        # txt = [txt,  $
-        # String('Rev Hyperboloid a: ', $
-        # AXMAJ, Format='(A40,G20.15)'), $
-        # String('Rev Hyperboloid b: ', $
-        # AXMIN, Format='(A40,G20.15)'), $
-        # String('Rev Hyperboloid c: ', $
-        # AFOCI, Format='(A40,G20.15)'), $
-        # String('Rev Hyperboloid focal discance c^2: ', $
-        # AFOCI^2, Format='(A40,G20.15)'), $
-        # String('Rev Hyperboloid excentricity: ', $
-        # ECCENT, Format='(A40,G20.15)'), $
-        # 'Mirror BRANCH: '+String(branch), $
-        # 'Mirror center at: '+vect2string([0,YCEN,ZCEN]), $
-        # 'Mirror normal: '+vect2string(RNCEN), $
-        # 'Mirror tangent: '+vect2string(RTCEN) ]
         if verbose:
             txt = ""
             txt += "p=%f, q=%f, theta_grazing=%f rad, theta_normal=%f rad\n" % (SSOUR, SIMAG, theta_grazing, theta)
@@ -877,6 +773,7 @@ class S4Conic(S4OpticalSurface):
             txt += 'Optical element normal: [%f,%f,%f]\n' % (RNCEN[0], RNCEN[1], RNCEN[2])
             txt += 'Optical element tangent: [%f,%f,%f]\n' % (RTCEN[0], RTCEN[1], RTCEN[2])
             print(txt)
+
         # ;C
         # ;C Coefficients of the canonical form
         # ;C
@@ -1139,14 +1036,12 @@ class S4Conic(S4OpticalSurface):
 
         normal = self.get_normal(x2)
 
-
         # ;
         # ; reflection
         # ;
         # v2 =  v1.T - 2 * vector_multiply_scalar(normal.T, vector_dot(v1.T, normal.T))
         # V_OUT = v2.copy()
         # v2 = v2.T
-
 
         # ;
         # ; grating scattering
@@ -1282,6 +1177,22 @@ if __name__ == "__main__":
         ccc.write_mesh_file(x, y,   filename="../oasys_workspaces/mirror111.dat")
         ccc.write_mesh_h5file(x, y, filename="../oasys_workspaces/mirror111.h5")
 
-    if True:
+    if False:
         a = S4Conic.initialize_as_sphere_from_curvature_radius(100)
         print(a.info())
+
+    if True:
+        ccc = S4Conic.initialize_as_hyperboloid_from_focal_distances(10.0, 3.0, 0.003, cylindrical=0, cylangle=0.0, switch_convexity=0)
+        c = ccc.get_coefficients()
+        print(c)
+        s5 =  [-3703.714814855263, -0.03333333333333342, -3703.5998488688683, 0.0, -41.269717460357114, 0.0, 0.0, 0.0, -190.47647619130194, 0.0]
+        for i in range(10):
+            assert ( numpy.abs(s5[i] - c[i]) < 1e-3)
+
+        ccc = S4Conic.initialize_as_hyperboloid_from_focal_distances(3, 10.0, 0.003, cylindrical=0, cylangle=0.0, switch_convexity=0)
+        c = ccc.get_coefficients()
+        print(c)
+        s5 =  [-3703.714814855263, -0.033333333332666124, -3703.5998488688692, 0.0, 41.269717460237345, 0.0, 0.0, 3.0796371740537288e-12, 190.47647619130194, 0]
+        for i in range(10):
+            assert ( numpy.abs(s5[i] - c[i]) < 1e-3)
+
