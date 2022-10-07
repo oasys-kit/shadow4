@@ -1,3 +1,6 @@
+
+# see doi: 10.11648/j.mma.20170204.12
+
 import numpy
 
 

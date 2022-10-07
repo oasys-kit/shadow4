@@ -198,16 +198,57 @@ def hyperbola_check(ssour=10,simag=3,theta_grazing=3e-3, do_plot=False):
         compare_conics(s5, ccc.get_coefficients(), x_min=-0.01, x_max=0.01, y_min=-0.1, y_max=0.1,
                        titles=['s5','ccc'])
 
+def ken_hyperboloid_large_q(p=3,q=10,theta=3e-3):
+    c = Cos(theta)
+    s = Sin(theta)
+    return [
+        0,
+        -0.25 * s**2 * (q-p)**2,
+        p*q - 0.25 * c**2 * (p+q)**2,
+        0,
+        0.5 * s * (q-p) * c * (p+q),
+        0,
+        0,
+        0,
+        s * (q-p) * p * q,
+        0
+    ]
+
+def ken_hyperboloid_large_p(p=3,q=10,theta=3e-3):
+    return ken_hyperboloid_large_q(p,q,theta)
+
+def cylinder(c_in):
+    c_out = c_in.copy()
+    c_out[0] = 0.0
+    c_out[3] = 0.0
+    c_out[5] = 0.0
+    c_out[6] = 0.0
+    return c_out
+
+def normalize(c_in, index=0, clean=True):
+    c_out = [0] * 10
+    for i in range(10):
+        c_out[i] = c_in[i] / c_in[index]
+        if clean:
+            if numpy.abs(c_out[i]) < 1e-15:
+                c_out[i] = 0.0
+    return c_out
+
 if __name__ == "__main__":
-    print(ellipsoid(p=10,q=3,theta=3e-3))
-    print(paraboloid_focusing(q=10,theta=3e-3))
-    print(paraboloid_collimating(p=10, theta=3e-3))
-    print(hyperboloid_large_p(p=10, q=3, theta=3e-3))
-    print(hyperboloid_large_q(p=3, q=10, theta=3e-3))
+    # print(ellipsoid(p=10,q=3,theta=3e-3))
+    # print(paraboloid_focusing(q=10,theta=3e-3))
+    # print(paraboloid_collimating(p=10, theta=3e-3))
+    # print(hyperboloid_large_p(p=10, q=3, theta=3e-3))
+    # print(hyperboloid_large_q(p=3, q=10, theta=3e-3))
+    #
+    # ellipsoid_check(ssour=10,simag=3,theta_grazing=3e-3, do_plot=False)
+    # parabola_check(ssour=10e10,simag=10,theta_grazing=3e-3, do_plot=False)
+    # parabola_check(ssour=10, simag=10e10, theta_grazing=3e-3, do_plot=False)
+    # hyperbola_check(ssour=10, simag=3, theta_grazing=3e-3, do_plot=False)
+    # hyperbola_check(ssour=3, simag=10, theta_grazing=3e-3, do_plot=False)
 
-    ellipsoid_check(ssour=10,simag=3,theta_grazing=3e-3, do_plot=False)
-    parabola_check(ssour=10e10,simag=10,theta_grazing=3e-3, do_plot=False)
-    parabola_check(ssour=10, simag=10e10, theta_grazing=3e-3, do_plot=False)
-    hyperbola_check(ssour=10, simag=3, theta_grazing=3e-3, do_plot=False)
-    hyperbola_check(ssour=3, simag=10, theta_grazing=3e-3, do_plot=False)
+    print(normalize(cylinder(hyperboloid_large_q(p=3, q=10, theta=3e-3)), index=2))
+    print(normalize(ken_hyperboloid_large_q(p=3, q=10, theta=3e-3),index=2))
 
+    print(normalize(cylinder(hyperboloid_large_p(p=10, q=3, theta=3e-3)), index=2))
+    print(normalize(ken_hyperboloid_large_p(p=10, q=3, theta=3e-3),index=2))
