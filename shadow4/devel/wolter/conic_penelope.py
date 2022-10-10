@@ -469,7 +469,7 @@ def sphere(ssour=10,simag=3,theta_grazing=3e-3):
     print("   expanded: ", s3)
     print("   rotated and shifted: ", s4)
     print("   normalized: ", s5)
-    return s5
+    return {'p':ssour, 'q':simag, 'theta_grazing':theta_grazing, 'radius':rmirr, 'ccc':s5}
 
 def paraboloid(ssour=10,simag=3,theta_grazing=3e-3, verbose=True):
 
@@ -545,7 +545,7 @@ def paraboloid(ssour=10,simag=3,theta_grazing=3e-3, verbose=True):
     print("**   expanded: ", s3)
     print("**   rotated and shifted: ", s4)
     print("**   normalized: ", s5)
-    return s5
+    return {'p':ssour, 'q':simag, 'theta_grazing':theta_grazing, 'a':a, 'center':CENTER, 'normal':NORMAL,  'ccc':s5}
 
 
 def ellipsoid(ssour=10, simag=3, theta_grazing=3e-3, verbose=True):
@@ -617,7 +617,10 @@ def ellipsoid(ssour=10, simag=3, theta_grazing=3e-3, verbose=True):
     print("**   expanded: ", s3)
     print("**   rotated and shifted: ", s4)
     print("**   normalized: ", s5)
-    return s5
+
+    return {'p':ssour, 'q':simag, 'theta_grazing':theta_grazing,
+                   'a':a, 'b':b, 'c':c,
+                   'center':CENTER, 'normal':NORMAL,  'ccc':s5}
 
 
 def hyperboloid(ssour=10, simag=3, theta_grazing=3e-3, verbose=True):
@@ -722,7 +725,10 @@ def hyperboloid(ssour=10, simag=3, theta_grazing=3e-3, verbose=True):
     nz = NORMAL[2]
     ccc = [A, A*ny**2+B*nz**2,A*nz**2+B*ny**2,0,2*(B-A)*ny*nz,0.,0.,0.,2*(B*ny*YCEN+A*nz*ZCEN),0.]
     print("**   using SHADOW way: ", ccc)
-    return s5
+
+    return {'p':ssour, 'q':simag, 'theta_grazing':theta_grazing,
+                   'a':a, 'b':b, 'c':c,
+                   'center':CENTER, 'normal':NORMAL,  'ccc':s5}
 #
 # TESTING ROUTINES
 #
@@ -741,8 +747,8 @@ def sphere_check():
     c[10-1]= 0
 
     for i in range(10):
-        print(s5[i] , c[i])
-        assert(numpy.abs(s5[i] - c[i]) < 1e-2)
+        print(s5['ccc'][i] , c[i])
+        assert(numpy.abs(s5['ccc'][i] - c[i]) < 1e-2)
 
 def ellipsoid_check(ssour=10,simag=3,theta_grazing=3e-3, do_plot=False):
 
@@ -755,16 +761,16 @@ def ellipsoid_check(ssour=10,simag=3,theta_grazing=3e-3, do_plot=False):
 
     c = ccc.get_coefficients()
     print("ccc: ", c)
-    print("s5: ", s5)
+    print("s5: ", s5['ccc'])
 
 
     for i in range(10):
-        print(i, c[i], s5[i])
-        assert(numpy.abs(s5[i] - c[i]) < 1e-2)
+        print(i, c[i], s5['ccc'][i])
+        assert(numpy.abs(s5['ccc'][i] - c[i]) < 1e-2)
 
     # view_conic(s5, x_min=-0.01, x_max=0.01, y_min=-0.1, y_max=0.1)
     if do_plot:
-        compare_conics(s5, ccc.get_coefficients(), x_min=-0.01, x_max=0.01, y_min=-0.1, y_max=0.1,
+        compare_conics(s5['ccc'], ccc.get_coefficients(), x_min=-0.01, x_max=0.01, y_min=-0.1, y_max=0.1,
                        titles=['s5','ccc'])
 
 def hyperboloid_check(ssour=10,simag=3,theta_grazing=3e-3, do_plot=False):
@@ -784,16 +790,16 @@ def hyperboloid_check(ssour=10,simag=3,theta_grazing=3e-3, do_plot=False):
     s5 = hyperboloid(ssour=ssour,simag=simag,theta_grazing=theta_grazing)
 
     print("ccc: ", c)
-    print("s5: ", s5)
+    print("s5: ", s5['ccc'])
 
 
     for i in range(10):
-        print(i, c[i], s5[i])
-        assert(numpy.abs(s5[i] - c[i]) < 1e-2)
+        print(i, c[i], s5['ccc'][i])
+        assert(numpy.abs(s5['ccc'][i] - c[i]) < 1e-2)
 
     # view_conic(s5, x_min=-0.01, x_max=0.01, y_min=-0.1, y_max=0.1)
     if do_plot:
-        compare_conics(s5, c, x_min=-0.01, x_max=0.01, y_min=-0.1, y_max=0.1,
+        compare_conics(s5['ccc'], c, x_min=-0.01, x_max=0.01, y_min=-0.1, y_max=0.1,
                        titles=['s5','ccc'], branch=branch)
 
     return s5
@@ -808,15 +814,15 @@ def parabola_check(ssour=10,simag=10,theta_grazing=3e-3, do_plot=False):
     s5 = paraboloid(ssour=ssour,simag=simag,theta_grazing=theta_grazing)
 
     print("ccc: ", ccc.get_coefficients())
-    print("s5: ", s5)
+    print("s5: ", s5['ccc'])
 
     c = ccc.get_coefficients()
     for i in range(10):
-        print(i, c[i], s5[i])
+        print(i, c[i], s5['ccc'][i])
 
     for i in range(10):
-        print(s5[i] , c[i])
-        assert(numpy.abs(s5[i] - c[i]) < 1e-2)
+        print(s5['ccc'][i] , c[i])
+        assert(numpy.abs(s5['ccc'][i] - c[i]) < 1e-2)
 
     # view_conic(s5, x_min=-0.01, x_max=0.01, y_min=-0.1, y_max=0.1)
     if do_plot:
@@ -870,10 +876,10 @@ if __name__ == "__main__":
 
     parabola_check(ssour=1e8,simag=10,theta_grazing=3e-3, do_plot=0)
     parabola_check(ssour=10,simag=1e9,theta_grazing=3e-3, do_plot=0)
-
+    #
     ellipsoid_check(ssour=10,simag=3,theta_grazing=3e-3, do_plot=0)
-
-
+    #
+    #
     hyperboloid_check(ssour=10,simag=3,theta_grazing=3e-3, do_plot=0)
     hyperboloid_check(ssour=3, simag=10, theta_grazing=3e-3, do_plot=0)
 
