@@ -24,6 +24,9 @@ class SourceGridPolar(object):
         :param direction_space_center:  Center in direction space [Vx,Vz] (note that (Vx+Vx_sampled)^2+(Vz+Vz_sampled)^2 < 1)
         :return:
         """
+        if real_space[1] != 0:
+            raise Exception("Finite source depth not yet implemented!") # TODO: implement it!
+
         self._real_space = real_space
         self._direction_space = direction_space
         self._real_space_points = real_space_points
@@ -261,7 +264,7 @@ if __name__ == "__main__":
     from shadow4tests.compatibility.beam3 import Beam3
     set_qt()
 
-    if False:
+    if True:
         a = SourceGridPolar.initialize_point_source(
                     direction_space        = [2e-3,2e-3],
                     direction_space_points = [20,  5],
@@ -280,7 +283,7 @@ if __name__ == "__main__":
 
     #
     #
-    if False:
+    if True:
         a = SourceGridPolar.initialize_collimated_source(
             real_space=[2e-6, 0.0, 1e-6],
             real_space_points=[10, 4],
