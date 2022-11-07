@@ -127,16 +127,25 @@ if __name__ == "__main__":
 
 
     if True:
+        # tkt_ell, tkt_hyp = recipe2(
+        #     p_ell=10.0,
+        #     distance=0.3,
+        #     p_hyp=0.9,
+        #     theta=0.003,
+        #     # m_ell=0.3,
+        #     m_hyp=1/3,
+        #     verbose=1,
+        # )
+
         tkt_ell, tkt_hyp = recipe2(
             p_ell=10.0,
-            distance=0.3,
-            p_hyp=0.9,
+            distance=0.5,
+            p_hyp=2.5,
             theta=0.003,
             # m_ell=0.3,
             m_hyp=1/3,
             verbose=1,
         )
-
         # print(tkt_ell)
         # print(tkt_hyp)
 

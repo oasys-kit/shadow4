@@ -198,7 +198,7 @@ def hyperbola_check(ssour=10,simag=3,theta_grazing=3e-3, do_plot=False):
         compare_conics(s5, ccc.get_coefficients(), x_min=-0.01, x_max=0.01, y_min=-0.1, y_max=0.1,
                        titles=['s5','ccc'])
 
-def ken_hyperboloid_large_q(p=3,q=10,theta=3e-3):
+def ken_hyperboloid_large_q_old(p=3,q=10,theta=3e-3):
     c = Cos(theta)
     s = Sin(theta)
     return [
@@ -214,8 +214,27 @@ def ken_hyperboloid_large_q(p=3,q=10,theta=3e-3):
         0
     ]
 
+def ken_hyperboloid_large_q(p=3,q=10,theta=3e-3):
+    c = Cos(theta)
+    s = Sin(theta)
+    return [
+        1,
+        s**2,
+        c**2 - 4 * p *q * s**2 / (q - p)**2,
+        0,
+        - 2 * s * c * (p + q) / (q - p),
+        0,
+        0,
+        0,
+        -4 * s * p * q  / (q - p),
+        0
+    ]
+
 def ken_hyperboloid_large_p(p=3,q=10,theta=3e-3):
     return ken_hyperboloid_large_q(p,q,theta)
+
+def ken_hyperboloid_large_p_old(p=3,q=10,theta=3e-3):
+    return ken_hyperboloid_large_q_old(p,q,theta)
 
 def cylinder(c_in):
     c_out = c_in.copy()
@@ -247,8 +266,18 @@ if __name__ == "__main__":
     # hyperbola_check(ssour=10, simag=3, theta_grazing=3e-3, do_plot=False)
     # hyperbola_check(ssour=3, simag=10, theta_grazing=3e-3, do_plot=False)
 
-    print(normalize(cylinder(hyperboloid_large_q(p=3, q=10, theta=3e-3)), index=2))
-    print(normalize(ken_hyperboloid_large_q(p=3, q=10, theta=3e-3),index=2))
+    # print("cylinder, p<q:")
+    # print(normalize(cylinder(hyperboloid_large_q(p=3, q=10, theta=3e-3)), index=2))
+    # print(normalize(ken_hyperboloid_large_q_old(p=3, q=10, theta=3e-3),index=2))
+    #
+    # print("cylinder, p>q:")
+    # print(normalize(cylinder(hyperboloid_large_p(p=10, q=3, theta=3e-3)), index=2))
+    # print(normalize(ken_hyperboloid_large_p_old(p=10, q=3, theta=3e-3),index=2))
 
-    print(normalize(cylinder(hyperboloid_large_p(p=10, q=3, theta=3e-3)), index=2))
-    print(normalize(ken_hyperboloid_large_p(p=10, q=3, theta=3e-3),index=2))
+    print("hyperboloid, p<q:")
+    print(normalize(hyperboloid_large_q(p=3, q=10, theta=3e-3), index=0))
+    print(ken_hyperboloid_large_q(p=3, q=10, theta=3e-3))
+
+    print("hyperboloid, p>q:")
+    print(normalize(hyperboloid_large_p(p=10, q=3, theta=3e-3), index=0))
+    print(ken_hyperboloid_large_p(p=10, q=3, theta=3e-3))
