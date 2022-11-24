@@ -6,7 +6,7 @@
 import numpy
 
 from shadow4.optical_surfaces.s4_conic import S4Conic # for comparison
-from conic_viewer import view_conic, compare_conics # for plot
+from shadow4.devel.wolter.conic_viewer import view_conic, compare_conics # for plot
 
 #
 # some tools
