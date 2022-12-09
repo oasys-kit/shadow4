@@ -687,8 +687,6 @@ def hyperboloid(ssour=10, simag=3, theta_grazing=3e-3, verbose=True):
         # txt += '** B nz ycen - A ny zcen: %f\n' % ((1/a**2) *NORMAL[2] * YCEN - (1/b**2) * NORMAL[1] * ZCEN)
         print(txt)
 
-        print(txt)
-
 
     s1 = [-1,1,-1,0,-1] # reduced_quadric('one sheet hyperboloid')
     s2 = scale_reduced_quadric(s1, xscale=b, yscale=a, zscale=b, return_list=True)
@@ -709,22 +707,23 @@ def hyperboloid(ssour=10, simag=3, theta_grazing=3e-3, verbose=True):
     # for i in range(10):
     #     s5[i] /= s4[0]
 
-    print("**Hyperboloid: ")
-    print("**   a,b, theta_grazing[rad]: ", a, b, theta_grazing)
-    print("**   euler [deg]: ", omega * 180 / numpy.pi, theta * 180 / numpy.pi, phi * 180 / numpy.pi)
-    print("**   D: ", D[0],D[1],D[2])
-    print("**   rotated N: ", numpy.dot(euler_rotation_matrix(omega, theta, phi), NORMAL))
-    print("**   reduced: ", s1)
-    print("**   scaled: ", s2)
-    print("**   expanded: ", s3)
-    print("**   rotated and shifted: ", s4)
-    print("**   normalized: ", s5)
+    if verbose:
+        print("**Hyperboloid: ")
+        print("**   a,b, theta_grazing[rad]: ", a, b, theta_grazing)
+        print("**   euler [deg]: ", omega * 180 / numpy.pi, theta * 180 / numpy.pi, phi * 180 / numpy.pi)
+        print("**   D: ", D[0],D[1],D[2])
+        print("**   rotated N: ", numpy.dot(euler_rotation_matrix(omega, theta, phi), NORMAL))
+        print("**   reduced: ", s1)
+        print("**   scaled: ", s2)
+        print("**   expanded: ", s3)
+        print("**   rotated and shifted: ", s4)
+        print("**   normalized: ", s5)
     A = -1/b**2
     B = 1/a**2
     ny = NORMAL[1]
     nz = NORMAL[2]
     ccc = [A, A*ny**2+B*nz**2,A*nz**2+B*ny**2,0,2*(B-A)*ny*nz,0.,0.,0.,2*(B*ny*YCEN+A*nz*ZCEN),0.]
-    print("**   using SHADOW way: ", ccc)
+    if verbose: print("**   using SHADOW way: ", ccc)
 
     return {'p':ssour, 'q':simag, 'theta_grazing':theta_grazing,
                    'a':a, 'b':b, 'c':c,
