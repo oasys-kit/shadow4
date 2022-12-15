@@ -140,10 +140,16 @@ def centered_system(
     print("   ** Origin is at parabola focus (=far hyperbola focus)**")
     print("   Kick point yp_min=y_hmax=p/tan(theta)", y_pmin)
     print("   Kick point: x_pmin, y_pmin, r_pmin: ", x_pmin, y_pmin, r_pmin)
-    print("   hyperbola (input) p,q, theta: ", p_hyp, q_hyp, theta)
+    print("   hyperbola (input) p,q, theta, q/p: ", p_hyp, q_hyp, theta, q_hyp/p_hyp)
     print("   hyperbola (output) a,b,c: ", a_hyp, b_hyp, c_hyp)
     print(" ")
-    print("   ccc_centered_parabola", ccc_centered_parabola)
+
+    ccc_centered_parabola = numpy.array(ccc_centered_parabola)
+    ccc_centered_hyperbola = numpy.array(ccc_centered_hyperbola)
+    print("\n   normalized ccc_centered_parabola", ccc_centered_parabola/ccc_centered_parabola[0])
+    print("   normalized ccc_centered_hyperbola", ccc_centered_hyperbola/ccc_centered_hyperbola[0])
+
+    print("\n   ccc_centered_parabola", ccc_centered_parabola)
     print("   ccc_centered_hyperbola", ccc_centered_hyperbola)
 
 
@@ -178,7 +184,9 @@ def noncentered_system(
 
 
     print("\n\nCalculated parameters: ")
-    print("   ccc_parabola: ", ccc_p['ccc'])
+    print("\n\n   Normalized ccc_parabola: ", ccc_p['ccc']/ccc_p['ccc'][0])
+    print("   Normalized ccc_hyperbola (for shadow, change sign of yz term!!!!!)): ", ccc_h['ccc']/ccc_h['ccc'][0])
+    print("\n   ccc_parabola: ", ccc_p['ccc'])
     print("   ccc_hyperbola (for shadow, change sign of yz term!!!!!)): ", ccc_h['ccc'])
 
 
@@ -186,8 +194,8 @@ def noncentered_system(
 if __name__ == "__main__":
     # draft1()
 
-    # centered_system()
+    centered_system()
 
-    noncentered_system()
+    # noncentered_system()
 
 

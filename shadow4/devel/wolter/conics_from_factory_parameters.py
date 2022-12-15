@@ -129,6 +129,11 @@ def hyperboloid_large_q(p=3,q=10,theta=3e-3):
 # Ken
 #
 
+def ken_paraboloid(p=1e11, q=10,theta=3e-3):
+    if q < p:
+        return ken_paraboloid_focusing(q=q, theta=theta)
+    else:
+        return ken_paraboloid_collimating(p=p, theta=theta)
 
 def ken_paraboloid_focusing(q=10,theta=3e-3):
     return [1, Sin(theta)**2, Cos(theta)**2, 0, 2*Cos(theta)*Sin(theta), 0, 0, 0, -4*q*Sin(theta),0 ]
