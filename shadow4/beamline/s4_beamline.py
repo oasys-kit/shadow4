@@ -40,7 +40,8 @@ class S4Beamline(Beamline):
             try:
                 script += element.to_python_code()
             except:
-                script += "\n\n\n# Error getting python code for S4Beamline S4BeamlineElement # %d " % (i+1)
+                script += "\n\n\n# Error getting python code for S4Beamline S4BeamlineElement # %d  :" % (i+1)
+                script += "\n#       %s " % (str(element))
 
         return script
 
