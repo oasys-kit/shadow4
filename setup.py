@@ -67,6 +67,9 @@ PACKAGES = [
     "shadow4.beamline.optical_elements.mirrors",
     "shadow4.beamline.optical_elements.crystals",
     "shadow4.beamline.optical_elements.gratings",
+    "shadow4.syned",
+    "shadow4.syned.absorbers",
+    "shadow4.syned.refractors",
     "shadow4.tools",
     "shadow4.devel.wolter",  # TODO: relocate
 ]
@@ -82,7 +85,7 @@ INSTALL_REQUIRES = (
 
 
 setup(name='shadow4',
-      version='0.1.7',
+      version='0.1.8',
       description='shadow implementation in python',
       author='Manuel Sanchez del Rio',
       author_email='srio@esrf.eu, ',
