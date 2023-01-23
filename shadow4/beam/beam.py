@@ -924,6 +924,7 @@ class Beam(object):
             newaxisi = newaxis - 1
             newtorot = torot + tstart[i] - 1
             newtoroti = newtorot - 1
+            # print(">>>>> rotating columns, angle", 1+newtoroti[0], 1+newtoroti[1], theta1)
 
             self.rays[:,newtoroti[0]] =  a1[:,newtoroti[0]] * costh + a1[:,newtoroti[1]] * sinth
             self.rays[:,newtoroti[1]] = -a1[:,newtoroti[0]] * sinth + a1[:,newtoroti[1]] * costh
@@ -1172,12 +1173,12 @@ class Beam(object):
         -------
 
         """
-        print(">>>>> apply_boundaries_syned: ", syned_boundary_object, Rectangle)
+        # print(">>>>> apply_boundaries_syned: ", syned_boundary_object, Rectangle)
         if isinstance(syned_boundary_object, type(None)):
             return
         elif isinstance(syned_boundary_object, Rectangle):
             x_left, x_right, y_bottom, y_top = syned_boundary_object.get_boundaries()
-            print(">>>>>>>>>>>>>>>>>>>>dimensions ",x_left, x_right, y_bottom, y_top)
+            # print(">>>>>>>>>>>>>>>>>>>>dimensions ",x_left, x_right, y_bottom, y_top)
             self.crop_rectangle(1, x_left, x_right, 2, y_bottom, y_top, flag_lost_value=flag_lost_value)
         elif isinstance(syned_boundary_object, Ellipse):
             a_axis_min, a_axis_max, b_axis_min, b_axis_max = syned_boundary_object.get_boundaries()

@@ -361,6 +361,3 @@ if __name__ == "__main__":
         #
         # print("\n\nParabola: ",  ccc_ell)
         # print("Hyperbola: ", ccc_hyp)
-
-
-
