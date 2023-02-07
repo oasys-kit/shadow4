@@ -14,17 +14,11 @@ class SourceGeometrical(object):
                     spatial_type="Point",
                     angular_distribution = "Flat",
                     energy_distribution = "Single line",
-                    seed = 123456,
                  ):
 
         self.set_spatial_type_by_name(spatial_type)
         self.set_angular_distribution_by_name(angular_distribution)
         self.set_energy_distribution_by_name(energy_distribution)
-
-        self._seed = seed
-
-        if seed != 0:
-            numpy.random.seed(seed)
 
 
     #
@@ -85,7 +79,7 @@ class SourceGeometrical(object):
          # 		  Available options are: flat(1),uniform(2),
          # 		  gaussian(3), synchrotron(4), conical(5), exact
          # 		  synchrotron(6).
-        return ["Flat","Uniform","Gaussian","Conical"]
+        return ["Flat","Uniform","Gaussian","Conical","Collimated"]
 
         # cone_max	=  0.0000000000000000E+00 - for fdistr=5; maximum half
         # 					    divergence.
@@ -110,10 +104,19 @@ class SourceGeometrical(object):
             self.set_angular_distribution_gaussian()
         elif name == "Conical":
             self.set_angular_distribution_conical()
+        elif name == "Collimated":
+            self.set_angular_distribution_collimated()
         else:
             raise Exception("Wrong angular distribution: %s"%name)
 
 
+    def set_angular_distribution_collimated(self,):
+        self.angular_distribution = "Flat"
+        self.__hdiv1 = 0.0
+        self.__hdiv2 = 0.0
+        self.__vdiv1 = 0.0
+        self.__vdiv2 = 0.0
+        self.__fdist = 1
 
     # WARNING: in shadow4 limits are signed!!!!
     def set_angular_distribution_flat(self,hdiv1=-5e-6,hdiv2=5e-6,vdiv1=-0.5e-6,vdiv2=0.5e-6):
@@ -273,11 +276,14 @@ class SourceGeometrical(object):
         rays[:,11] = numpy.arange(N) + 1          # index
         return rays
 
-    def calculate_beam(self,N=5000,POL_DEG=1.0,POL_ANGLE=0.0,F_COHER=False):
-        rays = self.calculate_rays(N=N, POL_DEG=POL_DEG, POL_ANGLE=POL_ANGLE, F_COHER=F_COHER)
+    def calculate_beam(self,N=5000,POL_DEG=1.0,POL_ANGLE=0.0,F_COHER=False,ISTAR1=0):
+        rays = self.calculate_rays(N=N, POL_DEG=POL_DEG, POL_ANGLE=POL_ANGLE, F_COHER=F_COHER, ISTAR1=ISTAR1)
         return Beam.initialize_from_array(rays)
 
-    def calculate_rays(self,N=5000,POL_DEG=1.0,POL_ANGLE=0.0,F_COHER=False):
+    def calculate_rays(self,N=5000,POL_DEG=1.0,POL_ANGLE=0.0,F_COHER=False,ISTAR1=0):
+
+        if ISTAR1 != 0:
+            numpy.random.seed(ISTAR1)
 
         rays = self._sample_rays_default(N)
 
@@ -347,9 +353,11 @@ class SourceGeometrical(object):
 
         if self.energy_distribution == "Single line":
             if self.__f_phot == 0:
+                print(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> eV", self.__ph[0], self._energy_to_wavenumber(self.__ph[0]))
                 rays[:,10] = self._energy_to_wavenumber(self.__ph[0])
             else:
-                rays[:,10] = self._wavelength_to_wavenumber(self.__ph[0])
+                print(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> A", self.__ph[0], self._wavelength_to_wavenumber(self.__ph[0]))
+                rays[:,10] = self._wavelength_to_wavenumber(self.__ph[0] * 1e-10)
         elif self.energy_distribution == "Several lines":
             values = numpy.array(self.__ph)
             n_test =   (numpy.random.random(N) * values.size).astype(int)
@@ -357,7 +365,7 @@ class SourceGeometrical(object):
             if self.__f_phot == 0:
                 rays[:,10] = self._energy_to_wavenumber(sampled_values)
             else:
-                rays[:,10] = self._wavelength_to_wavenumber(sampled_values)
+                rays[:,10] = self._wavelength_to_wavenumber(sampled_values * 1e-10)
         elif self.energy_distribution == "Relative intensities":
             values = numpy.array(self.__ph)
             relative_intensities = numpy.array(self.__rl)
@@ -392,19 +400,19 @@ class SourceGeometrical(object):
             if self.__f_phot == 0:
                 rays[:,10] = self._energy_to_wavenumber(sampled_values)
             else:
-                rays[:,10] = self._wavelength_to_wavenumber(sampled_values)
+                rays[:,10] = self._wavelength_to_wavenumber(sampled_values * 1e-10)
         elif self.energy_distribution == "Uniform":
             sampled_values = self.__ph[0] + (self.__ph[1]-self.__ph[0]) * numpy.random.rand(N)
             if self.__f_phot == 0:
                 rays[:,10] = self._energy_to_wavenumber(sampled_values)
             else:
-                rays[:,10] = self._wavelength_to_wavenumber(sampled_values)
+                rays[:,10] = self._wavelength_to_wavenumber(sampled_values * 1e-10)
         elif self.energy_distribution == "Gaussian":
             sampled_values = numpy.random.normal(loc=self.__ph[0], scale=self.__ph[1], size=N)
             if self.__f_phot == 0:
                 rays[:,10] = self._energy_to_wavenumber(sampled_values)
             else:
-                rays[:,10] = self._wavelength_to_wavenumber(sampled_values)
+                rays[:,10] = self._wavelength_to_wavenumber(sampled_values * 1e-10)
         elif self.energy_distribution == "User defined":
             sampler = Sampler1D(self.__ph_spectrum_ordinates,self.__ph_spectrum_abscissas)
             sampled_values = sampler.get_n_sampled_points(N)
@@ -414,7 +422,7 @@ class SourceGeometrical(object):
             if self.__f_phot == 0:
                 rays[:,10] = self._energy_to_wavenumber(sampled_values)
             else:
-                rays[:,10] = self._wavelength_to_wavenumber(sampled_values)
+                rays[:,10] = self._wavelength_to_wavenumber(sampled_values * 1e-10)
         else:
             raise Exception("Bad value of energy_distribution")
 
@@ -513,11 +521,88 @@ class SourceGeometrical(object):
             u_norm[:,i] = uu
         return u / u_norm
 
-    def get_beam(self, N=5000, POL_DEG=1.0, POL_ANGLE=0.0, F_COHER=False):
+    def get_beam(self, N=5000, POL_DEG=1.0, POL_ANGLE=0.0, F_COHER=False, ISTAR1=0):
 
-        rays =  self.calculate_rays(N=N,POL_DEG=POL_DEG,POL_ANGLE=POL_ANGLE,F_COHER=F_COHER)
+        rays =  self.calculate_rays(N=N,POL_DEG=POL_DEG,POL_ANGLE=POL_ANGLE,F_COHER=F_COHER,ISTAR1=ISTAR1)
         return Beam.initialize_from_array(rays)
 
+    def to_python_code(self):
+
+        txt = ""
+
+        txt += "\n#\n#\n#"
+
+        txt += "\nfrom shadow4.sources.source_geometrical.source_geometrical import SourceGeometrical"
+
+        txt += "\nlight_source = SourceGeometrical()"
+
+        # spatial type
+        if self.__fsour == 0:  # point
+            txt += "\nlight_source.set_spatial_type_point()"
+        elif self.__fsour == 1:  # rectangle
+            txt += "\nlight_source.set_spatial_type_rectangle(width=%f,height=%f)" % \
+                   (self.__wxsou, self.__wzsou)
+        elif self.__fsour == 2:  # ellipse
+            txt += "\nlight_source.set_spatial_type_ellipse(width=%f,height=%f)" % \
+                   (self.__wxsou, self.__wzsou)
+        elif self.__fsour == 3:  # Gaussian
+            txt += "\nlight_source.set_spatial_type_gaussian(sigma_h=%s,sigma_v=%f)" % \
+                   (self.__sigmax, self.__sigdiz)
+
+
+        # divergence
+        if self.__fdist == 1:  # flat
+            txt += "\nlight_source.set_angular_distribution_flat(hdiv1=%f,hdiv2=%f,vdiv1=%f,vdiv2=%f)" % \
+                   (self.__hdiv1, self.__hdiv2, self.__vdiv1, self.__vdiv2)
+        elif self.__fdist == 2:  # Uniform
+            txt += "\nlight_source.set_angular_distribution_uniform(hdiv1=%f,hdiv2=%f,vdiv1=%f,vdiv2=%f)" % \
+                   (self.__hdiv1, self.__hdiv2, self.__vdiv1, self.__vdiv2)
+
+        elif self.angular_distribution == 3:  # Gaussian
+            txt += "\nlight_source.set_angular_distribution_gaussian(sigdix=%f,sigdiz=%f)" % \
+                   (self.__sigdix, self.__sigdiz)
+        elif self.__fdist == 4:  # cone
+            txt += "\nlight_source.set_angular_distribution_conical(cone_max=%f,cone_min=%f" % \
+                   (self.__cone_max, self.__cone_min)
+        elif self.__fdist == 5:  # Zero (collimated) - New in shadow4
+            txt += "\nlight_source.set_angular_distribution_collimated()"
+
+
+        # energy
+        unit = ['eV', 'A'][self.__f_phot]
+
+        if self.__f_color == 1:  # "Single line":
+            txt += "\nlight_source.set_energy_distribution_singleline(%f, unit='%s')" % \
+                   (self.__ph[0], unit)
+        elif self.__f_color == 2:  # "Several lines":
+            nlines = (numpy.array(self.__ph)).size
+            ff = "["
+            for i in range(nlines):
+                ff += "%f," % self.__ph[i]
+            ff += "]"
+            txt += "\nlight_source.set_energy_distribution_severallines(values=%s, unit='%s')" % (ff, unit)
+        elif self.__f_color == 3:  # "Uniform":
+            txt += "\nlight_source.set_energy_distribution_uniform(value_min=%f, value_max=%f, unit='%s')" % \
+                   (self.__ph[0], self.__ph[1], unit)
+        elif self.__f_color == 4:  # "Relative intensities":
+            nlines = (numpy.array(self.__ph)).size
+            ff = "["
+            ww = "["
+            for i in range(nlines):
+                ff += "%f," % self.__ph[i]
+                ww += "%f," % self.__rl[i]
+            ff += "]"
+            ww += "]"
+            txt += "\nlight_source.set_energy_distribution_relativeintensities(values=%s, weights=%s, unit='%s')" % \
+                   (ff, ww, unit)
+        elif self.__f_color == 5:  # "Gaussian":
+            txt += "\nlight_source.set_energy_distribution_gaussian(center=%f, sigma=%f, unit='%s')" % \
+                (self.__ph[0], self.__ph[1], unit)
+        elif self.__f_color == 6:  # "User defined":
+            # a = numpy.loadtxt(self.user_defined_file)
+            txt += "\nlight_source.set_energy_distribution_userdefined() #### TODO: COMPLETE" 
+
+        return txt
 if __name__ == "__main__":
     pass
 
