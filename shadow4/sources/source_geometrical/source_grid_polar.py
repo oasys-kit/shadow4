@@ -1,8 +1,9 @@
 
 import numpy
 from shadow4.beam.beam import Beam
+from shadow4.sources.s4_light_source_base import S4LightSourceBase
 
-class SourceGridPolar(object):
+class SourceGridPolar(S4LightSourceBase):
 
     def __init__(self,
                  real_space=[1e-6,0,1e-6],
@@ -11,6 +12,9 @@ class SourceGridPolar(object):
                  direction_space_points=[1,1],
                  real_space_center=[0,0,0],
                  direction_space_center=[0,1,0],
+                 name="Undefined",
+                 nrays=0, # not used
+                 seed=0, # not used
                  ):
         """
         This defines a grid source, so points starting in a ellipsoid-like volume in real space
@@ -24,6 +28,9 @@ class SourceGridPolar(object):
         :param direction_space_center:  Center in direction space [Vx,Vz] (note that (Vx+Vx_sampled)^2+(Vz+Vz_sampled)^2 < 1)
         :return:
         """
+
+        super().__init__(name=name, nrays=nrays, seed=seed)
+
         if real_space[1] != 0:
             raise Exception("Finite source depth not yet implemented!") # TODO: implement it!
 

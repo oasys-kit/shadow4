@@ -16,20 +16,27 @@ from shadow4.sources.s4_light_source import S4LightSource
 
 class S4BendingMagnetLightSource(S4LightSource):
 
-    def __init__(self, name="Undefined", electron_beam=None, bending_magnet_magnetic_structure=None):
+    def __init__(self,
+                 name="Undefined",
+                 electron_beam=None,
+                 bending_magnet_magnetic_structure=None,
+                 nrays=5000,
+                 seed=12345,
+                 ):
         super().__init__(name,
                          electron_beam=electron_beam if not electron_beam is None else ElectronBeam(),
-                         magnetic_structure=bending_magnet_magnetic_structure if not bending_magnet_magnetic_structure is None else S4BendingMagnet())
+                         magnetic_structure=bending_magnet_magnetic_structure if not bending_magnet_magnetic_structure is None else S4BendingMagnet(),
+                         nrays=nrays,
+                         seed=seed,
+                         )
 
-    def get_beam(self, F_COHER=0, NRAYS=5000, SEED=123456,
+    def get_beam(self, F_COHER=0,
                        EPSI_DX=0.0, EPSI_DZ=0.0,
                        psi_interval_in_units_one_over_gamma=None,
                        psi_interval_number_of_points=1001,
                        verbose=False):
 
         return Beam.initialize_from_array(self.__calculate_rays(F_COHER=F_COHER,
-                                                                NRAYS=NRAYS,
-                                                                SEED=SEED,
                                                                 EPSI_DX=EPSI_DX,
                                                                 EPSI_DZ=EPSI_DZ,
                                                                 psi_interval_in_units_one_over_gamma=psi_interval_in_units_one_over_gamma,
@@ -70,7 +77,7 @@ class S4BendingMagnetLightSource(S4LightSource):
         return "# to be implemented..."
 
     def __calculate_rays(self,
-                         F_COHER=0, NRAYS=5000, SEED=123456,
+                         F_COHER=0,
                          EPSI_DX=0.0, EPSI_DZ=0.0,
                          psi_interval_in_units_one_over_gamma=None,
                          psi_interval_number_of_points=1001,
@@ -82,8 +89,10 @@ class S4BendingMagnetLightSource(S4LightSource):
         :return: rays, a numpy.array((npoits,18))
         """
 
-        if SEED != 0:
-            numpy.random.seed(SEED)
+        NRAYS = self.get_nrays()
+
+        if self.get_seed() != 0:
+            numpy.random.seed(self.get_seed())
 
         rays = numpy.zeros((NRAYS,18))
 

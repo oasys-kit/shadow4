@@ -51,8 +51,9 @@ if __name__ == "__main__":
 
     # print(und.info())
 
-    ls = S4UndulatorLightSource(name="", electron_beam=ebeam, undulator_magnetic_structure=und)
-    beam = ls.get_beam(user_unit_to_m=1.0,F_COHER=0,NRAYS=15000,SEED=5655452)
+    ls = S4UndulatorLightSource(name="", electron_beam=ebeam, magnetic_structure=und,
+                                nrays=15000,seed=5655452)
+    beam = ls.get_beam()
 
     print(ls.info())
     #

@@ -7,18 +7,22 @@ from shadow4.sources.source_geometrical.probability_distributions import Rectang
 from shadow4.sources.source_geometrical.probability_distributions import Flat2D, Uniform2D, Conical2D
 
 from srxraylib.util.inverse_method_sampler import Sampler1D
+from shadow4.sources.s4_light_source_base import S4LightSourceBase
 
-
-class SourceGeometrical(object):
+class SourceGeometrical(S4LightSourceBase):
     def __init__(self,
+                    name="Undefined",
                     spatial_type="Point",
                     angular_distribution = "Flat",
                     energy_distribution = "Single line",
+                    nrays=5000,
+                    seed=1234567,
                  ):
-
-        self.set_spatial_type_by_name(spatial_type)
-        self.set_angular_distribution_by_name(angular_distribution)
-        self.set_energy_distribution_by_name(energy_distribution)
+        super().__init__(name=name, nrays=nrays, seed=seed)
+        self.set_spatial_type_by_name(spatial_type)  # see SourceGeometrical.spatial_type_list()
+        self.set_angular_distribution_by_name(angular_distribution) # see SourceGeometrical.angular_distribution_list()
+        self.set_energy_distribution_by_name(energy_distribution) # see SourceGeometrical.energy_distribution_list()
+        self.set_polarization(polarization_degree=1.0, phase_diff=0.0, coherent_beam=0)
 
 
     #
@@ -148,6 +152,14 @@ class SourceGeometrical(object):
         self.__cone_min = cone_min
         self.__fdist = 5
 
+    def set_polarization(self,
+                         polarization_degree=1, # cos_s / (cos_s + sin_s)
+                         phase_diff=0.000000,   # in degrees, 0=linear, _90=elliptical/right
+                         coherent_beam=0,       # 0=No (random phase s: col 14)  1=Yes (zero s: col 14)
+                         ):
+        self.__pol_deg = polarization_degree
+        self.__pol_angle = phase_diff
+        self.__f_foher = coherent_beam
     #
     # energy distribution
     #
@@ -276,14 +288,16 @@ class SourceGeometrical(object):
         rays[:,11] = numpy.arange(N) + 1          # index
         return rays
 
-    def calculate_beam(self,N=5000,POL_DEG=1.0,POL_ANGLE=0.0,F_COHER=False,ISTAR1=0):
-        rays = self.calculate_rays(N=N, POL_DEG=POL_DEG, POL_ANGLE=POL_ANGLE, F_COHER=F_COHER, ISTAR1=ISTAR1)
+    def calculate_beam(self):
+        rays = self.calculate_rays()
         return Beam.initialize_from_array(rays)
 
-    def calculate_rays(self,N=5000,POL_DEG=1.0,POL_ANGLE=0.0,F_COHER=False,ISTAR1=0):
+    def calculate_rays(self):
 
-        if ISTAR1 != 0:
-            numpy.random.seed(ISTAR1)
+        if self.get_seed() != 0:
+            numpy.random.seed(self.get_seed())
+
+        N = self.get_nrays()
 
         rays = self._sample_rays_default(N)
 
@@ -353,10 +367,8 @@ class SourceGeometrical(object):
 
         if self.energy_distribution == "Single line":
             if self.__f_phot == 0:
-                print(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> eV", self.__ph[0], self._energy_to_wavenumber(self.__ph[0]))
                 rays[:,10] = self._energy_to_wavenumber(self.__ph[0])
             else:
-                print(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> A", self.__ph[0], self._wavelength_to_wavenumber(self.__ph[0]))
                 rays[:,10] = self._wavelength_to_wavenumber(self.__ph[0] * 1e-10)
         elif self.energy_distribution == "Several lines":
             values = numpy.array(self.__ph)
@@ -466,12 +478,12 @@ class SourceGeometrical(object):
         # obtain polarization for each ray (interpolation)
         #
 
-        DENOM = numpy.sqrt(1.0 - 2.0 * POL_DEG + 2.0 * POL_DEG ** 2)
-        AX = POL_DEG / DENOM
+        DENOM = numpy.sqrt(1.0 - 2.0 * self.__pol_deg + 2.0 * self.__pol_deg ** 2)
+        AX = self.__pol_deg / DENOM
         for i in range(3):
             A_VEC[:, i] *= AX
 
-        AZ = (1.0 - POL_DEG) / DENOM
+        AZ = (1.0 - self.__pol_deg) / DENOM
         for i in range(3):
             AP_VEC[:, i] *= AZ
 
@@ -485,12 +497,12 @@ class SourceGeometrical(object):
 
         #
 
-        if F_COHER == 1:
+        if self.__f_foher == 1:
             PHASEX = 0.0
         else:
             PHASEX = numpy.random.random(N) * 2 * numpy.pi
 
-        PHASEZ = PHASEX + POL_ANGLE
+        PHASEZ = PHASEX + self.__pol_angle
 
         rays[:, 13] = PHASEX
         rays[:, 14] = PHASEZ
@@ -521,9 +533,8 @@ class SourceGeometrical(object):
             u_norm[:,i] = uu
         return u / u_norm
 
-    def get_beam(self, N=5000, POL_DEG=1.0, POL_ANGLE=0.0, F_COHER=False, ISTAR1=0):
-
-        rays =  self.calculate_rays(N=N,POL_DEG=POL_DEG,POL_ANGLE=POL_ANGLE,F_COHER=F_COHER,ISTAR1=ISTAR1)
+    def get_beam(self):
+        rays =  self.calculate_rays()
         return Beam.initialize_from_array(rays)
 
     def to_python_code(self):
@@ -534,7 +545,8 @@ class SourceGeometrical(object):
 
         txt += "\nfrom shadow4.sources.source_geometrical.source_geometrical import SourceGeometrical"
 
-        txt += "\nlight_source = SourceGeometrical()"
+        txt += "\nlight_source = SourceGeometrical(name='%s', nrays=%d, seed=%d)" % \
+               (self.get_name(), self.get_nrays(), self.get_seed())
 
         # spatial type
         if self.__fsour == 0:  # point
@@ -601,6 +613,12 @@ class SourceGeometrical(object):
         elif self.__f_color == 6:  # "User defined":
             # a = numpy.loadtxt(self.user_defined_file)
             txt += "\nlight_source.set_energy_distribution_userdefined() #### TODO: COMPLETE" 
+
+        #polarization/coherence
+        txt += "\nlight_source.set_polarization(polarization_degree=%f, phase_diff=%f, coherent_beam=%s)" % \
+               (self.__pol_deg, self.__pol_angle, self.__f_foher)
+
+        txt += "\nbeam = light_source.get_beam()"
 
         return txt
 if __name__ == "__main__":

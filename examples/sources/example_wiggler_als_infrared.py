@@ -109,14 +109,19 @@ if __name__ == "__main__":
     sourcewiggler.set_electron_initial_conditions_by_label(position_label="value_at_zero",
                                                            velocity_label="value_at_zero")
 
-    ls = S4WigglerLightSource(name="", electron_beam=syned_electron_beam, wiggler_magnetic_structure=sourcewiggler)
+    ls = S4WigglerLightSource(name="",
+                              electron_beam=syned_electron_beam,
+                              magnetic_structure=sourcewiggler,
+                              nrays=5000,
+                              seed=12345,
+                              )
 
 
 
     print(ls.info())
 
 
-    beam = ls.get_beam(NRAYS=NRAYS)
+    beam = ls.get_beam()
     rays = beam.rays
 
     plot_scatter(rays[:,0]*1e6,rays[:,2]*1e6,xtitle="X um",ytitle="Z um")

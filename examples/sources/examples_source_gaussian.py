@@ -4,11 +4,12 @@ from srxraylib.plot.gol import plot_scatter
 
 def example_point_source():
 
-    a = SourceGaussian.initialize_point_source(number_of_rays=10000,
+    a = SourceGaussian.initialize_point_source(
                  sigmaXprime=3e-6,
                  sigmaZprime=1e-6,
                  real_space_center=[0.0,0.0,0.0],
-                 direction_space_center=[0.0,0.0])
+                 direction_space_center=[0.0,0.0],
+                 nrays=10000,)
     print(a.info())
 
     x,y,z = a.get_arrays_real_space()
@@ -38,12 +39,13 @@ def example_point_source():
 
 def example_collimated_source():
     #
-    a = SourceGaussian.initialize_collimated_source(number_of_rays=10000,
+    a = SourceGaussian.initialize_collimated_source(
                  sigmaX=1.0,
                  sigmaY=0.0,
                  sigmaZ=1.0,
                  real_space_center=[0.0,0.0,0.0],
-                 direction_space_center=[0.0,0.0] )
+                 direction_space_center=[0.0,0.0],
+                 nrays=10000,)
 
     print(a.info())
     beam = a.get_beam()
@@ -56,14 +58,15 @@ def example_collimated_source():
 def example_double_gaussian():
     #
     #
-    a = SourceGaussian.initialize_from_keywords(number_of_rays=10000,
+    a = SourceGaussian.initialize_from_keywords(
                                                 sigmaX=2.0e-6,
                                                 sigmaY=1.0e-3,
                                                 sigmaZ=1.0e-6,
                                                 sigmaXprime=3e-6,
                                                 sigmaZprime=3e-6,
                                                 real_space_center=[0.0, 0.0, 0.0],
-                                                direction_space_center=[0.0, 0.0])
+                                                direction_space_center=[0.0, 0.0],
+                                                nrays=10000,)
 
     print(a.info())
 

@@ -1,8 +1,9 @@
 
 import numpy
 from shadow4.beam.beam import Beam
+from shadow4.sources.s4_light_source_base import S4LightSourceBase
 
-class SourceGridCartesian(object):
+class SourceGridCartesian(S4LightSourceBase):
 
     def __init__(self,
                  real_space,
@@ -11,6 +12,9 @@ class SourceGridCartesian(object):
                  direction_space_points,
                  real_space_center,
                  direction_space_center,
+                 name="Undefined",
+                 nrays=0, # not used
+                 seed=0, # not used
                  ):
         """
         This defines a grid source, so points starting in a cube-like volume in real space
@@ -24,6 +28,7 @@ class SourceGridCartesian(object):
         :param direction_space_center:  Center in diraction space [Cx',Cz'] (note that (Cx')^2+(Cz')^2 < 1)
         :return:
         """
+        super().__init__(name=name, nrays=nrays, seed=seed)
         self._real_space = real_space
         self._direction_space = direction_space
         self._real_space_points = real_space_points

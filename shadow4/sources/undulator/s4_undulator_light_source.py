@@ -50,10 +50,19 @@ INTEGRATION_METHOD = 1 # 0=sum, 1=trapz
 
 class S4UndulatorLightSource(S4LightSource):
 
-    def __init__(self, name="Undefined", electron_beam=None, magnetic_structure=None):
+    def __init__(self,
+                 name="Undefined",
+                 electron_beam=None,
+                 magnetic_structure=None,
+                 nrays=5000,
+                 seed=12345,
+                 ):
         super().__init__(name,
                          electron_beam=electron_beam if not electron_beam is None else S4ElectronBeam(),
-                         magnetic_structure=magnetic_structure if not magnetic_structure is None else S4Undulator())
+                         magnetic_structure=magnetic_structure if not magnetic_structure is None else S4Undulator(),
+                         nrays=nrays,
+                         seed=seed,
+                         )
 
 
         # results of calculations
@@ -62,17 +71,17 @@ class S4UndulatorLightSource(S4LightSource):
         self.__result_photon_size_distribution = None
         self.__result_photon_size_sigma = None
 
-    def get_beam(self, NRAYS=5000, SEED=123456):
+    def get_beam(self):
         user_unit_to_m = 1.0
         F_COHER = 0
         # use_gaussian_approximation = False
 
+
         if self.get_magnetic_structure().use_gaussian_approximation():
-            return self.get_beam_in_gaussian_approximation(NRAYS=NRAYS, SEED=SEED)
+            return self.get_beam_in_gaussian_approximation()
         else:
             return Beam.initialize_from_array(self.__calculate_rays(
-                user_unit_to_m=user_unit_to_m, F_COHER=F_COHER, NRAYS=NRAYS, SEED=SEED
-                ))
+                user_unit_to_m=user_unit_to_m, F_COHER=F_COHER,))
 
 
     def get_resonance_ring(self,harmonic_number=1, ring_order=1):
@@ -328,13 +337,15 @@ class S4UndulatorLightSource(S4LightSource):
     def get_photon_size_distribution(self):
         return self.__result_photon_size_distribution["x"], self.__result_photon_size_distribution["y"]
 
-    def __calculate_rays(self,user_unit_to_m=1.0,F_COHER=0,NRAYS=5000,SEED=123456):
+    def __calculate_rays(self,user_unit_to_m=1.0,F_COHER=0):
         """
         compute the rays in SHADOW matrix (shape (npoints,18) )
         :param F_COHER: set this flag for coherent beam
         :param user_unit_to_m: default 1.0 (m)
         :return: rays, a numpy.array((npoits,18))
         """
+
+        NRAYS = self.get_nrays()
 
         if self.__result_radiation is None:
             self.__calculate_radiation()
@@ -344,8 +355,8 @@ class S4UndulatorLightSource(S4LightSource):
 
         sampled_photon_energy,sampled_theta,sampled_phi = self._sample_photon_energy_theta_and_phi(NRAYS)
 
-        if SEED != 0:
-            numpy.random.seed(SEED)
+        if self.get_seed() != 0:
+            numpy.random.seed(self.get_seed())
 
 
         sigmas = syned_electron_beam.get_sigmas_all()
@@ -753,8 +764,12 @@ class S4UndulatorLightSource(S4LightSource):
 
         return sampled_photon_energy,sampled_theta,sampled_phi
 
-    def get_beam_in_gaussian_approximation(self, NRAYS=1000, SEED=12345):
+    def get_beam_in_gaussian_approximation(self):
+
+
         emin, emax, npoints = self.get_magnetic_structure().get_energy_box()
+
+        NRAYS = self.get_nrays()
 
         if self.get_magnetic_structure().get_flag_emittance():
             sigma_x, sigdi_x, sigma_z, sigdi_z = self.get_electron_beam().get_sigmas_all()
@@ -766,28 +781,31 @@ class S4UndulatorLightSource(S4LightSource):
                 undulator_E0=0.5*(emin+emax),
                 undulator_length=self.get_magnetic_structure().length(),
             )
-            a = SourceGaussian.initialize_from_keywords(number_of_rays=NRAYS,
+            a = SourceGaussian.initialize_from_keywords(
                                                         sigmaX=Sx,
                                                         sigmaY=0,
                                                         sigmaZ=Sz,
                                                         sigmaXprime=Spx,
                                                         sigmaZprime=Spz,
                                                         real_space_center=[0.0, 0.0, 0.0],
-                                                        direction_space_center=[0.0, 0.0])
+                                                        direction_space_center=[0.0, 0.0],
+                                                        nrays=NRAYS,
+                                                        seed=self.get_seed())
         else:
             s, sp = self.get_undulator_photon_beam_sizes(
                 undulator_E0=0.5*(emin+emax),
                 undulator_length=self.get_magnetic_structure().length(),
             )
-            a = SourceGaussian.initialize_from_keywords(number_of_rays=NRAYS,
+            a = SourceGaussian.initialize_from_keywords(
                                                         sigmaX=s,
                                                         sigmaY=0,
                                                         sigmaZ=s,
                                                         sigmaXprime=sp,
                                                         sigmaZprime=sp,
                                                         real_space_center=[0.0, 0.0, 0.0],
-                                                        direction_space_center=[0.0, 0.0])
-
+                                                        direction_space_center=[0.0, 0.0],
+                                                        nrays=NRAYS,
+                                                        seed=self.get_seed())
 
         print(a.info())
         beam = a.get_beam()

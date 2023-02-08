@@ -94,10 +94,18 @@ def sync_f_sigma_and_pi(rAngle, rEnergy):
 
 class S4WigglerLightSource(S4LightSource):
 
-    def __init__(self, name="Undefined", electron_beam=None, magnetic_structure=None):
+    def __init__(self,
+                 name="Undefined",
+                 electron_beam=None,
+                 magnetic_structure=None,
+                 nrays=5000,
+                 seed=12345,
+                 ):
         super().__init__(name,
                          electron_beam=electron_beam if not electron_beam is None else S4ElectronBeam(),
-                         magnetic_structure=magnetic_structure if not magnetic_structure is None else S4Wiggler())
+                         magnetic_structure=magnetic_structure if not magnetic_structure is None else S4Wiggler(),
+                         nrays=nrays,
+                         seed=seed)
 
         # results of calculations
         self.__result_trajectory = None
@@ -174,7 +182,6 @@ class S4WigglerLightSource(S4LightSource):
         # calculate cdf and write file for Shadow/Source
         #
 
-        print(">>>>>>>>>>>>>>>>>>>>  wiggler._EMIN,wiggler._EMAX,wiggler._NG_E",wiggler._EMIN,wiggler._EMAX,wiggler._NG_E)
         self.__result_cdf = wiggler_cdf(self.__result_trajectory,
                                         enerMin=wiggler._EMIN,
                                         enerMax=wiggler._EMAX,
@@ -183,7 +190,7 @@ class S4WigglerLightSource(S4LightSource):
                                         elliptical=False)
 
 
-    def __calculate_rays(self,user_unit_to_m=1.0,F_COHER=0,NRAYS=5000,SEED=123456,EPSI_DX=0.0,EPSI_DZ=0.0,
+    def __calculate_rays(self,user_unit_to_m=1.0,F_COHER=0,EPSI_DX=0.0,EPSI_DZ=0.0,
                        psi_interval_in_units_one_over_gamma=None,
                        psi_interval_number_of_points=1001,
                        verbose=True):
@@ -193,6 +200,9 @@ class S4WigglerLightSource(S4LightSource):
         :param user_unit_to_m: default 1.0 (m)
         :return: rays, a numpy.array((npoits,18))
         """
+
+        NRAYS = self.get_nrays()
+
 
         if self.__result_cdf is None:
             self.__calculate_radiation()
@@ -211,8 +221,8 @@ class S4WigglerLightSource(S4LightSource):
         if verbose:
             print(">>> sampled sampled_photon_energy,sampled_theta,sampled_phi:  ",sampled_photon_energy,sampled_theta,sampled_phi)
 
-        if SEED != 0:
-            numpy.random.seed(SEED)
+        if self.get_seed() != 0:
+            numpy.random.seed(self.get_seed())
 
 
         sigmas = syned_electron_beam.get_sigmas_all()
@@ -840,7 +850,7 @@ class S4WigglerLightSource(S4LightSource):
     ############################################################################
     #
     ############################################################################
-    def get_beam(self, NRAYS=5000,SEED=123456):
+    def get_beam(self):
 
         user_unit_to_m = 1.0
         F_COHER = 0
@@ -853,8 +863,6 @@ class S4WigglerLightSource(S4LightSource):
         return Beam.initialize_from_array(self.__calculate_rays(
             user_unit_to_m=user_unit_to_m,
             F_COHER=F_COHER,
-            NRAYS=NRAYS,
-            SEED=SEED,
             EPSI_DX=EPSI_DX,
             EPSI_DZ=EPSI_DZ,
             psi_interval_in_units_one_over_gamma=psi_interval_in_units_one_over_gamma,
