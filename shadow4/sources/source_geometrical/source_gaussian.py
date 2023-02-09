@@ -45,7 +45,9 @@ class SourceGaussian(S4LightSourceBase):
                  sigmaZprime=1e-6,
                  real_space_center=[0.0,0.0,0.0],
                  direction_space_center=[0.0,0.0],
-                 nrays=10000):
+                 nrays=10000,
+                 seed=12345,
+                 ):
         return SourceGaussian(
                  sigmaX,
                  sigmaY,
@@ -54,7 +56,8 @@ class SourceGaussian(S4LightSourceBase):
                  sigmaZprime,
                  real_space_center,
                  direction_space_center,
-                 nrays=nrays)
+                 nrays=nrays,
+                 seed=seed)
 
     @classmethod
     def initialize_point_source(cls,
@@ -62,7 +65,9 @@ class SourceGaussian(S4LightSourceBase):
                  sigmaZprime=1e-6,
                  real_space_center=[0.0,0.0,0.0],
                  direction_space_center=[0.0,0.0],
-                 nrays=10000):
+                 nrays=10000,
+                 seed=12345,
+                 ):
 
         return SourceGaussian(
                  0.0,
@@ -72,7 +77,8 @@ class SourceGaussian(S4LightSourceBase):
                  sigmaZprime,
                  real_space_center,
                  direction_space_center,
-                 nrays=nrays)
+                 nrays=nrays,
+                 seed=seed)
 
 
     @classmethod
@@ -82,7 +88,9 @@ class SourceGaussian(S4LightSourceBase):
                  sigmaZ=1.0,
                  real_space_center=[0.0,0.0,0.0],
                  direction_space_center=[0.0,0.0],
-                 nrays = 10000):
+                 nrays = 10000,
+                 seed=12345,
+                 ):
 
         return SourceGaussian(
                  sigmaX,
@@ -92,7 +100,8 @@ class SourceGaussian(S4LightSourceBase):
                  0.0,
                  real_space_center,
                  direction_space_center,
-                 nrays=nrays)
+                 nrays=nrays,
+                 seed=seed)
 
 
     #

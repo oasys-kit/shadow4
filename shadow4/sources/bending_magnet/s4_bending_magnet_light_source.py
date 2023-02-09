@@ -19,13 +19,13 @@ class S4BendingMagnetLightSource(S4LightSource):
     def __init__(self,
                  name="Undefined",
                  electron_beam=None,
-                 bending_magnet_magnetic_structure=None,
+                 magnetic_structure=None,
                  nrays=5000,
                  seed=12345,
                  ):
         super().__init__(name,
                          electron_beam=electron_beam if not electron_beam is None else ElectronBeam(),
-                         magnetic_structure=bending_magnet_magnetic_structure if not bending_magnet_magnetic_structure is None else S4BendingMagnet(),
+                         magnetic_structure=magnetic_structure if not magnetic_structure is None else S4BendingMagnet(),
                          nrays=nrays,
                          seed=seed,
                          )
@@ -571,3 +571,25 @@ class S4BendingMagnetLightSource(S4LightSource):
         for i in range(3):
             u_norm[:, i] = uu
         return u / u_norm
+
+    def to_python_code(self, data=None):
+        script = ''
+        try:
+            script += self.get_electron_beam().to_python_code()
+        except:
+            script += "\n\n#Error retrieving electron_beam code"
+
+        try:
+            script += self.get_magnetic_structure().to_python_code()
+        except:
+            script += "\n\n#Error retrieving magnetic structure code"
+
+        script += "\n\n\n#light source\nfrom shadow4.sources.bending_magnet.s4_bending_magnet_light_source import S4BendingMagnetLightSource"
+        script += "\nlight_source = S4BendingMagnetLightSource(name='%s',electron_beam=electron_beam,magnetic_structure=source,nrays=%d,seed=%s)" % \
+                                                          (self.get_name(),self.get_nrays(),self.get_seed())
+        #
+        # script += "\n\n\n#beamline\nfrom shadow4.beamline.s4_beamline import S4Beamline"
+        # script += "\nbeamline = S4Beamline(light_source=light_source)"
+        script += "\nbeam = light_source.get_beam()"
+        return script
+

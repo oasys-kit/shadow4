@@ -201,7 +201,7 @@ class S4WigglerLightSource(S4LightSource):
         :return: rays, a numpy.array((npoits,18))
         """
 
-        NRAYS = self.get_nrays()
+
 
 
         if self.__result_cdf is None:
@@ -216,7 +216,7 @@ class S4WigglerLightSource(S4LightSource):
         syned_electron_beam = self.get_electron_beam()
 
 
-        sampled_photon_energy,sampled_theta,sampled_phi = self._sample_photon_energy_theta_and_phi(NRAYS)
+        sampled_photon_energy,sampled_theta,sampled_phi = self._sample_photon_energy_theta_and_phi()
 
         if verbose:
             print(">>> sampled sampled_photon_energy,sampled_theta,sampled_phi:  ",sampled_photon_energy,sampled_theta,sampled_phi)
@@ -226,6 +226,8 @@ class S4WigglerLightSource(S4LightSource):
 
 
         sigmas = syned_electron_beam.get_sigmas_all()
+
+        NRAYS = self.get_nrays()
 
         rays = numpy.zeros((NRAYS,18))
 
@@ -840,7 +842,7 @@ class S4WigglerLightSource(S4LightSource):
             u_norm[:,i] = uu
         return u / u_norm
 
-    def _sample_photon_energy_theta_and_phi(self,NRAYS):
+    def _sample_photon_energy_theta_and_phi(self):
 
         #
         # sample divergences
@@ -921,11 +923,12 @@ class S4WigglerLightSource(S4LightSource):
             script += "\n\n#Error retrieving magnetic structure code"
 
         script += "\n\n\n#light source\nfrom shadow4.sources.wiggler.s4_wiggler_light_source import S4WigglerLightSource"
-        script += "\nlight_source = S4WigglerLightSource(name='%s', electron_beam=electron_beam, magnetic_structure=source)" % \
-                                                          (self.get_name())
-
-        script += "\n\n\n#beamline\nfrom shadow4.beamline.s4_beamline import S4Beamline"
-        script += "\nbeamline = S4Beamline(light_source=light_source)"
+        script += "\nlight_source = S4WigglerLightSource(name='%s',electron_beam=electron_beam,magnetic_structure=source,nrays=%d,seed=%s)" % \
+                                                          (self.get_name(),self.get_nrays(),self.get_seed())
+        #
+        # script += "\n\n\n#beamline\nfrom shadow4.beamline.s4_beamline import S4Beamline"
+        # script += "\nbeamline = S4Beamline(light_source=light_source)"
+        script += "\nbeam = light_source.get_beam()"
         return script
 if __name__ == "__main__":
     from srxraylib.plot.gol import plot_scatter, set_qt
@@ -981,12 +984,13 @@ if __name__ == "__main__":
 
     # print(w.info())
 
-    ls = S4WigglerLightSource(name="Undefined", electron_beam=electron_beam, magnetic_structure=w)
+    ls = S4WigglerLightSource(name="Undefined", electron_beam=electron_beam, magnetic_structure=w,
+                              nrays=NRAYS)
 
     print(ls.info())
 
 
-    beam = ls.get_beam(NRAYS=NRAYS)
+    beam = ls.get_beam()
 
     rays = beam.rays
 

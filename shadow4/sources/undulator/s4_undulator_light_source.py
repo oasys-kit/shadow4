@@ -974,11 +974,13 @@ class S4UndulatorLightSource(S4LightSource):
 
 
         script += "\n\n\n# light source\nfrom shadow4.sources.undulator.s4_undulator_light_source import S4UndulatorLightSource"
-        script += "\nlight_source = S4UndulatorLightSource(name='%s', electron_beam=electron_beam, magnetic_structure=source)" % \
-                                                          (self.get_name())
+        script += "\nlight_source = S4UndulatorLightSource(name='%s', electron_beam=electron_beam, magnetic_structure=source,nrays=%s,seed=%s)" % \
+                                                          (self.get_name(),self.get_nrays(),self.get_seed())
 
-        script += "\n\n\n#beamline\nfrom shadow4.beamline.s4_beamline import S4Beamline"
-        script += "\nbeamline = S4Beamline(light_source=light_source)"
+        # script += "\n\n\n#beamline\nfrom shadow4.beamline.s4_beamline import S4Beamline"
+        # script += "\nbeamline = S4Beamline(light_source=light_source)"
+        script += "\nbeam = light_source.get_beam()"
+
         return script
 
 if __name__ == "__main__":

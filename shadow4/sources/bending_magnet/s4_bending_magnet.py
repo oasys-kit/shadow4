@@ -126,7 +126,37 @@ class S4BendingMagnet(BendingMagnet):
         return S4BendingMagnet(magnetic_radius,magnetic_field,numpy.abs(divergence * magnetic_radius),
                                emin=emin, emax=emax, ng_e=ng_e, ng_j=ng_j, flag_emittance=flag_emittance)
 
+    def to_python_code(self):
+        script_template = """
 
+#magnetic structure
+from shadow4.sources.bending_magnet.s4_bending_magnet import S4BendingMagnet
+source = S4BendingMagnet(
+                 radius={radius}, # from syned BM, can be obtained as S4BendingMagnet.calculate_magnetic_radius({magnetic_field}, electron_beam.energy())
+                 magnetic_field={magnetic_field}, # from syned BM
+                 length={length}, # from syned BM = abs(BM divergence * magnetic_field)
+                 emin={emin},     # Photon energy scan from energy (in eV)
+                 emax={emax},     # Photon energy scan to energy (in eV)
+                 ng_e={ng_e},     # Photon energy scan number of points
+                 ng_j={ng_j},     # Number of points in electron trajectory (per period) for internal calculation only
+                 flag_emittance={flag_emittance}, # when sampling rays: Use emittance (0=No, 1=Yes)
+                 )
+"""
+
+        script_dict = {
+            "radius": self.radius(),
+            "magnetic_field": self.magnetic_field(),
+            "length": self.length(),
+            "emin": self._EMIN,
+            "emax": self._EMAX,
+            "ng_e": self._NG_E,
+            "ng_j": self._NG_J,
+            "flag_emittance": self._FLAG_EMITTANCE,
+        }
+
+        script = script_template.format_map(script_dict)
+
+        return script
 
 if __name__ == "__main__":
 
@@ -148,4 +178,6 @@ if __name__ == "__main__":
                 )
 
     print(bm.info())
+
+    print(bm.to_python_code())
 
