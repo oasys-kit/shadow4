@@ -5,8 +5,6 @@ from shadow4.syned.shape import Rectangle
 from shadow4.syned.element_coordinates import ElementCoordinates
 from syned.beamline.optical_elements.crystals.crystal import Crystal, DiffractionGeometry
 
-from shadow4.physical_models.prerefl.prerefl import PreRefl
-
 from shadow4.beamline.s4_beamline_element import S4BeamlineElement
 
 from crystalpy.diffraction.DiffractionSetup import DiffractionSetup
