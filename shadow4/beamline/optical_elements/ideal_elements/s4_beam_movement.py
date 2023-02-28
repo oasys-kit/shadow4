@@ -1,7 +1,7 @@
 from syned.beamline.optical_element import OpticalElement
 from shadow4.beamline.s4_optical_element import S4OpticalElement
 from shadow4.beamline.s4_beamline_element import S4BeamlineElement
-from shadow4.syned.element_coordinates import ElementCoordinates
+from syned.beamline.element_coordinates import ElementCoordinates
 
 
 class S4BeamMovement(OpticalElement, S4OpticalElement):

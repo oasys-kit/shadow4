@@ -1,7 +1,7 @@
 import numpy
 
-from shadow4.syned.element_coordinates import ElementCoordinates
-from shadow4.syned.shape import Plane
+from syned.beamline.element_coordinates import ElementCoordinates
+from syned.beamline.shape import Plane
 
 from shadow4.beamline.optical_elements.gratings.s4_grating import S4GratingElement, S4Grating
 from shadow4.beamline.s4_optical_element import S4PlaneOpticalElement

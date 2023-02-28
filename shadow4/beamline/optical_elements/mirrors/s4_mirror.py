@@ -1,8 +1,8 @@
 import numpy
 
-from shadow4.syned.shape import Rectangle
+from syned.beamline.shape import Rectangle
 
-from shadow4.syned.element_coordinates import ElementCoordinates
+from syned.beamline.element_coordinates import ElementCoordinates
 from syned.beamline.optical_elements.mirrors.mirror import Mirror
 
 from shadow4.physical_models.prerefl.prerefl import PreRefl

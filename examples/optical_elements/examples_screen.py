@@ -6,16 +6,9 @@ from shadow4.beamline.optical_elements.absorbers.s4_screen import S4Screen, S4Sc
 
 from shadow4.tools.graphics import plotxy
 
-from shadow4.syned.element_coordinates import ElementCoordinates
+from syned.beamline.element_coordinates import ElementCoordinates
 
-
-# from shadow4.syned.absorbers.beam_stopper import BeamStopper    # TODO: syned.beamline.optical_elements.
-# from shadow4.syned.absorbers.filter import Filter               # TODO: syned.beamline.optical_elements.
-# from shadow4.syned.absorbers.holed_filter import HoledFilter    # TODO: syned.beamline.optical_elements.
-# from shadow4.syned.absorbers.slit import Slit                   # TODO: syned.beamline.optical_elements.
-
-
-from shadow4.syned.shape import Rectangle, Ellipse  # TODO from syned.beamline.shape
+from syned.beamline.shape import Rectangle, Ellipse
 
 
 def get_sigmas_radiation(photon_energy,undulator_length):

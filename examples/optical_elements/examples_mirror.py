@@ -1,11 +1,11 @@
 import numpy
 
-from shadow4.syned.element_coordinates import ElementCoordinates
+from syned.beamline.element_coordinates import ElementCoordinates
 
 from shadow4.beam.beam import Beam
 from shadow4.sources.source_geometrical.source_gaussian import SourceGaussian
 
-from shadow4.syned.shape import Rectangle, Direction, Side  # TODO from syned.beamline.shape
+from syned.beamline.shape import Rectangle, Direction, Side
 
 from shadow4.beamline.s4_optical_element import SurfaceCalculation
 

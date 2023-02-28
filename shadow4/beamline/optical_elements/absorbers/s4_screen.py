@@ -7,18 +7,10 @@
 #
 import numpy
 
-# from syned.beamline.optical_elements.ideal_elements.screen import Screen as SyScreen
-#
-#
-# from shadow4.syned.absorbers.beam_stopper import BeamStopper as SyBeamStopper   # TODO: syned.beamline.optical_elements.
-# from shadow4.syned.absorbers.filter import Filter as SyFilter                   # TODO: syned.beamline.optical_elements.
-# from shadow4.syned.absorbers.holed_filter import HoledFilter as SyHoledFilter   # TODO: syned.beamline.optical_elements.
-# from shadow4.syned.absorbers.slit import Slit as SySlit                         # TODO: syned.beamline.optical_elements.
-
 from syned.beamline.optical_elements.absorbers.absorber import Absorber
 
-from shadow4.syned.element_coordinates import ElementCoordinates
-from shadow4.syned.shape import Rectangle, Ellipse, MultiplePatch # TODO from syned.beamline.shape
+from syned.beamline.element_coordinates import ElementCoordinates
+from syned.beamline.shape import Rectangle, Ellipse, MultiplePatch
 
 from shadow4.physical_models.prerefl.prerefl import PreRefl
 

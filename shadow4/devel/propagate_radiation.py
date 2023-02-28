@@ -11,11 +11,8 @@ from srxraylib.plot.gol import plot
 import numpy
 from wofry.propagator.propagator import PropagationManager, PropagationElements, PropagationParameters
 from syned.beamline.beamline_element import BeamlineElement
-from shadow4.syned.element_coordinates import ElementCoordinates
-from wofry.propagator.propagators1D.fresnel_zoom import FresnelZoom1D
-
-
-
+from syned.beamline.element_coordinates import ElementCoordinates
+from wofryimpl.propagator.propagators1D.fresnel_zoom import FresnelZoom1D
 
 
 input_wavefront = GenericWavefront1D()
@@ -26,10 +23,7 @@ input_wavefront = input_wavefront.load_h5_file("/users/srio/OASYS1.1/minishadow/
 # input_wavefront.set_spherical_wave(radius=100,complex_amplitude=numpy.abs(input_wavefront.get_intensity()) )
 # plot(input_wavefront.get_abscissas()*1e6,input_wavefront.get_intensity())
 
-
-
-
-from wofry.beamline.optical_elements.ideal_elements.screen import WOScreen1D
+from wofryimpl.beamline.optical_elements.ideal_elements.screen import WOScreen1D
 
 optical_element = WOScreen1D()
 

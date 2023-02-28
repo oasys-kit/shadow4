@@ -1,6 +1,4 @@
-from shadow4.syned.beamline_element import BeamlineElement # todo: change when syned upgraded
-# from syned.beamline.beamline_element import BeamlineElement
-
+from syned.beamline.beamline_element import BeamlineElement
 
 class S4BeamlineElement(BeamlineElement):
 

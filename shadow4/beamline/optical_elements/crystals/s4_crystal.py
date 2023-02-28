@@ -1,8 +1,8 @@
 import numpy
 
-from shadow4.syned.shape import Rectangle
+from syned.beamline.shape import Rectangle
 
-from shadow4.syned.element_coordinates import ElementCoordinates
+from syned.beamline.element_coordinates import ElementCoordinates
 from syned.beamline.optical_elements.crystals.crystal import Crystal, DiffractionGeometry
 
 from shadow4.beamline.s4_beamline_element import S4BeamlineElement
@@ -19,7 +19,7 @@ from crystalpy.util.Photon import Photon
 from crystalpy.util.ComplexAmplitudePhoton import ComplexAmplitidePhoton
 from crystalpy.util.ComplexAmplitudePhotonBunch import ComplexAmplitudePhotonBunch
 
-from shadow4.syned.shape import Plane
+from syned.beamline.shape import Plane
 
 
 import scipy.constants as codata

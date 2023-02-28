@@ -1,6 +1,6 @@
-from shadow4.syned.shape import Conic
+from syned.beamline.shape import Conic
 from shadow4.beamline.optical_elements.refractors.s4_interface import S4InterfaceElement, S4Interface
-from shadow4.syned.element_coordinates import ElementCoordinates
+from syned.beamline.element_coordinates import ElementCoordinates
 from shadow4.optical_surfaces.s4_conic import S4Conic
 
 from shadow4.beamline.s4_optical_element import S4ConicOpticalElement

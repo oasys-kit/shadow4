@@ -1,12 +1,12 @@
 import numpy
 import os
 
-from shadow4.syned.shape import Direction, Convexity
-from shadow4.syned.shape import Sphere, SphericalCylinder
-from shadow4.syned.shape import Ellipsoid, EllipticalCylinder
-from shadow4.syned.shape import Hyperboloid, HyperbolicCylinder
-from shadow4.syned.shape import Paraboloid, ParabolicCylinder
-from shadow4.syned.shape import Toroid, Conic, SurfaceData, Plane, Side
+from syned.beamline.shape import Direction, Convexity
+from syned.beamline.shape import Sphere, SphericalCylinder
+from syned.beamline.shape import Ellipsoid, EllipticalCylinder
+from syned.beamline.shape import Hyperboloid, HyperbolicCylinder
+from syned.beamline.shape import Paraboloid, ParabolicCylinder
+from syned.beamline.shape import Toroid, Conic, SurfaceData, Plane, Side
 
 from shadow4.optical_surfaces.s4_conic import S4Conic
 from shadow4.optical_surfaces.s4_mesh import S4Mesh

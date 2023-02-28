@@ -6,9 +6,7 @@ import h5py
 import time
 import os
 
-from shadow4.syned.shape import Rectangle, Ellipse, TwoEllipses
-# TODO from syned.beamline.shape import Rectangle, Ellipse, TwoEllipses
-
+from syned.beamline.shape import Rectangle, Ellipse, TwoEllipses
 
 # IMPORTANT: Column 11 (index 10) is wavenumber (cm^-1) as internally in Shadow
 

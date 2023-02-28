@@ -1,4 +1,4 @@
-from shadow4.syned.shape import Toroid
+from syned.beamline.shape import Toroid
 from shadow4.beamline.optical_elements.mirrors.s4_mirror import S4MirrorElement, S4Mirror, ElementCoordinates
 from shadow4.beamline.s4_optical_element import SurfaceCalculation, S4ToroidalOpticalElement
 

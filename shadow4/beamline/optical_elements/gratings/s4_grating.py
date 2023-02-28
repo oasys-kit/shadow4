@@ -2,8 +2,8 @@ import numpy
 import scipy.constants as codata
 
 from syned.beamline.optical_elements.gratings.grating import GratingVLS
-from shadow4.syned.shape import Plane, Sphere
-from shadow4.syned.element_coordinates import ElementCoordinates # TODO from shadow4.syned.element_coordinates
+from syned.beamline.shape import Plane, Sphere
+from syned.beamline.element_coordinates import ElementCoordinates
 
 from shadow4.beamline.s4_optical_element import S4OpticalElement
 from shadow4.beamline.s4_beamline_element import S4BeamlineElement

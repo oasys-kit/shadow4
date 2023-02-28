@@ -1,6 +1,6 @@
 import numpy
 from syned.beamline.optical_elements.ideal_elements.screen import Screen
-from shadow4.syned.element_coordinates import ElementCoordinates # TODO from shadow4.syned.element_coordinates
+from syned.beamline.element_coordinates import ElementCoordinates
 
 from shadow4.beamline.s4_optical_element import S4OpticalElement
 

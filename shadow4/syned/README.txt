@@ -1,1 +1,0 @@
-This directory contains extensions to syned tools that will eventually be moved to syned repository

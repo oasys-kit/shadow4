@@ -1,5 +1,6 @@
-from shadow4.syned.shape import SurfaceData
-from shadow4.beamline.optical_elements.mirrors.s4_mirror import S4MirrorElement, S4Mirror, ElementCoordinates
+from syned.beamline.shape import SurfaceData
+from syned.beamline.element_coordinates import ElementCoordinates
+from shadow4.beamline.optical_elements.mirrors.s4_mirror import S4MirrorElement, S4Mirror
 
 from shadow4.beamline.s4_optical_element import S4AdditiveSurfaceDataOpticalElement
 
@@ -51,7 +52,7 @@ if __name__ == "__main__":
 
     from shadow4.tools.graphics import plotxy
 
-    from shadow4.syned.element_coordinates import ElementCoordinates
+    from syned.beamline.element_coordinates import ElementCoordinates
 
     from shadow4.beamline.optical_elements.mirrors.s4_toroidal_mirror import S4ToroidalMirror, S4ToroidalMirrorElement
     from shadow4.beamline.optical_elements.mirrors.s4_sphere_mirror import S4SphereMirror, S4SphereMirrorElement
@@ -59,7 +60,7 @@ if __name__ == "__main__":
     from shadow4.beamline.optical_elements.mirrors.s4_surface_data_mirror import S4SurfaceDataMirror, \
         S4SurfaceDataMirrorElement
 
-    from shadow4.syned.shape import Rectangle, Direction, Side  # TODO from syned.beamline.shape
+    from syned.beamline.shape import Rectangle, Direction, Side
     from srxraylib.plot.gol import set_qt
 
     set_qt()

@@ -1,9 +1,9 @@
 import numpy
-from shadow4.syned.shape import Conic, Plane
+from syned.beamline.shape import Conic, Plane
 from shadow4.beamline.optical_elements.crystals.s4_crystal import S4CrystalElement, S4Crystal
-from shadow4.syned.element_coordinates import ElementCoordinates
+from syned.beamline.element_coordinates import ElementCoordinates
 from shadow4.optical_surfaces.s4_conic import S4Conic
-from shadow4.syned.shape import Plane
+from syned.beamline.shape import Plane
 
 from shadow4.beamline.s4_optical_element import S4PlaneOpticalElement
 

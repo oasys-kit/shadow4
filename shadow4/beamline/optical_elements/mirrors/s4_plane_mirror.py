@@ -1,7 +1,7 @@
-from shadow4.syned.shape import Plane
+from syned.beamline.shape import Plane
+from syned.beamline.element_coordinates import ElementCoordinates
 from shadow4.beamline.s4_optical_element import S4PlaneOpticalElement
-from shadow4.beamline.optical_elements.mirrors.s4_mirror import S4MirrorElement, S4Mirror, ElementCoordinates
-
+from shadow4.beamline.optical_elements.mirrors.s4_mirror import S4MirrorElement, S4Mirror
 
 class S4PlaneMirror(S4Mirror, S4PlaneOpticalElement):
     def __init__(self,
@@ -47,7 +47,7 @@ class S4PlaneMirrorElement(S4MirrorElement):
         txt = "\n\n# optical element number XX"
         txt += self.get_optical_element().to_python_code()
         coordinates = self.get_coordinates()
-        txt += "\nfrom shadow4.syned.element_coordinates import ElementCoordinates"
+        txt += "\nfrom syned.beamline.element_coordinates import ElementCoordinates"
         txt += "\ncoordinates=ElementCoordinates(p=%g,q=%g,angle_radial=%g)" % \
                (coordinates.p(), coordinates.q(), coordinates.angle_radial())
         txt += "\nfrom shadow4.beamline.optical_elements.mirrors.s4_plane_mirror import S4PlaneMirrorElement"

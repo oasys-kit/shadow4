@@ -1,5 +1,5 @@
 import numpy
-from shadow4.syned.shape import Hyperboloid, HyperbolicCylinder, Convexity, Direction
+from syned.beamline.shape import Hyperboloid, HyperbolicCylinder, Convexity, Direction
 from shadow4.beamline.s4_optical_element import SurfaceCalculation, S4HyperboloidOpticalElement
 from shadow4.beamline.optical_elements.mirrors.s4_mirror import S4MirrorElement, S4Mirror, ElementCoordinates
 
@@ -46,7 +46,7 @@ class S4HyperboloidMirrorElement(S4MirrorElement):
 
 
 if __name__=="__main__":
-    from shadow4.syned.shape import Rectangle
+    from syned.beamline.shape import Rectangle
 
     angle_radial = 88.0
 

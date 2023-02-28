@@ -1,4 +1,4 @@
-from shadow4.syned.shape import Ellipsoid, EllipticalCylinder, Convexity, Direction
+from syned.beamline.shape import Ellipsoid, EllipticalCylinder, Convexity, Direction
 from shadow4.beamline.s4_optical_element import SurfaceCalculation, S4EllipsoidOpticalElement
 from shadow4.beamline.optical_elements.mirrors.s4_mirror import S4MirrorElement, S4Mirror, ElementCoordinates
 

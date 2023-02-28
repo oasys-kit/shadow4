@@ -67,9 +67,6 @@ PACKAGES = [
     "shadow4.beamline.optical_elements.mirrors",
     "shadow4.beamline.optical_elements.crystals",
     "shadow4.beamline.optical_elements.gratings",
-    "shadow4.syned",
-    "shadow4.syned.absorbers",
-    "shadow4.syned.refractors",
     "shadow4.tools",
     "shadow4.devel.wolter",  # TODO: relocate
 ]

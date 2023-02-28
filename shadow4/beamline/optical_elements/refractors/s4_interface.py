@@ -1,14 +1,9 @@
 import numpy
 
-from shadow4.syned.shape import Rectangle
-
-from shadow4.syned.element_coordinates import ElementCoordinates
-from shadow4.syned.refractors.interface import Interface
-
-from shadow4.physical_models.prerefl.prerefl import PreRefl
+from syned.beamline.element_coordinates import ElementCoordinates
+from syned.beamline.optical_elements.refractors.interface import Interface
 
 from shadow4.beamline.s4_beamline_element import S4BeamlineElement
-
 
 class S4Interface(Interface):
 

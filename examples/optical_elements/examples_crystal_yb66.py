@@ -7,7 +7,7 @@ from shadow4.beamline.optical_elements.crystals.s4_plane_crystal import S4PlaneC
 
 from shadow4.tools.graphics import plotxy
 
-from shadow4.syned.element_coordinates import ElementCoordinates
+from syned.beamline.element_coordinates import ElementCoordinates
 
 from syned.beamline.optical_elements.crystals.crystal import Crystal, DiffractionGeometry
 
