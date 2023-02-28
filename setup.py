@@ -75,14 +75,14 @@ INSTALL_REQUIRES = (
     'setuptools',
     'numpy',
     'scipy',
-    'syned>=1.0.19',
+    'syned>=1.0.26',
     'srxraylib',
-    'wofryimpl',
+    'wofryimpl>=1.0.20',
 )
 
 
 setup(name='shadow4',
-      version='0.1.9',
+      version='0.1.10',
       description='shadow implementation in python',
       author='Manuel Sanchez del Rio',
       author_email='srio@esrf.eu, ',
