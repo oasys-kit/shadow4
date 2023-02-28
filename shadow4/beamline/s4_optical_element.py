@@ -46,6 +46,7 @@ class S4PlaneOpticalElement(S4OpticalElement):
     def get_optical_surface_instance(self):
         return S4Conic.initialize_as_plane()
 
+
 class S4CurvedOpticalElement(S4OpticalElement):
 
     def __init__(self,

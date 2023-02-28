@@ -26,6 +26,16 @@ class S4PlaneMirror(S4Mirror, S4PlaneOpticalElement):
         mirr, normal = ccc.apply_specular_reflection_on_beam(beam)
         return mirr, normal
 
+    def to_python_code(self, data=None):
+        txt = "\nfrom shadow4.beamline.optical_elements.mirrors.s4_plane_mirror import S4PlaneMirror"
+        txt_pre = "\noptical_element = S4PlaneMirror(name='{name:s}',boundary_shape=None,f_reflec={f_reflec:d},f_refl={f_refl:d},file_refl='{file_refl:s}',refraction_index={refraction_index:g})"
+        txt += txt_pre.format(name=self.get_name(),
+                              f_reflec=self._f_reflec,
+                              f_refl=self._f_refl,
+                              file_refl=self._file_refl,
+                              refraction_index=self._refraction_index)
+        return txt
+
 class S4PlaneMirrorElement(S4MirrorElement):
     def __init__(self, optical_element=None, coordinates=None):
         super().__init__(optical_element if optical_element is not None else S4PlaneMirror(),
@@ -33,7 +43,20 @@ class S4PlaneMirrorElement(S4MirrorElement):
         if not isinstance(self.get_optical_element().get_surface_shape(), Plane):
             raise ValueError("Wrong Optical Element: only Plane shape is accepted")
 
+    def to_python_code(self, data=None):
+        txt = "\n\n# optical element number XX"
+        txt += self.get_optical_element().to_python_code()
+        coordinates = self.get_coordinates()
+        txt += "\nfrom shadow4.syned.element_coordinates import ElementCoordinates"
+        txt += "\ncoordinates=ElementCoordinates(p=%g,q=%g,angle_radial=%g)" % \
+               (coordinates.p(), coordinates.q(), coordinates.angle_radial())
+        txt += "\nfrom shadow4.beamline.optical_elements.mirrors.s4_plane_mirror import S4PlaneMirrorElement"
+        txt += "\nbeamline_element = S4PlaneMirrorElement(optical_element=optical_element,coordinates=coordinates)"
+        txt += "\n\nbeam, mirr = beamline_element.trace_beam(beam)"
+        return txt
 
 if __name__ == "__main__":
-    m = S4PlaneMirror()
-    me = S4PlaneMirrorElement(optical_element=m, coordinates=ElementCoordinates())
+    m = S4PlaneMirror(refraction_index=1+1e-7j)
+    me = S4PlaneMirrorElement(optical_element=m, coordinates=ElementCoordinates(p=10))
+    print(me.info())
+    print(me.to_python_code())

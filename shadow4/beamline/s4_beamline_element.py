@@ -13,4 +13,6 @@ class S4BeamlineElement(BeamlineElement):
     def info(self):
         return self.get_optical_element().info() + "\n" + self.get_coordinates().info()
 
+    def to_python_code(self, data=None):
+        raise NotImplementedError()
 
