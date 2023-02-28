@@ -30,8 +30,8 @@ def crystal_diffraction_with_collimated_beam(do_plot=True):
         src.set_energy_distribution_singleline(value=8000, unit='eV')
         src.set_spatial_type_rectangle(width=1e-3, height=1e-3)
         src.set_angular_distribution_uniform(0,0,-100e-6,100e-6)
-
-        beam = src.get_beam(POL_DEG=0.5, POL_ANGLE=numpy.pi/4, F_COHER=False)
+        src.set_polarization(polarization_degree= 0.5, phase_diff=numpy.pi/4, coherent_beam=True)
+        beam = src.get_beam()
 
         print(beam.info())
         SX, SZ = (1e6*beam.get_standard_deviation(1),1e6*beam.get_standard_deviation(3))

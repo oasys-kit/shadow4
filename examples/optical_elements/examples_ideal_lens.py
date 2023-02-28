@@ -23,7 +23,7 @@ def lens_with_collimated_beam(do_plot=True):
     #
     # collimated source
     #
-    src = SourceGaussian.initialize_collimated_source(number_of_rays=10000,sigmaX=1e-6,sigmaZ=1e-6)
+    src = SourceGaussian.initialize_collimated_source(nrays=10000,sigmaX=1e-6,sigmaZ=1e-6)
 
 
 
@@ -67,7 +67,7 @@ def lens_with_collimated_beam(do_plot=True):
 
 def lens_with_divergent_beam_super_ideal(do_plot=True):
 
-    src = SourceGaussian.initialize_from_keywords(number_of_rays=100000,
+    src = SourceGaussian.initialize_from_keywords(nrays=100000,
                                                   sigmaX=     20e-6/2.35,sigmaZ=     10e-6/2.35,
                                                   sigmaXprime=50e-6/2.35,sigmaZprime=10e-6/2.35)
 
@@ -112,7 +112,7 @@ def lens_with_divergent_beam(do_plot=True):
 
 
 
-    src = SourceGaussian.initialize_from_keywords(number_of_rays=100000,
+    src = SourceGaussian.initialize_from_keywords(nrays=100000,
                                                   sigmaX=     20e-6/2.35,sigmaZ=     10e-6/2.35,
                                                   sigmaXprime=50e-6/2.35,sigmaZprime=10e-6/2.35)
 
@@ -189,7 +189,7 @@ def lens_id16ni(do_plot=True):
     print("Gaussian source dimensions (rms) x z x' z'",1e6*Sx,1e6*Sz,1e6*Sxp,1e6*Szp)
     print("Gaussian source dimensions (FWHM) x z x' z'",f2dot35*1e6*Sx,f2dot35*1e6*Sz,f2dot35*1e6*Sxp,f2dot35*1e6*Szp)
 
-    src = SourceGaussian.initialize_from_keywords(number_of_rays=500000,
+    src = SourceGaussian.initialize_from_keywords(nrays=500000,
                                                   sigmaX=Sx,sigmaZ=Sz,
                                                   sigmaXprime=Sxp,sigmaZprime=Szp)
 

@@ -30,7 +30,7 @@ def example_screen(do_plot=True):
     #
     # collimated source
     #
-    src = SourceGaussian.initialize_collimated_source(number_of_rays=10000,sigmaX=1e-6,sigmaZ=1e-6)
+    src = SourceGaussian.initialize_collimated_source(nrays=10000,sigmaX=1e-6,sigmaZ=1e-6)
 
     beam = src.get_beam()
 
@@ -53,7 +53,7 @@ def example_screen(do_plot=True):
 
 def example_slit(do_plot=True):
 
-    src = SourceGaussian.initialize_collimated_source(number_of_rays=10000,sigmaX=1e-6,sigmaZ=1e-6)
+    src = SourceGaussian.initialize_collimated_source(nrays=10000,sigmaX=1e-6,sigmaZ=1e-6)
     beam = src.get_beam()
 
 
@@ -84,7 +84,7 @@ def example_slit(do_plot=True):
 
 def example_beam_stopper(do_plot=True):
 
-    src = SourceGaussian.initialize_collimated_source(number_of_rays=10000,sigmaX=1e-6,sigmaZ=1e-6)
+    src = SourceGaussian.initialize_collimated_source(nrays=10000,sigmaX=1e-6,sigmaZ=1e-6)
     beam = src.get_beam()
 
 
@@ -114,7 +114,7 @@ def example_beam_stopper(do_plot=True):
 
 def example_filter(do_plot=True):
 
-    src = SourceGaussian.initialize_collimated_source(number_of_rays=10000,sigmaX=1e-6,sigmaZ=1e-6)
+    src = SourceGaussian.initialize_collimated_source(nrays=10000,sigmaX=1e-6,sigmaZ=1e-6)
     beam = src.get_beam()
 
     #
@@ -149,7 +149,7 @@ def example_filter(do_plot=True):
 
 def example_holed_filter(do_plot=True):
 
-    src = SourceGaussian.initialize_collimated_source(number_of_rays=10000,sigmaX=1e-6,sigmaZ=1e-6)
+    src = SourceGaussian.initialize_collimated_source(nrays=10000,sigmaX=1e-6,sigmaZ=1e-6)
     beam = src.get_beam()
 
 

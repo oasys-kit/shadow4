@@ -154,7 +154,7 @@ class SourceGeometrical(S4LightSourceBase):
 
     def set_polarization(self,
                          polarization_degree=1, # cos_s / (cos_s + sin_s)
-                         phase_diff=0.000000,   # in degrees, 0=linear, _90=elliptical/right
+                         phase_diff=0.000000,   # in rad, 0=linear, pi/2=elliptical/right
                          coherent_beam=0,       # 0=No (random phase s: col 14)  1=Yes (zero s: col 14)
                          ):
         self.__pol_deg = polarization_degree
