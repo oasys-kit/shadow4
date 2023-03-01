@@ -36,7 +36,7 @@ if __name__ == "__main__":
 
     print(bm.info())
 
-    light_source = S4BendingMagnetLightSource(electron_beam=electron_beam, bending_magnet_magnetic_structure=bm,
+    light_source = S4BendingMagnetLightSource(electron_beam=electron_beam, magnetic_structure=bm,
                                               nrays=5000, seed=123456)
 
     beam = light_source.get_beam(F_COHER=0, EPSI_DX=0.0, EPSI_DZ=0.0, verbose=False)
