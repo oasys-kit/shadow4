@@ -62,7 +62,8 @@ class S4PlaneCrystal(S4Crystal, S4PlaneOpticalElement):
                            f_ext=f_ext,
                            material_constants_library_flag=material_constants_library_flag,
                            )
-    def to_python_code(self, data=None):
+
+    def get_input_dictionary(self):
         fmt = {
             "name": self.get_name(),
             "material": self._material                       ,
@@ -84,8 +85,13 @@ class S4PlaneCrystal(S4Crystal, S4PlaneOpticalElement):
             "r_johansson": self._r_johansson                    ,
             "material_constants_library_flag": self._material_constants_library_flag,
             }
+        return fmt
+
+    def to_python_code(self, data=None):
 
         txt = "\nfrom shadow4.beamline.optical_elements.crystals.s4_plane_crystal import S4PlaneCrystal"
+
+        fmt = self.get_input_dictionary()
         txt_pre = """\noptical_element = S4PlaneCrystal(name='{name}',
     boundary_shape=None,material='{material}',diffraction_geometry={diffraction_geometry},
     miller_index_h={miller_index_h},miller_index_k={miller_index_k},miller_index_l={miller_index_l},
@@ -100,6 +106,7 @@ class S4PlaneCrystal(S4Crystal, S4PlaneOpticalElement):
     material_constants_library_flag={material_constants_library_flag},
     )"""
         txt += txt_pre.format(**fmt)
+
         return txt
 
 class S4PlaneCrystalElement(S4CrystalElement):

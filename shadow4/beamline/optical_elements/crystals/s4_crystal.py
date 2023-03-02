@@ -187,7 +187,7 @@ class S4CrystalElement(S4BeamlineElement):
                             angle_radial_out=numpy.pi/2-setting_angle,
                             angle_azimuthal=0.0)
         else:
-            print("Info: nothing to align: f_central=0")
+            print("align_crystal: nothing to align: f_central=0")
 
         print(coor.info())
 
