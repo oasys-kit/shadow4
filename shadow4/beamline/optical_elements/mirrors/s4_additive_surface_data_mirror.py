@@ -46,7 +46,7 @@ if __name__ == "__main__":
 
     from shadow4.sources.source_geometrical.source_gaussian import SourceGaussian
 
-    from shadow4.beam.beam import Beam
+    from shadow4.beam.s4_beam import S4Beam
 
     from shadow4.beamline.optical_elements.ideal_elements.s4_ideal_lens import S4IdealLens, S4IdealLensElement
 
@@ -72,7 +72,7 @@ if __name__ == "__main__":
                                                      sigmaZ=0.0,
                                                      sigmaXprime=1e-6,
                                                      sigmaZprime=1e-6, )
-    beam0 = Beam()
+    beam0 = S4Beam()
     beam0.genSource(source)
     print(beam0.info())
 

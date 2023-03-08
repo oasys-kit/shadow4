@@ -6,9 +6,8 @@ from syned.beamline.element_coordinates import ElementCoordinates
 from syned.beamline.optical_elements.mirrors.mirror import Mirror
 
 from shadow4.physical_models.prerefl.prerefl import PreRefl
-
 from shadow4.beamline.s4_beamline_element import S4BeamlineElement
-
+from shadow4.beam.s4_beam import S4Beam
 
 class S4Mirror(Mirror):
 
@@ -70,11 +69,13 @@ class S4Mirror(Mirror):
 
 class S4MirrorElement(S4BeamlineElement):
     
-    def __init__(self, optical_element=None, coordinates=None):
+    def __init__(self, optical_element : S4Mirror = None, coordinates : ElementCoordinates = None, input_beam : S4Beam = None):
         super().__init__(optical_element if optical_element is not None else S4Mirror(),
-                         coordinates if coordinates is not None else ElementCoordinates())
+                         coordinates if coordinates is not None else ElementCoordinates(),
+                         input_beam)
     
-    def trace_beam(self, beam_in, flag_lost_value=-1):
+    def trace_beam(self, **params):
+        flag_lost_value = params.get("flag_lost_value", -1)
 
         p = self.get_coordinates().p()
         q = self.get_coordinates().q()
@@ -82,30 +83,28 @@ class S4MirrorElement(S4BeamlineElement):
         alpha1 = self.get_coordinates().angle_azimuthal()
 
         #
-        beam = beam_in.duplicate()
+        input_beam = self.get_input_beam().duplicate()
 
         #
         # put beam in mirror reference system
         #
-        beam.rotate(alpha1, axis=2)
-        beam.rotate(theta_grazing1, axis=1)
-        beam.translation([0.0, -p * numpy.cos(theta_grazing1), p * numpy.sin(theta_grazing1)])
+        input_beam.rotate(alpha1, axis=2)
+        input_beam.rotate(theta_grazing1, axis=1)
+        input_beam.translation([0.0, -p * numpy.cos(theta_grazing1), p * numpy.sin(theta_grazing1)])
 
         #
         # reflect beam in the mirror surface
         #
         soe = self.get_optical_element() #._optical_element_syned
 
-        v_in = beam.get_columns([4,5,6])
-        if not isinstance(soe, Mirror): # undefined
-            raise Exception("Undefined mirror")
-        else:
-            mirr, normal = self.apply_local_reflection(beam)
+        v_in = input_beam.get_columns([4,5,6])
+
+        footprint, normal = self.apply_local_reflection(input_beam)
 
         #
         # apply mirror boundaries
         #
-        mirr.apply_boundaries_syned(soe.get_boundary_shape(), flag_lost_value=flag_lost_value)
+        footprint.apply_boundaries_syned(soe.get_boundary_shape(), flag_lost_value=flag_lost_value)
 
         #
         # apply mirror reflectivity
@@ -115,12 +114,12 @@ class S4MirrorElement(S4BeamlineElement):
         if soe._f_reflec == 0:
             pass
         elif soe._f_reflec == 1: # full polarization
-            v_out = beam.get_columns([4, 5, 6])
-            angle_in = numpy.arccos( v_in[0,:] * normal[0,:] +
-                                     v_in[1,:] * normal[1,:] +
-                                     v_in[2,:] * normal[2,:])
+            v_out = input_beam.get_columns([4, 5, 6])
+            angle_in = numpy.arccos(v_in[0,:] * normal[0,:] +
+                                    v_in[1,:] * normal[1,:] +
+                                    v_in[2,:] * normal[2,:])
 
-            angle_out = numpy.arccos( v_out[0,:] * normal[0,:] +
+            angle_out = numpy.arccos(v_out[0,:] * normal[0,:] +
                                      v_out[1,:] * normal[1,:] +
                                      v_out[2,:] * normal[2,:])
 
@@ -133,7 +132,7 @@ class S4MirrorElement(S4BeamlineElement):
                 print(pr.info())
 
                 Rs, Rp, Ru = pr.reflectivity_fresnel(grazing_angle_mrad=grazing_angle_mrad,
-                                                     photon_energy_ev=beam.get_column(-11),
+                                                     photon_energy_ev=input_beam.get_column(-11),
                                                      roughness_rms_A=0.0)
 
             elif soe._f_refl == 1:  # alpha, gamma, electric susceptibilities
@@ -163,11 +162,9 @@ class S4MirrorElement(S4BeamlineElement):
                                   left=mirror_reflectivities[0],
                                   right=mirror_reflectivities[-1])
                 Rp = Rs
-
-
             elif soe._f_refl == 3:  # user energy
 
-                beam_energies = beam.get_photon_energy_eV()
+                beam_energies = input_beam.get_photon_energy_eV()
 
                 values = numpy.loadtxt(soe._file_refl)
 
@@ -184,7 +181,7 @@ class S4MirrorElement(S4BeamlineElement):
             elif soe._f_refl == 4:  # user 2D
                 values = numpy.loadtxt(soe._file_refl)
 
-                beam_energies = beam.get_photon_energy_eV()
+                beam_energies = input_beam.get_photon_energy_eV()
 
                 mirror_energies       = values[:, 0]
                 mirror_grazing_angles = values[:, 1]
@@ -220,8 +217,7 @@ class S4MirrorElement(S4BeamlineElement):
             else:
                 raise Exception("Not implemented source of mirror reflectivity")
 
-            beam.apply_reflectivities(numpy.sqrt(Rs), numpy.sqrt(Rp))
-
+            footprint.apply_reflectivities(numpy.sqrt(Rs), numpy.sqrt(Rp))
 
         #
         # TODO: write angle.xx for comparison
@@ -232,10 +228,10 @@ class S4MirrorElement(S4BeamlineElement):
         # from mirror reference system to image plane
         #
 
-        beam_out = mirr.duplicate()
-        beam_out.change_to_image_reference_system(theta_grazing1, q)
+        output_beam = footprint.duplicate()
+        output_beam.change_to_image_reference_system(theta_grazing1, q)
 
-        return beam_out, mirr
+        return output_beam, footprint
 
     def apply_local_reflection(self, beam):
         return self.get_optical_element().apply_geometrical_model(beam)

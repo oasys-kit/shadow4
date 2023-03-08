@@ -1,6 +1,7 @@
 from syned.beamline.shape import Paraboloid, ParabolicCylinder, Convexity, Direction, Side
 from shadow4.beamline.s4_optical_element import SurfaceCalculation, S4ParaboloidOpticalElement
 from shadow4.beamline.optical_elements.mirrors.s4_mirror import S4MirrorElement, S4Mirror, ElementCoordinates
+from shadow4.beam.s4_beam import S4Beam
 
 class S4ParaboloidMirror(S4Mirror, S4ParaboloidOpticalElement):
     def __init__(self,
@@ -37,9 +38,10 @@ class S4ParaboloidMirror(S4Mirror, S4ParaboloidOpticalElement):
         return mirr, normal
 
 class S4ParaboloidMirrorElement(S4MirrorElement):
-    def __init__(self, optical_element=None, coordinates=None):
+    def __init__(self, optical_element : S4ParaboloidMirror = None, coordinates : ElementCoordinates = None, input_beam : S4Beam = None):
         super().__init__(optical_element if optical_element is not None else S4ParaboloidMirror(),
-                         coordinates if coordinates is not None else ElementCoordinates())
+                         coordinates if coordinates is not None else ElementCoordinates(),
+                         input_beam)
         if not (isinstance(self.get_optical_element().get_surface_shape(), ParabolicCylinder) or
                 isinstance(self.get_optical_element().get_surface_shape(), Paraboloid)):
             raise ValueError("Wrong Optical Element: only Paraboloid or Parabolic Cylinder shape is accepted")
