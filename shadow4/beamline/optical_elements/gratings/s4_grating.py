@@ -7,7 +7,7 @@ from syned.beamline.element_coordinates import ElementCoordinates
 
 from shadow4.beamline.s4_optical_element import S4OpticalElement
 from shadow4.beamline.s4_beamline_element import S4BeamlineElement
-
+from shadow4.beam.s4_beam import S4Beam
 
 class S4Grating(GratingVLS, S4OpticalElement):
     def __init__(self,
@@ -76,17 +76,15 @@ class S4Grating(GratingVLS, S4OpticalElement):
         if not self._f_ruling in [0,1,5]:
             raise Exception("Not implemented grating with f_ruling=%d" % self._fruling)
 
-
 class S4GratingElement(S4BeamlineElement):
 
-    def __init__(self, optical_element=None, coordinates=None):
+    def __init__(self, optical_element : S4Grating = None, coordinates : ElementCoordinates = None, input_beam : S4Beam = None):
         super().__init__(optical_element if optical_element is not None else S4Grating(),
-                         coordinates if coordinates is not None else ElementCoordinates())
-
+                         coordinates if coordinates is not None else ElementCoordinates(),
+                         input_beam)
         self.align_grating()
 
     def align_grating(self):
-
         oe = self.get_optical_element()
         coor = self.get_coordinates()
 
@@ -110,7 +108,8 @@ class S4GratingElement(S4BeamlineElement):
 
         print(coor.info())
 
-    def trace_beam(self, beam_in, flag_lost_value=-1):
+    def trace_beam(self, **params):
+        flag_lost_value = params.get("flag_lost_value", -1)
 
         p = self.get_coordinates().p()
         q = self.get_coordinates().q()
@@ -119,29 +118,26 @@ class S4GratingElement(S4BeamlineElement):
         alpha1 = self.get_coordinates().angle_azimuthal()
 
         #
-        beam = beam_in.duplicate()
+        input_beam = self.get_input_beam().duplicate()
         #
         # put beam in mirror reference system
         #
-        beam.rotate(alpha1, axis=2)
-        beam.rotate(theta_grazing1, axis=1)
-        beam.translation([0.0, -p * numpy.cos(theta_grazing1), p * numpy.sin(theta_grazing1)])
+        input_beam.rotate(alpha1, axis=2)
+        input_beam.rotate(theta_grazing1, axis=1)
+        input_beam.translation([0.0, -p * numpy.cos(theta_grazing1), p * numpy.sin(theta_grazing1)])
 
         #
         # reflect beam in the mirror surface
         #
         soe = self.get_optical_element()
 
-        beam_in_crystal_frame_before_reflection = beam.duplicate()
-        if not isinstance(soe, GratingVLS):  # undefined
-            raise Exception("Undefined Grating")
-        else:
-            beam_mirr, normal = self.apply_grating_diffraction(beam)  # warning, beam is also changed!!
+        beam_in_crystal_frame_before_reflection = input_beam.duplicate()
+        footprint, normal = self.apply_grating_diffraction(input_beam)  # warning, beam is also changed!!
 
         #
         # apply mirror boundaries
         #
-        beam_mirr.apply_boundaries_syned(soe.get_boundary_shape(), flag_lost_value=flag_lost_value)
+        footprint.apply_boundaries_syned(soe.get_boundary_shape(), flag_lost_value=flag_lost_value)
 
         ########################################################################################
         #
@@ -155,17 +151,17 @@ class S4GratingElement(S4BeamlineElement):
         # from element reference system to image plane
         #
 
-        beam_out = beam_mirr.duplicate()
-        beam_out.change_to_image_reference_system(theta_grazing2, q)
+        output_beam = footprint.duplicate()
+        output_beam.change_to_image_reference_system(theta_grazing2, q)
 
         # plot results
         if False:
             if scan_type == 0:
                 pass
             else:
-                deviations = beam_out.get_column(6)
-                intensityS = beam_out.get_column(24)
-                intensityP = beam_out.get_column(25)
+                deviations = output_beam.get_column(6)
+                intensityS = output_beam.get_column(24)
+                intensityP = output_beam.get_column(25)
 
             from srxraylib.plot.gol import plot
             plot(1e6 * deviations, intensityS,
@@ -176,10 +172,9 @@ class S4GratingElement(S4BeamlineElement):
                  linestyle=['', ''],
                  marker=['+', '.'])
 
-        return beam_out, beam_mirr
+        return output_beam, footprint
 
     def apply_grating_diffraction(self, beam):  # to be implemented in the children classes
-
         oe = self.get_optical_element()
         ssi = oe.get_surface_shape_instance()
         ccc = oe.get_optical_surface_instance()
@@ -213,7 +208,7 @@ class S4GratingElement(S4BeamlineElement):
 
 if __name__ == "__main__":
     from shadow4.sources.source_geometrical.source_gaussian import SourceGaussian
-    from shadow4.beam.beam import Beam
+    from shadow4.beam.s4_beam import S4Beam
 
     from syned.beamline.shape import Plane
     #
@@ -229,7 +224,7 @@ if __name__ == "__main__":
                  real_space_center=[0.0,0.0,0.0],
                  direction_space_center=[0.0,0.0]
                                  )
-    beam = Beam()
+    beam = S4Beam()
 
     beam.genSource(src)
     beam.set_photon_energy_eV(1000.0)

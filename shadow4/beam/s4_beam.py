@@ -10,7 +10,7 @@ from syned.beamline.shape import Rectangle, Ellipse, TwoEllipses
 
 # IMPORTANT: Column 11 (index 10) is wavenumber (cm^-1) as internally in Shadow
 
-class Beam(object):
+class S4Beam(object):
     """
 
     """
@@ -44,7 +44,7 @@ class Beam(object):
         """
         if array.shape[1] != 18:
             raise Exception("Bad array shape: must be (npoints,18)")
-        return Beam(array=array)
+        return S4Beam(array=array)
 
     @classmethod
     def initialize_as_pencil(cls, N=1000):
@@ -58,7 +58,7 @@ class Beam(object):
         -------
 
         """
-        beam = Beam(N)
+        beam = S4Beam(N)
         beam.set_column(5,1.0) # Vy
         beam.set_column(7,1.0) # Es
         beam.set_column(10,1.0) # flag
@@ -75,7 +75,7 @@ class Beam(object):
         -------
 
         """
-        return Beam.initialize_from_array(self.rays.copy())
+        return S4Beam.initialize_from_array(self.rays.copy())
 
     #
     # getters
@@ -1582,7 +1582,7 @@ class Beam(object):
         try:
             x = (f["%s/%s/col01 x"%(simulation_name,beam_name)])[:]
 
-            beam = Beam(N=x.size)
+            beam = S4Beam(N=x.size)
             rays = numpy.zeros( (x.size,18))
             for i in range(18):
                 column_name = column_names[i]
@@ -1593,7 +1593,7 @@ class Beam(object):
 
         f.close()
 
-        return Beam.initialize_from_array(rays)
+        return S4Beam.initialize_from_array(rays)
 
     def identical(self,beam2):
         """

@@ -1,7 +1,7 @@
 import numpy
 import scipy.constants as codata
 
-from shadow4.beam.beam import Beam
+from shadow4.beam.s4_beam import S4Beam
 
 from shadow4.sources.source_geometrical.probability_distributions import Rectangle2D, Ellipse2D, Gaussian2D
 from shadow4.sources.source_geometrical.probability_distributions import Flat2D, Uniform2D, Conical2D
@@ -290,7 +290,7 @@ class SourceGeometrical(S4LightSourceBase):
 
     def calculate_beam(self):
         rays = self.calculate_rays()
-        return Beam.initialize_from_array(rays)
+        return S4Beam.initialize_from_array(rays)
 
     def calculate_rays(self):
 
@@ -535,7 +535,7 @@ class SourceGeometrical(S4LightSourceBase):
 
     def get_beam(self):
         rays =  self.calculate_rays()
-        return Beam.initialize_from_array(rays)
+        return S4Beam.initialize_from_array(rays)
 
     def to_python_code(self):
 

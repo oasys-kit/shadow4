@@ -1,11 +1,11 @@
 import numpy
 
-from syned.beamline.shape import Rectangle
-
+from syned.beamline.shape import Plane
 from syned.beamline.element_coordinates import ElementCoordinates
 from syned.beamline.optical_elements.crystals.crystal import Crystal, DiffractionGeometry
 
 from shadow4.beamline.s4_beamline_element import S4BeamlineElement
+from shadow4.beam.s4_beam import S4Beam
 
 from crystalpy.diffraction.DiffractionSetup import DiffractionSetup
 from crystalpy.diffraction.DiffractionSetupDabax import DiffractionSetupDabax
@@ -18,9 +18,6 @@ from crystalpy.util.Vector import Vector
 from crystalpy.util.Photon import Photon
 from crystalpy.util.ComplexAmplitudePhoton import ComplexAmplitidePhoton
 from crystalpy.util.ComplexAmplitudePhotonBunch import ComplexAmplitudePhotonBunch
-
-from syned.beamline.shape import Plane
-
 
 import scipy.constants as codata
 
@@ -107,20 +104,18 @@ class S4Crystal(Crystal):
             self._f_johansson:
             raise Exception("Not implemented")
 
-
-
 class S4CrystalElement(S4BeamlineElement):
     
-    def __init__(self, optical_element=None, coordinates=None):
+    def __init__(self, optical_element : S4Crystal = None, coordinates : ElementCoordinates = None, input_beam : S4Beam = None):
         super().__init__(optical_element if optical_element is not None else S4Crystal(),
-                         coordinates if coordinates is not None else ElementCoordinates())
+                         coordinates if coordinates is not None else ElementCoordinates(),
+                         input_beam)
 
         self._crystalpy_diffraction_setup = None
 
         self.align_crystal()
 
     def align_crystal(self):
-
         oe = self.get_optical_element()
         coor = self.get_coordinates()
 
@@ -191,8 +186,8 @@ class S4CrystalElement(S4BeamlineElement):
 
         print(coor.info())
 
-
-    def trace_beam(self, beam_in, flag_lost_value=-1):
+    def trace_beam(self, **params):
+        flag_lost_value = params.get("flag_lost_value", -1)
 
         p = self.get_coordinates().p()
         q = self.get_coordinates().q()
@@ -201,36 +196,36 @@ class S4CrystalElement(S4BeamlineElement):
         alpha1 = self.get_coordinates().angle_azimuthal()
 
         #
-        beam = beam_in.duplicate()
+        input_beam = self.get_input_beam().duplicate()
         #
         # put beam in mirror reference system
         #
-        beam.rotate(alpha1, axis=2)
-        beam.rotate(theta_grazing1, axis=1)
-        beam.translation([0.0, -p * numpy.cos(theta_grazing1), p * numpy.sin(theta_grazing1)])
+        input_beam.rotate(alpha1, axis=2)
+        input_beam.rotate(theta_grazing1, axis=1)
+        input_beam.translation([0.0, -p * numpy.cos(theta_grazing1), p * numpy.sin(theta_grazing1)])
 
         #
         # reflect beam in the mirror surface
         #
         soe = self.get_optical_element()
 
-        beam_in_crystal_frame_before_reflection = beam.duplicate()
+        beam_in_crystal_frame_before_reflection = input_beam.duplicate()
         if not isinstance(soe, Crystal): # undefined
             raise Exception("Undefined Crystal")
         else:
-            beam_mirr, normal = self.apply_crystal_diffraction(beam) # warning, beam is also changed!!
+            footprint, normal = self.apply_crystal_diffraction(input_beam) # warning, beam is also changed!!
 
         #
         # apply mirror boundaries
         #
-        beam_mirr.apply_boundaries_syned(soe.get_boundary_shape(), flag_lost_value=flag_lost_value)
+        footprint.apply_boundaries_syned(soe.get_boundary_shape(), flag_lost_value=flag_lost_value)
 
 
         ########################################################################################
         #
         # TODO" apply crystal reflectivity
         #
-        nrays = beam_mirr.get_number_of_rays()
+        nrays = footprint.get_number_of_rays()
         # energy = 8000.0  # eV
 
         # Create a Diffraction object (the calculator)
@@ -289,7 +284,7 @@ class S4CrystalElement(S4BeamlineElement):
                 complex_reflectivity_S[ia] = coeffs['S'].complexAmplitude()
                 complex_reflectivity_P[ia] = coeffs['P'].complexAmplitude()
 
-            beam_mirr.apply_complex_reflectivities(complex_reflectivity_S, complex_reflectivity_P)
+            footprint.apply_complex_reflectivities(complex_reflectivity_S, complex_reflectivity_P)
         elif scan_type == 2: # from beam, bunch
             # this is complicated... and not faster...
             # todo: accelerate crystalpy create calculateDiffractedComplexAmplitudes for a PhotonBunch
@@ -319,8 +314,8 @@ class S4CrystalElement(S4BeamlineElement):
             reflectivity_S = numpy.sqrt(numpy.array(bunch_out_dict["intensityS"]))
             reflectivity_P = numpy.sqrt(numpy.array(bunch_out_dict["intensityP"]))
 
-            beam_mirr.apply_reflectivities(reflectivity_S, reflectivity_P)
-            beam_mirr.add_phases(numpy.array(bunch_out_dict["intensityS"]),
+            footprint.apply_reflectivities(reflectivity_S, reflectivity_P)
+            footprint.add_phases(numpy.array(bunch_out_dict["intensityS"]),
                                  numpy.array(bunch_out_dict["intensityP"]))
 
 
@@ -330,17 +325,17 @@ class S4CrystalElement(S4BeamlineElement):
         # from element reference system to image plane
         #
 
-        beam_out = beam_mirr.duplicate()
-        beam_out.change_to_image_reference_system(theta_grazing2, q)
+        output_beam = footprint.duplicate()
+        output_beam.change_to_image_reference_system(theta_grazing2, q)
 
         # plot results
         if False:
             if scan_type == 0:
                 pass
             else:
-                deviations = beam_out.get_column(6)
-                intensityS = beam_out.get_column(24)
-                intensityP = beam_out.get_column(25)
+                deviations = output_beam.get_column(6)
+                intensityS = output_beam.get_column(24)
+                intensityP = output_beam.get_column(25)
 
             from srxraylib.plot.gol import plot
             plot(1e6 * deviations, intensityS,
@@ -351,7 +346,7 @@ class S4CrystalElement(S4BeamlineElement):
                  linestyle=['',''],
                  marker=['+','.'])
 
-        return beam_out, beam_mirr
+        return output_beam, footprint
 
     def apply_crystal_diffraction(self, beam):
 

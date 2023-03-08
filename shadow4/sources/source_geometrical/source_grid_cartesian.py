@@ -1,6 +1,6 @@
 
 import numpy
-from shadow4.beam.beam import Beam
+from shadow4.beam.s4_beam import S4Beam
 from shadow4.sources.s4_light_source_base import S4LightSourceBase
 
 class SourceGridCartesian(S4LightSourceBase):
@@ -283,7 +283,7 @@ class SourceGridCartesian(S4LightSourceBase):
         rays[:,10] = 2 * numpy.pi / (wavelength * 1e2) # wavenumber
         rays[:,11] = numpy.arange(self.get_number_of_points(),dtype=float) # index
 
-        return Beam.initialize_from_array(rays)
+        return S4Beam.initialize_from_array(rays)
 
 
 if __name__ == "__main__":

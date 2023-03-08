@@ -32,7 +32,7 @@ from syned.storage_ring.magnetic_structures.undulator import Undulator
 # from syned.storage_ring.electron_beam import ElectronBeam
 from shadow4.sources.s4_electron_beam import S4ElectronBeam
 
-from shadow4.beam.beam import Beam
+from shadow4.beam.s4_beam import S4Beam
 
 from shadow4.sources.undulator.source_undulator_factory import calculate_undulator_emission # SourceUndulatorFactory
 from shadow4.sources.undulator.source_undulator_factory_srw import calculate_undulator_emission_SRW # SourceUndulatorFactorySrw
@@ -80,7 +80,7 @@ class S4UndulatorLightSource(S4LightSource):
         if self.get_magnetic_structure().use_gaussian_approximation():
             return self.get_beam_in_gaussian_approximation()
         else:
-            return Beam.initialize_from_array(self.__calculate_rays(
+            return S4Beam.initialize_from_array(self.__calculate_rays(
                 user_unit_to_m=user_unit_to_m, F_COHER=F_COHER,))
 
 

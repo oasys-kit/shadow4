@@ -2,7 +2,7 @@ import numpy
 
 from syned.beamline.element_coordinates import ElementCoordinates
 
-from shadow4.beam.beam import Beam
+from shadow4.beam.s4_beam import S4Beam
 from shadow4.sources.source_geometrical.source_gaussian import SourceGaussian
 
 from syned.beamline.shape import Rectangle, Direction, Side
@@ -32,7 +32,7 @@ def example_branch_1(do_plot=True):
                  sigmaZ=0.0,
                  sigmaXprime=1e-6,
                  sigmaZprime=1e-6,)
-    beam0 = Beam()
+    beam0 = S4Beam()
     beam0.genSource(source)
     print(beam0.info())
 
@@ -120,7 +120,7 @@ def example_branch_2(do_plot=True):
                  sigmaZ=0.0,
                  sigmaXprime=1e-6,
                  sigmaZprime=1e-6,)
-    beam0 = Beam()
+    beam0 = S4Beam()
     beam0.genSource(source)
     print(beam0.info())
 
@@ -174,7 +174,7 @@ def example_branch_3(surface_shape_file, do_plot=True):
                  sigmaZ=0.0,
                  sigmaXprime=1e-4,
                  sigmaZprime=1e-4,)
-    beam0 = Beam()
+    beam0 = S4Beam()
     beam0.genSource(source)
     print(beam0.info())
 
@@ -230,7 +230,7 @@ def example_branch_4(do_plot=True, f_refl=0):
                  sigmaZ=0.0,
                  sigmaXprime=1e-6,
                  sigmaZprime=1e-6,)
-    beam0 = Beam()
+    beam0 = S4Beam()
     numpy.random.seed(123456)
     beam0.genSource(source)
     beam0.set_photon_wavelength(5e-10)
@@ -322,7 +322,7 @@ def example_branch_5(surface_type, do_plot=True):
                  sigmaZ=0.0,
                  sigmaXprime=1e-6,
                  sigmaZprime=1e-6,)
-    beam0 = Beam()
+    beam0 = S4Beam()
     beam0.genSource(source)
     # print(beam0.info())
 

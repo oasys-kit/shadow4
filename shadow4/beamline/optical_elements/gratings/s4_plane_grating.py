@@ -1,11 +1,10 @@
 import numpy
 
 from syned.beamline.element_coordinates import ElementCoordinates
-from syned.beamline.shape import Plane
 
 from shadow4.beamline.optical_elements.gratings.s4_grating import S4GratingElement, S4Grating
 from shadow4.beamline.s4_optical_element import S4PlaneOpticalElement
-
+from shadow4.beam.s4_beam import S4Beam
 
 class S4PlaneGrating(S4Grating, S4PlaneOpticalElement):
     def __init__(self,
@@ -54,17 +53,15 @@ class S4PlaneGrating(S4Grating, S4PlaneOpticalElement):
     #     return S4Conic.initialize_as_plane()
 
 class S4PlaneGratingElement(S4GratingElement):
-    def __init__(self, optical_element=None, coordinates=None):
-        super().__init__(optical_element if optical_element is not None else S4Grating(),
-                         coordinates if coordinates is not None else ElementCoordinates())
-        if not isinstance(self.get_optical_element().get_surface_shape(), Plane):
-            raise ValueError("Wrong Optical Element: only Plane shape is accepted")
-
+    def __init__(self, optical_element : S4PlaneGrating = None, coordinates : ElementCoordinates = None, input_beam : S4Beam = None):
+        super().__init__(optical_element if optical_element is not None else S4PlaneGrating(),
+                         coordinates if coordinates is not None else ElementCoordinates(),
+                         input_beam)
 
 if __name__ == "__main__":
 
     from shadow4.sources.source_geometrical.source_gaussian import SourceGaussian
-    from shadow4.beam.beam import Beam
+    from shadow4.beam.s4_beam import S4Beam
     from shadow4.tools.graphics import plotxy
 
     #
@@ -80,7 +77,7 @@ if __name__ == "__main__":
                  real_space_center=[0.0,0.0,0.0],
                  direction_space_center=[0.0,0.0]
                                  )
-    beam = Beam()
+    beam = S4Beam()
 
     beam.genSource(src)
     beam.set_photon_energy_eV(1000.0)

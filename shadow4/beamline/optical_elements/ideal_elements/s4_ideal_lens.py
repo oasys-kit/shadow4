@@ -23,32 +23,29 @@ class S4IdealLensElement(S4BeamlineElement):
     def get_focalZ(self):
         return self.get_optical_element()._focal_y
 
-    def trace_beam(self, beam1, flag_lost_value=-1):
-        beam0 = beam1.duplicate()
+    def trace_beam(self, **params):
+        footprint = self.get_input_beam().duplicate()
 
+        p, q = self.get_coordinates().get_p_and_q()
+        if p != 0.0: footprint.retrace(p,resetY=True)
 
-
-        p,q = self.get_coordinates().get_p_and_q()
-        if p != 0.0:
-            beam0.retrace(p,resetY=True)
-
-        beam = beam0.duplicate()
+        output_beam = footprint.duplicate()
 
         # rotate around Z
         if self.get_focalX() != 0.0:
             # whatch out the minus!!
-            tan_two_theta = - beam.get_column(1) / self.get_focalX()
-            beam.rotate(numpy.arctan(tan_two_theta),axis=3,rad=True)
+            tan_two_theta = - output_beam.get_column(1) / self.get_focalX()
+            output_beam.rotate(numpy.arctan(tan_two_theta),axis=3,rad=True)
 
         # rotate around X
         if self.get_focalZ() != 0.0:
-            tan_two_theta = beam.get_column(3) / self.get_focalZ()
-            beam.rotate(numpy.arctan(tan_two_theta),axis=1,rad=True)
+            tan_two_theta = output_beam.get_column(3) / self.get_focalZ()
+            output_beam.rotate(numpy.arctan(tan_two_theta),axis=1,rad=True)
 
         if q != 0.0:
-            beam.retrace(q,resetY=True)
+            output_beam.retrace(q,resetY=True)
 
-        return beam, beam0
+        return output_beam, footprint
 
 
 class S4SuperIdealLens(IdealLens, S4OpticalElement):
@@ -69,48 +66,46 @@ class S4SuperIdealLensElement(S4BeamlineElement):
                          coordinates if coordinates is not None else ElementCoordinates())
 
 
-    def trace_beam(self,beam1):
-        beam0 = beam1.duplicate()
+    def trace_beam(self, **params):
+        footprint = self.get_input_beam().duplicate()
+
+        p, q = self.get_coordinates().get_p_and_q()
+        if p != 0.0: footprint.retrace(p,resetY=True)
 
         lens = self.get_optical_element()
 
-        p, q = self.get_coordinates().get_p_and_q()
-
-        if p != 0.0:
-            beam0.retrace(p,resetY=True)
-
-        beam = beam0.duplicate()
+        output_beam = footprint.duplicate()
 
         # rotate around Z; watch out the minus!!
         if lens._focal_p_x != 0.0:
-            tan_theta_p = - beam.get_column(1) / lens._focal_p_x
+            tan_theta_p = - output_beam.get_column(1) / lens._focal_p_x
         else:
             tan_theta_p = 0.0
 
         if lens._focal_q_x != 0.0:
-            tan_theta_q = - beam.get_column(1) / lens._focal_q_x
+            tan_theta_q = - output_beam.get_column(1) / lens._focal_q_x
         else:
             tan_theta_q = 0.0
 
         two_theta = numpy.arctan(tan_theta_p) + numpy.arctan(tan_theta_q)
-        beam.rotate(two_theta,axis=3,rad=True)
+        output_beam.rotate(two_theta,axis=3,rad=True)
 
         # rotate around X
         if lens._focal_p_y != 0.0:
-            tan_theta_p = beam.get_column(3) / lens._focal_p_y
+            tan_theta_p = output_beam.get_column(3) / lens._focal_p_y
         else:
             tan_theta_p = 0.0
 
         if lens._focal_q_y != 0.0:
-            tan_theta_q = beam.get_column(3) / lens._focal_q_y
+            tan_theta_q = output_beam.get_column(3) / lens._focal_q_y
         else:
             tan_theta_q = 0.0
 
         two_theta = numpy.arctan(tan_theta_p) + numpy.arctan(tan_theta_q)
-        beam.rotate(two_theta,axis=1,rad=True)
+        output_beam.rotate(two_theta,axis=1,rad=True)
 
         if q != 0.0:
-            beam.retrace(q,resetY=True)
+            output_beam.retrace(q,resetY=True)
 
-        return beam, beam0
+        return output_beam, footprint
 

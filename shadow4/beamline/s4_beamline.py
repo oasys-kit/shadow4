@@ -9,24 +9,16 @@ class S4Beamline(Beamline):
                  beamline_elements_list=[]):
         super().__init__(light_source=light_source, beamline_elements_list=beamline_elements_list)
 
-
-
-
     def duplicate(self):
         beamline_elements_list = []
         for beamline_element in self._beamline_elements_list:
-            beamline_elements_list.append(beamline_element)
+            beamline_elements_list.append(beamline_element.duplicate())
 
         return S4Beamline(light_source=self._light_source,
-                        beamline_elements_list = beamline_elements_list)
+                          beamline_elements_list = beamline_elements_list)
 
-    # copied from syned. May be removed when updating syned
-
-    def append_beamline_element(self, beamline_element=S4BeamlineElement()):
-        if not isinstance(beamline_element,S4BeamlineElement):
-            raise Exception("Input class must be of type: "+S4BeamlineElement.__name__)
-        else:
-            self._beamline_elements_list.append(beamline_element)
+    def append_beamline_element(self, beamline_element: S4BeamlineElement):
+        self._beamline_elements_list.append(beamline_element)
 
 
     def to_python_code(self, data=None):
@@ -45,25 +37,21 @@ class S4Beamline(Beamline):
 
         return script
 
-
-
     def run_beamline(self, **params):
         try:
-            beam0 = self.get_light_source().get_beam(**params)
-            mirr0 = None
+            output_beam = self.get_light_source().get_beam(**params)
+            output_mirr = None
         except:
             raise Exception("Error running beamline light source")
 
-        for i,element in enumerate(self.get_beamline_elements()):
+        for i, element in enumerate(self.get_beamline_elements()):
             try:
-                beam1, mirr1 = element.trace_beam(beam_in=beam0, **params)
+                element.input_beam = output_beam
+                output_beam, output_mirr = element.trace_beam(**params)
             except:
                 raise Exception("Error running beamline element # %d" % (i+1) )
 
-            beam0 = beam1
-            mirr0 = mirr1
-
-        return beam0, mirr0
+        return output_beam, output_mirr
 
 
 if __name__ == "__main__":

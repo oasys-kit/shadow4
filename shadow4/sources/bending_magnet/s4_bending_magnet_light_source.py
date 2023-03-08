@@ -11,7 +11,7 @@ from syned.storage_ring.light_source import LightSource
 from syned.storage_ring.electron_beam import ElectronBeam
 
 from shadow4.sources.bending_magnet.s4_bending_magnet import S4BendingMagnet
-from shadow4.beam.beam import Beam
+from shadow4.beam.s4_beam import S4Beam
 from shadow4.sources.s4_light_source import S4LightSource
 
 class S4BendingMagnetLightSource(S4LightSource):
@@ -36,12 +36,12 @@ class S4BendingMagnetLightSource(S4LightSource):
                        psi_interval_number_of_points=1001,
                        verbose=False):
 
-        return Beam.initialize_from_array(self.__calculate_rays(F_COHER=F_COHER,
-                                                                EPSI_DX=EPSI_DX,
-                                                                EPSI_DZ=EPSI_DZ,
-                                                                psi_interval_in_units_one_over_gamma=psi_interval_in_units_one_over_gamma,
-                                                                psi_interval_number_of_points=psi_interval_number_of_points,
-                                                                verbose=verbose))
+        return S4Beam.initialize_from_array(self.__calculate_rays(F_COHER=F_COHER,
+                                                                  EPSI_DX=EPSI_DX,
+                                                                  EPSI_DZ=EPSI_DZ,
+                                                                  psi_interval_in_units_one_over_gamma=psi_interval_in_units_one_over_gamma,
+                                                                  psi_interval_number_of_points=psi_interval_number_of_points,
+                                                                  verbose=verbose))
 
 
     def info(self):

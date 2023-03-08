@@ -2,7 +2,7 @@ import socket
 import getpass
 import datetime
 
-from shadow4.beam.beam import Beam
+from shadow4.beam.s4_beam import S4Beam
 
 try:
     import matplotlib.pyplot as plt
@@ -71,13 +71,13 @@ def ErrorMsg(fromFunc, value):
 
 
 def getshonecol_CheckArg(beam, col):
-    if not isinstance(beam, Beam): raise ErrorMsg('getshonecol', 'beam')
+    if not isinstance(beam, S4Beam): raise ErrorMsg('getshonecol', 'beam')
     if not isinstance(col, int): raise ErrorMsg('getshonecol', 'col')
     if col < 1 or col > 33: raise ErrorMsg('getshonecol', 'col')
 
 
 def getshcol_CheckArg(beam, col):  # the rest of checks are included in the function getshonecol_CheckArg
-    if not isinstance(beam, Beam): raise ErrorMsg('getshcol', 'beam')
+    if not isinstance(beam, S4Beam): raise ErrorMsg('getshcol', 'beam')
     if not isinstance(col, (int, tuple, list)): raise ErrorMsg('getshcol', 'col')
     if isinstance(col, int):
         if col < 1 or col > 33: raise ErrorMsg('getshcol', 'col')
@@ -88,7 +88,7 @@ def getshcol_CheckArg(beam, col):  # the rest of checks are included in the func
 
 
 def Histo1_CheckArg(beam, col, xrange, yrange, nbins, nolost, ref, write, title, xtitle, ytitle, calfwhm, noplot):
-    if not isinstance(beam, Beam): raise ErrorMsg('Histo1', 'beam')
+    if not isinstance(beam, S4Beam): raise ErrorMsg('Histo1', 'beam')
     if not isinstance(col, int): raise ErrorMsg('Histo1', 'col')
     if col < 1 or col > 33: raise ErrorMsg('Histo1', 'col')
     # the next 3 lines don't matter, it is a trick to pass the test when None
@@ -119,7 +119,7 @@ def Histo1_CheckArg(beam, col, xrange, yrange, nbins, nolost, ref, write, title,
 
 def plotxy_CheckArg(beam, cols1, cols2, nbins, nbins_h, level, xrange, yrange, nolost, title, xtitle, ytitle, noplot,
                     calfwhm, contour):
-    if not isinstance(beam, Beam): raise ErrorMsg('plotxy', 'beam')
+    if not isinstance(beam, S4Beam): raise ErrorMsg('plotxy', 'beam')
     if cols1 < 1 or cols1 > 33: raise ErrorMsg('plotxy', 'cols1')
     if cols2 < 1 or cols2 > 33: raise ErrorMsg('plotxy', 'cols2')
     if not isinstance(nbins, int): raise ErrorMsg('plotxy', 'nbins')
@@ -184,7 +184,7 @@ def calcFWHM(h, binSize):
 
 
 def Histo1_write(title, bins, h, w, col, beam, ref):
-    if isinstance(beam, Beam): usubtitle = "Shadow running in dir " + os.getcwd()
+    if isinstance(beam, S4Beam): usubtitle = "Shadow running in dir " + os.getcwd()
     if isinstance(beam, str): usubtitle = os.getcwd() + beam
     now = str(datetime.datetime.now())
     usubtitle += " " + now + " " + getpass.getuser() + "@" + socket.gethostname()

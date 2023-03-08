@@ -1,9 +1,10 @@
 import numpy
 
-from syned.beamline.shape import Sphere, SphericalCylinder, Convexity, Direction
+from syned.beamline.shape import Convexity, Direction
 
 from shadow4.beamline.s4_optical_element import SurfaceCalculation, S4SphereOpticalElement
 from shadow4.beamline.optical_elements.gratings.s4_grating import S4GratingElement, S4Grating, ElementCoordinates
+from shadow4.beam.s4_beam import S4Beam
 
 class S4SphereGrating(S4Grating, S4SphereOpticalElement):
     def __init__(self,
@@ -59,12 +60,10 @@ class S4SphereGrating(S4Grating, S4SphereOpticalElement):
                            )
 
 class S4SphereGratingElement(S4GratingElement):
-    def __init__(self, optical_element=None, coordinates=None):
-        super().__init__(optical_element if optical_element is not None else S4SphereMirror(),
-                         coordinates if coordinates is not None else ElementCoordinates())
-        if not (isinstance(self.get_optical_element().get_surface_shape(), SphericalCylinder) or
-                isinstance(self.get_optical_element().get_surface_shape(), Sphere)):
-            raise ValueError("Wrong Optical Element: only Sphere or Spherical Cylinder shape is accepted")
+    def __init__(self, optical_element : S4SphereGrating = None, coordinates : ElementCoordinates = None, input_beam : S4Beam = None):
+        super().__init__(optical_element if optical_element is not None else S4SphereGrating(),
+                         coordinates if coordinates is not None else ElementCoordinates(),
+                         input_beam)
 
     # def apply_grating_diffraction(self, beam):
     #     return self.get_optical_element().apply_grating_diffraction(beam)

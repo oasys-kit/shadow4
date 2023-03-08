@@ -1,10 +1,8 @@
 import numpy
-from syned.beamline.shape import Conic, Plane
-from shadow4.beamline.optical_elements.crystals.s4_crystal import S4CrystalElement, S4Crystal
 from syned.beamline.element_coordinates import ElementCoordinates
-from shadow4.optical_surfaces.s4_conic import S4Conic
-from syned.beamline.shape import Plane
 
+from shadow4.beam.s4_beam import S4Beam
+from shadow4.beamline.optical_elements.crystals.s4_crystal import S4CrystalElement, S4Crystal
 from shadow4.beamline.s4_optical_element import S4PlaneOpticalElement
 
 from syned.beamline.optical_elements.crystals.crystal import DiffractionGeometry
@@ -110,11 +108,10 @@ class S4PlaneCrystal(S4Crystal, S4PlaneOpticalElement):
         return txt
 
 class S4PlaneCrystalElement(S4CrystalElement):
-    def __init__(self, optical_element=None, coordinates=None):
-        super().__init__(optical_element if optical_element is not None else S4Crystal(),
-                         coordinates if coordinates is not None else ElementCoordinates())
-        if not isinstance(self.get_optical_element().get_surface_shape(), Plane):
-            raise ValueError("Wrong Optical Element: only Plane shape is accepted")
+    def __init__(self, optical_element : S4PlaneCrystal = None, coordinates : ElementCoordinates = None, input_beam : S4Beam = None):
+        super().__init__(optical_element if optical_element is not None else S4PlaneCrystal(),
+                         coordinates if coordinates is not None else ElementCoordinates(),
+                         input_beam)
 
     def to_python_code(self, data=None):
         txt = "\n\n# optical element number XX"
@@ -127,22 +124,6 @@ class S4PlaneCrystalElement(S4CrystalElement):
         txt += "\nbeamline_element = S4PlaneCrystalElement(optical_element=optical_element,coordinates=coordinates)"
         txt += "\n\nbeam, mirr = beamline_element.trace_beam(beam)"
         return txt
-
-
-    # def apply_crystal_diffraction(self, beam):
-    #     surface_shape = self.get_optical_element().get_surface_shape()
-    #
-    #     ccc = S4Conic.initialize_as_plane()
-    #
-    #     oe = self.get_optical_element()
-    #
-    #     if oe._diffraction_geometry == DiffractionGeometry.BRAGG and oe._asymmetry_angle == 0.0:
-    #         beam_mirr, normal = ccc.apply_crystal_diffraction_bragg_symmetric_on_beam(beam)
-    #     else:
-    #         raise Exception(NotImplementedError)
-    #
-    #     return beam_mirr, normal
-
 
 if __name__ == "__main__":
     c = S4PlaneCrystal(

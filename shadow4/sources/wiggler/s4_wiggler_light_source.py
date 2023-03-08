@@ -24,7 +24,7 @@ import scipy.constants as codata
 from shadow4.sources.s4_electron_beam import S4ElectronBeam
 from shadow4.sources.s4_light_source import S4LightSource
 from shadow4.sources.wiggler.s4_wiggler import S4Wiggler
-from shadow4.beam.beam import Beam
+from shadow4.beam.s4_beam import S4Beam
 
 # This is similar to sync_f in srxraylib but faster
 def sync_f_sigma_and_pi(rAngle, rEnergy):
@@ -862,7 +862,7 @@ class S4WigglerLightSource(S4LightSource):
         psi_interval_number_of_points = 1001
         verbose = True
 
-        return Beam.initialize_from_array(self.__calculate_rays(
+        return S4Beam.initialize_from_array(self.__calculate_rays(
             user_unit_to_m=user_unit_to_m,
             F_COHER=F_COHER,
             EPSI_DX=EPSI_DX,

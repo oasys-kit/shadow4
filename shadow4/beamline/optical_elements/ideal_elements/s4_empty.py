@@ -3,23 +3,21 @@ from syned.beamline.optical_elements.ideal_elements.screen import Screen
 from syned.beamline.element_coordinates import ElementCoordinates
 
 from shadow4.beamline.s4_optical_element import S4OpticalElement
-
 from shadow4.beamline.s4_beamline_element import S4BeamlineElement
-
+from shadow4.beam.s4_beam import S4Beam
 
 class S4Empty(Screen, S4OpticalElement):
     def __init__(self, name="Undefined"):
         super().__init__(name=name)
 
-
 class S4EmptyElement(S4BeamlineElement):
 
-    def __init__(self, optical_element=None, coordinates=None):
+    def __init__(self, optical_element : S4Empty = None, coordinates : ElementCoordinates = None, input_beam : S4Beam = None):
         super().__init__(optical_element if optical_element is not None else S4Empty(),
-                         coordinates if coordinates is not None else ElementCoordinates())
+                         coordinates if coordinates is not None else ElementCoordinates(),
+                         input_beam)
 
-    def trace_beam(self,beam1):
-
+    def trace_beam(self, **params):
         p, q, angle_radial, angle_radial_out, angle_azimuthal = self.get_coordinates().get_positions()
 
         theta_grazing1 = numpy.pi / 2 - angle_radial
@@ -27,14 +25,14 @@ class S4EmptyElement(S4BeamlineElement):
         alpha1 = angle_azimuthal
 
         #
-        beam = beam1.duplicate()
+        input_beam = self.get_input_beam().duplicate()
 
         #
         # put beam in mirror reference system
         #
-        beam.rotate(alpha1, axis=2)
-        beam.rotate(theta_grazing1, axis=1)
-        beam.translation([0.0, -p * numpy.cos(theta_grazing1), p * numpy.sin(theta_grazing1)])
+        input_beam.rotate(alpha1, axis=2)
+        input_beam.rotate(theta_grazing1, axis=1)
+        input_beam.translation([0.0, -p * numpy.cos(theta_grazing1), p * numpy.sin(theta_grazing1)])
 
         #
         # oe does nothing
@@ -44,9 +42,9 @@ class S4EmptyElement(S4BeamlineElement):
         #
         # from oe reference system to image plane
         #
-        beam_out = beam.duplicate()
-        beam_out.change_to_image_reference_system(theta_grazing2, q)
+        output_beam = input_beam.duplicate()
+        output_beam.change_to_image_reference_system(theta_grazing2, q)
 
 
-        return beam_out, beam
+        return output_beam, input_beam
 
