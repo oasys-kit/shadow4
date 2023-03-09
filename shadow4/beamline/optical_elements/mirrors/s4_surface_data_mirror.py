@@ -2,9 +2,9 @@ from syned.beamline.shape import SurfaceData
 from shadow4.beam.s4_beam import S4Beam
 from shadow4.beamline.optical_elements.mirrors.s4_mirror import S4MirrorElement, S4Mirror, ElementCoordinates
 
-from shadow4.beamline.s4_optical_element import S4SurfaceDataOpticalElement
+from shadow4.beamline.s4_optical_element import S4SurfaceDataOpticalElementDecorator
 
-class S4SurfaceDataMirror(S4Mirror, S4SurfaceDataOpticalElement):
+class S4SurfaceDataMirror(S4Mirror, S4SurfaceDataOpticalElementDecorator):
     def __init__(self,
                  name="Surface Data Mirror",
                  boundary_shape=None,
@@ -22,7 +22,7 @@ class S4SurfaceDataMirror(S4Mirror, S4SurfaceDataOpticalElement):
                  file_refl="",  # preprocessor file fir f_refl=0,2,3,4
                  refraction_index=1.0  # refraction index (complex) for f_refl=1
                  ):
-        S4SurfaceDataOpticalElement.__init__(self, xx, yy, zz, surface_data_file)
+        S4SurfaceDataOpticalElementDecorator.__init__(self, xx, yy, zz, surface_data_file)
         S4Mirror.__init__(self, name, boundary_shape, self.get_surface_shape_instance(),
                           f_reflec, f_refl, file_refl, refraction_index)
 

@@ -4,9 +4,9 @@ from syned.beamline.element_coordinates import ElementCoordinates
 from shadow4.beam.s4_beam import S4Beam
 from shadow4.beamline.optical_elements.refractors.s4_interface import S4InterfaceElement, S4Interface
 from shadow4.optical_surfaces.s4_conic import S4Conic
-from shadow4.beamline.s4_optical_element import S4ConicOpticalElement
+from shadow4.beamline.s4_optical_element import S4ConicOpticalElementDecorator
 
-class S4ConicInterface(S4Interface, S4ConicOpticalElement):
+class S4ConicInterface(S4Interface, S4ConicOpticalElementDecorator):
     def __init__(self,
                  name="Conic Refractive Interface",
                  boundary_shape=None,
@@ -22,7 +22,7 @@ class S4ConicInterface(S4Interface, S4ConicOpticalElement):
                  conic_coefficients=[0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
                  ):
 
-        S4ConicOpticalElement.__init__(self, conic_coefficients)
+        S4ConicOpticalElementDecorator.__init__(self, conic_coefficients)
         S4Interface.__init__(self,
                              name,
                              boundary_shape,

@@ -14,7 +14,7 @@ from shadow4.optical_surfaces.s4_conic import S4Conic
 from shadow4.optical_surfaces.s4_mesh import S4Mesh
 from shadow4.optical_surfaces.s4_toroid import S4Toroid
 
-class S4OpticalElement(object):
+class S4OpticalElementDecorator(object):
 
     def __init__(self):
         pass
@@ -36,9 +36,9 @@ class SurfaceCalculation:
     EXTERNAL = 1
 
 
-class S4PlaneOpticalElement(S4OpticalElement):
+class S4PlaneOpticalElementDecorator(S4OpticalElementDecorator):
     def __init__(self):
-        S4OpticalElement.__init__(self)
+        S4OpticalElementDecorator.__init__(self)
 
         self._plane_surface_shape = Plane()
 
@@ -49,13 +49,13 @@ class S4PlaneOpticalElement(S4OpticalElement):
         return S4Conic.initialize_as_plane()
 
 
-class S4CurvedOpticalElement(S4OpticalElement):
+class S4CurvedOpticalElementDecorator(S4OpticalElementDecorator):
 
     def __init__(self,
                  surface_calculation=SurfaceCalculation.INTERNAL,
                  is_cylinder=False,
                  ):
-        S4OpticalElement.__init__(self)
+        S4OpticalElementDecorator.__init__(self)
 
         self._surface_calculation = surface_calculation
         self._is_cylinder = is_cylinder
@@ -71,7 +71,7 @@ class S4CurvedOpticalElement(S4OpticalElement):
 # CURVED OPTICAL ELEMENTS
 ##################################################
 
-class S4SphereOpticalElement(S4CurvedOpticalElement):
+class S4SphereOpticalElementDecorator(S4CurvedOpticalElementDecorator):
     def __init__(self,
                  surface_calculation=SurfaceCalculation.INTERNAL,
                  is_cylinder=False,
@@ -82,7 +82,7 @@ class S4SphereOpticalElement(S4CurvedOpticalElement):
                  q_focus=0.0,
                  grazing_angle=0.0,
                  ):
-        S4CurvedOpticalElement.__init__(self, surface_calculation, is_cylinder)
+        S4CurvedOpticalElementDecorator.__init__(self, surface_calculation, is_cylinder)
 
         if self._surface_calculation == SurfaceCalculation.EXTERNAL:
             if self._is_cylinder: self._curved_surface_shape = SphericalCylinder.create_spherical_cylinder_from_radius(radius, convexity, cylinder_direction)
@@ -112,7 +112,7 @@ class S4SphereOpticalElement(S4CurvedOpticalElement):
 
 
 
-class S4EllipsoidOpticalElement(S4CurvedOpticalElement):
+class S4EllipsoidOpticalElementDecorator(S4CurvedOpticalElementDecorator):
 
     def __init__(self,
                  surface_calculation=SurfaceCalculation.INTERNAL,
@@ -125,7 +125,7 @@ class S4EllipsoidOpticalElement(S4CurvedOpticalElement):
                  q_focus=0.0,
                  grazing_angle=0.0,
                  ):
-        S4CurvedOpticalElement.__init__(self, surface_calculation, is_cylinder)
+        S4CurvedOpticalElementDecorator.__init__(self, surface_calculation, is_cylinder)
 
         if self._surface_calculation == SurfaceCalculation.EXTERNAL:
             if self._is_cylinder: self._curved_surface_shape = EllipticalCylinder.create_elliptical_cylinder_from_axes(min_axis, maj_axis, p_focus, convexity, cylinder_direction)
@@ -154,7 +154,7 @@ class S4EllipsoidOpticalElement(S4CurvedOpticalElement):
                                                                     cylindrical=cylindrical,
                                                                     cylangle=cylangle,
                                                                     switch_convexity=switch_convexity)
-class S4HyperboloidOpticalElement(S4CurvedOpticalElement):
+class S4HyperboloidOpticalElementDecorator(S4CurvedOpticalElementDecorator):
     def __init__(self,
                  surface_calculation=SurfaceCalculation.INTERNAL,
                  is_cylinder=False,
@@ -166,7 +166,7 @@ class S4HyperboloidOpticalElement(S4CurvedOpticalElement):
                  q_focus=0.0,
                  grazing_angle=0.0,
                  ):
-        S4CurvedOpticalElement.__init__(self, surface_calculation, is_cylinder)
+        S4CurvedOpticalElementDecorator.__init__(self, surface_calculation, is_cylinder)
 
         if self._surface_calculation == SurfaceCalculation.EXTERNAL:
             if self._is_cylinder: self._curved_surface_shape = HyperbolicCylinder.create_hyperbolic_cylinder_from_axes(min_axis, maj_axis, p_focus, convexity, cylinder_direction)
@@ -196,7 +196,7 @@ class S4HyperboloidOpticalElement(S4CurvedOpticalElement):
                                                                       cylangle=cylangle,
                                                                       switch_convexity=switch_convexity)
 
-class S4ToroidalOpticalElement(S4CurvedOpticalElement):
+class S4ToroidalOpticalElementDecorator(S4CurvedOpticalElementDecorator):
     def __init__(self,
                  surface_calculation=SurfaceCalculation.INTERNAL,
                  min_radius=0.0,
@@ -205,7 +205,7 @@ class S4ToroidalOpticalElement(S4CurvedOpticalElement):
                  q_focus=0.0,
                  grazing_angle=0.0,
                  ):
-        S4CurvedOpticalElement.__init__(self, surface_calculation, False)
+        S4CurvedOpticalElementDecorator.__init__(self, surface_calculation, False)
 
         if self._surface_calculation == SurfaceCalculation.EXTERNAL:
             self._curved_surface_shape = Toroid.create_toroid_from_radii(min_radius, maj_radius)
@@ -221,9 +221,9 @@ class S4ToroidalOpticalElement(S4CurvedOpticalElement):
         toroid.set_toroid_radii(surface_shape.get_maj_radius(), surface_shape.get_min_radius())
         return toroid
 
-class S4ConicOpticalElement(S4CurvedOpticalElement):
+class S4ConicOpticalElementDecorator(S4CurvedOpticalElementDecorator):
     def __init__(self, conic_coefficients=[0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]):
-        S4CurvedOpticalElement.__init__(self, surface_calculation=SurfaceCalculation.INTERNAL, is_cylinder=False)
+        S4CurvedOpticalElementDecorator.__init__(self, surface_calculation=SurfaceCalculation.INTERNAL, is_cylinder=False)
 
         self._curved_surface_shape = Conic(conic_coefficients=conic_coefficients)
 
@@ -232,7 +232,7 @@ class S4ConicOpticalElement(S4CurvedOpticalElement):
         print(">>>>> Conic optical element")
         return S4Conic.initialize_from_coefficients(surface_shape.get_conic_coefficients())
 
-class S4ParaboloidOpticalElement(S4CurvedOpticalElement):
+class S4ParaboloidOpticalElementDecorator(S4CurvedOpticalElementDecorator):
     def __init__(self,
                  surface_calculation=SurfaceCalculation.INTERNAL,
                  is_cylinder=False,
@@ -245,7 +245,7 @@ class S4ParaboloidOpticalElement(S4CurvedOpticalElement):
                  q_focus=0.0,
                  grazing_angle=0.0,
                  ):
-        S4CurvedOpticalElement.__init__(self, surface_calculation, is_cylinder)
+        S4CurvedOpticalElementDecorator.__init__(self, surface_calculation, is_cylinder)
 
         if self._surface_calculation == SurfaceCalculation.EXTERNAL:
             if self._is_cylinder: self._curved_surface_shape = ParabolicCylinder.create_parabolic_cylinder_from_parabola_parameter(parabola_parameter, at_infinity, pole_to_focus, convexity, cylinder_direction)
@@ -278,9 +278,9 @@ class S4ParaboloidOpticalElement(S4CurvedOpticalElement):
         return S4Conic.initialize_as_paraboloid_from_focal_distances(p, q, surface_shape.get_grazing_angle(), cylindrical=cylindrical, cylangle=cylangle, switch_convexity=switch_convexity)
 
 
-class S4SurfaceDataOpticalElement(S4CurvedOpticalElement):
+class S4SurfaceDataOpticalElementDecorator(S4CurvedOpticalElementDecorator):
     def __init__(self, xx=None, yy=None, zz=None, surface_data_file=None):
-        S4CurvedOpticalElement.__init__(self, surface_calculation=SurfaceCalculation.INTERNAL, is_cylinder=False)
+        S4CurvedOpticalElementDecorator.__init__(self, surface_calculation=SurfaceCalculation.INTERNAL, is_cylinder=False)
 
         self._curved_surface_shape = SurfaceData(xx, yy, zz, surface_data_file)
 
@@ -302,9 +302,9 @@ class S4SurfaceDataOpticalElement(S4CurvedOpticalElement):
 
         return num_mesh
 
-class S4AdditiveSurfaceDataOpticalElement(S4CurvedOpticalElement):
+class S4AdditionalSurfaceDataOpticalElementDecorator(S4CurvedOpticalElementDecorator):
     def __init__(self, xx=None, yy=None, zz=None, surface_data_file=None, base_surface_function=None):
-        S4CurvedOpticalElement.__init__(self, surface_calculation=SurfaceCalculation.INTERNAL, is_cylinder=False)
+        S4CurvedOpticalElementDecorator.__init__(self, surface_calculation=SurfaceCalculation.INTERNAL, is_cylinder=False)
 
         self._curved_surface_shape = SurfaceData(xx, yy, zz, surface_data_file)
 
@@ -316,7 +316,7 @@ class S4AdditiveSurfaceDataOpticalElement(S4CurvedOpticalElement):
     def get_optical_surface_instance(self):
         surface_shape = self.get_surface_shape()
 
-        print(">>>>> AdditiveSurfaceData optical element")
+        print(">>>>> AdditionalSurfaceData optical element")
         num_mesh = S4Mesh()
 
         if surface_shape.has_surface_data():

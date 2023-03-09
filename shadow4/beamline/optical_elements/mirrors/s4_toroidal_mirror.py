@@ -1,9 +1,9 @@
 from syned.beamline.shape import Toroid
 from shadow4.beam.s4_beam import S4Beam
 from shadow4.beamline.optical_elements.mirrors.s4_mirror import S4MirrorElement, S4Mirror, ElementCoordinates
-from shadow4.beamline.s4_optical_element import SurfaceCalculation, S4ToroidalOpticalElement
+from shadow4.beamline.s4_optical_element import SurfaceCalculation, S4ToroidalOpticalElementDecorator
 
-class S4ToroidalMirror(S4Mirror, S4ToroidalOpticalElement):
+class S4ToroidalMirror(S4Mirror, S4ToroidalOpticalElementDecorator):
     def __init__(self,
                  name="Toroidal Mirror",
                  boundary_shape=None,
@@ -23,8 +23,8 @@ class S4ToroidalMirror(S4Mirror, S4ToroidalOpticalElement):
                  file_refl="",  # preprocessor file fir f_refl=0,2,3,4
                  refraction_index=1.0  # refraction index (complex) for f_refl=1
                  ):
-        S4ToroidalOpticalElement.__init__(self, surface_calculation,
-                                          min_radius, maj_radius, p_focus, q_focus, grazing_angle)
+        S4ToroidalOpticalElementDecorator.__init__(self, surface_calculation,
+                                                   min_radius, maj_radius, p_focus, q_focus, grazing_angle)
         S4Mirror.__init__(self, name, boundary_shape, self.get_surface_shape_instance(),
                           f_reflec, f_refl, file_refl, refraction_index)
 

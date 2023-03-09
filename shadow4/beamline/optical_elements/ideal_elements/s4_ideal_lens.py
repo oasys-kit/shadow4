@@ -4,11 +4,11 @@ from syned.beamline.element_coordinates import ElementCoordinates
 from syned.beamline.optical_elements.ideal_elements.ideal_lens import IdealLens
 
 from shadow4.beam.s4_beam import S4Beam
-from shadow4.beamline.s4_optical_element import S4OpticalElement
+from shadow4.beamline.s4_optical_element import S4OpticalElementDecorator
 from shadow4.beamline.s4_beamline_element import S4BeamlineElement
 
 
-class S4IdealLens(IdealLens, S4OpticalElement):
+class S4IdealLens(IdealLens, S4OpticalElementDecorator):
     def __init__(self, name="Undefined",focal_x=0.0,focal_y=0.0):
         super().__init__(name=name,focal_x=focal_x,focal_y=focal_y)
 
@@ -53,7 +53,7 @@ class S4IdealLensElement(S4BeamlineElement):
         return output_beam, footprint
 
 
-class S4SuperIdealLens(IdealLens, S4OpticalElement):
+class S4SuperIdealLens(IdealLens, S4OpticalElementDecorator):
     def __init__(self, name="Undefined",focal_p_x=0.0, focal_p_y=0.0,
                                         focal_q_x=0.0, focal_q_y=0.0,):
         super().__init__(name=name,focal_x=1.0/(1/focal_p_x+1/focal_q_x),focal_y=1.0/(1/focal_p_y+1/focal_q_y))

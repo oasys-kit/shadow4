@@ -3,11 +3,11 @@ from syned.beamline.element_coordinates import ElementCoordinates
 
 from shadow4.beam.s4_beam import S4Beam
 from shadow4.beamline.optical_elements.crystals.s4_crystal import S4CrystalElement, S4Crystal
-from shadow4.beamline.s4_optical_element import S4PlaneOpticalElement
+from shadow4.beamline.s4_optical_element import S4PlaneOpticalElementDecorator
 
 from syned.beamline.optical_elements.crystals.crystal import DiffractionGeometry
 
-class S4PlaneCrystal(S4Crystal, S4PlaneOpticalElement):
+class S4PlaneCrystal(S4Crystal, S4PlaneOpticalElementDecorator):
     def __init__(self,
                  name="Plane crystal",
                  boundary_shape=None,
@@ -35,7 +35,7 @@ class S4PlaneCrystal(S4Crystal, S4PlaneOpticalElement):
                                                      # 3=shadow preprocessor file v2
                  ):
 
-        S4PlaneOpticalElement.__init__(self)
+        S4PlaneOpticalElementDecorator.__init__(self)
         S4Crystal.__init__(self,
                            name=name,
                            boundary_shape=boundary_shape,

@@ -1,10 +1,10 @@
 from syned.beamline.shape import Plane
 from syned.beamline.element_coordinates import ElementCoordinates
 from shadow4.beam.s4_beam import S4Beam
-from shadow4.beamline.s4_optical_element import S4PlaneOpticalElement
+from shadow4.beamline.s4_optical_element import S4PlaneOpticalElementDecorator
 from shadow4.beamline.optical_elements.mirrors.s4_mirror import S4MirrorElement, S4Mirror
 
-class S4PlaneMirror(S4Mirror, S4PlaneOpticalElement):
+class S4PlaneMirror(S4Mirror, S4PlaneOpticalElementDecorator):
     def __init__(self,
                  name="Plane Mirror",
                  boundary_shape=None,
@@ -18,7 +18,7 @@ class S4PlaneMirror(S4Mirror, S4PlaneOpticalElement):
                  file_refl="",  # preprocessor file fir f_refl=0,2,3,4
                  refraction_index=1.0  # refraction index (complex) for f_refl=1
                  ):
-        S4PlaneOpticalElement.__init__(self)
+        S4PlaneOpticalElementDecorator.__init__(self)
         S4Mirror.__init__(self, name, boundary_shape, self.get_surface_shape_instance(), f_reflec, f_refl, file_refl, refraction_index)
 
 

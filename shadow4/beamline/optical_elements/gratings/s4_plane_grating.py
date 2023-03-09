@@ -4,9 +4,9 @@ from syned.beamline.element_coordinates import ElementCoordinates
 
 from shadow4.beam.s4_beam import S4Beam
 from shadow4.beamline.optical_elements.gratings.s4_grating import S4GratingElement, S4Grating
-from shadow4.beamline.s4_optical_element import S4PlaneOpticalElement
+from shadow4.beamline.s4_optical_element import S4PlaneOpticalElementDecorator
 
-class S4PlaneGrating(S4Grating, S4PlaneOpticalElement):
+class S4PlaneGrating(S4Grating, S4PlaneOpticalElementDecorator):
     def __init__(self,
                  name="Undefined",
                  boundary_shape=None,
@@ -27,7 +27,7 @@ class S4PlaneGrating(S4Grating, S4PlaneOpticalElement):
                  f_ruling=0,
                  ):
 
-        S4PlaneOpticalElement.__init__(self)
+        S4PlaneOpticalElementDecorator.__init__(self)
         S4Grating.__init__(self,
                            name=name,
                            surface_shape=self.get_surface_shape_instance(),

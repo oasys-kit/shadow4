@@ -1,9 +1,9 @@
 from syned.beamline.shape import Sphere, SphericalCylinder, Convexity, Direction
 from shadow4.beam.s4_beam import S4Beam
-from shadow4.beamline.s4_optical_element import SurfaceCalculation, S4SphereOpticalElement
+from shadow4.beamline.s4_optical_element import SurfaceCalculation, S4SphereOpticalElementDecorator
 from shadow4.beamline.optical_elements.mirrors.s4_mirror import S4MirrorElement, S4Mirror, ElementCoordinates
 
-class S4SphereMirror(S4Mirror, S4SphereOpticalElement):
+class S4SphereMirror(S4Mirror, S4SphereOpticalElementDecorator):
     def __init__(self,
                  name="Sphere Mirror",
                  boundary_shape=None,
@@ -25,8 +25,8 @@ class S4SphereMirror(S4Mirror, S4SphereOpticalElement):
                  file_refl="",  # preprocessor file fir f_refl=0,2,3,4
                  refraction_index=1.0  # refraction index (complex) for f_refl=1
                  ):
-        S4SphereOpticalElement.__init__(self, surface_calculation, is_cylinder, cylinder_direction, convexity,
-                                        radius, p_focus, q_focus, grazing_angle)
+        S4SphereOpticalElementDecorator.__init__(self, surface_calculation, is_cylinder, cylinder_direction, convexity,
+                                                 radius, p_focus, q_focus, grazing_angle)
         S4Mirror.__init__(self, name, boundary_shape, self.get_surface_shape_instance(),
                           f_reflec, f_refl, file_refl, refraction_index)
 

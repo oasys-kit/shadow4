@@ -1,9 +1,9 @@
 from syned.beamline.shape import Paraboloid, ParabolicCylinder, Convexity, Direction, Side
-from shadow4.beamline.s4_optical_element import SurfaceCalculation, S4ParaboloidOpticalElement
+from shadow4.beamline.s4_optical_element import SurfaceCalculation, S4ParaboloidOpticalElementDecorator
 from shadow4.beamline.optical_elements.mirrors.s4_mirror import S4MirrorElement, S4Mirror, ElementCoordinates
 from shadow4.beam.s4_beam import S4Beam
 
-class S4ParaboloidMirror(S4Mirror, S4ParaboloidOpticalElement):
+class S4ParaboloidMirror(S4Mirror, S4ParaboloidOpticalElementDecorator):
     def __init__(self,
                  name="Paraboloid Mirror",
                  boundary_shape=None,
@@ -27,8 +27,8 @@ class S4ParaboloidMirror(S4Mirror, S4ParaboloidOpticalElement):
                  file_refl="",  # preprocessor file fir f_refl=0,2,3,4
                  refraction_index=1.0  # refraction index (complex) for f_refl=1
                  ):
-        S4ParaboloidOpticalElement.__init__(self, surface_calculation, is_cylinder, cylinder_direction, convexity,
-                                            parabola_parameter, at_infinity, pole_to_focus, p_focus, q_focus, grazing_angle)
+        S4ParaboloidOpticalElementDecorator.__init__(self, surface_calculation, is_cylinder, cylinder_direction, convexity,
+                                                     parabola_parameter, at_infinity, pole_to_focus, p_focus, q_focus, grazing_angle)
         S4Mirror.__init__(self, name, boundary_shape, self.get_surface_shape_instance(),
                           f_reflec, f_refl, file_refl, refraction_index)
 
