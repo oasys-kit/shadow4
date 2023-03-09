@@ -24,8 +24,8 @@ class S4PlaneMirror(S4Mirror, S4PlaneOpticalElementDecorator):
 
     def apply_geometrical_model(self, beam):
         ccc = self.get_optical_surface_instance()
-        mirr, normal = ccc.apply_specular_reflection_on_beam(beam)
-        return mirr, normal
+        footprint, normal = ccc.apply_specular_reflection_on_beam(beam)
+        return footprint, normal
 
     def to_python_code(self, data=None):
         txt = "\nfrom shadow4.beamline.optical_elements.mirrors.s4_plane_mirror import S4PlaneMirror"

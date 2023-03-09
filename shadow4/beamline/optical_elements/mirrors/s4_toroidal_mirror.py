@@ -31,8 +31,8 @@ class S4ToroidalMirror(S4Mirror, S4ToroidalOpticalElementDecorator):
 
     def apply_geometrical_model(self, beam):
         toroid = self.get_optical_surface_instance()
-        mirr, normal = toroid.apply_specular_reflection_on_beam(beam)
-        return mirr, normal
+        footprint, normal = toroid.apply_specular_reflection_on_beam(beam)
+        return footprint, normal
 
 
 class S4ToroidalMirrorElement(S4MirrorElement):

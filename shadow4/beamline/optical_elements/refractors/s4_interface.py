@@ -80,7 +80,8 @@ class S4InterfaceElement(S4BeamlineElement):
                          coordinates=coordinates if coordinates is not None else ElementCoordinates(),
                          input_beam=input_beam)
 
-    def trace_beam(self, flag_lost_value=-1):
+    def trace_beam(self, **params):
+        flag_lost_value = params.get("flag_lost_value", -1)
 
         p = self.get_coordinates().p()
         q = self.get_coordinates().q()
@@ -89,13 +90,13 @@ class S4InterfaceElement(S4BeamlineElement):
         alpha1 = self.get_coordinates().angle_azimuthal()
 
         #
-        beam = self.get_input_beam().duplicate()
+        input_beam = self.get_input_beam().duplicate()
         #
         # put beam in mirror reference system
         #
-        beam.rotate(alpha1, axis=2)
-        beam.rotate(theta_grazing1, axis=1)
-        beam.translation([0.0, -p * numpy.cos(theta_grazing1), p * numpy.sin(theta_grazing1)])
+        input_beam.rotate(alpha1, axis=2)
+        input_beam.rotate(theta_grazing1, axis=1)
+        input_beam.translation([0.0, -p * numpy.cos(theta_grazing1), p * numpy.sin(theta_grazing1)])
 
         #
         # reflect beam in the mirror surface
@@ -106,16 +107,12 @@ class S4InterfaceElement(S4BeamlineElement):
         # TODO: no check for total reflection is done...
         # TODO: implement correctly in shadow4 via Fresnel equations for the transmitted beam
 
-        if not isinstance(soe, Interface): # undefined
-            raise Exception("Undefined refractive interface")
-        else:
-            beam_mirr, normal = self.apply_local_refraction(beam)
-
+        footprint, normal = self.apply_local_refraction(input_beam)
 
         #
         # apply mirror boundaries
         #
-        beam_mirr.apply_boundaries_syned(soe.get_boundary_shape(), flag_lost_value=flag_lost_value)
+        footprint.apply_boundaries_syned(soe.get_boundary_shape(), flag_lost_value=flag_lost_value)
         #
         # TODO" apply lens absorption
         #
@@ -124,11 +121,11 @@ class S4InterfaceElement(S4BeamlineElement):
         # from element reference system to image plane
         #
 
-        beam_out = beam_mirr.duplicate()
-        n1, n2 = self.get_optical_element().get_refraction_indices()
-        beam_out.change_to_image_reference_system(theta_grazing2, q, refraction_index=n2)
+        output_beam = footprint.duplicate()
+        _, n2 = self.get_optical_element().get_refraction_indices()
+        output_beam.change_to_image_reference_system(theta_grazing2, q, refraction_index=n2)
 
-        return beam_out, beam_mirr
+        return output_beam, footprint
 
     def apply_local_refraction(self, beam):
         raise NotImplementedError()

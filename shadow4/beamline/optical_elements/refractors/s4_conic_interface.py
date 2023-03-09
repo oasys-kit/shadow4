@@ -57,7 +57,6 @@ class S4ConicInterfaceElement(S4InterfaceElement):
         oe = self.get_optical_element()
         refraction_index_object, refraction_index_image = oe.get_refraction_indices()
 
+        footprint, normal = ccc.apply_refraction_on_beam(beam, refraction_index_object, refraction_index_image)
 
-        beam_mirr, normal = ccc.apply_refraction_on_beam(beam, refraction_index_object, refraction_index_image)
-
-        return beam_mirr, normal
+        return footprint, normal

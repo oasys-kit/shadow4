@@ -25,8 +25,8 @@ class S4ConicMirror(S4Mirror, S4ConicOpticalElementDecorator):
 
     def apply_geometrical_model(self, beam):
         ccc = self.get_optical_surface_instance()
-        mirr, normal = ccc.apply_specular_reflection_on_beam(beam)
-        return mirr, normal
+        footprint, normal = ccc.apply_specular_reflection_on_beam(beam)
+        return footprint, normal
 
 class S4ConicMirrorElement(S4MirrorElement):
     def __init__(self,
