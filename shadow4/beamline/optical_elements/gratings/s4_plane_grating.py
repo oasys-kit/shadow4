@@ -2,9 +2,9 @@ import numpy
 
 from syned.beamline.element_coordinates import ElementCoordinates
 
+from shadow4.beam.s4_beam import S4Beam
 from shadow4.beamline.optical_elements.gratings.s4_grating import S4GratingElement, S4Grating
 from shadow4.beamline.s4_optical_element import S4PlaneOpticalElement
-from shadow4.beam.s4_beam import S4Beam
 
 class S4PlaneGrating(S4Grating, S4PlaneOpticalElement):
     def __init__(self,
@@ -53,10 +53,13 @@ class S4PlaneGrating(S4Grating, S4PlaneOpticalElement):
     #     return S4Conic.initialize_as_plane()
 
 class S4PlaneGratingElement(S4GratingElement):
-    def __init__(self, optical_element : S4PlaneGrating = None, coordinates : ElementCoordinates = None, input_beam : S4Beam = None):
-        super().__init__(optical_element if optical_element is not None else S4PlaneGrating(),
-                         coordinates if coordinates is not None else ElementCoordinates(),
-                         input_beam)
+    def __init__(self,
+                 optical_element : S4PlaneGrating = None,
+                 coordinates : ElementCoordinates = None,
+                 input_beam : S4Beam = None):
+        super().__init__(optical_element=optical_element if optical_element is not None else S4PlaneGrating(),
+                         coordinates=coordinates if coordinates is not None else ElementCoordinates(),
+                         input_beam=input_beam)
 
 if __name__ == "__main__":
 
@@ -68,7 +71,7 @@ if __name__ == "__main__":
     # source
     #
     src = SourceGaussian.initialize_from_keywords(
-                 number_of_rays=10000,
+                 nrays=10000,
                  sigmaX=1.0e-6,
                  sigmaY=0.0,
                  sigmaZ=1.0e-6,
@@ -116,10 +119,10 @@ if __name__ == "__main__":
 
 
 
-    ge = S4PlaneGratingElement(optical_element=g, coordinates=coordinates_syned)
+    ge = S4PlaneGratingElement(optical_element=g, coordinates=coordinates_syned, input_beam=beam)
 
     print(ge.info())
 
-    beam_out = ge.trace_beam(beam)
+    beam_out = ge.trace_beam()
     plotxy(beam_out[0], 1, 3, title="Image 0", nbins=201)
 

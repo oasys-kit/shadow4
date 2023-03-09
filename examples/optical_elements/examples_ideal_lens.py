@@ -44,7 +44,8 @@ def lens_with_collimated_beam(do_plot=True):
 
 
     lens1e = S4IdealLensElement(optical_element=S4IdealLens(name="Undefined", focal_x=10.0, focal_y=10.0),
-                                coordinates=ElementCoordinates(p=100.0, q=10.0))
+                                coordinates=ElementCoordinates(p=100.0, q=10.0),
+                                input_beam=beam)
 
 
     print(lens1e.info())
@@ -53,7 +54,7 @@ def lens_with_collimated_beam(do_plot=True):
     # trace
     #
 
-    beam2, tmp = lens1e.trace_beam(beam)
+    beam2, tmp = lens1e.trace_beam()
 
     #
     if do_plot:
@@ -89,10 +90,11 @@ def lens_with_divergent_beam_super_ideal(do_plot=True):
 
     lens1e = S4SuperIdealLensElement(
                         optical_element=S4SuperIdealLens(name="test1", focal_p_x=p,focal_p_y=p,focal_q_x=q,focal_q_y=q),
-                        coordinates=ElementCoordinates(p=p, q=q))
+                        coordinates=ElementCoordinates(p=p, q=q),
+                        input_beam=beam)
 
 
-    beam2, tmp = lens1e.trace_beam(beam)
+    beam2, tmp = lens1e.trace_beam()
 
     X = beam2.get_column(1)
     Y = beam2.get_column(3)
@@ -138,10 +140,11 @@ def lens_with_divergent_beam(do_plot=True):
     F = 1.0 / (1/p + 1/q)
 
     lens1e = S4IdealLensElement(optical_element=S4IdealLens(name="Undefined", focal_x=F, focal_y=F),
-                                coordinates=ElementCoordinates(p=p, q=q))
+                                coordinates=ElementCoordinates(p=p, q=q),
+                                input_beam=beam)
 
     print(lens1e.info())
-    beam2, tmp = lens1e.trace_beam(beam)
+    beam2, tmp = lens1e.trace_beam()
 
 
     X = beam2.get_column(1)
@@ -208,9 +211,10 @@ def lens_id16ni(do_plot=True):
 
 
     lens1e = S4IdealLensElement(optical_element=S4IdealLens(name="ML", focal_x=F, focal_y=0),
-                                coordinates=ElementCoordinates(p=p, q=q))
+                                coordinates=ElementCoordinates(p=p, q=q),
+                                input_beam=beam)
 
-    beam, tmp = lens1e.trace_beam(beam)
+    beam, tmp = lens1e.trace_beam()
 
 
     FX, FZ = (1e6*beam.get_standard_deviation(1),1e6*beam.get_standard_deviation(3))
@@ -227,11 +231,12 @@ def lens_id16ni(do_plot=True):
     F = 1.0/(1/184.90+1/0.10)
 
     lens2e = S4IdealLensElement(optical_element=S4IdealLens(name="KBV", focal_x=0, focal_y=F),
-                                coordinates=ElementCoordinates(p=p, q=q))
+                                coordinates=ElementCoordinates(p=p, q=q),
+                                input_beam=beam)
 
 
     print(lens2e.info())
-    beam, tmp = lens2e.trace_beam(beam)
+    beam, tmp = lens2e.trace_beam()
 
 
 
@@ -241,10 +246,11 @@ def lens_id16ni(do_plot=True):
     F = 1.0/(1/144.95+1/0.05)
 
     lens3e = S4IdealLensElement(optical_element=S4IdealLens(name="KBH", focal_x=F, focal_y=0),
-                                coordinates=ElementCoordinates(p=p, q=q))
+                                coordinates=ElementCoordinates(p=p, q=q),
+                                input_beam=beam)
 
     print(lens3e.info())
-    beam, tmp = lens3e.trace_beam(beam)
+    beam, tmp = lens3e.trace_beam()
 
 
     #

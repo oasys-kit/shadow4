@@ -2,6 +2,8 @@ import numpy
 
 from syned.beamline.element_coordinates import ElementCoordinates
 from syned.beamline.optical_elements.ideal_elements.ideal_lens import IdealLens
+
+from shadow4.beam.s4_beam import S4Beam
 from shadow4.beamline.s4_optical_element import S4OpticalElement
 from shadow4.beamline.s4_beamline_element import S4BeamlineElement
 
@@ -12,10 +14,13 @@ class S4IdealLens(IdealLens, S4OpticalElement):
 
 
 class S4IdealLensElement(S4BeamlineElement):
-
-    def __init__(self, optical_element=None, coordinates=None):
-        super().__init__(optical_element if optical_element is not None else S4IdealLens(),
-                         coordinates if coordinates is not None else ElementCoordinates())
+    def __init__(self,
+                 optical_element : S4IdealLens = None,
+                 coordinates : ElementCoordinates = None,
+                 input_beam : S4Beam = None):
+        super().__init__(optical_element=optical_element if optical_element is not None else S4IdealLens(),
+                         coordinates=coordinates if coordinates is not None else ElementCoordinates(),
+                         input_beam=input_beam)
 
     def get_focalX(self):
         return self.get_optical_element()._focal_x
@@ -60,11 +65,13 @@ class S4SuperIdealLens(IdealLens, S4OpticalElement):
 
 
 class S4SuperIdealLensElement(S4BeamlineElement):
-
-    def __init__(self, optical_element=None, coordinates=None):
-        super().__init__(optical_element if optical_element is not None else S4SuperIdealLens(),
-                         coordinates if coordinates is not None else ElementCoordinates())
-
+    def __init__(self,
+                 optical_element : S4SuperIdealLens = None,
+                 coordinates : ElementCoordinates = None,
+                 input_beam : S4Beam = None):
+        super().__init__(optical_element=optical_element if optical_element is not None else S4SuperIdealLens(),
+                         coordinates=coordinates if coordinates is not None else ElementCoordinates(),
+                         input_beam=input_beam)
 
     def trace_beam(self, **params):
         footprint = self.get_input_beam().duplicate()

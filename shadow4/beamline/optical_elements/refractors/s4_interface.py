@@ -3,6 +3,7 @@ import numpy
 from syned.beamline.element_coordinates import ElementCoordinates
 from syned.beamline.optical_elements.refractors.interface import Interface
 
+from shadow4.beam.s4_beam import S4Beam
 from shadow4.beamline.s4_beamline_element import S4BeamlineElement
 
 class S4Interface(Interface):
@@ -71,12 +72,15 @@ class S4Interface(Interface):
         return refraction_index_object, refraction_index_image
 
 class S4InterfaceElement(S4BeamlineElement):
-    
-    def __init__(self, optical_element=None, coordinates=None):
-        super().__init__(optical_element if optical_element is not None else S4Interface(),
-                         coordinates if coordinates is not None else ElementCoordinates())
-    
-    def trace_beam(self, beam_in, flag_lost_value=-1):
+    def __init__(self,
+                 optical_element : S4Interface = None,
+                 coordinates : ElementCoordinates = None,
+                 input_beam : S4Beam = None):
+        super().__init__(optical_element=optical_element if optical_element is not None else S4Interface(),
+                         coordinates=coordinates if coordinates is not None else ElementCoordinates(),
+                         input_beam=input_beam)
+
+    def trace_beam(self, flag_lost_value=-1):
 
         p = self.get_coordinates().p()
         q = self.get_coordinates().q()
@@ -85,7 +89,7 @@ class S4InterfaceElement(S4BeamlineElement):
         alpha1 = self.get_coordinates().angle_azimuthal()
 
         #
-        beam = beam_in.duplicate()
+        beam = self.get_input_beam().duplicate()
         #
         # put beam in mirror reference system
         #

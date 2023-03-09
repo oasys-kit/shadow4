@@ -1,4 +1,5 @@
 from syned.beamline.shape import Toroid
+from shadow4.beam.s4_beam import S4Beam
 from shadow4.beamline.optical_elements.mirrors.s4_mirror import S4MirrorElement, S4Mirror, ElementCoordinates
 from shadow4.beamline.s4_optical_element import SurfaceCalculation, S4ToroidalOpticalElement
 
@@ -35,9 +36,13 @@ class S4ToroidalMirror(S4Mirror, S4ToroidalOpticalElement):
 
 
 class S4ToroidalMirrorElement(S4MirrorElement):
-    def __init__(self, optical_element=None, coordinates=None):
-        super().__init__(optical_element if optical_element is not None else S4ToroidalMirror(),
-                         coordinates if coordinates is not None else ElementCoordinates())
+    def __init__(self,
+                 optical_element : S4ToroidalMirror = None,
+                 coordinates : ElementCoordinates = None,
+                 input_beam : S4Beam = None):
+        super().__init__(optical_element=optical_element if optical_element is not None else S4ToroidalMirror(),
+                         coordinates=coordinates if coordinates is not None else ElementCoordinates(),
+                         input_beam=input_beam)
         if not isinstance(self.get_optical_element().get_surface_shape(), Toroid):
             raise ValueError("Wrong Optical Element: only Toroid shape is accepted")
 

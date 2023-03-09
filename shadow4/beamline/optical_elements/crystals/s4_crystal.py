@@ -4,8 +4,8 @@ from syned.beamline.shape import Plane
 from syned.beamline.element_coordinates import ElementCoordinates
 from syned.beamline.optical_elements.crystals.crystal import Crystal, DiffractionGeometry
 
-from shadow4.beamline.s4_beamline_element import S4BeamlineElement
 from shadow4.beam.s4_beam import S4Beam
+from shadow4.beamline.s4_beamline_element import S4BeamlineElement
 
 from crystalpy.diffraction.DiffractionSetup import DiffractionSetup
 from crystalpy.diffraction.DiffractionSetupDabax import DiffractionSetupDabax
@@ -105,11 +105,13 @@ class S4Crystal(Crystal):
             raise Exception("Not implemented")
 
 class S4CrystalElement(S4BeamlineElement):
-    
-    def __init__(self, optical_element : S4Crystal = None, coordinates : ElementCoordinates = None, input_beam : S4Beam = None):
-        super().__init__(optical_element if optical_element is not None else S4Crystal(),
-                         coordinates if coordinates is not None else ElementCoordinates(),
-                         input_beam)
+    def __init__(self,
+                 optical_element : S4Crystal = None,
+                 coordinates : ElementCoordinates = None,
+                 input_beam : S4Beam = None):
+        super().__init__(optical_element=optical_element if optical_element is not None else S4Crystal(),
+                         coordinates=coordinates if coordinates is not None else ElementCoordinates(),
+                         input_beam=input_beam)
 
         self._crystalpy_diffraction_setup = None
 

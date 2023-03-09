@@ -78,7 +78,8 @@ def example_branch_1(do_plot=True):
     mirror1 = S4ConicMirrorElement(optical_element=S4ConicMirror(name="M1",
                                                        conic_coefficients=[0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, -1.0, 0.0],
                                                        boundary_shape=boundary_shape),
-                              coordinates=coordinates_syned)
+                              coordinates=coordinates_syned,
+                              input_beam=beam0)
 
     print(mirror1.info())
 
@@ -86,7 +87,7 @@ def example_branch_1(do_plot=True):
     #
     # run
     #
-    beam1, mirr1 = mirror1.trace_beam(beam_in=beam0)
+    beam1, mirr1 = mirror1.trace_beam()
     print(mirr1.info())
 
     #
@@ -103,13 +104,14 @@ def example_branch_1(do_plot=True):
     
     mirror2 = S4ConicMirrorElement(optical_element=S4ConicMirror(conic_coefficients=[0,0,0,0,0,0,0,0,-1,0],
                                                                  boundary_shape=Rectangle(-100e-6,100e-6,-150e-6,150e-6)),
-                                   coordinates=ElementCoordinates(p = 10.0, q = 100.0, angle_radial = (0.5*numpy.pi - 0.003)))
+                                   coordinates=ElementCoordinates(p = 10.0, q = 100.0, angle_radial = (0.5*numpy.pi - 0.003)),
+                                   input_beam=beam1)
 
     print(mirror2.info())
     #
     #
     if do_plot:
-        beam2, mirr2 = mirror2.trace_beam(beam1)
+        beam2, mirr2 = mirror2.trace_beam()
         plotxy(beam2, 1, 3, title="Image 2", nbins=101, nolost=1)
         plotxy(mirr2, 2, 1, title="Footprint 2", nbins=101, nolost=1)
 
@@ -144,7 +146,8 @@ def example_branch_2(do_plot=True):
                                                                        boundary_shape=boundary_shape),
                                       coordinates=ElementCoordinates(p = 10.0,
                                                                      q = 6.0,
-                                                                     angle_radial = numpy.radians(88.8)))
+                                                                     angle_radial = numpy.radians(88.8)),
+                                      input_beam=beam0)
 
 
     print(mirror1.info())
@@ -152,7 +155,7 @@ def example_branch_2(do_plot=True):
     #
     # run
     #
-    beam1, mirr1 = mirror1.trace_beam(beam0)
+    beam1, mirr1 = mirror1.trace_beam()
     print(mirr1.info())
 
     #
@@ -199,13 +202,14 @@ def example_branch_3(surface_shape_file, do_plot=True):
                                                                              boundary_shape=Rectangle(x_left=-rwidx2,x_right=rwidx1,y_bottom=-rlen2,y_top=rlen1)),
                                          coordinates=ElementCoordinates(p = 100.0,
                                                                         q = 1000.0,
-                                                                        angle_radial = numpy.radians(88.8)))
+                                                                        angle_radial = numpy.radians(88.8)),
+                                         input_beam=beam0)
     print(mirror1.info())
 
     #
     # run
     #
-    beam1, mirr1 = mirror1.trace_beam(beam0)
+    beam1, mirr1 = mirror1.trace_beam()
     print(mirr1.info())
 
     #
@@ -268,7 +272,8 @@ def example_branch_4(do_plot=True, f_refl=0):
                                                                      conic_coefficients=[0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, -1.0, 0.0],
                                                                      boundary_shape=boundary_shape,
                                                                      f_reflec=1, f_refl=f_refl, file_refl="SiC.dat"),
-                                       coordinates=coordinates_syned)
+                                       coordinates=coordinates_syned,
+                                       input_beam=beam0)
     elif f_refl == 1: # refraction index
         import xraylib
         refraction_index = xraylib.Refractive_Index("SiC", 2.4797, 3.217)
@@ -276,32 +281,36 @@ def example_branch_4(do_plot=True, f_refl=0):
                                                                      conic_coefficients=[0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, -1.0, 0.0],
                                                                      boundary_shape=boundary_shape,
                                                                      f_reflec=1, f_refl=f_refl, file_refl="", refraction_index=refraction_index),
-                                       coordinates=coordinates_syned)
+                                       coordinates=coordinates_syned,
+                                       input_beam=beam0)
     elif f_refl == 2:  # user file: 1D  vs angle
         mirror1 = S4ConicMirrorElement(optical_element=S4ConicMirror(name="M1",
                                                                      conic_coefficients=[0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, -1.0, 0.0],
                                                                      boundary_shape=boundary_shape,
                                                                      f_reflec=1, f_refl=f_refl, file_refl="../../oasys_workspaces/xoppy_f1f2_139980555361648.dat"),
-                                       coordinates=coordinates_syned)
+                                       coordinates=coordinates_syned,
+                                       input_beam=beam0)
     elif f_refl == 3:  # user file 1D vs energy
         mirror1 = S4ConicMirrorElement(optical_element=S4ConicMirror(name="M1",
                                                                      conic_coefficients=[0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, -1.0, 0.0],
                                                                      boundary_shape=boundary_shape,
                                                                      f_reflec=1, f_refl=f_refl, file_refl="../../oasys_workspaces/xoppy_f1f2_139981943656272.dat"),
-                                       coordinates=coordinates_syned)
+                                       coordinates=coordinates_syned,
+                                       input_beam=beam0)
     elif f_refl == 4:  # user file
         mirror1 = S4ConicMirrorElement(optical_element=S4ConicMirror(name="M1",
                                                            conic_coefficients=[0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, -1.0, 0.0],
                                                            boundary_shape=boundary_shape,
                                                            f_reflec=1, f_refl=f_refl, file_refl="../../oasys_workspaces/xoppy_f1f2_139980938100080.dat"),
-                                       coordinates=coordinates_syned)
+                                       coordinates=coordinates_syned,
+                                       input_beam=beam0)
 
     print(mirror1.info())
 
     #
     # run
     #
-    beam1, mirr1 = mirror1.trace_beam(beam0)
+    beam1, mirr1 = mirror1.trace_beam()
     print(mirr1.info())
 
     #
@@ -343,7 +352,8 @@ def example_branch_5(surface_type, do_plot=True):
     if surface_type == "plane":
         mirror1 = S4PlaneMirrorElement(optical_element=S4PlaneMirror(name="M1",
                                                                      boundary_shape=boundary_shape),
-                                       coordinates=coordinates_syned)
+                                       coordinates=coordinates_syned,
+                                       input_beam=beam0)
     elif surface_type == "sphere":
         mirror1 = S4SphereMirrorElement(optical_element=S4SphereMirror(name="M1",
                                                                        boundary_shape=boundary_shape,
@@ -352,7 +362,8 @@ def example_branch_5(surface_type, do_plot=True):
                                                                        p_focus=10.0,
                                                                        q_focus=10.0,
                                                                        grazing_angle=numpy.radians(90.0 - 88.8)),
-                                       coordinates=coordinates_syned)
+                                       coordinates=coordinates_syned,
+                                       input_beam=beam0)
     elif surface_type == "spherical_cylinder_tangential":
         mirror1 = S4SphereMirrorElement(optical_element=S4SphereMirror(name="M1",
                                                                        boundary_shape=boundary_shape,
@@ -362,7 +373,8 @@ def example_branch_5(surface_type, do_plot=True):
                                                                        p_focus=10.0,
                                                                        q_focus=10.0,
                                                                        grazing_angle=numpy.radians(90.0 - 88.8)),
-                                       coordinates=coordinates_syned)
+                                       coordinates=coordinates_syned,
+                                       input_beam=beam0)
     elif surface_type == "spherical_cylinder_sagittal":
         mirror1 = S4SphereMirrorElement(optical_element=S4SphereMirror(name="M1",
                                                                        boundary_shape=boundary_shape,
@@ -372,7 +384,8 @@ def example_branch_5(surface_type, do_plot=True):
                                                                        p_focus=10.0,
                                                                        q_focus=10.0,
                                                                        grazing_angle=numpy.radians(90.0 - 88.8)),
-                                       coordinates=coordinates_syned)
+                                       coordinates=coordinates_syned,
+                                       input_beam=beam0)
     elif surface_type == "ellipsoid":
         mirror1 = S4EllipsoidMirrorElement(optical_element=S4EllipsoidMirror(name="M1",
                                                                              boundary_shape=boundary_shape,
@@ -381,7 +394,8 @@ def example_branch_5(surface_type, do_plot=True):
                                                                              p_focus=20.0,
                                                                              q_focus=10.0,
                                                                              grazing_angle=0.003),
-                                          coordinates=coordinates_syned)
+                                          coordinates=coordinates_syned,
+                                          input_beam=beam0)
     elif surface_type == "elliptical_cylinder":
         mirror1 = S4EllipsoidMirrorElement(optical_element=S4EllipsoidMirror(name="M1",
                                                                              boundary_shape=boundary_shape,
@@ -391,7 +405,8 @@ def example_branch_5(surface_type, do_plot=True):
                                                                              p_focus=20.0,
                                                                              q_focus=10.0,
                                                                              grazing_angle=0.003),
-                                          coordinates=coordinates_syned)
+                                          coordinates=coordinates_syned,
+                                          input_beam=beam0)
     elif surface_type == "hyperboloid":
         mirror1 = S4HyperboloidMirrorElement(optical_element=S4HyperboloidMirror(name="M1",
                                                                                  boundary_shape=boundary_shape,
@@ -400,7 +415,8 @@ def example_branch_5(surface_type, do_plot=True):
                                                                                  p_focus=20.0,
                                                                                  q_focus=10.0,
                                                                                  grazing_angle=0.003),
-                                             coordinates=coordinates_syned)
+                                             coordinates=coordinates_syned,
+                                             input_beam=beam0)
     elif surface_type == "hyperbolic_cylinder":
         mirror1 = S4HyperboloidMirrorElement(optical_element=S4HyperboloidMirror(name="M1",
                                                                                  boundary_shape=boundary_shape,
@@ -410,7 +426,8 @@ def example_branch_5(surface_type, do_plot=True):
                                                                                  p_focus=20.0,
                                                                                  q_focus=10.0,
                                                                                  grazing_angle=0.003),
-                                             coordinates=coordinates_syned)
+                                             coordinates=coordinates_syned,
+                                             input_beam=beam0)
     elif surface_type == "paraboloid":
         mirror1 = S4ParaboloidMirrorElement(optical_element=S4ParaboloidMirror(name="M1",
                                                                                  boundary_shape=boundary_shape,
@@ -420,7 +437,8 @@ def example_branch_5(surface_type, do_plot=True):
                                                                                  p_focus=20.0,
                                                                                  q_focus=10.0,
                                                                                  grazing_angle=0.003),
-                                             coordinates=coordinates_syned)
+                                             coordinates=coordinates_syned,
+                                             input_beam=beam0)
     elif surface_type == "parabolic_cylinder":
         mirror1 = S4ParaboloidMirrorElement(optical_element=S4ParaboloidMirror(name="M1",
                                                                                boundary_shape=boundary_shape,
@@ -431,12 +449,14 @@ def example_branch_5(surface_type, do_plot=True):
                                                                                p_focus=20.0,
                                                                                q_focus=10.0,
                                                                                grazing_angle=0.003),
-                                            coordinates=coordinates_syned)
+                                            coordinates=coordinates_syned,
+                                       input_beam=beam0)
     elif surface_type == "conic":
         mirror1 = S4ConicMirrorElement(optical_element=S4ConicMirror(name="M1",
                                                                      boundary_shape=boundary_shape,
                                                                      conic_coefficients=[0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, -1.0, 0.0]),
-                                       coordinates=coordinates_syned)
+                                       coordinates=coordinates_syned,
+                                       input_beam=beam0)
     else:
         raise Exception("undefined surface shape")
 
@@ -445,7 +465,7 @@ def example_branch_5(surface_type, do_plot=True):
     # run
     #
     print(mirror1.info())
-    beam1, mirr1 = mirror1.trace_beam(beam0)
+    beam1, mirr1 = mirror1.trace_beam()
 
 
     #

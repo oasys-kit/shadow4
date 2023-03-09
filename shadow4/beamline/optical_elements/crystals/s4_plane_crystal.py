@@ -108,10 +108,13 @@ class S4PlaneCrystal(S4Crystal, S4PlaneOpticalElement):
         return txt
 
 class S4PlaneCrystalElement(S4CrystalElement):
-    def __init__(self, optical_element : S4PlaneCrystal = None, coordinates : ElementCoordinates = None, input_beam : S4Beam = None):
-        super().__init__(optical_element if optical_element is not None else S4PlaneCrystal(),
-                         coordinates if coordinates is not None else ElementCoordinates(),
-                         input_beam)
+    def __init__(self,
+                 optical_element : S4PlaneCrystal = None,
+                 coordinates : ElementCoordinates = None,
+                 input_beam : S4Beam = None):
+        super().__init__(optical_element=optical_element if optical_element is not None else S4PlaneCrystal(),
+                         coordinates=coordinates if coordinates is not None else ElementCoordinates(),
+                         input_beam=input_beam)
 
     def to_python_code(self, data=None):
         txt = "\n\n# optical element number XX"
@@ -121,8 +124,8 @@ class S4PlaneCrystalElement(S4CrystalElement):
         txt += "\ncoordinates=ElementCoordinates(p=%g,q=%g,angle_radial=%g)" % \
                (coordinates.p(), coordinates.q(), coordinates.angle_radial())
         txt += "\nfrom shadow4.beamline.optical_elements.crystals.s4_plane_crystal import S4PlaneCrystalElement"
-        txt += "\nbeamline_element = S4PlaneCrystalElement(optical_element=optical_element,coordinates=coordinates)"
-        txt += "\n\nbeam, mirr = beamline_element.trace_beam(beam)"
+        txt += "\nbeamline_element = S4PlaneCrystalElement(optical_element=optical_element,coordinates=coordinates,input_beam=beam)"
+        txt += "\n\nbeam, mirr = beamline_element.trace_beam()"
         return txt
 
 if __name__ == "__main__":

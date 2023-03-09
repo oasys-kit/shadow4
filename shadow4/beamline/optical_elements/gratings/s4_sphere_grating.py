@@ -2,9 +2,10 @@ import numpy
 
 from syned.beamline.shape import Convexity, Direction
 
+from shadow4.beam.s4_beam import S4Beam
 from shadow4.beamline.s4_optical_element import SurfaceCalculation, S4SphereOpticalElement
 from shadow4.beamline.optical_elements.gratings.s4_grating import S4GratingElement, S4Grating, ElementCoordinates
-from shadow4.beam.s4_beam import S4Beam
+
 
 class S4SphereGrating(S4Grating, S4SphereOpticalElement):
     def __init__(self,
@@ -60,10 +61,13 @@ class S4SphereGrating(S4Grating, S4SphereOpticalElement):
                            )
 
 class S4SphereGratingElement(S4GratingElement):
-    def __init__(self, optical_element : S4SphereGrating = None, coordinates : ElementCoordinates = None, input_beam : S4Beam = None):
-        super().__init__(optical_element if optical_element is not None else S4SphereGrating(),
-                         coordinates if coordinates is not None else ElementCoordinates(),
-                         input_beam)
+    def __init__(self,
+                 optical_element : S4SphereGrating = None,
+                 coordinates : ElementCoordinates = None,
+                 input_beam : S4Beam = None):
+        super().__init__(optical_element=optical_element if optical_element is not None else S4SphereGrating(),
+                         coordinates=coordinates if coordinates is not None else ElementCoordinates(),
+                         input_beam=input_beam)
 
     # def apply_grating_diffraction(self, beam):
     #     return self.get_optical_element().apply_grating_diffraction(beam)
@@ -79,6 +83,7 @@ if __name__ == "__main__":
     src = SourceGeometrical(spatial_type="Point",
                     angular_distribution = "Flat",
                     energy_distribution = "Uniform",
+                    nrays = 5000,
                             )
 
     src.set_angular_distribution_flat(0,0,0,0)
@@ -87,7 +92,7 @@ if __name__ == "__main__":
 
     # print(src.info())
 
-    beam = src.get_beam(N=5000, POL_DEG=1.0, POL_ANGLE=0.0, F_COHER=False)
+    beam = src.get_beam()
 
 
     print(beam.info())
@@ -132,10 +137,10 @@ if __name__ == "__main__":
 
 
 
-    ge = S4SphereGratingElement(optical_element=g, coordinates=coordinates_syned)
+    ge = S4SphereGratingElement(optical_element=g, coordinates=coordinates_syned, input_beam=beam)
 
     print(ge.info())
 
-    beam_out = ge.trace_beam(beam)
+    beam_out = ge.trace_beam()
 
     plotxy(beam_out[0], 1, 3, title="Image 0", nbins=201)

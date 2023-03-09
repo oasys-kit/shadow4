@@ -33,11 +33,11 @@ def example_screen(do_plot=True):
     # screen definition
     #
 
-    screen1 = S4ScreenElement(optical_element=S4Screen(), coordinates=ElementCoordinates(p=100.0, q=0.0))
+    screen1 = S4ScreenElement(optical_element=S4Screen(), coordinates=ElementCoordinates(p=100.0, q=0.0), input_beam=beam)
 
     print(screen1.info())
 
-    beam2, tmp = screen1.trace_beam(beam)
+    beam2, tmp = screen1.trace_beam()
 
     #
     if do_plot:
@@ -58,7 +58,7 @@ def example_slit(do_plot=True):
     optical_element = S4Screen(name="slit1", boundary_shape=boundary_shape,
                                 i_abs=False, i_stop=False, thick=0.0, file_abs="")
 
-    slit1 = S4ScreenElement(optical_element=optical_element, coordinates=coordinates)
+    slit1 = S4ScreenElement(optical_element=optical_element, coordinates=coordinates, input_beam=beam)
 
     print(slit1.info())
 
@@ -66,7 +66,7 @@ def example_slit(do_plot=True):
     # trace
     #
 
-    beam2, tmp = slit1.trace_beam(beam)
+    beam2, tmp = slit1.trace_beam()
 
 
     #
@@ -89,7 +89,7 @@ def example_beam_stopper(do_plot=True):
     optical_element = S4Screen(name="slit1", boundary_shape=boundary_shape,
                                 i_abs=False, i_stop=True, thick=0.0, file_abs="")
 
-    screen1 = S4ScreenElement(optical_element=optical_element, coordinates=coordinates)
+    screen1 = S4ScreenElement(optical_element=optical_element, coordinates=coordinates, input_beam=beam)
 
     print(screen1.info())
 
@@ -97,7 +97,7 @@ def example_beam_stopper(do_plot=True):
     # trace
     #
 
-    beam2, tmp = screen1.trace_beam(beam)
+    beam2, tmp = screen1.trace_beam()
 
 
     #
@@ -123,7 +123,7 @@ def example_filter(do_plot=True):
     optical_element = S4Screen(name="filter1", boundary_shape=None,
                                 i_abs=True, i_stop=False, thick=10e-6, file_abs="Be.dat")
     coordinates = ElementCoordinates(p=100.0, q=0.0)
-    filter1 = S4ScreenElement(optical_element=optical_element, coordinates=coordinates)
+    filter1 = S4ScreenElement(optical_element=optical_element, coordinates=coordinates, input_beam=beam)
 
 
     print(filter1.info())
@@ -132,7 +132,7 @@ def example_filter(do_plot=True):
     # trace
     #
 
-    beam2, tmp = filter1.trace_beam(beam)
+    beam2, tmp = filter1.trace_beam()
 
     #
     if do_plot:
@@ -155,7 +155,7 @@ def example_holed_filter(do_plot=True):
                                 i_abs=True, i_stop=True, thick=10e-6, file_abs="Be.dat")
 
     coordinates = ElementCoordinates(p=100.0, q=0.0)
-    filter1 = S4ScreenElement(optical_element=optical_element, coordinates=coordinates)
+    filter1 = S4ScreenElement(optical_element=optical_element, coordinates=coordinates, input_beam=beam)
 
     print(filter1.info())
 
@@ -163,7 +163,7 @@ def example_holed_filter(do_plot=True):
     # trace
     #
 
-    beam2, tmp = filter1.trace_beam(beam)
+    beam2, tmp = filter1.trace_beam()
 
 
     #

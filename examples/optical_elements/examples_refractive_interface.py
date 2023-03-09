@@ -51,7 +51,8 @@ def refractive_interface_with_collimated_beam(do_plot=True):
                                     conic_coefficients=[1.0, 1.0, 1.0, 0.0, -0.0, -0.0, 0.0, 0.0, 3350.0e-3, 0.0],
                                     ),
                                 coordinates=ElementCoordinates(p=0.0, q=5000.0e-3,
-                                            angle_radial=0.0, angle_azimuthal=0.0, angle_radial_out=numpy.pi))
+                                            angle_radial=0.0, angle_azimuthal=0.0, angle_radial_out=numpy.pi),
+                                input_beam=beam)
 
     print(interface1.info())
     print(interface1.get_optical_element().get_surface_shape().get_conic_coefficients())
@@ -59,7 +60,7 @@ def refractive_interface_with_collimated_beam(do_plot=True):
     # trace
     #
 
-    beam2, mirr2 = interface1.trace_beam(beam)
+    beam2, mirr2 = interface1.trace_beam()
 
     #
     if do_plot:

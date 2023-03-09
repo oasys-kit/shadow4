@@ -69,10 +69,13 @@ class S4Mirror(Mirror):
 
 class S4MirrorElement(S4BeamlineElement):
     
-    def __init__(self, optical_element : S4Mirror = None, coordinates : ElementCoordinates = None, input_beam : S4Beam = None):
-        super().__init__(optical_element if optical_element is not None else S4Mirror(),
-                         coordinates if coordinates is not None else ElementCoordinates(),
-                         input_beam)
+    def __init__(self,
+                 optical_element : S4Mirror = None,
+                 coordinates : ElementCoordinates = None,
+                 input_beam : S4Beam = None):
+        super().__init__(optical_element=optical_element if optical_element is not None else S4Mirror(),
+                         coordinates=coordinates if coordinates is not None else ElementCoordinates(),
+                         input_beam=input_beam)
     
     def trace_beam(self, **params):
         flag_lost_value = params.get("flag_lost_value", -1)

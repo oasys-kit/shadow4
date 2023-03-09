@@ -5,9 +5,10 @@ from syned.beamline.optical_elements.gratings.grating import GratingVLS
 from syned.beamline.shape import Plane, Sphere
 from syned.beamline.element_coordinates import ElementCoordinates
 
+from shadow4.beam.s4_beam import S4Beam
 from shadow4.beamline.s4_optical_element import S4OpticalElement
 from shadow4.beamline.s4_beamline_element import S4BeamlineElement
-from shadow4.beam.s4_beam import S4Beam
+
 
 class S4Grating(GratingVLS, S4OpticalElement):
     def __init__(self,
@@ -77,11 +78,13 @@ class S4Grating(GratingVLS, S4OpticalElement):
             raise Exception("Not implemented grating with f_ruling=%d" % self._fruling)
 
 class S4GratingElement(S4BeamlineElement):
-
-    def __init__(self, optical_element : S4Grating = None, coordinates : ElementCoordinates = None, input_beam : S4Beam = None):
-        super().__init__(optical_element if optical_element is not None else S4Grating(),
-                         coordinates if coordinates is not None else ElementCoordinates(),
-                         input_beam)
+    def __init__(self,
+                 optical_element : S4Grating = None,
+                 coordinates : ElementCoordinates = None,
+                 input_beam : S4Beam = None):
+        super().__init__(optical_element=optical_element if optical_element is not None else S4Grating(),
+                         coordinates=coordinates if coordinates is not None else ElementCoordinates(),
+                         input_beam=input_beam)
         self.align_grating()
 
     def align_grating(self):
@@ -215,7 +218,7 @@ if __name__ == "__main__":
     # source
     #
     src = SourceGaussian.initialize_from_keywords(
-                 number_of_rays=10000,
+                 nrays=10000,
                  sigmaX=1.0e-6,
                  sigmaY=0.0,
                  sigmaZ=1.0e-6,
@@ -263,8 +266,8 @@ if __name__ == "__main__":
 
 
 
-    ge = S4GratingElement(optical_element=g, coordinates=coordinates_syned)
+    ge = S4GratingElement(optical_element=g, coordinates=coordinates_syned, input_beam=beam)
 
     print(ge.info())
 
-    beam_out = ge.trace_beam(beam)
+    beam_out = ge.trace_beam()

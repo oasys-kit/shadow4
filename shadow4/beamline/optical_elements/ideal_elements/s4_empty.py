@@ -11,11 +11,13 @@ class S4Empty(Screen, S4OpticalElement):
         super().__init__(name=name)
 
 class S4EmptyElement(S4BeamlineElement):
-
-    def __init__(self, optical_element : S4Empty = None, coordinates : ElementCoordinates = None, input_beam : S4Beam = None):
-        super().__init__(optical_element if optical_element is not None else S4Empty(),
-                         coordinates if coordinates is not None else ElementCoordinates(),
-                         input_beam)
+    def __init__(self,
+                 optical_element : S4Empty = None,
+                 coordinates : ElementCoordinates = None,
+                 input_beam : S4Beam = None):
+        super().__init__(optical_element=optical_element if optical_element is not None else S4Empty(),
+                         coordinates=coordinates if coordinates is not None else ElementCoordinates(),
+                         input_beam=input_beam)
 
     def trace_beam(self, **params):
         p, q, angle_radial, angle_radial_out, angle_azimuthal = self.get_coordinates().get_positions()

@@ -307,6 +307,98 @@ def hyperbola_check(ssour=10,simag=3,theta_grazing=3e-3, do_plot=False):
         compare_conics(s5, ccc.get_coefficients(), x_min=-0.01, x_max=0.01, y_min=-0.1, y_max=0.1,
                        titles=['s5','ccc'])
 
+# adapted from s4_conic
+def height(ccc,y=0,x=0,return_solution=0):
+    aa = ccc[2]
+    bb = ccc[4] * y + ccc[5] * x + ccc[8]
+    cc = ccc[0] * x**2 + ccc[1] * y**2 + ccc[3] * x * y + \
+        ccc[6] * x + ccc[7] * y + ccc[9]
+
+
+    if aa != 0:
+        discr = bb**2 - 4 * aa * cc + 0j
+        print("delta: ", discr)
+        s1 = (-bb + numpy.sqrt(discr)) / 2 / aa
+        s2 = (-bb - numpy.sqrt(discr)) / 2 / aa
+
+        # if return_solution == 0: # select the solution close to zero at pole
+        #     if numpy.abs(s1).min() < numpy.abs(s2).min():
+        #         ss = s1
+        #     else:
+        #         ss = s2
+        # elif return_solution == 1:
+        #     ss = s1
+        # else:
+        #     ss = s2
+    else:
+        # ss = -cc / bb
+        s1 = -cc / bb
+        s2 = -cc / bb
+
+    return s1,s2
+
+def plot_height(ccc, p=7, q=10, theta=3e-3, title=""):
+    nx = 10
+    ny = 20
+    x0 = numpy.linspace(-0.1,0.1,nx)
+    y0 = numpy.linspace(-0.5,0.5,ny)
+    x = numpy.outer( x0, numpy.ones(ny) )
+    y = numpy.outer( numpy.ones(nx), y0)
+    z0,z1 = height(ccc, y=y, x=x)
+    # print(x.shape, y.shape, z0.shape)
+
+    z2 = height_ken(p, q, theta, y=y, x=x, sign1=+1.0)
+    z3 = height_ken(p, q, theta, y=y, x=x, sign1=-1.0)
+
+    if (z0.imag ** 2).sum() > 0: raise Exception("Delta < 0")
+    if (z1.imag ** 2).sum() > 0: raise Exception("Delta < 0")
+
+    from srxraylib.plot.gol import plot
+    plot(
+         y0, z0[nx // 2, :],
+         y0, z1[nx // 2, :],
+         y0, z2[nx // 2, :],
+         y0, z3[nx // 2, :],
+         legend=['solving eq 17 +', 'solving eq 17 -', 'Eq 11 +', 'Eq 11 -'],
+         marker=[None,None,'+','+'],
+         linestyle=[None,None,'',''],
+         title=title,
+         )
+
+    plot(
+         y0, z1[nx // 2, :],
+         y0, z3[nx // 2, :],
+         legend=['solving eq 17 -', 'Eq 11 -'],
+         marker=[None,'+'],
+         linestyle=[None,''],
+         title=title,
+         )
+
+    plot(
+         y0, z0[nx // 2, :],
+         y0, z3[nx // 2, :],
+         legend=['solving eq 17 +', 'Eq 11 -'],
+         marker=[None,'+'],
+         linestyle=[None,''],
+         title=title,
+         )
+
+    return z0.real,z1.real
+
+def height_ken(p, q, theta, y=0, x=0, sign1=+1.0):
+
+    s = numpy.sin(theta)
+    c = numpy.cos(theta)
+
+
+    z = s*(2*p*q+c*(p+q)*y) + sign1 * numpy.sqrt(
+        4 * s**2 * p * q * (p * q + c * (p + q) * y + y**2) - (c**2 * (p + q)**2 - 4 * p * q) * x**2
+        )
+    z /= (4 * s**2 * p * q / (p - q) - c**2 * (p - q))
+
+    return z
+
+
 
 if __name__ == "__main__":
     # print(ellipsoid(p=10,q=3,theta=3e-3))
@@ -330,17 +422,27 @@ if __name__ == "__main__":
     # print(normalize(ken_hyperboloid_large_p_old(p=10, q=3, theta=3e-3),index=2))
 
     print("hyperboloid, p<q:")
-    print(normalize(hyperboloid_large_q(p=3, q=10, theta=3e-3), index=0))
-    print(ken_hyperboloid_large_q(p=3, q=10, theta=3e-3))
+    p, q, theta = 7, 10, 3e-1
+    # p, q, theta = 0.900000, 2.700000, 0.003
+    print(normalize(hyperboloid_large_q(p=p, q=q, theta=theta), index=0))
+    print(ken_hyperboloid_large_q(p=p, q=q, theta=theta))
+    ccc = ken_hyperboloid_large_q(p=p, q=q, theta=theta)
+    s1, s2 = plot_height(ccc, p=p, q=q, theta=theta, title="p=%f, q=%f, theta=%f" % (p,q,theta))
 
     print("hyperboloid, p>q:")
-    print(normalize(hyperboloid_large_p(p=10, q=3, theta=3e-3), index=0))
-    print(ken_hyperboloid_large_p(p=10, q=3, theta=3e-3))
+    p, q, theta = 10, 7, 3e-1
+    # p, q, theta = 2.7, 0.900000, 0.003
+    print(normalize(hyperboloid_large_p(p=10, q=7, theta=3e-3), index=0))
+    print(ken_hyperboloid_large_p(p=p, q=q, theta=theta))
+    ccc = ken_hyperboloid_large_p(p=p, q=q, theta=theta)
+    s1, s2 = plot_height(ccc, p=p, q=q, theta=theta, title="p=%f, q=%f, theta=%f" % (p,q,theta))
 
-    print("ellipsoid")
-    print(normalize(ellipsoid(p=10, q=3, theta=3e-3), index=0))
-    print(normalize(ken_ellipsoid(p=10, q=3, theta=3e-3), index=0))
 
-    print("parabola")
-    print(normalize(paraboloid_focusing(q=10, theta=3e-3), index=0))
-    print(normalize(ken_paraboloid_focusing(q=10, theta=3e-3), index=0))
+
+    # print("ellipsoid")
+    # print(normalize(ellipsoid(p=10, q=3, theta=3e-3), index=0))
+    # print(normalize(ken_ellipsoid(p=10, q=3, theta=3e-3), index=0))
+    #
+    # print("parabola")
+    # print(normalize(paraboloid_focusing(q=10, theta=3e-3), index=0))
+    # print(normalize(ken_paraboloid_focusing(q=10, theta=3e-3), index=0))

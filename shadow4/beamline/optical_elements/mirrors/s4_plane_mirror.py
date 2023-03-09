@@ -1,5 +1,6 @@
 from syned.beamline.shape import Plane
 from syned.beamline.element_coordinates import ElementCoordinates
+from shadow4.beam.s4_beam import S4Beam
 from shadow4.beamline.s4_optical_element import S4PlaneOpticalElement
 from shadow4.beamline.optical_elements.mirrors.s4_mirror import S4MirrorElement, S4Mirror
 
@@ -37,9 +38,13 @@ class S4PlaneMirror(S4Mirror, S4PlaneOpticalElement):
         return txt
 
 class S4PlaneMirrorElement(S4MirrorElement):
-    def __init__(self, optical_element=None, coordinates=None):
-        super().__init__(optical_element if optical_element is not None else S4PlaneMirror(),
-                         coordinates if coordinates is not None else ElementCoordinates())
+    def __init__(self,
+                 optical_element: S4PlaneMirror = None,
+                 coordinates: ElementCoordinates = None,
+                 input_beam: S4Beam = None):
+        super().__init__(optical_element=optical_element if optical_element is not None else S4PlaneMirror(),
+                         coordinates=coordinates if coordinates is not None else ElementCoordinates(),
+                         input_beam=input_beam)
         if not isinstance(self.get_optical_element().get_surface_shape(), Plane):
             raise ValueError("Wrong Optical Element: only Plane shape is accepted")
 
@@ -51,8 +56,8 @@ class S4PlaneMirrorElement(S4MirrorElement):
         txt += "\ncoordinates=ElementCoordinates(p=%g,q=%g,angle_radial=%g)" % \
                (coordinates.p(), coordinates.q(), coordinates.angle_radial())
         txt += "\nfrom shadow4.beamline.optical_elements.mirrors.s4_plane_mirror import S4PlaneMirrorElement"
-        txt += "\nbeamline_element = S4PlaneMirrorElement(optical_element=optical_element,coordinates=coordinates)"
-        txt += "\n\nbeam, mirr = beamline_element.trace_beam(beam)"
+        txt += "\nbeamline_element = S4PlaneMirrorElement(optical_element=optical_element,coordinates=coordinates,input_beam=beam)"
+        txt += "\n\nbeam, mirr = beamline_element.trace_beam()"
         return txt
 
 if __name__ == "__main__":

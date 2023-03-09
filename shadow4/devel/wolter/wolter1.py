@@ -278,7 +278,7 @@ def recipe4(    #  centered system parabola-hyperbola
     # return tkt_ell, tkt_hyp
 if __name__ == "__main__":
 
-    if False:
+    if True:
         tkt_ell, tkt_hyp = recipe1(
             p_ell = 10.0,
             q_ell = 3.0,
@@ -351,7 +351,7 @@ if __name__ == "__main__":
         print("Hyperbola: ", ccc_hyp)
 
 
-    if True: # Underwood centered
+    if False: # Underwood centered
         tkt_ell, tkt_hyp = recipe4(verbose=1)
         ccc_ell = tkt_ell['ccc']
         ccc_hyp = tkt_hyp['ccc']

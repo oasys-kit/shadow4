@@ -1,4 +1,5 @@
 from syned.beamline.shape import Conic
+from shadow4.beam.s4_beam import S4Beam
 from shadow4.beamline.optical_elements.mirrors.s4_mirror import S4MirrorElement, S4Mirror, ElementCoordinates
 
 from shadow4.beamline.s4_optical_element import S4ConicOpticalElement
@@ -28,9 +29,13 @@ class S4ConicMirror(S4Mirror, S4ConicOpticalElement):
         return mirr, normal
 
 class S4ConicMirrorElement(S4MirrorElement):
-    def __init__(self, optical_element=None, coordinates=None):
-        super().__init__(optical_element if optical_element is not None else S4ConicMirror(),
-                         coordinates if coordinates is not None else ElementCoordinates())
+    def __init__(self,
+                 optical_element: S4ConicMirror = None,
+                 coordinates: ElementCoordinates = None,
+                 input_beam: S4Beam = None):
+        super().__init__(optical_element=optical_element if optical_element is not None else S4ConicMirror(),
+                         coordinates=coordinates if coordinates is not None else ElementCoordinates(),
+                         input_beam=input_beam)
         if not isinstance(self.get_optical_element().get_surface_shape(), Conic):
             raise ValueError("Wrong Optical Element: only Conic shape is accepted")
 

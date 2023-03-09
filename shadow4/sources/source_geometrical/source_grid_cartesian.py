@@ -344,5 +344,4 @@ if __name__ == "__main__":
     import Shadow
     Shadow.ShadowTools.plotxy(beam_shadow3,1,3)
     #
-
     beam_shadow3.write("begin.dat")

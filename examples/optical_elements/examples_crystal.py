@@ -65,7 +65,8 @@ def crystal_diffraction_with_collimated_beam(do_plot=True):
                                     spread_mos=0.4 * numpy.pi / 180,
                                     f_ext=0,                                    ),
                                 coordinates=ElementCoordinates(p=0.0, q=5000.0e-3,
-                                            angle_radial=0.0, angle_azimuthal=0.0, angle_radial_out=0.0))
+                                            angle_radial=0.0, angle_azimuthal=0.0, angle_radial_out=0.0),
+                                input_beam=beam)
 
     # print(crystal1.info())
     # print(crystal1.get_optical_element().get_surface_shape().get_conic_coefficients())
@@ -73,7 +74,7 @@ def crystal_diffraction_with_collimated_beam(do_plot=True):
     # trace
     #
 
-    beam2, mirr2 = crystal1.trace_beam(beam)
+    beam2, mirr2 = crystal1.trace_beam()
 
     if do_plot:
         plotxy(beam2, 6, 23, nbins=100, title="INTENSITY VS Z'")

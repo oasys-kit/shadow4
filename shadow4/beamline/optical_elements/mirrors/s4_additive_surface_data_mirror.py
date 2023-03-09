@@ -1,5 +1,6 @@
 from syned.beamline.shape import SurfaceData
 from syned.beamline.element_coordinates import ElementCoordinates
+from shadow4.beam.s4_beam import S4Beam
 from shadow4.beamline.optical_elements.mirrors.s4_mirror import S4MirrorElement, S4Mirror
 
 from shadow4.beamline.s4_optical_element import S4AdditiveSurfaceDataOpticalElement
@@ -33,9 +34,13 @@ class S4AdditiveSurfaceDataMirror(S4Mirror, S4AdditiveSurfaceDataOpticalElement)
         return mirr, normal
 
 class S4AdditiveSurfaceDataMirrorElement(S4MirrorElement):
-    def __init__(self, optical_element=None, coordinates=None):
-        super().__init__(optical_element if optical_element is not None else S4AdditiveSurfaceDataMirror(),
-                         coordinates if coordinates is not None else ElementCoordinates())
+    def __init__(self,
+                 optical_element: S4AdditiveSurfaceDataMirror = None,
+                 coordinates: ElementCoordinates = None,
+                 input_beam: S4Beam = None):
+        super().__init__(optical_element=optical_element if optical_element is not None else S4AdditiveSurfaceDataMirror(),
+                         coordinates=coordinates if coordinates is not None else ElementCoordinates(),
+                         input_beam=input_beam)
         if not isinstance(self.get_optical_element().get_surface_shape(), SurfaceData):
             raise ValueError("Wrong Optical Element: only Surface Data shape is accepted")
 
@@ -66,7 +71,7 @@ if __name__ == "__main__":
     set_qt()
     do_plot = True
 
-    source = SourceGaussian.initialize_from_keywords(number_of_rays=10000,
+    source = SourceGaussian.initialize_from_keywords(nrays=10000,
                                                      sigmaX=0.0,
                                                      sigmaY=0.0,
                                                      sigmaZ=0.0,
@@ -108,14 +113,15 @@ if __name__ == "__main__":
     mirror1 = S4AdditiveSurfaceDataMirrorElement(optical_element=mesh_element,
                                                     coordinates=ElementCoordinates(p=10.0,
                                                                                    q=6.0,
-                                                                                   angle_radial=numpy.radians(88.8)))
+                                                                                   angle_radial=numpy.radians(88.8)),
+                                                 input_beam=beam0)
 
     print(mirror1.info())
 
     #
     # run
     #
-    beam1, mirr1 = mirror1.trace_beam(beam0)
+    beam1, mirr1 = mirror1.trace_beam()
     print(mirr1.info())
 
     #

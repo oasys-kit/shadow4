@@ -1028,7 +1028,7 @@ if __name__ == "__main__":
     a = MLayer.pre_mlayer(
         interactive=False,
         FILE="pre_mlayer.dat",
-        E_MIN=100.0, E_MAX=500.0,
+        E_MIN=110.0, E_MAX=500.0,
         O_DENSITY=7.19, O_MATERIAL="Cr",  # odd: closer to vacuum
         E_DENSITY=3.00, E_MATERIAL="Sc",  # even: closer to substrate
         S_DENSITY=2.33, S_MATERIAL="Si",  # substrate

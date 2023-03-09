@@ -1,4 +1,5 @@
 from syned.beamline.shape import Ellipsoid, EllipticalCylinder, Convexity, Direction
+from shadow4.beam.s4_beam import S4Beam
 from shadow4.beamline.s4_optical_element import SurfaceCalculation, S4EllipsoidOpticalElement
 from shadow4.beamline.optical_elements.mirrors.s4_mirror import S4MirrorElement, S4Mirror, ElementCoordinates
 
@@ -37,9 +38,13 @@ class S4EllipsoidMirror(S4Mirror, S4EllipsoidOpticalElement):
         return mirr, normal
 
 class S4EllipsoidMirrorElement(S4MirrorElement):
-    def __init__(self, optical_element=None, coordinates=None):
-        super().__init__(optical_element if optical_element is not None else S4EllipsoidMirror(),
-                         coordinates if coordinates is not None else ElementCoordinates())
+    def __init__(self,
+                 optical_element: S4EllipsoidMirror = None,
+                 coordinates: ElementCoordinates = None,
+                 input_beam: S4Beam = None):
+        super().__init__(optical_element=optical_element if optical_element is not None else S4EllipsoidMirror(),
+                         coordinates=coordinates if coordinates is not None else ElementCoordinates(),
+                         input_beam=input_beam)
         if not (isinstance(self.get_optical_element().get_surface_shape(), EllipticalCylinder) or
                 isinstance(self.get_optical_element().get_surface_shape(), Ellipsoid)):
             raise ValueError("Wrong Optical Element: only Ellipsoid or Elliptical Cylinder shape is accepted")

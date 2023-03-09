@@ -417,7 +417,7 @@ class PreRefl(object):
 
 if __name__ == "__main__":
     from srxraylib.plot.gol import plot
-    if True:
+    if False:
         from srxraylib.plot.gol import plot
 
         #
@@ -504,20 +504,20 @@ if __name__ == "__main__":
             plot(Energy, rs0, Energy, rs1, ylog=True, legend=["no roughness", "5A RMS roughness"],title="array inputs")
 
 
-    if True: # compare with cxro
+    if False: # compare with cxro
 
         prerefl_file = "reflec1.dat"
         prerefl_file_cxro = "reflec_cxro.dat"
 
 
         PreRefl.prerefl(interactive=False, SYMBOL="Au", DENSITY=19.3, FILE=prerefl_file,
-                        E_MIN=50.0, E_MAX=501.0, E_STEP=1.0)
+                        E_MIN=110.0, E_MAX=501.0, E_STEP=1.0)
 
         PreRefl.prerefl_cxro(input_file="https://henke.lbl.gov/tmp/xray8378.dat",
                              output_file=prerefl_file_cxro,
-                             E_MIN=50, E_MAX=501,  NPOINTS=500)
+                             E_MIN=110, E_MAX=501,  NPOINTS=500)
 
-        Energy = numpy.linspace(100.0,500.0,1000)
+        Energy = numpy.linspace(110.0,500.0,1000)
         grazing_angle_mrad = 175.5
 
         a = PreRefl()
@@ -541,17 +541,17 @@ if __name__ == "__main__":
         prerefl_file = "reflec1.dat"
 
         PreRefl.prerefl(interactive=False, SYMBOL="Au", DENSITY=19.3, FILE=prerefl_file,
-                        E_MIN=50.0, E_MAX=501.0, E_STEP=1.0)
+                        E_MIN=110.0, E_MAX=501.0, E_STEP=1.0)
 
-        Energy = numpy.linspace(100.0, 500.0, 1000)
+        Energy = numpy.linspace(110.0, 500.0, 1000)
         grazing_angle_mrad = 175.5
 
         PreRefl.prerefl(interactive=False, SYMBOL="Au", DENSITY=19.3, FILE=prerefl_file,
-                        E_MIN=50.0, E_MAX=501.0, E_STEP=1.0)
+                        E_MIN=110.0, E_MAX=501.0, E_STEP=1.0)
 
         a = PreRefl()
         a.read_preprocessor_file(prerefl_file)
-        a.get_refraction_index(100.0, verbose=1)
+        a.get_refraction_index(110.0, verbose=1)
 
         RS0 = numpy.zeros_like(Energy)
 
@@ -573,8 +573,11 @@ if __name__ == "__main__":
 
 
 
-        from xoppylib.xoppy_xraylib_util import f1f2_calc
-        aa = f1f2_calc("Au", Energy, theta=grazing_angle_mrad*1e-3, F=8, density=None, rough=0.0, verbose=True)
+        from xoppylib.scattering_functions.f1f2_calc import f1f2_calc
+        import xraylib
+
+        aa = f1f2_calc("Au", Energy, theta=grazing_angle_mrad*1e-3, F=8, density=None, rough=0.0, verbose=True,
+                       material_constants_library=xraylib)
         print(aa.shape)
         plot(Energy,RS0,
              Energy,aa,

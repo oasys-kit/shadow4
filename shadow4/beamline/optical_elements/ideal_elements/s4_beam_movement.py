@@ -1,6 +1,7 @@
 from syned.beamline.optical_element import OpticalElement
 from syned.beamline.element_coordinates import ElementCoordinates
 
+from shadow4.beam.s4_beam import S4Beam
 from shadow4.beamline.s4_optical_element import S4OpticalElement
 from shadow4.beamline.s4_beamline_element import S4BeamlineElement
 from shadow4.beam.s4_beam import S4Beam
@@ -25,11 +26,13 @@ class S4BeamMovement(OpticalElement, S4OpticalElement):
         self.rotation_z    = rotation_z
 
 class S4BeamMovementElement(S4BeamlineElement):
-
-    def __init__(self, optical_element : S4BeamMovement = None, coordinates : ElementCoordinates = None, input_beam : S4Beam = None):
-        super().__init__(optical_element if optical_element is not None else S4BeamMovement(),
-                         coordinates if coordinates is not None else ElementCoordinates(),
-                         input_beam)
+    def __init__(self,
+                 optical_element : S4BeamMovement = None,
+                 coordinates : ElementCoordinates = None,
+                 input_beam : S4Beam = None):
+        super().__init__(optical_element=optical_element if optical_element is not None else S4BeamMovement(),
+                         coordinates=coordinates if coordinates is not None else ElementCoordinates(),
+                         input_beam=input_beam)
 
     def trace_beam(self, **params):
         verbose = 0

@@ -38,10 +38,13 @@ class S4ParaboloidMirror(S4Mirror, S4ParaboloidOpticalElement):
         return mirr, normal
 
 class S4ParaboloidMirrorElement(S4MirrorElement):
-    def __init__(self, optical_element : S4ParaboloidMirror = None, coordinates : ElementCoordinates = None, input_beam : S4Beam = None):
-        super().__init__(optical_element if optical_element is not None else S4ParaboloidMirror(),
-                         coordinates if coordinates is not None else ElementCoordinates(),
-                         input_beam)
+    def __init__(self,
+                 optical_element : S4ParaboloidMirror = None,
+                 coordinates : ElementCoordinates = None,
+                 input_beam : S4Beam = None):
+        super().__init__(optical_element=optical_element if optical_element is not None else S4ParaboloidMirror(),
+                         coordinates=coordinates if coordinates is not None else ElementCoordinates(),
+                         input_beam=input_beam)
         if not (isinstance(self.get_optical_element().get_surface_shape(), ParabolicCylinder) or
                 isinstance(self.get_optical_element().get_surface_shape(), Paraboloid)):
             raise ValueError("Wrong Optical Element: only Paraboloid or Parabolic Cylinder shape is accepted")
