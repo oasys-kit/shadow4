@@ -1,8 +1,6 @@
 import numpy
 import os
 
-from syned.beamline.optical_element_with_surface_shape import OpticalElement, OpticalElementsWithSurfaceShape
-
 from syned.beamline.shape import Direction, Convexity
 from syned.beamline.shape import Sphere, SphericalCylinder
 from syned.beamline.shape import Ellipsoid, EllipticalCylinder
@@ -34,7 +32,6 @@ class S4OpticalElementDecorator(object):
 class SurfaceCalculation:
     INTERNAL = 0
     EXTERNAL = 1
-
 
 class S4PlaneOpticalElementDecorator(S4OpticalElementDecorator):
     def __init__(self):

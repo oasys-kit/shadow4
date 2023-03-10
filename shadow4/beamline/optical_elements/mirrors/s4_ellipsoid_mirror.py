@@ -37,6 +37,9 @@ class S4EllipsoidMirror(S4Mirror, S4EllipsoidOpticalElementDecorator):
         footprint, normal = ccc.apply_specular_reflection_on_beam(beam)
         return footprint, normal
 
+
+
+
 class S4EllipsoidMirrorElement(S4MirrorElement):
     def __init__(self,
                  optical_element: S4EllipsoidMirror = None,
