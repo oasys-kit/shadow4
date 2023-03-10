@@ -11,7 +11,7 @@ from shadow4.beamline.s4_optical_element import SurfaceCalculation
 
 from shadow4.beamline.optical_elements.mirrors.s4_conic_mirror import S4ConicMirror, S4ConicMirrorElement
 from shadow4.beamline.optical_elements.mirrors.s4_toroidal_mirror import S4ToroidalMirror, S4ToroidalMirrorElement
-from shadow4.beamline.optical_elements.mirrors.s4_surface_data_mirror import S4SurfaceDataMirror, S4SurfaceDataMirrorElement
+from shadow4.beamline.optical_elements.mirrors.s4_numerical_mesh_mirror import S4NumericalMeshMirror, S4NumericalMeshMirrorElement
 from shadow4.beamline.optical_elements.mirrors.s4_plane_mirror import S4PlaneMirror, S4PlaneMirrorElement
 from shadow4.beamline.optical_elements.mirrors.s4_ellipsoid_mirror import S4EllipsoidMirror, S4EllipsoidMirrorElement
 from shadow4.beamline.optical_elements.mirrors.s4_hyperboloid_mirror import S4HyperboloidMirror, S4HyperboloidMirrorElement
@@ -197,13 +197,13 @@ def example_branch_3(surface_shape_file, do_plot=True):
     #
     # shadow definitions
     #
-    mirror1 = S4SurfaceDataMirrorElement(optical_element=S4SurfaceDataMirror(name="M1",
-                                                                             surface_data_file=surface_shape_file,
-                                                                             boundary_shape=Rectangle(x_left=-rwidx2,x_right=rwidx1,y_bottom=-rlen2,y_top=rlen1)),
-                                         coordinates=ElementCoordinates(p = 100.0,
+    mirror1 = S4NumericalMeshMirrorElement(optical_element=S4NumericalMeshMirror(name="M1",
+                                                                                 surface_data_file=surface_shape_file,
+                                                                                 boundary_shape=Rectangle(x_left=-rwidx2,x_right=rwidx1,y_bottom=-rlen2,y_top=rlen1)),
+                                           coordinates=ElementCoordinates(p = 100.0,
                                                                         q = 1000.0,
                                                                         angle_radial = numpy.radians(88.8)),
-                                         input_beam=beam0)
+                                           input_beam=beam0)
     print(mirror1.info())
 
     #

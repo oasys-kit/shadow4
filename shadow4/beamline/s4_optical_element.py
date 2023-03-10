@@ -6,7 +6,7 @@ from syned.beamline.shape import Sphere, SphericalCylinder
 from syned.beamline.shape import Ellipsoid, EllipticalCylinder
 from syned.beamline.shape import Hyperboloid, HyperbolicCylinder
 from syned.beamline.shape import Paraboloid, ParabolicCylinder
-from syned.beamline.shape import Toroid, Conic, SurfaceData, Plane, Side
+from syned.beamline.shape import Toroid, Conic, NumericalMesh, Plane, Side
 
 from shadow4.optical_surfaces.s4_conic import S4Conic
 from shadow4.optical_surfaces.s4_mesh import S4Mesh
@@ -275,35 +275,32 @@ class S4ParaboloidOpticalElementDecorator(S4CurvedOpticalElementDecorator):
         return S4Conic.initialize_as_paraboloid_from_focal_distances(p, q, surface_shape.get_grazing_angle(), cylindrical=cylindrical, cylangle=cylangle, switch_convexity=switch_convexity)
 
 
-class S4SurfaceDataOpticalElementDecorator(S4CurvedOpticalElementDecorator):
+class S4NumericalMeshOpticalElementDecorator(S4CurvedOpticalElementDecorator):
     def __init__(self, xx=None, yy=None, zz=None, surface_data_file=None):
         S4CurvedOpticalElementDecorator.__init__(self, surface_calculation=SurfaceCalculation.INTERNAL, is_cylinder=False)
 
-        self._curved_surface_shape = SurfaceData(xx, yy, zz, surface_data_file)
+        self._curved_surface_shape = NumericalMesh(xx, yy, zz, surface_data_file)
 
     def get_optical_surface_instance(self):
         surface_shape = self.get_surface_shape()
 
         print(">>>>> SurfaceData optical element")
-        num_mesh = S4Mesh()
+        numerical_mesh = S4Mesh()
 
-        if surface_shape.has_surface_data():
-            num_mesh.load_surface_data(surface_shape)
+        if surface_shape.has_surface_data(): numerical_mesh.load_surface_data(surface_shape)
         elif surface_shape.has_surface_data_file():
             filename, file_extension = os.path.splitext(surface_shape._surface_data_file)
 
-            if file_extension.lower() in [".h5", ".hdf", ".hdf5"]:
-                num_mesh.load_h5file(surface_shape._surface_data_file)
-            else:
-                num_mesh.load_file(surface_shape._surface_data_file) # 3 columns ASCII
+            if file_extension.lower() in [".h5", ".hdf", ".hdf5"]: numerical_mesh.load_h5file(surface_shape._surface_data_file)
+            else:                                                  numerical_mesh.load_file(surface_shape._surface_data_file) # 3 columns ASCII
 
-        return num_mesh
-
-class S4AdditionalSurfaceDataOpticalElementDecorator(S4CurvedOpticalElementDecorator):
+        return numerical_mesh
+'''
+class S4AdditionalNumericalMeshOpticalElementDecorator(S4CurvedOpticalElementDecorator):
     def __init__(self, xx=None, yy=None, zz=None, surface_data_file=None, base_surface_function=None):
         S4CurvedOpticalElementDecorator.__init__(self, surface_calculation=SurfaceCalculation.INTERNAL, is_cylinder=False)
 
-        self._curved_surface_shape = SurfaceData(xx, yy, zz, surface_data_file)
+        self._curved_surface_shape = NumericalMesh(xx, yy, zz, surface_data_file)
 
         if base_surface_function is None:
             self._base_surface_function = lambda x,y: x * 0.0
@@ -338,3 +335,4 @@ class S4AdditionalSurfaceDataOpticalElementDecorator(S4CurvedOpticalElementDecor
         # plot_surface(zadd, x, y, xtitle="x")
         num_mesh.add_to_mesh( zadd )
         return num_mesh
+'''

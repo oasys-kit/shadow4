@@ -1,49 +1,55 @@
-from syned.beamline.shape import SurfaceData
+from syned.beamline.shape import NumericalMesh
 from syned.beamline.element_coordinates import ElementCoordinates
 from shadow4.beam.s4_beam import S4Beam
 from shadow4.beamline.optical_elements.mirrors.s4_mirror import S4MirrorElement, S4Mirror
+from shadow4.beamline.optical_elements.mirrors.s4_numerical_mesh_mirror import S4NumericalMeshMirror
 
-from shadow4.beamline.s4_optical_element import S4AdditionalSurfaceDataOpticalElementDecorator
+def add_mesh_to_ideal_surface(numerical_mesh, ideal_surface_ccc):
+    return None
 
-class S4AdditionalSurfaceDataMirror(S4Mirror, S4AdditionalSurfaceDataOpticalElementDecorator):
+class S4AdditionalNumericalMeshMirror(S4NumericalMeshMirror):
     def __init__(self,
-                 name="Surface Data Mirror",
-                 boundary_shape=None,
-                 xx=None,
-                 yy=None,
-                 zz=None,
-                 surface_data_file=None,
-                 # inputs related to mirror reflectivity
-                 f_reflec=0,  # reflectivity of surface: 0=no reflectivity, 1=full polarization
-                 f_refl=0,  # 0=prerefl file
-                 # 1=electric susceptibility
-                 # 2=user defined file (1D reflectivity vs angle)
-                 # 3=user defined file (1D reflectivity vs energy)
-                 # 4=user defined file (2D reflectivity vs energy and angle)
-                 file_refl="",  # preprocessor file fir f_refl=0,2,3,4
-                 refraction_index=1.0,  # refraction index (complex) for f_refl=1
-                 base_surface_function=None,
-                 ):
-        S4AdditionalSurfaceDataOpticalElementDecorator.__init__(self, xx, yy, zz, surface_data_file, base_surface_function)
-        S4Mirror.__init__(self, name, boundary_shape, self._curved_surface_shape,
-                          f_reflec, f_refl, file_refl, refraction_index)
+                 name="Mirror with Additional Numerical Mesh",
+                 ideal_mirror : S4Mirror = None,
+                 numerical_mesh_mirror : S4NumericalMeshMirror = None):
+        S4NumericalMeshMirror.__init__(name)
+
+        self.__ideal_mirror   = ideal_mirror
+        self.__numerical_mesh_mirror = numerical_mesh_mirror
+
+        self._f_reflec         = self.__ideal_mirror.f_reflec
+        self._f_refl           = self.__ideal_mirror.f_refl
+        self._file_refl        = self.__ideal_mirror.file_refl
+        self._refraction_index = self.__ideal_mirror.refraction_index
+
+    def get_surface_shape(self):  return self.__numerical_mesh_mirror.get_surface_shape()
+    def get_boundary_shape(self): return self.__ideal_mirror.get_boundary_shape()
+
+    def set_boundaries_rectangle(self, x_left=-1e3, x_right=1e3, y_bottom=-1e3, y_top=1e3):
+        self.__numerical_mesh_mirror.set_boundaries_rectangle(x_left=x_left, x_right=x_right, y_bottom=y_bottom, y_top=y_top)
+        self.__ideal_mirror.set_boundaries_rectangle(x_left=x_left, x_right=x_right, y_bottom=y_bottom, y_top=y_top)
 
     def apply_geometrical_model(self, beam):
-        num_mesh = self.get_optical_surface_instance()
-        footprint, normal, _, _, _, _, _ = num_mesh.apply_specular_reflection_on_beam(beam)
+        numerical_mesh    = self.__numerical_mesh_mirror.get_optical_surface_instance()
+        ideal_surface_ccc = self.__ideal_mirror.get_optical_surface_instance() # this mean that every S4Mirror must inherit from S4OpticalElementDecorator
+
+        # here sum ideal surface to numerical mesh :
+        numerical_mesh = add_mesh_to_ideal_surface(numerical_mesh, ideal_surface_ccc)
+
+        footprint, normal, _, _, _, _, _ = numerical_mesh.apply_specular_reflection_on_beam(beam)
+
         return footprint, normal
 
-class S4AdditionalSurfaceDataMirrorElement(S4MirrorElement):
+class S4AdditionalNumericalMeshMirrorElement(S4MirrorElement):
     def __init__(self,
-                 optical_element: S4AdditionalSurfaceDataMirror = None,
+                 optical_element: S4AdditionalNumericalMeshMirror = None,
                  coordinates: ElementCoordinates = None,
                  input_beam: S4Beam = None):
-        super().__init__(optical_element=optical_element if optical_element is not None else S4AdditionalSurfaceDataMirror(),
+        super().__init__(optical_element=optical_element if optical_element is not None else S4AdditionalNumericalMeshMirror(),
                          coordinates=coordinates if coordinates is not None else ElementCoordinates(),
                          input_beam=input_beam)
-        if not isinstance(self.get_optical_element().get_surface_shape(), SurfaceData):
+        if not isinstance(self.get_optical_element().get_surface_shape(), NumericalMesh):
             raise ValueError("Wrong Optical Element: only Surface Data shape is accepted")
-
 
 
 if __name__ == "__main__":
@@ -94,11 +100,11 @@ if __name__ == "__main__":
 
     base_surface_function = base_element.get_optical_surface_instance().surface_height
 
-    mesh_element = S4AdditionalSurfaceDataMirror(name="M1",
-                                                 surface_data_file="../../../../oasys_workspaces/test_shadow4.hdf5",
-                                                 boundary_shape=Rectangle(x_left=-rwidx2, x_right=rwidx1, y_bottom=-rlen2,
+    mesh_element = S4AdditionalNumericalMeshMirror(name="M1",
+                                                   surface_data_file="../../../../oasys_workspaces/test_shadow4.hdf5",
+                                                   boundary_shape=Rectangle(x_left=-rwidx2, x_right=rwidx1, y_bottom=-rlen2,
                                                                 y_top=rlen1),
-                                                 base_surface_function=base_surface_function)
+                                                   base_surface_function=base_surface_function)
 
     mirror1 = S4AdditionalSurfaceDataMirrorElement(optical_element=mesh_element,
                                                    coordinates=ElementCoordinates(p=10.0,
