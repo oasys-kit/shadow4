@@ -17,15 +17,20 @@ class S4AdditionalNumericalMeshMirror(S4NumericalMeshMirror):
         self.__ideal_mirror   = ideal_mirror
         self.__numerical_mesh_mirror = numerical_mesh_mirror
 
+        # these attributes are necessary since they are called by the trace method.
         self._f_reflec         = self.__ideal_mirror.f_reflec
         self._f_refl           = self.__ideal_mirror.f_refl
         self._file_refl        = self.__ideal_mirror.file_refl
         self._refraction_index = self.__ideal_mirror.refraction_index
 
     def get_surface_shape(self):  return self.__numerical_mesh_mirror.get_surface_shape()
-    def get_boundary_shape(self): return self.__ideal_mirror.get_boundary_shape()
 
-    def set_boundaries_rectangle(self, x_left=-1e3, x_right=1e3, y_bottom=-1e3, y_top=1e3):
+    def get_boundary_shape(self):
+        # I think that the boundary shape should be dictated by the mirror and not by the error profile.
+        # if the error profile is smaller, in the non-overlap area its value will be 0.
+        return self.__ideal_mirror.get_boundary_shape()
+
+    def set_boundaries_rectangle(self, x_left=-1e3, x_right=1e3, y_bottom=-1e3, y_top=1e3): # this method is for completeness
         self.__numerical_mesh_mirror.set_boundaries_rectangle(x_left=x_left, x_right=x_right, y_bottom=y_bottom, y_top=y_top)
         self.__ideal_mirror.set_boundaries_rectangle(x_left=x_left, x_right=x_right, y_bottom=y_bottom, y_top=y_top)
 
@@ -33,7 +38,7 @@ class S4AdditionalNumericalMeshMirror(S4NumericalMeshMirror):
         numerical_mesh    = self.__numerical_mesh_mirror.get_optical_surface_instance()
         ideal_surface_ccc = self.__ideal_mirror.get_optical_surface_instance() # this mean that every S4Mirror must inherit from S4OpticalElementDecorator
 
-        # here sum ideal surface to numerical mesh :
+        # here sum ideal surface to numerical mesh, and obtain a new numerical mesh:
         numerical_mesh = add_mesh_to_ideal_surface(numerical_mesh, ideal_surface_ccc)
 
         footprint, normal, _, _, _, _, _ = numerical_mesh.apply_specular_reflection_on_beam(beam)
@@ -98,19 +103,19 @@ if __name__ == "__main__":
     #                                 boundary_shape=Rectangle(x_left=-rwidx2, x_right=rwidx1, y_bottom=-rlen2,
     #                                                          y_top=rlen1))
 
-    base_surface_function = base_element.get_optical_surface_instance().surface_height
-
     mesh_element = S4AdditionalNumericalMeshMirror(name="M1",
-                                                   surface_data_file="../../../../oasys_workspaces/test_shadow4.hdf5",
-                                                   boundary_shape=Rectangle(x_left=-rwidx2, x_right=rwidx1, y_bottom=-rlen2,
-                                                                y_top=rlen1),
-                                                   base_surface_function=base_surface_function)
+                                                   ideal_mirror=base_element,
+                                                   numerical_mesh_mirror=S4NumericalMeshMirror(surface_data_file="../../../../oasys_workspaces/test_shadow4.hdf5",
+                                                                                               boundary_shape=Rectangle(x_left=-rwidx2,
+                                                                                                                        x_right=rwidx1,
+                                                                                                                        y_bottom=-rlen2,
+                                                                                                                        y_top=rlen1)))
 
-    mirror1 = S4AdditionalSurfaceDataMirrorElement(optical_element=mesh_element,
-                                                   coordinates=ElementCoordinates(p=10.0,
-                                                                                   q=6.0,
-                                                                                   angle_radial=numpy.radians(88.8)),
-                                                   input_beam=beam0)
+    mirror1 = S4AdditionalNumericalMeshMirrorElement(optical_element=mesh_element,
+                                                     coordinates=ElementCoordinates(p=10.0,
+                                                                                    q=6.0,
+                                                                                    angle_radial=numpy.radians(88.8)),
+                                                    input_beam=beam0)
 
     print(mirror1.info())
 
