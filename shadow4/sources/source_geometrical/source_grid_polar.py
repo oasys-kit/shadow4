@@ -6,8 +6,8 @@ from shadow4.sources.s4_light_source_base import S4LightSourceBase
 class SourceGridPolar(S4LightSourceBase):
 
     def __init__(self,
-                 real_space=[1e-6,0,1e-6],
-                 direction_space=[1e-6,1e-6],
+                 real_space_width=[1e-6,0,1e-6],
+                 direction_space_width=[1e-6,1e-6],
                  real_space_points=[100,36],
                  direction_space_points=[1,1],
                  real_space_center=[0,0,0],
@@ -20,8 +20,8 @@ class SourceGridPolar(S4LightSourceBase):
         This defines a grid source, so points starting in a ellipsoid-like volume in real space
         and angularly gridded in X,Z
 
-        :param real_space: the widths of the real_space volume [2a,2b,2c] of the ellipsoid
-        :param direction_space: The "angular" aperture [Dx',Dz']
+        :param real_space_width: the widths of the real_space_width volume [2a,2b,2c] of the ellipsoid
+        :param direction_space_width: The "angular" aperture [Dx',Dz']
         :param real_space_points: Number of points [Nradial,Nangular]
         :param direction_space_points: Number of points [Nradial',Nangular']
         :param real_space_center: Center in real space in cartesial coordinates [Xc,Yc,Zc]
@@ -31,11 +31,11 @@ class SourceGridPolar(S4LightSourceBase):
 
         super().__init__(name=name, nrays=nrays, seed=seed)
 
-        if real_space[1] != 0:
+        if real_space_width[1] != 0:
             raise Exception("Finite source depth not yet implemented!") # TODO: implement it!
 
-        self._real_space = real_space
-        self._direction_space = direction_space
+        self._real_space_width = real_space_width
+        self._direction_space_width = direction_space_width
         self._real_space_points = real_space_points
         self._direction_space_points = direction_space_points
         self._real_space_center = real_space_center
@@ -46,7 +46,7 @@ class SourceGridPolar(S4LightSourceBase):
     @classmethod
     def initialize_point_source(cls,
                 real_space_center=[0.0, 0.0, 0.0],
-                direction_space=[1e-6,1e-6],
+                direction_space_width=[1e-6,1e-6],
                 direction_space_points=[5,36],
                 direction_space_center=[0.0,0.0],
                                 ):
@@ -54,13 +54,13 @@ class SourceGridPolar(S4LightSourceBase):
         Initializes a point source
 
         :param real_space_center: Center in real space in cartesial coordinates [Xc,Yc,Zc]
-        :param direction_space: Default: [1e-6,1e-6],
+        :param direction_space_width: Default: [1e-6,1e-6],
         :param direction_space_points: Default: [100,100],
         :param direction_space_center: Default: [0.0,0.0] ),
         :return:
         """
-        return SourceGridPolar(real_space=[0,0,0],
-                 direction_space=direction_space,
+        return SourceGridPolar(real_space_width=[0,0,0],
+                 direction_space_width=direction_space_width,
                  real_space_points=[1,1,1],
                  direction_space_points=direction_space_points,
                  real_space_center=real_space_center,
@@ -69,21 +69,21 @@ class SourceGridPolar(S4LightSourceBase):
 
     @classmethod
     def initialize_collimated_source(cls,
-                real_space=[1e-6,0.0,1e-6],
+                real_space_width=[1e-6,0.0,1e-6],
                 real_space_points=[100,36],
                 real_space_center=[0.0,0.0,0.0],
                 direction_space_center=[0.0,0.0],
                                 ):
         """
 
-        :param real_space: Default: [1e-6,0,1e-6]
+        :param real_space_width: Default: [1e-6,0,1e-6]
         :param real_space_points: Default: [100,36]
         :param real_space_center: Default: [0.0,0.0,0.0]
         :param direction_space_center: Default: [0.0,0.0]
         :return:
         """
-        return SourceGridPolar(real_space=real_space,
-                 direction_space=[0.0,0.0],
+        return SourceGridPolar(real_space_width=real_space_width,
+                 direction_space_width=[0.0,0.0],
                  real_space_points=real_space_points,
                  direction_space_points=[1,1],
                  real_space_center=real_space_center,
@@ -136,8 +136,8 @@ class SourceGridPolar(S4LightSourceBase):
         for radius_ratio in radial_ratio:
             for angle in angular:
                 i += 1
-                x[i] = self._real_space[0]/2 * radius_ratio * numpy.cos(angle)
-                z[i] = self._real_space[2]/2 * radius_ratio * numpy.sin(angle)
+                x[i] = self._real_space_width[0]/2 * radius_ratio * numpy.cos(angle)
+                z[i] = self._real_space_width[2]/2 * radius_ratio * numpy.sin(angle)
         y = numpy.zeros_like(x)
         return x,y,z
 
@@ -161,8 +161,8 @@ class SourceGridPolar(S4LightSourceBase):
         for radius_ratio in radial_ratio:
             for angle in angular:
                 i += 1
-                vx[i] = self._direction_space[0]/2 * radius_ratio * numpy.cos(angle)
-                vz[i] = self._direction_space[0]/2 * radius_ratio * numpy.sin(angle)
+                vx[i] = self._direction_space_width[0]/2 * radius_ratio * numpy.cos(angle)
+                vz[i] = self._direction_space_width[0]/2 * radius_ratio * numpy.sin(angle)
 
         return vx,vz
 
@@ -231,8 +231,8 @@ class SourceGridPolar(S4LightSourceBase):
         txt += "Gridding in direction space: %d, %d \n"%(self._direction_space_points[0],
                                                                 self._direction_space_points[1])
         txt += "\n"
-        txt += "real_space widths"+repr(self._real_space) + "\n"
-        txt += "direction_space widths "+repr(self._direction_space) + "\n"
+        txt += "real_space widths"+repr(self._real_space_width) + "\n"
+        txt += "direction_space widths "+repr(self._direction_space_width) + "\n"
         txt += "real_space_points "+repr(self._real_space_points) + "\n"
         txt += "direction_space_points "+repr(self._direction_space_points) + "\n"
         txt += "real_space_center "+repr(self._real_space_center) + "\n"
@@ -265,6 +265,71 @@ class SourceGridPolar(S4LightSourceBase):
 
         return S4Beam.initialize_from_array(rays)
 
+    def to_python_code(self):
+
+        txt = ""
+
+        txt += "\n#\n#\n#"
+
+        txt += "\nfrom shadow4.sources.source_geometrical.source_grid_polar import SourceGridPolar"
+        txt += "\nlight_source = SourceGridPolar(name='%s', " % (self.get_name())
+        txt += "\n   real_space_width = [%f, %f, %f]," % (tuple(self._real_space_width))
+        txt += "\n   real_space_center = [%f, %f, %f]," % (tuple(self._real_space_center))
+        txt += "\n   real_space_points = [%d, %d]," % (tuple(self._real_space_points))
+        txt += "\n   direction_space_width = [%f, %f]," % (tuple(self._direction_space_width))
+        txt += "\n   direction_space_center = [%f, %f]," % (tuple(self._direction_space_center))
+        txt += "\n   direction_space_points = [%d, %d])" % (tuple(self._direction_space_points))
+
+
+        # real_space_width = [1e-6, 0, 1e-6],
+        # direction_space_width = [1e-6, 1e-6],
+        # real_space_points = [100, 36],
+        # direction_space_points = [1, 1],
+        # real_space_center = [0, 0, 0],
+        # direction_space_center = [0, 1, 0],
+
+
+        # # energy
+        # unit = ['eV', 'A'][self.__f_phot]
+        #
+        # if self.__f_color == 1:  # "Single line":
+        #     txt += "\nlight_source.set_energy_distribution_singleline(%f, unit='%s')" % \
+        #            (self.__ph[0], unit)
+        # elif self.__f_color == 2:  # "Several lines":
+        #     nlines = (numpy.array(self.__ph)).size
+        #     ff = "["
+        #     for i in range(nlines):
+        #         ff += "%f," % self.__ph[i]
+        #     ff += "]"
+        #     txt += "\nlight_source.set_energy_distribution_severallines(values=%s, unit='%s')" % (ff, unit)
+        # elif self.__f_color == 3:  # "Uniform":
+        #     txt += "\nlight_source.set_energy_distribution_uniform(value_min=%f, value_max=%f, unit='%s')" % \
+        #            (self.__ph[0], self.__ph[1], unit)
+        # elif self.__f_color == 4:  # "Relative intensities":
+        #     nlines = (numpy.array(self.__ph)).size
+        #     ff = "["
+        #     ww = "["
+        #     for i in range(nlines):
+        #         ff += "%f," % self.__ph[i]
+        #         ww += "%f," % self.__rl[i]
+        #     ff += "]"
+        #     ww += "]"
+        #     txt += "\nlight_source.set_energy_distribution_relativeintensities(values=%s, weights=%s, unit='%s')" % \
+        #            (ff, ww, unit)
+        # elif self.__f_color == 5:  # "Gaussian":
+        #     txt += "\nlight_source.set_energy_distribution_gaussian(center=%f, sigma=%f, unit='%s')" % \
+        #         (self.__ph[0], self.__ph[1], unit)
+        # elif self.__f_color == 6:  # "User defined":
+        #     # a = numpy.loadtxt(self.user_defined_file)
+        #     txt += "\nlight_source.set_energy_distribution_userdefined() #### TODO: COMPLETE"
+        #
+        # #polarization/coherence
+        # txt += "\nlight_source.set_polarization(polarization_degree=%f, phase_diff=%f, coherent_beam=%s)" % \
+        #        (self.__pol_deg, self.__pol_angle, self.__f_foher)
+
+        txt += "\nbeam = light_source.get_beam()"
+
+        return txt
 
 if __name__ == "__main__":
     from srxraylib.plot.gol import plot_scatter, set_qt
@@ -273,7 +338,7 @@ if __name__ == "__main__":
 
     if False:
         a = SourceGridPolar.initialize_point_source(
-                    direction_space        = [2e-3,2e-3],
+                    direction_space_width  = [2e-3,2e-3],
                     direction_space_points = [20,  5],
                     direction_space_center = [0.0, 0.0] )
         print(a.info())
@@ -292,7 +357,7 @@ if __name__ == "__main__":
     #
     if False:
         a = SourceGridPolar.initialize_collimated_source(
-            real_space=[2e-6, 0.0, 1e-6],
+            real_space_width=[2e-6, 0.0, 1e-6],
             real_space_points=[10, 4],
             real_space_center=[0.0, 0.0, 0.0]
         )
@@ -313,10 +378,10 @@ if __name__ == "__main__":
 
     if False:
         a = SourceGridPolar(
-            real_space=[1e-6, 0.0, 1e-6],
+            real_space_width=[1e-6, 0.0, 1e-6],
             real_space_points=[2, 4],
             real_space_center=[0.0, 0.0, 0.0],
-            direction_space=[2e-6, 2e-6],
+            direction_space_width=[2e-6, 2e-6],
             direction_space_points=[5, 5],
             direction_space_center=[0.0, 0.0])
 
@@ -341,12 +406,12 @@ if __name__ == "__main__":
         # #
         #
 
-    if True:
+    if False:
         a = SourceGridPolar(
-            real_space=[2e-3, 0.0, 2e-3],
+            real_space_width=[2e-3, 0.0, 2e-3],
             real_space_points=[2, 8],
             real_space_center=[0.0, 0.0, 0.0],
-            direction_space=[20e-3, 20e-3],
+            direction_space_width=[20e-3, 20e-3],
             direction_space_points=[3, 359],
             direction_space_center=[0.0, 0.0])
 
@@ -359,3 +424,14 @@ if __name__ == "__main__":
         plot_scatter(beam.get_column(1)*1e6, beam.get_column(4)*1e6, xrange=[-1.1e3,1.1e3], yrange=[-11e3,11e3], title="Phase space X")
         plot_scatter(beam.get_column(3)*1e6, beam.get_column(6)*1e6, xrange=[-1.1e3,1.1e3], yrange=[-11e3,11e3], title="Phase space Z")
         beam_shadow3 = Beam3.initialize_from_shadow4_beam( beam )
+
+    if True:
+        a = SourceGridPolar(
+            real_space_width=[2e-3, 0.0, 2e-3],
+            real_space_points=[2, 8],
+            real_space_center=[0.0, 0.0, 0.0],
+            direction_space_width=[20e-3, 20e-3],
+            direction_space_points=[3, 359],
+            direction_space_center=[0.0, 0.0])
+
+        print(a.to_python_code())
