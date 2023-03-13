@@ -28,6 +28,31 @@ class S4ToroidalMirror(S4Mirror, S4ToroidalOpticalElementDecorator):
         S4Mirror.__init__(self, name, boundary_shape, self.get_surface_shape_instance(),
                           f_reflec, f_refl, file_refl, refraction_index)
 
+        self.__inputs = {
+            "name": name,
+            "surface_calculation": surface_calculation,
+            "min_radius" : min_radius,
+            "maj_radius" : maj_radius,
+            "p_focus": p_focus,
+            "q_focus": q_focus,
+            "grazing_angle": grazing_angle,
+            "f_reflec": f_reflec,
+            "f_refl": f_refl,
+            "file_refl": file_refl,
+            "refraction_index": refraction_index,
+        }
+
+    def to_python_code(self, data=None):
+        txt = "\nfrom shadow4.beamline.optical_elements.mirrors.s4_toroidal_mirror import S4ToroidalMirror"
+        txt_pre = """
+optical_element = S4ToroidalMirror(name='{name:s}',boundary_shape=None,
+    surface_calculation={surface_calculation:d},
+    min_radius={min_radius:f},maj_radius={maj_radius:f},
+    p_focus={p_focus:f},q_focus={q_focus:f},grazing_angle={grazing_angle:f},
+    f_reflec={f_reflec:d},f_refl={f_refl:d},file_refl='{file_refl:s}',refraction_index={refraction_index:g})
+"""
+        txt += txt_pre.format(**self.__inputs)
+        return txt
 
     def apply_geometrical_model(self, beam):
         toroid = self.get_optical_surface_instance()
@@ -46,3 +71,18 @@ class S4ToroidalMirrorElement(S4MirrorElement):
         if not isinstance(self.get_optical_element().get_surface_shape(), Toroid):
             raise ValueError("Wrong Optical Element: only Toroid shape is accepted")
 
+    def to_python_code(self, data=None):
+        txt = "\n\n# optical element number XX"
+        txt += self.get_optical_element().to_python_code()
+        coordinates = self.get_coordinates()
+        txt += "\nfrom syned.beamline.element_coordinates import ElementCoordinates"
+        txt += "\ncoordinates=ElementCoordinates(p=%g,q=%g,angle_radial=%g)" % \
+               (coordinates.p(), coordinates.q(), coordinates.angle_radial())
+        txt += "\nfrom shadow4.beamline.optical_elements.mirrors.s4_toroidal_mirror import S4ToroidalMirrorElement"
+        txt += "\nbeamline_element = S4ToroidalMirrorElement(optical_element=optical_element,coordinates=coordinates,input_beam=beam)"
+        txt += "\n\nbeam, mirr = beamline_element.trace_beam()"
+        return txt
+
+if __name__ == "__main__":
+    a = S4ToroidalMirror(refraction_index=6j)
+    print(a.to_python_code())

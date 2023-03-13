@@ -129,31 +129,33 @@ class S4PlaneCrystalElement(S4CrystalElement):
         return txt
 
 if __name__ == "__main__":
-    c = S4PlaneCrystal(
-            name="Undefined",
-            boundary_shape=None,
-            material="Si",
-            diffraction_geometry=DiffractionGeometry.BRAGG, #?? not supposed to be in syned...
-            miller_index_h=1,
-            miller_index_k=1,
-            miller_index_l=1,
-            asymmetry_angle=0.0,
-            thickness=0.010, ###########################
-            f_central=False,
-            f_phot_cent=0,
-            phot_cent=8000.0,
-            file_refl="",
-            f_bragg_a=False,
-            # a_bragg=0.0,
-            f_johansson=False,
-            r_johansson=1.0,
-            f_mosaic=False,
-            spread_mos=0.4*numpy.pi/180,
-            f_ext=0,)
-    # print(c.info())
-    # print(c.to_python_code())
+    # c = S4PlaneCrystal(
+    #         name="Undefined",
+    #         boundary_shape=None,
+    #         material="Si",
+    #         diffraction_geometry=DiffractionGeometry.BRAGG, #?? not supposed to be in syned...
+    #         miller_index_h=1,
+    #         miller_index_k=1,
+    #         miller_index_l=1,
+    #         asymmetry_angle=0.0,
+    #         thickness=0.010, ###########################
+    #         f_central=False,
+    #         f_phot_cent=0,
+    #         phot_cent=8000.0,
+    #         file_refl="",
+    #         f_bragg_a=False,
+    #         # a_bragg=0.0,
+    #         f_johansson=False,
+    #         r_johansson=1.0,
+    #         f_mosaic=False,
+    #         spread_mos=0.4*numpy.pi/180,
+    #         f_ext=0,)
+    # # print(c.info())
+    # # print(c.to_python_code())
+    #
+    #
+    # ce = S4PlaneCrystalElement(optical_element=c)
+    # print(ce.info())
+    # print(ce.to_python_code())
 
-
-    ce = S4PlaneCrystalElement(optical_element=c)
-    print(ce.info())
-    print(ce.to_python_code())
+    cc = S4PlaneCrystalElement()

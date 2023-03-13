@@ -271,7 +271,7 @@ if __name__ == "__main__":
     from shadow4tests.compatibility.beam3 import Beam3
     set_qt()
 
-    if True:
+    if False:
         a = SourceGridPolar.initialize_point_source(
                     direction_space        = [2e-3,2e-3],
                     direction_space_points = [20,  5],
@@ -290,7 +290,7 @@ if __name__ == "__main__":
 
     #
     #
-    if True:
+    if False:
         a = SourceGridPolar.initialize_collimated_source(
             real_space=[2e-6, 0.0, 1e-6],
             real_space_points=[10, 4],
@@ -311,7 +311,7 @@ if __name__ == "__main__":
         # #
         #
 
-    if True:
+    if False:
         a = SourceGridPolar(
             real_space=[1e-6, 0.0, 1e-6],
             real_space_points=[2, 4],
@@ -328,7 +328,10 @@ if __name__ == "__main__":
                      title="Real space")
         plot_scatter(beam.get_column(4)*1e6, beam.get_column(6)*1e6, xrange=[-1,1], yrange=[-1,1],
                      title="Directions space")
-
+        plot_scatter(beam.get_column(1)*1e6, beam.get_column(4)*1e6, xrange=[-1,1], yrange=[-1,1],
+                     title="Phase space X")
+        plot_scatter(beam.get_column(3)*1e6, beam.get_column(6)*1e6, xrange=[-1,1], yrange=[-1,1],
+                     title="Phase space Z")
         beam_shadow3 = Beam3.initialize_from_shadow4_beam( beam )
         # beam_shadow3.write("begin.dat")
 
@@ -337,3 +340,22 @@ if __name__ == "__main__":
         Shadow.ShadowTools.plotxy(beam_shadow3, 4, 6)
         # #
         #
+
+    if True:
+        a = SourceGridPolar(
+            real_space=[2e-3, 0.0, 2e-3],
+            real_space_points=[2, 8],
+            real_space_center=[0.0, 0.0, 0.0],
+            direction_space=[20e-3, 20e-3],
+            direction_space_points=[3, 359],
+            direction_space_center=[0.0, 0.0])
+
+        print(a.info())
+
+
+        beam = a.get_beam()
+        plot_scatter(beam.get_column(1)*1e6, beam.get_column(3)*1e6, xrange=[-1.1e3,1.1e3], yrange=[-1.1e3,1.1e3], title="Real space")
+        plot_scatter(beam.get_column(4)*1e6, beam.get_column(6)*1e6, xrange=[-11e3,11e3], yrange=[-11e3,11e3], title="Directions space")
+        plot_scatter(beam.get_column(1)*1e6, beam.get_column(4)*1e6, xrange=[-1.1e3,1.1e3], yrange=[-11e3,11e3], title="Phase space X")
+        plot_scatter(beam.get_column(3)*1e6, beam.get_column(6)*1e6, xrange=[-1.1e3,1.1e3], yrange=[-11e3,11e3], title="Phase space Z")
+        beam_shadow3 = Beam3.initialize_from_shadow4_beam( beam )

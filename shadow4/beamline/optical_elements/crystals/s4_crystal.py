@@ -115,15 +115,13 @@ class S4CrystalElement(S4BeamlineElement):
 
         self._crystalpy_diffraction_setup = None
 
-        self.align_crystal()
 
-    def align_crystal(self):
+    def set_crystalpy_diffraction_setup(self):
         oe = self.get_optical_element()
         coor = self.get_coordinates()
 
-
         if oe._material_constants_library_flag == 0:
-            print("\nCreating a diffraction setup (XRAYLIB)...")
+            print("\nCreating a diffraction setup (XRAYLIB) for material:", oe._material)
             diffraction_setup = DiffractionSetup(geometry_type=BraggDiffraction(),  # todo: use oe._diffraction_geometry
                                                  crystal_name=oe._material,  # string
                                                  thickness=oe._thickness,  # meters
@@ -133,7 +131,7 @@ class S4CrystalElement(S4BeamlineElement):
                                                  asymmetry_angle=oe._asymmetry_angle,                            # radians
                                                  azimuthal_angle=0.0)
         elif oe._material_constants_library_flag == 1:
-            print("\nCreating a diffraction setup (DABAX)...")
+            print("\nCreating a diffraction setup (DABAX) for material:", oe._material)
             diffraction_setup = DiffractionSetupDabax(geometry_type=BraggDiffraction(),  # todo: use oe._diffraction_geometry
                                                  crystal_name=oe._material,  # string
                                                  thickness=oe._thickness,  # meters
@@ -169,6 +167,12 @@ class S4CrystalElement(S4BeamlineElement):
 
         self._crystalpy_diffraction_setup = diffraction_setup
 
+    def align_crystal(self):
+        oe = self.get_optical_element()
+        coor = self.get_coordinates()
+
+        if oe is None:
+            raise Exception("Undefined optical element")
 
         if oe._f_central:
             if oe._f_phot_cent == 0:
@@ -176,7 +180,7 @@ class S4CrystalElement(S4BeamlineElement):
             else:
                 energy = codata.h * codata.c / codata.e * 1e2 / (oe._phot_cent * 1e-8)
 
-            setting_angle = diffraction_setup.angleBraggCorrected(energy)
+            setting_angle = self._crystalpy_diffraction_setup.angleBraggCorrected(energy)
 
             print("Bragg angle for E=%f eV is %f deg" % (energy, setting_angle * 180.0 / numpy.pi))
 
@@ -190,6 +194,10 @@ class S4CrystalElement(S4BeamlineElement):
 
     def trace_beam(self, **params):
         flag_lost_value = params.get("flag_lost_value", -1)
+
+        if self._crystalpy_diffraction_setup is None:  # todo: supress if?
+            self.set_crystalpy_diffraction_setup()
+            self.align_crystal()
 
         p = self.get_coordinates().p()
         q = self.get_coordinates().q()
@@ -394,5 +402,8 @@ if __name__ == "__main__":
             f_ext=0,)
     # print(c.info())
 
-    ce = S4CrystalElement(optical_element=c)
-    print(ce.info())
+    # ce = S4CrystalElement(optical_element=c)
+    # print(ce.info())
+
+    ce = S4CrystalElement()
+    ce.set_optical_element(c)

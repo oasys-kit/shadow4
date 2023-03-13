@@ -42,7 +42,8 @@ def crystal_diffraction_with_collimated_beam(do_plot=True):
     #
 
 
-    crystal1 = S4PlaneCrystalElement(
+    if False:
+        crystal1 = S4PlaneCrystalElement(
                                 optical_element=S4PlaneCrystal(
                                     name="Plane crystal",
                                     boundary_shape=None,
@@ -67,6 +68,36 @@ def crystal_diffraction_with_collimated_beam(do_plot=True):
                                 coordinates=ElementCoordinates(p=0.0, q=5000.0e-3,
                                             angle_radial=0.0, angle_azimuthal=0.0, angle_radial_out=0.0),
                                 input_beam=beam)
+    else:
+        crystal1 = S4PlaneCrystalElement()
+        optical_element =             S4PlaneCrystal(
+                name="Plane crystal",
+                boundary_shape=None,
+                material="Si",
+                diffraction_geometry=DiffractionGeometry.BRAGG,  # ?? not supposed to be in syned...
+                miller_index_h=1,
+                miller_index_k=1,
+                miller_index_l=1,
+                asymmetry_angle=0.0,
+                thickness=0.010,  # this is thick crystal approximation
+                f_central=True,
+                f_phot_cent=0,
+                phot_cent=8000.0,
+                file_refl="",
+                f_bragg_a=False,
+                # a_bragg=0.0,
+                f_johansson=False,
+                r_johansson=1.0,
+                f_mosaic=False,
+                spread_mos=0.4 * numpy.pi / 180,
+                f_ext=0, )
+
+        crystal1.set_optical_element(optical_element)
+        crystal1.set_coordinates(
+            ElementCoordinates(p=0.0, q=5000.0e-3,
+                                           angle_radial=0.0, angle_azimuthal=0.0, angle_radial_out=0.0))
+        crystal1.set_input_beam(beam)
+
 
     # print(crystal1.info())
     # print(crystal1.get_optical_element().get_surface_shape().get_conic_coefficients())
