@@ -44,6 +44,6 @@ class S4NumericalMeshMirrorElement(S4MirrorElement):
 
 
 if __name__ == "__main__":
-    pass
+    a = S4NumericalMeshMirror(name="")
 
 

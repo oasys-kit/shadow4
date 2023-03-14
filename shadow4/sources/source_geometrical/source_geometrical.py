@@ -570,7 +570,7 @@ class SourceGeometrical(S4LightSourceBase):
             txt += "\nlight_source.set_angular_distribution_uniform(hdiv1=%f,hdiv2=%f,vdiv1=%f,vdiv2=%f)" % \
                    (self.__hdiv1, self.__hdiv2, self.__vdiv1, self.__vdiv2)
 
-        elif self.angular_distribution == 3:  # Gaussian
+        elif self.__fdist == 3:  # Gaussian
             txt += "\nlight_source.set_angular_distribution_gaussian(sigdix=%f,sigdiz=%f)" % \
                    (self.__sigdix, self.__sigdiz)
         elif self.__fdist == 4:  # cone

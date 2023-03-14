@@ -15,6 +15,9 @@ class SourceGridPolar(S4LightSourceBase):
                  name="Undefined",
                  nrays=0, # not used
                  seed=0, # not used
+                 wavelength=1e-10,
+                 polarization_degree=1.0,
+                 polarization_phase_deg=0.0,
                  ):
         """
         This defines a grid source, so points starting in a ellipsoid-like volume in real space
@@ -40,7 +43,9 @@ class SourceGridPolar(S4LightSourceBase):
         self._direction_space_points = direction_space_points
         self._real_space_center = real_space_center
         self._direction_space_center = direction_space_center
-
+        self._wavelength = wavelength
+        self._polarization_degree = polarization_degree
+        self._polarization_phase_deg = polarization_phase_deg
 
 
     @classmethod
@@ -176,7 +181,6 @@ class SourceGridPolar(S4LightSourceBase):
         """
         X, Y, Z = self.get_arrays_real_space()
         VX, VZ = self.get_arrays_direction_space()
-        print(">>>", X.shape, Y.shape, Z.shape, VX.shape, VZ.shape)
 
         npoint = self.get_number_of_points()
         V1x = numpy.zeros(npoint)
@@ -243,12 +247,13 @@ class SourceGridPolar(S4LightSourceBase):
         return txt
 
 
-    def get_beam(self,wavelength=1e-10):
-        """
-        Returns a Beam
-        :param wavelength: the photon wavelength in m
-        :return:
-        """
+    def get_beam(self):
+
+        # obtain polarization
+        DENOM = numpy.sqrt(1.0 - 2.0 * self._polarization_degree + 2.0 * self._polarization_degree ** 2)
+        AX = self._polarization_degree / DENOM
+        AZ = (1.0 - self._polarization_degree) / DENOM
+
 
         rays = numpy.zeros((self.get_number_of_points(),18))
         volume = self.get_volume()
@@ -258,17 +263,18 @@ class SourceGridPolar(S4LightSourceBase):
         rays[:, 3] = volume[3,:]
         rays[:, 4] = volume[4,:]
         rays[:, 5] = volume[5,:]
-        rays[:,6] = 1.0 # Es
+        rays[:,6] = AX # Es
         rays[:,9] = 1   # flag
-        rays[:,10] = 2 * numpy.pi / (wavelength * 1e2) # wavenumber
+        rays[:,10] = 2 * numpy.pi / (self._wavelength * 1e2) # wavenumber in cm**-1
         rays[:,11] = numpy.arange(self.get_number_of_points(),dtype=float) # index
+        rays[:, 14] = self._polarization_phase_deg # Phase p
+        rays[:, 17] = AZ # Ep
 
         return S4Beam.initialize_from_array(rays)
 
     def to_python_code(self):
 
         txt = ""
-
         txt += "\n#\n#\n#"
 
         txt += "\nfrom shadow4.sources.source_geometrical.source_grid_polar import SourceGridPolar"
@@ -278,54 +284,10 @@ class SourceGridPolar(S4LightSourceBase):
         txt += "\n   real_space_points = [%d, %d]," % (tuple(self._real_space_points))
         txt += "\n   direction_space_width = [%f, %f]," % (tuple(self._direction_space_width))
         txt += "\n   direction_space_center = [%f, %f]," % (tuple(self._direction_space_center))
-        txt += "\n   direction_space_points = [%d, %d])" % (tuple(self._direction_space_points))
-
-
-        # real_space_width = [1e-6, 0, 1e-6],
-        # direction_space_width = [1e-6, 1e-6],
-        # real_space_points = [100, 36],
-        # direction_space_points = [1, 1],
-        # real_space_center = [0, 0, 0],
-        # direction_space_center = [0, 1, 0],
-
-
-        # # energy
-        # unit = ['eV', 'A'][self.__f_phot]
-        #
-        # if self.__f_color == 1:  # "Single line":
-        #     txt += "\nlight_source.set_energy_distribution_singleline(%f, unit='%s')" % \
-        #            (self.__ph[0], unit)
-        # elif self.__f_color == 2:  # "Several lines":
-        #     nlines = (numpy.array(self.__ph)).size
-        #     ff = "["
-        #     for i in range(nlines):
-        #         ff += "%f," % self.__ph[i]
-        #     ff += "]"
-        #     txt += "\nlight_source.set_energy_distribution_severallines(values=%s, unit='%s')" % (ff, unit)
-        # elif self.__f_color == 3:  # "Uniform":
-        #     txt += "\nlight_source.set_energy_distribution_uniform(value_min=%f, value_max=%f, unit='%s')" % \
-        #            (self.__ph[0], self.__ph[1], unit)
-        # elif self.__f_color == 4:  # "Relative intensities":
-        #     nlines = (numpy.array(self.__ph)).size
-        #     ff = "["
-        #     ww = "["
-        #     for i in range(nlines):
-        #         ff += "%f," % self.__ph[i]
-        #         ww += "%f," % self.__rl[i]
-        #     ff += "]"
-        #     ww += "]"
-        #     txt += "\nlight_source.set_energy_distribution_relativeintensities(values=%s, weights=%s, unit='%s')" % \
-        #            (ff, ww, unit)
-        # elif self.__f_color == 5:  # "Gaussian":
-        #     txt += "\nlight_source.set_energy_distribution_gaussian(center=%f, sigma=%f, unit='%s')" % \
-        #         (self.__ph[0], self.__ph[1], unit)
-        # elif self.__f_color == 6:  # "User defined":
-        #     # a = numpy.loadtxt(self.user_defined_file)
-        #     txt += "\nlight_source.set_energy_distribution_userdefined() #### TODO: COMPLETE"
-        #
-        # #polarization/coherence
-        # txt += "\nlight_source.set_polarization(polarization_degree=%f, phase_diff=%f, coherent_beam=%s)" % \
-        #        (self.__pol_deg, self.__pol_angle, self.__f_foher)
+        txt += "\n   direction_space_points = [%d, %d]," % (tuple(self._direction_space_points))
+        txt += "\n   wavelength = %g," % self._wavelength
+        txt += "\n   polarization_degree = %g," % self._polarization_degree
+        txt += "\n   polarization_phase_deg = %g)" % self._polarization_phase_deg
 
         txt += "\nbeam = light_source.get_beam()"
 
