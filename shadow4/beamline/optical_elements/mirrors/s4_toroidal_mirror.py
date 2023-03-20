@@ -30,6 +30,7 @@ class S4ToroidalMirror(S4Mirror, S4ToroidalOpticalElementDecorator):
 
         self.__inputs = {
             "name": name,
+            "boundary_shape": boundary_shape,
             "surface_calculation": surface_calculation,
             "min_radius" : min_radius,
             "maj_radius" : maj_radius,
@@ -82,6 +83,11 @@ class S4ToroidalMirrorElement(S4MirrorElement):
         txt += "\nbeamline_element = S4ToroidalMirrorElement(optical_element=optical_element,coordinates=coordinates,input_beam=beam)"
         txt += "\n\nbeam, mirr = beamline_element.trace_beam()"
         return txt
+
+    def duplicate(self):
+        return S4ToroidalMirrorElement(optical_element=self.duplicate_coordinates(),
+                                coordinates=self.duplicate_coordinates(),
+                                input_beam=self.duplicate_input_beam())
 
 if __name__ == "__main__":
     a = S4ToroidalMirror(refraction_index=6j)

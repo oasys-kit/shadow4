@@ -21,21 +21,30 @@ class S4PlaneMirror(S4Mirror, S4PlaneOpticalElementDecorator):
         S4PlaneOpticalElementDecorator.__init__(self)
         S4Mirror.__init__(self, name, boundary_shape, self.get_surface_shape_instance(), f_reflec, f_refl, file_refl, refraction_index)
 
+        self.__inputs = {
+            "name": name,
+            "boundary_shape": boundary_shape,
+            "f_reflec": f_reflec,
+            "f_refl": f_refl,
+            "file_refl": file_refl,
+            "refraction_index": refraction_index,
+        }
+
+    def to_python_code(self, data=None):
+        txt = "\nfrom shadow4.beamline.optical_elements.mirrors.s4_plane_mirror import S4PlaneMirror"
+        txt_pre = """
+optical_element = S4PlaneMirror(name='{name:s}',boundary_shape=None,
+    f_reflec={f_reflec:d},f_refl={f_refl:d},file_refl='{file_refl:s}',refraction_index={refraction_index:g})
+    """
+        txt += txt_pre.format(**self.__inputs)
+        return txt
 
     def apply_geometrical_model(self, beam):
         ccc = self.get_optical_surface_instance()
         footprint, normal = ccc.apply_specular_reflection_on_beam(beam)
         return footprint, normal
 
-    def to_python_code(self, data=None):
-        txt = "\nfrom shadow4.beamline.optical_elements.mirrors.s4_plane_mirror import S4PlaneMirror"
-        txt_pre = "\noptical_element = S4PlaneMirror(name='{name:s}',boundary_shape=None,f_reflec={f_reflec:d},f_refl={f_refl:d},file_refl='{file_refl:s}',refraction_index={refraction_index:g})"
-        txt += txt_pre.format(name=self.get_name(),
-                              f_reflec=self._f_reflec,
-                              f_refl=self._f_refl,
-                              file_refl=self._file_refl,
-                              refraction_index=self._refraction_index)
-        return txt
+
 
 class S4PlaneMirrorElement(S4MirrorElement):
     def __init__(self,
@@ -60,8 +69,14 @@ class S4PlaneMirrorElement(S4MirrorElement):
         txt += "\n\nbeam, mirr = beamline_element.trace_beam()"
         return txt
 
+    def duplicate(self):
+        return S4PlaneMirrorElement(optical_element=self.duplicate_coordinates(),
+                                coordinates=self.duplicate_coordinates(),
+                                input_beam=self.duplicate_input_beam())
+
 if __name__ == "__main__":
     m = S4PlaneMirror(refraction_index=1+1e-7j)
     me = S4PlaneMirrorElement(optical_element=m, coordinates=ElementCoordinates(p=10))
     print(me.info())
     print(me.to_python_code())
+    print(me.duplicate())

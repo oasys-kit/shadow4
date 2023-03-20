@@ -33,6 +33,7 @@ class S4EllipsoidMirror(S4Mirror, S4EllipsoidOpticalElementDecorator):
 
         self.__inputs = {
             "name": name,
+            "boundary_shape": boundary_shape,
             "surface_calculation": surface_calculation,
             "is_cylinder": is_cylinder,
             "cylinder_direction": cylinder_direction,
@@ -93,7 +94,15 @@ class S4EllipsoidMirrorElement(S4MirrorElement):
         txt += "\n\nbeam, mirr = beamline_element.trace_beam()"
         return txt
 
+    def duplicate(self):
+        return S4EllipsoidMirrorElement(optical_element=self.duplicate_coordinates(),
+                                coordinates=self.duplicate_coordinates(),
+                                input_beam=self.duplicate_input_beam())
+
 if __name__ == "__main__":
-    a = S4EllipsoidMirror(refraction_index=6j)
+    import copy
+    a = S4EllipsoidMirror(refraction_index=6j,p_focus=1,q_focus=2)
+    b = copy.copy(a)
     print(a.to_python_code())
+    print(b.to_python_code())
 

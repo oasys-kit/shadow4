@@ -64,6 +64,9 @@ class S4Mirror(Mirror):
     def set_boundaries_rectangle(self, x_left=-1e3, x_right=1e3, y_bottom=-1e3, y_top=1e3):
         self._boundary_shape = Rectangle(x_left=x_left, x_right=x_right, y_bottom=y_bottom, y_top=y_top)
 
+    def to_python_code(self):
+        raise Exception("To be implemented in the children class")
+
     def apply_geometrical_model(self, beam):
         raise Exception("To be implemented in the children class")
 
@@ -270,6 +273,12 @@ class S4MirrorElement(S4BeamlineElement):
         runp = 0.5 * (rs + rp)
 
         return rs*debyewaller, rp*debyewaller, runp*debyewaller
+
+    def to_python_code(self):
+        raise Exception("To be implemented in the children class")
+
+    def duplicate(self):
+        raise Exception("To be implemented in the children class")
 
 if __name__ == "__main__":
     pass

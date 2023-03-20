@@ -28,7 +28,21 @@ class S4BeamlineElement(BeamlineElement):
     def to_python_code(self, data=None):
         raise NotImplementedError()
 
+    def duplicate_input_beam(self):
+        if self.get_input_beam() is None:
+            input_beam = None
+        else:
+            input_beam = self.get_input_beam().duplicate()
+            return input_beam
+
+    def duplicate_optical_element(self):
+        optical_element = copy.deepcopy(self.get_optical_element())
+
+    def duplicate_coordinates(self):
+        copy.deepcopy(self.get_coordinates())
+
     def duplicate(self):
-        return S4BeamlineElement(optical_element=copy.deepcopy(self.get_optical_element()),
-                                 coordinates=copy.deepcopy(self.get_coordinates()),
-                                 input_beam=self.get_input_beam().duplicate())
+        return S4BeamlineElement(optical_element=self.duplicate_coordinates(),
+                                coordinates=self.duplicate_coordinates(),
+                                input_beam=self.duplicate_input_beam())
+
