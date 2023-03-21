@@ -68,7 +68,6 @@ PACKAGES = [
     "shadow4.beamline.optical_elements.crystals",
     "shadow4.beamline.optical_elements.gratings",
     "shadow4.tools",
-    "shadow4.devel.wolter",  # TODO: relocate
 ]
 
 INSTALL_REQUIRES = (
