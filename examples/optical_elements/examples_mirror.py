@@ -287,21 +287,21 @@ def example_branch_4(do_plot=True, f_refl=0):
         mirror1 = S4ConicMirrorElement(optical_element=S4ConicMirror(name="M1",
                                                                      conic_coefficients=[0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, -1.0, 0.0],
                                                                      boundary_shape=boundary_shape,
-                                                                     f_reflec=1, f_refl=f_refl, file_refl="../../oasys_workspaces/xoppy_f1f2_139980555361648.dat"),
+                                                                     f_reflec=1, f_refl=f_refl, file_refl="xoppy_f1f2_139980555361648.dat"),
                                        coordinates=coordinates_syned,
                                        input_beam=beam0)
     elif f_refl == 3:  # user file 1D vs energy
         mirror1 = S4ConicMirrorElement(optical_element=S4ConicMirror(name="M1",
                                                                      conic_coefficients=[0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, -1.0, 0.0],
                                                                      boundary_shape=boundary_shape,
-                                                                     f_reflec=1, f_refl=f_refl, file_refl="../../oasys_workspaces/xoppy_f1f2_139981943656272.dat"),
+                                                                     f_reflec=1, f_refl=f_refl, file_refl="xoppy_f1f2_139981943656272.dat"),
                                        coordinates=coordinates_syned,
                                        input_beam=beam0)
     elif f_refl == 4:  # user file
         mirror1 = S4ConicMirrorElement(optical_element=S4ConicMirror(name="M1",
                                                            conic_coefficients=[0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, -1.0, 0.0],
                                                            boundary_shape=boundary_shape,
-                                                           f_reflec=1, f_refl=f_refl, file_refl="../../oasys_workspaces/xoppy_f1f2_139980938100080.dat"),
+                                                           f_reflec=1, f_refl=f_refl, file_refl="xoppy_f1f2_139980938100080.dat"),
                                        coordinates=coordinates_syned,
                                        input_beam=beam0)
 
@@ -488,7 +488,7 @@ if __name__ == "__main__":
 
     example_branch_1(do_plot=do_plot) # two plane mirrors
     example_branch_2(do_plot=do_plot) # toroid
-    example_branch_3("../../oasys_workspaces/test_shadow4.hdf5",do_plot=do_plot) # mesh #TODO: remote acces
+    example_branch_3("test_shadow4.hdf5",do_plot=do_plot) # mesh #TODO: remote acces
     example_branch_4(do_plot=do_plot, f_refl=0) # prerefl
     example_branch_4(do_plot=do_plot, f_refl=1)  # refraction index
     example_branch_4(do_plot=do_plot, f_refl=2)  # user file 1D, angle[mrad], reflectivity
