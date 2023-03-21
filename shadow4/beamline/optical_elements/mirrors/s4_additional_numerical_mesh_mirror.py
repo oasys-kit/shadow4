@@ -7,11 +7,11 @@ from shadow4.beamline.optical_elements.mirrors.s4_numerical_mesh_mirror import S
 
 class S4AdditionalNumericalMeshMirror(S4NumericalMeshMirror):
     def __init__(self,
-                 name="Mirror with Additional Numerical Mesh",
-                 ideal_mirror : S4Mirror = None,
-                 numerical_mesh_mirror : S4NumericalMeshMirror = None):
+                 ideal_mirror : S4Mirror,
+                 numerical_mesh_mirror : S4NumericalMeshMirror,
+                 name="Mirror with Additional Numerical Mesh"):
         S4NumericalMeshMirror.__init__(self, name=name,
-                 boundary_shape=numerical_mesh_mirror.get_boundary_shape(),
+                 boundary_shape=ideal_mirror.get_boundary_shape(),
                  xx=numerical_mesh_mirror._curved_surface_shape._xx,
                  yy=numerical_mesh_mirror._curved_surface_shape._yy,
                  zz=numerical_mesh_mirror._curved_surface_shape._zz,
@@ -26,33 +26,16 @@ class S4AdditionalNumericalMeshMirror(S4NumericalMeshMirror):
                  file_refl=ideal_mirror._file_refl,  # preprocessor file fir f_refl=0,2,3,4
                  refraction_index=ideal_mirror._refraction_index)  # refraction index (complex) for f_refl=1)
 
-        self.__ideal_mirror   = ideal_mirror
+        self.__ideal_mirror          = ideal_mirror
         self.__numerical_mesh_mirror = numerical_mesh_mirror
-
-        # these attributes are necessary since they are called by the trace method.
-        # self._f_reflec         = self.__ideal_mirror.f_reflec
-        # self._f_refl           = self.__ideal_mirror.f_refl
-        # self._file_refl        = self.__ideal_mirror.file_refl
-        # self._refraction_index = self.__ideal_mirror.refraction_index
-
-    # def get_surface_shape(self):  return self.__numerical_mesh_mirror.get_surface_shape()
-
-    # def get_boundary_shape(self):
-    #     # I think that the boundary shape should be dictated by the mirror and not by the error profile.
-    #     # if the error profile is smaller, in the non-overlap area its value will be 0.
-    #
-    #     # srio: It is defined like that in __init__
-    #     return self.__ideal_mirror.get_boundary_shape()
-
-    # def set_boundaries_rectangle(self, x_left=-1e3, x_right=1e3, y_bottom=-1e3, y_top=1e3): # this method is for completeness
-    #     self.__numerical_mesh_mirror.set_boundaries_rectangle(x_left=x_left, x_right=x_right, y_bottom=y_bottom, y_top=y_top)
-    #     self.__ideal_mirror.set_boundaries_rectangle(x_left=x_left, x_right=x_right, y_bottom=y_bottom, y_top=y_top)
 
         self.__inputs = {
             "name": name,
             "ideal_mirror": ideal_mirror,
             "numerical_mesh_mirror": numerical_mesh_mirror,
         }
+
+    def set_boundaries_rectangle(self, x_left=-1e3, x_right=1e3, y_bottom=-1e3, y_top=1e3): raise ValueError("Not allowed for this entity")
 
     def to_python_code(self, **kwargs):
         txt = "\nfrom shadow4.beamline.optical_elements.mirrors.s4_additional_numerical_mesh_mirror import S4AdditionalNumericalmeshMirror"
