@@ -910,7 +910,7 @@ class S4WigglerLightSource(S4LightSource):
         txt2 = magnetic_structure.info()
         return (txt + "\n\n" + txt2)
 
-    def to_python_code(self, data=None):
+    def to_python_code(self, **kwargs):
         script = ''
         try:
             script += self.get_electron_beam().to_python_code()

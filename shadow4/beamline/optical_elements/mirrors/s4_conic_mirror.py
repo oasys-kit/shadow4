@@ -2,7 +2,7 @@ from syned.beamline.shape import Conic
 from shadow4.beam.s4_beam import S4Beam
 from shadow4.beamline.optical_elements.mirrors.s4_mirror import S4MirrorElement, S4Mirror, ElementCoordinates
 
-from shadow4.beamline.s4_optical_element import S4ConicOpticalElementDecorator
+from shadow4.beamline.s4_optical_element_decorators import S4ConicOpticalElementDecorator
 
 class S4ConicMirror(S4Mirror, S4ConicOpticalElementDecorator):
     def __init__(self,
@@ -33,7 +33,7 @@ class S4ConicMirror(S4Mirror, S4ConicOpticalElementDecorator):
             "refraction_index": refraction_index,
         }
 
-    def to_python_code(self, data=None):
+    def to_python_code(self, **kwargs):
         txt = "\nfrom shadow4.beamline.optical_elements.mirrors.s4_conic_mirror import S4ConicMirror"
         txt_pre = """
 optical_element = S4ConicMirror(name='{name:s}',boundary_shape=None,
@@ -59,7 +59,7 @@ class S4ConicMirrorElement(S4MirrorElement):
         if not isinstance(self.get_optical_element().get_surface_shape(), Conic):
             raise ValueError("Wrong Optical Element: only Conic shape is accepted")
 
-    def to_python_code(self, data=None):
+    def to_python_code(self, **kwargs):
         txt = "\n\n# optical element number XX"
         txt += self.get_optical_element().to_python_code()
         coordinates = self.get_coordinates()
@@ -70,8 +70,3 @@ class S4ConicMirrorElement(S4MirrorElement):
         txt += "\nbeamline_element = S4ConicMirrorElement(optical_element=optical_element,coordinates=coordinates,input_beam=beam)"
         txt += "\n\nbeam, mirr = beamline_element.trace_beam()"
         return txt
-
-    def duplicate(self):
-        return S4ConicMirrorElement(optical_element=self.duplicate_coordinates(),
-                                coordinates=self.duplicate_coordinates(),
-                                input_beam=self.duplicate_input_beam())

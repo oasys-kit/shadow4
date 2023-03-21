@@ -1,6 +1,6 @@
 from syned.beamline.shape import Ellipsoid, EllipticalCylinder, Convexity, Direction
 from shadow4.beam.s4_beam import S4Beam
-from shadow4.beamline.s4_optical_element import SurfaceCalculation, S4EllipsoidOpticalElementDecorator
+from shadow4.beamline.s4_optical_element_decorators import SurfaceCalculation, S4EllipsoidOpticalElementDecorator
 from shadow4.beamline.optical_elements.mirrors.s4_mirror import S4MirrorElement, S4Mirror, ElementCoordinates
 
 class S4EllipsoidMirror(S4Mirror, S4EllipsoidOpticalElementDecorator):
@@ -49,7 +49,7 @@ class S4EllipsoidMirror(S4Mirror, S4EllipsoidOpticalElementDecorator):
             "refraction_index": refraction_index,
         }
 
-    def to_python_code(self, data=None):
+    def to_python_code(self, **kwargs):
 
         txt = "\nfrom shadow4.beamline.optical_elements.mirrors.s4_ellipsoid_mirror import S4EllipsoidMirror"
         txt_pre = """
@@ -82,7 +82,7 @@ class S4EllipsoidMirrorElement(S4MirrorElement):
                 isinstance(self.get_optical_element().get_surface_shape(), Ellipsoid)):
             raise ValueError("Wrong Optical Element: only Ellipsoid or Elliptical Cylinder shape is accepted")
 
-    def to_python_code(self, data=None):
+    def to_python_code(self, **kwargs):
         txt = "\n\n# optical element number XX"
         txt += self.get_optical_element().to_python_code()
         coordinates = self.get_coordinates()
@@ -94,10 +94,6 @@ class S4EllipsoidMirrorElement(S4MirrorElement):
         txt += "\n\nbeam, mirr = beamline_element.trace_beam()"
         return txt
 
-    def duplicate(self):
-        return S4EllipsoidMirrorElement(optical_element=self.duplicate_coordinates(),
-                                coordinates=self.duplicate_coordinates(),
-                                input_beam=self.duplicate_input_beam())
 
 if __name__ == "__main__":
     import copy

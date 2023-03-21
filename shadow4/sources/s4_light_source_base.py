@@ -23,7 +23,7 @@ class S4LightSourceBase(EmptyLightSource):
     def get_seed(self):
         return self.__seed
 
-    def to_python_code(self, data=None):
+    def to_python_code(self, **kwargs):
         raise NotImplementedError()
 
     def get_beam(self, **params):

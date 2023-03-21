@@ -1,7 +1,7 @@
 import numpy
 from syned.beamline.shape import Hyperboloid, HyperbolicCylinder, Convexity, Direction
 from shadow4.beam.s4_beam import S4Beam
-from shadow4.beamline.s4_optical_element import SurfaceCalculation, S4HyperboloidOpticalElementDecorator
+from shadow4.beamline.s4_optical_element_decorators import SurfaceCalculation, S4HyperboloidOpticalElementDecorator
 from shadow4.beamline.optical_elements.mirrors.s4_mirror import S4MirrorElement, S4Mirror, ElementCoordinates
 
 class S4HyperboloidMirror(S4Mirror, S4HyperboloidOpticalElementDecorator):
@@ -50,7 +50,7 @@ class S4HyperboloidMirror(S4Mirror, S4HyperboloidOpticalElementDecorator):
             "refraction_index": refraction_index,
         }
 
-    def to_python_code(self, data=None):
+    def to_python_code(self, **kwargs):
         txt = "\nfrom shadow4.beamline.optical_elements.mirrors.s4_hyerboloid_mirror import S4HyperboloidMirror"
         txt_pre = """
 optical_element = S4HyperboloidMirror(name='{name:s}',boundary_shape=None,
@@ -79,7 +79,7 @@ class S4HyperboloidMirrorElement(S4MirrorElement):
                 isinstance(self.get_optical_element().get_surface_shape(), Hyperboloid)):
             raise ValueError("Wrong Optical Element: only Hyperboloid or Hyperbolic Cylinder shape is accepted")
 
-    def to_python_code(self, data=None):
+    def to_python_code(self, **kwargs):
         txt = "\n\n# optical element number XX"
         txt += self.get_optical_element().to_python_code()
         coordinates = self.get_coordinates()
@@ -91,10 +91,6 @@ class S4HyperboloidMirrorElement(S4MirrorElement):
         txt += "\n\nbeam, mirr = beamline_element.trace_beam()"
         return txt
 
-    def duplicate(self):
-        return S4HyperboloidMirrorElement(optical_element=self.duplicate_coordinates(),
-                                coordinates=self.duplicate_coordinates(),
-                                input_beam=self.duplicate_input_beam())
 
 if __name__=="__main__":
     from syned.beamline.shape import Rectangle

@@ -1,7 +1,7 @@
 from syned.beamline.shape import Plane
 from syned.beamline.element_coordinates import ElementCoordinates
 from shadow4.beam.s4_beam import S4Beam
-from shadow4.beamline.s4_optical_element import S4PlaneOpticalElementDecorator
+from shadow4.beamline.s4_optical_element_decorators import S4PlaneOpticalElementDecorator
 from shadow4.beamline.optical_elements.mirrors.s4_mirror import S4MirrorElement, S4Mirror
 
 class S4PlaneMirror(S4Mirror, S4PlaneOpticalElementDecorator):
@@ -30,7 +30,7 @@ class S4PlaneMirror(S4Mirror, S4PlaneOpticalElementDecorator):
             "refraction_index": refraction_index,
         }
 
-    def to_python_code(self, data=None):
+    def to_python_code(self, **kwargs):
         txt = "\nfrom shadow4.beamline.optical_elements.mirrors.s4_plane_mirror import S4PlaneMirror"
         txt_pre = """
 optical_element = S4PlaneMirror(name='{name:s}',boundary_shape=None,
@@ -45,7 +45,6 @@ optical_element = S4PlaneMirror(name='{name:s}',boundary_shape=None,
         return footprint, normal
 
 
-
 class S4PlaneMirrorElement(S4MirrorElement):
     def __init__(self,
                  optical_element: S4PlaneMirror = None,
@@ -57,26 +56,21 @@ class S4PlaneMirrorElement(S4MirrorElement):
         if not isinstance(self.get_optical_element().get_surface_shape(), Plane):
             raise ValueError("Wrong Optical Element: only Plane shape is accepted")
 
-    def to_python_code(self, data=None):
+    def to_python_code(self, **kwargs):
         txt = "\n\n# optical element number XX"
         txt += self.get_optical_element().to_python_code()
         coordinates = self.get_coordinates()
         txt += "\nfrom syned.beamline.element_coordinates import ElementCoordinates"
-        txt += "\ncoordinates=ElementCoordinates(p=%g,q=%g,angle_radial=%g)" % \
-               (coordinates.p(), coordinates.q(), coordinates.angle_radial())
+        txt += "\ncoordinates = ElementCoordinates(p=%g, q=%g, angle_radial=%g, angle_azimuthal=%g)" % \
+               (coordinates.p(), coordinates.q(), coordinates.angle_radial(), coordinates.angle_azimuthal())
         txt += "\nfrom shadow4.beamline.optical_elements.mirrors.s4_plane_mirror import S4PlaneMirrorElement"
-        txt += "\nbeamline_element = S4PlaneMirrorElement(optical_element=optical_element,coordinates=coordinates,input_beam=beam)"
+        txt += "\nbeamline_element = S4PlaneMirrorElement(optical_element=optical_element, coordinates=coordinates, input_beam=beam)"
         txt += "\n\nbeam, mirr = beamline_element.trace_beam()"
         return txt
 
-    def duplicate(self):
-        return S4PlaneMirrorElement(optical_element=self.duplicate_coordinates(),
-                                coordinates=self.duplicate_coordinates(),
-                                input_beam=self.duplicate_input_beam())
-
 if __name__ == "__main__":
     m = S4PlaneMirror(refraction_index=1+1e-7j)
-    me = S4PlaneMirrorElement(optical_element=m, coordinates=ElementCoordinates(p=10))
+    me = S4PlaneMirrorElement(optical_element=m, coordinates=ElementCoordinates(p=10, q=20, angle_radial=30, angle_azimuthal=40))
     print(me.info())
     print(me.to_python_code())
-    print(me.duplicate())
+    print(me.duplicate().to_python_code())

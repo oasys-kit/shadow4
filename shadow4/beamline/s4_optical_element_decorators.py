@@ -20,7 +20,7 @@ class S4OpticalElementDecorator(object):
     def info(self):
         raise NotImplementedError()
 
-    def to_python_code(self, data=None):
+    def to_python_code(self, **kwargs):
         raise NotImplementedError()
 
     def get_surface_shape_instance(self):

@@ -54,7 +54,7 @@ class S4AdditionalNumericalMeshMirror(S4NumericalMeshMirror):
             "numerical_mesh_mirror": numerical_mesh_mirror,
         }
 
-    def to_python_code(self, data=None):
+    def to_python_code(self, **kwargs):
         txt = "\nfrom shadow4.beamline.optical_elements.mirrors.s4_additional_numerical_mesh_mirror import S4AdditionalNumericalmeshMirror"
         txt_pre = """
 optical_element = S4AdditionalNumericalMeshMirror(name='{name:s}',boundary_shape=None,
@@ -93,7 +93,7 @@ class S4AdditionalNumericalMeshMirrorElement(S4MirrorElement):
         if not isinstance(self.get_optical_element().get_surface_shape(), NumericalMesh):
             raise ValueError("Wrong Optical Element: only Surface Data shape is accepted")
 
-    def to_python_code(self, data=None):
+    def to_python_code(self, **kwargs):
         txt = "\n\n# optical element number XX"
         txt += self.get_optical_element().to_python_code()
         coordinates = self.get_coordinates()
@@ -104,11 +104,6 @@ class S4AdditionalNumericalMeshMirrorElement(S4MirrorElement):
         txt += "\nbeamline_element = S4AdditionalNumericalMeshMirrorElement(optical_element=optical_element,coordinates=coordinates,input_beam=beam)"
         txt += "\n\nbeam, mirr = beamline_element.trace_beam()"
         return txt
-
-    def duplicate(self):
-        return S4AdditionalNumericalMeshMirrorElement(optical_element=self.duplicate_coordinates(),
-                                coordinates=self.duplicate_coordinates(),
-                                input_beam=self.duplicate_input_beam())
 
 if __name__ == "__main__":
     import numpy

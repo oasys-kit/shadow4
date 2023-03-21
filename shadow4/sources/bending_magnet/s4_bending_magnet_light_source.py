@@ -572,7 +572,7 @@ class S4BendingMagnetLightSource(S4LightSource):
             u_norm[:, i] = uu
         return u / u_norm
 
-    def to_python_code(self, data=None):
+    def to_python_code(self, **kwargs):
         script = ''
         try:
             script += self.get_electron_beam().to_python_code()

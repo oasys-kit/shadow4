@@ -6,7 +6,7 @@ from syned.beamline.shape import Plane, Sphere
 from syned.beamline.element_coordinates import ElementCoordinates
 
 from shadow4.beam.s4_beam import S4Beam
-from shadow4.beamline.s4_optical_element import S4OpticalElementDecorator
+from shadow4.beamline.s4_optical_element_decorators import S4OpticalElementDecorator
 from shadow4.beamline.s4_beamline_element import S4BeamlineElement
 
 

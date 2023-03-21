@@ -4,7 +4,7 @@ from syned.beamline.element_coordinates import ElementCoordinates
 from shadow4.beam.s4_beam import S4Beam
 from shadow4.beamline.optical_elements.refractors.s4_interface import S4InterfaceElement, S4Interface
 from shadow4.optical_surfaces.s4_conic import S4Conic
-from shadow4.beamline.s4_optical_element import S4ConicOpticalElementDecorator
+from shadow4.beamline.s4_optical_element_decorators import S4ConicOpticalElementDecorator
 
 class S4ConicInterface(S4Interface, S4ConicOpticalElementDecorator):
     def __init__(self,

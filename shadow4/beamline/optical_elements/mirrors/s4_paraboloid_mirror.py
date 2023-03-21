@@ -1,5 +1,5 @@
 from syned.beamline.shape import Paraboloid, ParabolicCylinder, Convexity, Direction, Side
-from shadow4.beamline.s4_optical_element import SurfaceCalculation, S4ParaboloidOpticalElementDecorator
+from shadow4.beamline.s4_optical_element_decorators import SurfaceCalculation, S4ParaboloidOpticalElementDecorator
 from shadow4.beamline.optical_elements.mirrors.s4_mirror import S4MirrorElement, S4Mirror, ElementCoordinates
 from shadow4.beam.s4_beam import S4Beam
 
@@ -51,7 +51,7 @@ class S4ParaboloidMirror(S4Mirror, S4ParaboloidOpticalElementDecorator):
             "refraction_index": refraction_index,
         }
 
-    def to_python_code(self, data=None):
+    def to_python_code(self, **kwargs):
         txt = "\nfrom shadow4.beamline.optical_elements.mirrors.s4_paraboloid_mirror import S4ParaboloidMirror"
         txt_pre = """
 optical_element = S4ParaboloidMirror(name='{name:s}',boundary_shape=None,
@@ -82,7 +82,7 @@ class S4ParaboloidMirrorElement(S4MirrorElement):
                 isinstance(self.get_optical_element().get_surface_shape(), Paraboloid)):
             raise ValueError("Wrong Optical Element: only Paraboloid or Parabolic Cylinder shape is accepted")
 
-    def to_python_code(self, data=None):
+    def to_python_code(self, **kwargs):
         txt = "\n\n# optical element number XX"
         txt += self.get_optical_element().to_python_code()
         coordinates = self.get_coordinates()
@@ -93,8 +93,3 @@ class S4ParaboloidMirrorElement(S4MirrorElement):
         txt += "\nbeamline_element = S4EllipsoidMirrorElement(optical_element=optical_element,coordinates=coordinates,input_beam=beam)"
         txt += "\n\nbeam, mirr = beamline_element.trace_beam()"
         return txt
-
-    def duplicate(self):
-        return S4ParaboloidMirrorElement(optical_element=self.duplicate_coordinates(),
-                                coordinates=self.duplicate_coordinates(),
-                                input_beam=self.duplicate_input_beam())

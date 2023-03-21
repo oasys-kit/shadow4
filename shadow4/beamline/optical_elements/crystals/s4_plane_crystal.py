@@ -3,7 +3,7 @@ from syned.beamline.element_coordinates import ElementCoordinates
 
 from shadow4.beam.s4_beam import S4Beam
 from shadow4.beamline.optical_elements.crystals.s4_crystal import S4CrystalElement, S4Crystal
-from shadow4.beamline.s4_optical_element import S4PlaneOpticalElementDecorator
+from shadow4.beamline.s4_optical_element_decorators import S4PlaneOpticalElementDecorator
 
 from syned.beamline.optical_elements.crystals.crystal import DiffractionGeometry
 
@@ -85,7 +85,7 @@ class S4PlaneCrystal(S4Crystal, S4PlaneOpticalElementDecorator):
             }
         return fmt
 
-    def to_python_code(self, data=None):
+    def to_python_code(self, **kwargs):
 
         txt = "\nfrom shadow4.beamline.optical_elements.crystals.s4_plane_crystal import S4PlaneCrystal"
 
@@ -116,7 +116,7 @@ class S4PlaneCrystalElement(S4CrystalElement):
                          coordinates=coordinates if coordinates is not None else ElementCoordinates(),
                          input_beam=input_beam)
 
-    def to_python_code(self, data=None):
+    def to_python_code(self, **kwargs):
         txt = "\n\n# optical element number XX"
         txt += self.get_optical_element().to_python_code()
         coordinates = self.get_coordinates()

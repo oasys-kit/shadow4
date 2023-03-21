@@ -7,7 +7,7 @@ from shadow4.sources.source_geometrical.source_gaussian import SourceGaussian
 
 from syned.beamline.shape import Rectangle, Direction, Side
 
-from shadow4.beamline.s4_optical_element import SurfaceCalculation
+from shadow4.beamline.s4_optical_element_decorators import SurfaceCalculation
 
 from shadow4.beamline.optical_elements.mirrors.s4_conic_mirror import S4ConicMirror, S4ConicMirrorElement
 from shadow4.beamline.optical_elements.mirrors.s4_toroidal_mirror import S4ToroidalMirror, S4ToroidalMirrorElement

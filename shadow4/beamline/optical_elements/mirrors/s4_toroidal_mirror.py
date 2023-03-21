@@ -1,7 +1,7 @@
 from syned.beamline.shape import Toroid
 from shadow4.beam.s4_beam import S4Beam
 from shadow4.beamline.optical_elements.mirrors.s4_mirror import S4MirrorElement, S4Mirror, ElementCoordinates
-from shadow4.beamline.s4_optical_element import SurfaceCalculation, S4ToroidalOpticalElementDecorator
+from shadow4.beamline.s4_optical_element_decorators import SurfaceCalculation, S4ToroidalOpticalElementDecorator
 
 class S4ToroidalMirror(S4Mirror, S4ToroidalOpticalElementDecorator):
     def __init__(self,
@@ -43,7 +43,7 @@ class S4ToroidalMirror(S4Mirror, S4ToroidalOpticalElementDecorator):
             "refraction_index": refraction_index,
         }
 
-    def to_python_code(self, data=None):
+    def to_python_code(self, **kwargs):
         txt = "\nfrom shadow4.beamline.optical_elements.mirrors.s4_toroidal_mirror import S4ToroidalMirror"
         txt_pre = """
 optical_element = S4ToroidalMirror(name='{name:s}',boundary_shape=None,
@@ -72,7 +72,7 @@ class S4ToroidalMirrorElement(S4MirrorElement):
         if not isinstance(self.get_optical_element().get_surface_shape(), Toroid):
             raise ValueError("Wrong Optical Element: only Toroid shape is accepted")
 
-    def to_python_code(self, data=None):
+    def to_python_code(self, **kwargs):
         txt = "\n\n# optical element number XX"
         txt += self.get_optical_element().to_python_code()
         coordinates = self.get_coordinates()
@@ -83,11 +83,6 @@ class S4ToroidalMirrorElement(S4MirrorElement):
         txt += "\nbeamline_element = S4ToroidalMirrorElement(optical_element=optical_element,coordinates=coordinates,input_beam=beam)"
         txt += "\n\nbeam, mirr = beamline_element.trace_beam()"
         return txt
-
-    def duplicate(self):
-        return S4ToroidalMirrorElement(optical_element=self.duplicate_coordinates(),
-                                coordinates=self.duplicate_coordinates(),
-                                input_beam=self.duplicate_input_beam())
 
 if __name__ == "__main__":
     a = S4ToroidalMirror(refraction_index=6j)

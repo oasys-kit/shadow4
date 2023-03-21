@@ -3,7 +3,7 @@ import numpy
 from syned.beamline.shape import Convexity, Direction
 
 from shadow4.beam.s4_beam import S4Beam
-from shadow4.beamline.s4_optical_element import SurfaceCalculation, S4SphereOpticalElementDecorator
+from shadow4.beamline.s4_optical_element_decorators import SurfaceCalculation, S4SphereOpticalElementDecorator
 from shadow4.beamline.optical_elements.gratings.s4_grating import S4GratingElement, S4Grating, ElementCoordinates
 
 

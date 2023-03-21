@@ -26,7 +26,7 @@ class S4LightSource(LightSource):
     def get_seed(self):
         return self.__seed
 
-    def to_python_code(self, data=None):
+    def to_python_code(self, **kwargs):
         script = ''
         try:
             script += self.get_electron_beam().to_python_code()

@@ -21,7 +21,7 @@ class S4Beamline(Beamline):
         self._beamline_elements_list.append(beamline_element)
 
 
-    def to_python_code(self, data=None):
+    def to_python_code(self, **kwargs):
         script = ''
         try:
             script += self.get_light_source().to_python_code()
