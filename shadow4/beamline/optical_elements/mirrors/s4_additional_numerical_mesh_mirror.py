@@ -1,3 +1,4 @@
+import numpy
 from syned.beamline.shape import NumericalMesh
 from syned.beamline.element_coordinates import ElementCoordinates
 from shadow4.beam.s4_beam import S4Beam
@@ -7,24 +8,24 @@ from shadow4.beamline.optical_elements.mirrors.s4_numerical_mesh_mirror import S
 
 class S4AdditionalNumericalMeshMirror(S4NumericalMeshMirror):
     def __init__(self,
-                 ideal_mirror : S4Mirror,
-                 numerical_mesh_mirror : S4NumericalMeshMirror,
+                 ideal_mirror : S4Mirror = None,
+                 numerical_mesh_mirror : S4NumericalMeshMirror = None,
                  name="Mirror with Additional Numerical Mesh"):
         S4NumericalMeshMirror.__init__(self, name=name,
-                 boundary_shape=ideal_mirror.get_boundary_shape(),
-                 xx=numerical_mesh_mirror._curved_surface_shape._xx,
-                 yy=numerical_mesh_mirror._curved_surface_shape._yy,
-                 zz=numerical_mesh_mirror._curved_surface_shape._zz,
-                 surface_data_file=numerical_mesh_mirror._curved_surface_shape._surface_data_file,
+                 boundary_shape=None if ideal_mirror is None else ideal_mirror.get_boundary_shape(),
+                 xx=None if numerical_mesh_mirror is None else numerical_mesh_mirror._curved_surface_shape._xx,
+                 yy=None if numerical_mesh_mirror is None else numerical_mesh_mirror._curved_surface_shape._yy,
+                 zz=None if numerical_mesh_mirror is None else numerical_mesh_mirror._curved_surface_shape._zz,
+                 surface_data_file="" if numerical_mesh_mirror is None else numerical_mesh_mirror._curved_surface_shape._surface_data_file,
                  # inputs related to mirror reflectivity
-                 f_reflec=ideal_mirror._f_reflec,  # reflectivity of surface: 0=no reflectivity, 1=full polarization
-                 f_refl=ideal_mirror._f_refl,  # 0=prerefl file
+                 f_reflec=0 if ideal_mirror is None else ideal_mirror._f_reflec,  # reflectivity of surface: 0=no reflectivity, 1=full polarization
+                 f_refl=0 if ideal_mirror is None else ideal_mirror._f_refl,  # 0=prerefl file
                  # 1=electric susceptibility
                  # 2=user defined file (1D reflectivity vs angle)
                  # 3=user defined file (1D reflectivity vs energy)
                  # 4=user defined file (2D reflectivity vs energy and angle)
-                 file_refl=ideal_mirror._file_refl,  # preprocessor file fir f_refl=0,2,3,4
-                 refraction_index=ideal_mirror._refraction_index)  # refraction index (complex) for f_refl=1)
+                 file_refl="" if ideal_mirror is None else ideal_mirror._file_refl,  # preprocessor file fir f_refl=0,2,3,4
+                 refraction_index=1+0j if ideal_mirror is None else ideal_mirror._refraction_index)  # refraction index (complex) for f_refl=1)
 
         self.__ideal_mirror          = ideal_mirror
         self.__numerical_mesh_mirror = numerical_mesh_mirror
@@ -154,6 +155,13 @@ if __name__ == "__main__":
     if do_plot:
 
         plot_scatter(1e6*beam1.get_column(1), 1e6*beam1.get_column(3), title="Cols 1,3 / um")
+
+
+    # from shadow4.beamline.optical_elements.mirrors.s4_numerical_mesh_mirror import S4NumericalMeshMirror, S4NumericalMeshMirrorElement
+    # m = S4NumericalMeshMirror()
+    # e = S4NumericalMeshMirrorElement()
+    # m = S4AdditionalNumericalMeshMirror()
+    # e = S4AdditionalNumericalMeshMirrorElement(None, None, None)
 
 
 
