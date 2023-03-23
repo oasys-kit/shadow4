@@ -67,7 +67,7 @@ class Rectangle2D(Distribution2D):
             ] )
 
         # return ["Point","Rectangle","Ellipse","Gaussian"]
-        # return ["Flat","Uniform","Gaussian","Conical"]
+        # return ["Flat","Uniform","Gaussian","Cone"]
 
     def get_sampled_points(self,N):
         return Uniform1D.sample(N,self._h_min,self._h_max),Uniform1D.sample(N,self._v_min,self._v_max)
@@ -92,7 +92,7 @@ class Ellipse2D(Distribution2D):
             ] )
 
         # return ["Point","Rectangle","Ellipse","Gaussian"]
-        # return ["Flat","Uniform","Gaussian","Conical"]
+        # return ["Flat","Uniform","Gaussian","Cone"]
 
     def get_sampled_points(self,N):
         # ! C
@@ -121,7 +121,7 @@ class Gaussian2D(Distribution2D):
             ] )
 
         # return ["Point","Rectangle","Ellipse","Gaussian"]
-        # return ["Flat","Uniform","Gaussian","Conical"]
+        # return ["Flat","Uniform","Gaussian","Cone"]
 
     def get_sampled_points(self,N):
         return Gaussian1D.sample(N,self._sigma_h),Gaussian1D.sample(N,self._sigma_v)
@@ -133,7 +133,7 @@ class Gaussian2D(Distribution2D):
 
 #
 # Subclasses for Distribution2D used for angle emission sampling
-#  ["Flat","Uniform","Gaussian","Conical"]
+#  ["Flat","Uniform","Gaussian","Cone"]
 #
 
 
@@ -157,7 +157,7 @@ class Uniform2D(Distribution2D):
             ] )
 
         # return ["Point","Rectangle","Ellipse","Gaussian"]
-        # return ["Flat","Uniform","Gaussian","Conical"]
+        # return ["Flat","Uniform","Gaussian","Cone"]
 
     def get_sampled_points(self,N):
         # ! C
@@ -183,7 +183,7 @@ class Uniform2D(Distribution2D):
 
 
 
-class Conical2D(Distribution2D):
+class Cone2D(Distribution2D):
     def __init__(self, cone_max=10e-6,cone_min=0.0):
         self._cone_max = cone_max
         self._cone_min = cone_min
@@ -223,7 +223,7 @@ class Conical2D(Distribution2D):
 
     @classmethod
     def sample(cls,N,cone_max=10e-6,cone_min=0.0):
-        return Conical2D(cone_max=cone_max,cone_min=cone_min).get_sampled_points(N)
+        return Cone2D(cone_max=cone_max,cone_min=cone_min).get_sampled_points(N)
 
 
 
@@ -370,9 +370,9 @@ if __name__=="__main__":
         plot_scatter(1e6*dx,1e6*dy,title="Gaussian2D")
 
     #
-    # Conical2D
+    # Cone2D
     #
 
-    dx,dy = Conical2D.sample(5000,2.5e-6,0.5e-6,)
+    dx,dy = Cone2D.sample(5000,2.5e-6,0.5e-6,)
     if do_plot:
         plot_scatter(1e6*dx,1e6*dy,title="Gaussian2D")

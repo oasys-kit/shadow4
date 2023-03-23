@@ -4,7 +4,7 @@ import scipy.constants as codata
 from shadow4.beam.s4_beam import S4Beam
 
 from shadow4.sources.source_geometrical.probability_distributions import Rectangle2D, Ellipse2D, Gaussian2D
-from shadow4.sources.source_geometrical.probability_distributions import Flat2D, Uniform2D, Conical2D
+from shadow4.sources.source_geometrical.probability_distributions import Flat2D, Uniform2D, Cone2D
 
 from srxraylib.util.inverse_method_sampler import Sampler1D
 from shadow4.sources.s4_light_source_base import S4LightSourceBase
@@ -81,9 +81,9 @@ class SourceGeometrical(S4LightSourceBase):
     def angular_distribution_list(cls):
          # fdistr	= 2 - defines source angle distribution types:
          # 		  Available options are: flat(1),uniform(2),
-         # 		  gaussian(3), synchrotron(4), conical(5), exact
+         # 		  gaussian(3), synchrotron(4), cone(5), exact
          # 		  synchrotron(6).
-        return ["Flat","Uniform","Gaussian","Conical","Collimated"]
+        return ["Flat","Uniform","Gaussian","Cone","Collimated"]
 
         # cone_max	=  0.0000000000000000E+00 - for fdistr=5; maximum half
         # 					    divergence.
@@ -106,8 +106,8 @@ class SourceGeometrical(S4LightSourceBase):
             self.set_angular_distribution_uniform()
         elif name == "Gaussian":
             self.set_angular_distribution_gaussian()
-        elif name == "Conical":
-            self.set_angular_distribution_conical()
+        elif name == "Cone":
+            self.set_angular_distribution_cone()
         elif name == "Collimated":
             self.set_angular_distribution_collimated()
         else:
@@ -146,8 +146,8 @@ class SourceGeometrical(S4LightSourceBase):
         self.__sigdiz = sigdiz
         self.__fdist = 3
 
-    def set_angular_distribution_conical(self,cone_max=10e-6,cone_min=0.0):
-        self.angular_distribution = "Conical"
+    def set_angular_distribution_cone(self,cone_max=10e-6,cone_min=0.0):
+        self.angular_distribution = "Cone"
         self.__cone_max = cone_max
         self.__cone_min = cone_min
         self.__fdist = 4
@@ -351,8 +351,8 @@ class SourceGeometrical(S4LightSourceBase):
                                     self.__sigdix,
                                     self.__sigdiz)
             rays[:,4] = numpy.sqrt(-rays[:,3]**2 - rays[:,5]**2 + 1.0)
-        elif self.angular_distribution == "Conical":
-            rays[:,3],rays[:,5] = Conical2D.sample(N,
+        elif self.angular_distribution == "Cone":
+            rays[:,3],rays[:,5] = Cone2D.sample(N,
                                     self.__cone_max,
                                     self.__cone_min)
             rays[:,4] = numpy.sqrt(-rays[:,3]**2 - rays[:,5]**2 + 1.0)
@@ -574,7 +574,7 @@ class SourceGeometrical(S4LightSourceBase):
             txt += "\nlight_source.set_angular_distribution_gaussian(sigdix=%f,sigdiz=%f)" % \
                    (self.__sigdix, self.__sigdiz)
         elif self.__fdist == 4:  # cone
-            txt += "\nlight_source.set_angular_distribution_conical(cone_max=%f,cone_min=%f)" % \
+            txt += "\nlight_source.set_angular_distribution_cone(cone_max=%f,cone_min=%f)" % \
                    (self.__cone_max, self.__cone_min)
         elif self.__fdist == 5:  # Zero (collimated) - New in shadow4
             txt += "\nlight_source.set_angular_distribution_collimated()"
