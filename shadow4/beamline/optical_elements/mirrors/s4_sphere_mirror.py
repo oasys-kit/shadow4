@@ -48,9 +48,11 @@ class S4SphereMirror(S4Mirror, S4SphereOpticalElementDecorator):
         }
 
     def to_python_code(self, **kwargs):
-        txt = "\nfrom shadow4.beamline.optical_elements.mirrors.s4_sphere_mirror import S4SphereMirror"
+        txt = self.to_python_code_boundary_shape()
         txt_pre = """
-optical_element = S4SphereMirror(name='{name:s}',boundary_shape=None,
+        
+from shadow4.beamline.optical_elements.mirrors.s4_sphere_mirror import S4SphereMirror
+optical_element = S4SphereMirror(name='{name:s}',boundary_shape=boundary_shape,
     surface_calculation={surface_calculation:d},is_cylinder={is_cylinder:d},cylinder_direction={cylinder_direction:d},
     convexity={convexity:d},radius={radius:f},p_focus={p_focus:f},q_focus={q_focus:f},
     grazing_angle={grazing_angle:f},

@@ -51,9 +51,11 @@ class S4HyperboloidMirror(S4Mirror, S4HyperboloidOpticalElementDecorator):
         }
 
     def to_python_code(self, **kwargs):
-        txt = "\nfrom shadow4.beamline.optical_elements.mirrors.s4_hyerboloid_mirror import S4HyperboloidMirror"
+        txt = self.to_python_code_boundary_shape()
         txt_pre = """
-optical_element = S4HyperboloidMirror(name='{name:s}',boundary_shape=None,
+        
+from shadow4.beamline.optical_elements.mirrors.s4_hyperboloid_mirror import S4HyperboloidMirror
+optical_element = S4HyperboloidMirror(name='{name:s}',boundary_shape=boundary_shape,
     surface_calculation={surface_calculation:d},is_cylinder={is_cylinder:d},cylinder_direction={cylinder_direction:d},
     convexity={convexity:d},min_axis={min_axis:f},maj_axis={maj_axis:f},p_focus={p_focus:f},q_focus={q_focus:f},
     grazing_angle={grazing_angle:f},

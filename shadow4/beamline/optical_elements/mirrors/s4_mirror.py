@@ -1,6 +1,6 @@
 import numpy
 
-from syned.beamline.shape import Rectangle
+from syned.beamline.shape import Rectangle, Ellipse
 
 from syned.beamline.element_coordinates import ElementCoordinates
 from syned.beamline.optical_elements.mirrors.mirror import Mirror
@@ -66,6 +66,19 @@ class S4Mirror(Mirror):
 
     def apply_geometrical_model(self, beam):
         raise Exception("To be implemented in the children class")
+
+    def to_python_code_boundary_shape(self):
+        txt = "" # "\nfrom shadow4.beamline.optical_elements.mirrors.s4_plane_mirror import S4PlaneMirror"
+        bs = self._boundary_shape
+        if bs is None:
+            txt += "\nboundary_shape = None"
+        elif isinstance(bs, Rectangle):
+            txt += "\nfrom syned.beamline.shape import Rectangle"
+            txt += "\nboundary_shape = Rectangle(x_left=%g, x_right=%g, y_bottom=%g, y_top=%g)" % bs.get_boundaries()
+        elif isinstance(bs, Ellipse):
+            txt += "\nfrom syned.beamline.shape import Ellipse"
+            txt += "\nboundary_shape = Ellipse(a_axis_min=%g, a_axis_max=%g, b_axis_min=%g, b_axis_max=%g)" % bs.get_boundaries()
+        return txt
 
 class S4MirrorElement(S4BeamlineElement):
     

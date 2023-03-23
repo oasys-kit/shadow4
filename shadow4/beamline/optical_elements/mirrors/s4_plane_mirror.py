@@ -1,4 +1,4 @@
-from syned.beamline.shape import Plane
+from syned.beamline.shape import Plane, Rectangle, Ellipse
 from syned.beamline.element_coordinates import ElementCoordinates
 from shadow4.beam.s4_beam import S4Beam
 from shadow4.beamline.s4_optical_element_decorators import S4PlaneOpticalElementDecorator
@@ -31,9 +31,11 @@ class S4PlaneMirror(S4Mirror, S4PlaneOpticalElementDecorator):
         }
 
     def to_python_code(self, **kwargs):
-        txt = "\nfrom shadow4.beamline.optical_elements.mirrors.s4_plane_mirror import S4PlaneMirror"
+        txt = self.to_python_code_boundary_shape()
         txt_pre = """
-optical_element = S4PlaneMirror(name='{name:s}',boundary_shape=None,
+   
+from shadow4.beamline.optical_elements.mirrors.s4_plane_mirror import S4PlaneMirror
+optical_element = S4PlaneMirror(name='{name:s}',boundary_shape=boundary_shape,
     f_reflec={f_reflec:d},f_refl={f_refl:d},file_refl='{file_refl:s}',refraction_index={refraction_index:g})
     """
         txt += txt_pre.format(**self.__inputs)
@@ -69,7 +71,7 @@ class S4PlaneMirrorElement(S4MirrorElement):
         return txt
 
 if __name__ == "__main__":
-    m = S4PlaneMirror(refraction_index=1+1e-7j)
+    m = S4PlaneMirror(refraction_index=1+1e-7j, boundary_shape=Ellipse())
     me = S4PlaneMirrorElement(optical_element=m, coordinates=ElementCoordinates(p=10, q=20, angle_radial=30, angle_azimuthal=40))
     print(me.info())
     print(me.to_python_code())

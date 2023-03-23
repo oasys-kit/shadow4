@@ -44,9 +44,11 @@ class S4ToroidalMirror(S4Mirror, S4ToroidalOpticalElementDecorator):
         }
 
     def to_python_code(self, **kwargs):
-        txt = "\nfrom shadow4.beamline.optical_elements.mirrors.s4_toroidal_mirror import S4ToroidalMirror"
+        txt = self.to_python_code_boundary_shape()
         txt_pre = """
-optical_element = S4ToroidalMirror(name='{name:s}',boundary_shape=None,
+        
+from shadow4.beamline.optical_elements.mirrors.s4_toroidal_mirror import S4ToroidalMirror
+optical_element = S4ToroidalMirror(name='{name:s}',boundary_shape=boundary_shape,
     surface_calculation={surface_calculation:d},
     min_radius={min_radius:f},maj_radius={maj_radius:f},
     p_focus={p_focus:f},q_focus={q_focus:f},grazing_angle={grazing_angle:f},

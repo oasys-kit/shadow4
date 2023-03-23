@@ -34,9 +34,11 @@ class S4ConicMirror(S4Mirror, S4ConicOpticalElementDecorator):
         }
 
     def to_python_code(self, **kwargs):
-        txt = "\nfrom shadow4.beamline.optical_elements.mirrors.s4_conic_mirror import S4ConicMirror"
+        txt = self.to_python_code_boundary_shape()
         txt_pre = """
-optical_element = S4ConicMirror(name='{name:s}',boundary_shape=None,
+        
+from shadow4.beamline.optical_elements.mirrors.s4_conic_mirror import S4ConicMirror
+optical_element = S4ConicMirror(name='{name:s}',boundary_shape=boundary_shape,
     conic_coefficients={conic_coefficients:s},
     f_reflec={f_reflec:d},f_refl={f_refl:d},file_refl='{file_refl:s}',refraction_index={refraction_index:g})
     """

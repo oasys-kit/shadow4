@@ -40,9 +40,11 @@ class S4NumericalMeshMirror(S4Mirror, S4NumericalMeshOpticalElementDecorator):
         }
 
     def to_python_code(self, **kwargs):
-        txt = "\nfrom shadow4.beamline.optical_elements.mirrors.s4_numerical_mesh_mirror import S4NumericalmeshMirror"
+        txt = self.to_python_code_boundary_shape()
         txt_pre = """
-optical_element = S4NumericalMeshMirror(name='{name:s}',boundary_shape=None,
+        
+from shadow4.beamline.optical_elements.mirrors.s4_numerical_mesh_mirror import S4NumericalmeshMirror
+optical_element = S4NumericalMeshMirror(name='{name:s}',boundary_shape=boundary_shape,
     xx=None,yy=None,zz=None,surface_data_file='{surface_data_file:s}',
     f_reflec={f_reflec:d},f_refl={f_refl:d},file_refl='{file_refl:s}',refraction_index={refraction_index:g})
     """

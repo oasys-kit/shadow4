@@ -52,9 +52,11 @@ class S4ParaboloidMirror(S4Mirror, S4ParaboloidOpticalElementDecorator):
         }
 
     def to_python_code(self, **kwargs):
-        txt = "\nfrom shadow4.beamline.optical_elements.mirrors.s4_paraboloid_mirror import S4ParaboloidMirror"
+        txt = self.to_python_code_boundary_shape()
+        txt = "\n"
         txt_pre = """
-optical_element = S4ParaboloidMirror(name='{name:s}',boundary_shape=None,
+from shadow4.beamline.optical_elements.mirrors.s4_paraboloid_mirror import S4ParaboloidMirror
+optical_element = S4ParaboloidMirror(name='{name:s}',boundary_shape=boundary_shape,
     surface_calculation={surface_calculation:d},is_cylinder={is_cylinder:d},cylinder_direction={cylinder_direction:d},
     convexity={convexity:d},
     parabola_parameter={parabola_parameter:f},at_infinity={at_infinity:d},pole_to_focus={pole_to_focus:f},
