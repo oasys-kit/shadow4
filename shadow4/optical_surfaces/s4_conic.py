@@ -193,9 +193,9 @@ class S4Conic(S4OpticalSurface):
         self.ccc[6-1]  = - self.ccc[6-1]
         self.ccc[9-1]  = - self.ccc[9-1]
 
-    def calculate_intercept(self,XIN,VIN,keep=0):
+    def calculate_intercept(self,XIN,VIN):
 
-        # # FUNCTION conicintercept,ccc,xIn1,vIn1,iflag,keep=keep
+        # # FUNCTION conicintercept,ccc,xIn1,vIn1,iflag
         # #
         # #
         # # ;+
@@ -227,11 +227,6 @@ class S4Conic(S4OpticalSurface):
         # # ; 	OUTPUT KEYWORD PARAMETERS
         # # ;		IFLAG: A flag (negative if no intersection)
         # # ;
-        # # ; 	KEYWORD PARAMETERS
-        # # ;               keep: 0 [default] keep the max t from both solutions
-        # # ;                     1 keep the MIN t from both solutions
-        # # ;                     2 keep the first solution
-        # # ;                     3 keep the second solution
         # # ;	ALGORITHM:
         # # ;		 Adapted from SHADOW/INTERCEPT
         # # ;
@@ -351,18 +346,27 @@ class S4Conic(S4OpticalSurface):
 
 
 
-    def choose_solution(self,TPAR1,TPAR2,reference_distance=10.0):
+    def choose_solution(self,TPAR1,TPAR2,reference_distance=10.0, method=0):
+        # method = 0: new shadow4 way (essentially the same as in shadow3
+        #             but replacing TSOURCE (unavailable here) by reference_distance
+        # method = 1: use first solution
+        # method = 2: use second solution
+
         #todo remove this nasty thing
         TPAR = numpy.zeros_like(TPAR1)
         I_FLAG = numpy.ones_like(TPAR1)
 
 
-
-        for i in range(TPAR1.size):
-            if ( numpy.abs(TPAR1[i]-reference_distance) <= numpy.abs(TPAR2[i]-reference_distance)):
-               TPAR[i] = TPAR1[i]
-            else:
-               TPAR[i] = TPAR2[i]
+        if method == 0:
+            for i in range(TPAR1.size):
+                if ( numpy.abs(TPAR1[i]-reference_distance) <= numpy.abs(TPAR2[i]-reference_distance)):
+                   TPAR[i] = TPAR1[i]
+                else:
+                   TPAR[i] = TPAR2[i]
+        elif method == 1:
+            TPAR = TPAR1
+        elif method == 2:
+            TPAR = TPAR2
 
         return TPAR,I_FLAG
 
@@ -896,7 +900,8 @@ class S4Conic(S4OpticalSurface):
         optical_path = newbeam.get_column(13)
 
         t1, t2 = self.calculate_intercept(x1, v1)
-        t, iflag = self.choose_solution(t1, t2, reference_distance=-newbeam.get_column(2).mean())
+        reference_distance = -newbeam.get_column(2).mean() + newbeam.get_column(3).mean()
+        t, iflag = self.choose_solution(t1, t2, reference_distance=reference_distance)
 
         # for i in range(t.size):
         #     print(">>>> solutions: ",t1[i],t2[i],t[i])
@@ -950,7 +955,8 @@ class S4Conic(S4OpticalSurface):
         optical_path = newbeam.get_column(13)
 
         t1, t2 = self.calculate_intercept(x1, v1)
-        t, iflag = self.choose_solution(t1, t2, reference_distance=-newbeam.get_column(2).mean())
+        reference_distance = -newbeam.get_column(2).mean() + newbeam.get_column(3).mean()
+        t, iflag = self.choose_solution(t1, t2, reference_distance=reference_distance)
 
         # for i in range(t.size):
         #     print(">>>> solutions: ",t1[i],t2[i],t[i])
@@ -1021,7 +1027,8 @@ class S4Conic(S4OpticalSurface):
         nrays = flag.size
 
         t1, t2 = self.calculate_intercept(x1, v1)
-        t, iflag = self.choose_solution(t1, t2, reference_distance=-newbeam.get_column(2).mean())
+        reference_distance = -newbeam.get_column(2).mean() + newbeam.get_column(3).mean()
+        t, iflag = self.choose_solution(t1, t2, reference_distance=reference_distance)
 
         # for i in range(t.size):
         #     print(">>>> solutions: ",t1[i],t2[i],t[i])

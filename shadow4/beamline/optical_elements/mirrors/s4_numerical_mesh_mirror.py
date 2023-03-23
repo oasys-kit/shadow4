@@ -70,8 +70,8 @@ class S4NumericalMeshMirrorElement(S4MirrorElement):
         txt += self.get_optical_element().to_python_code()
         coordinates = self.get_coordinates()
         txt += "\nfrom syned.beamline.element_coordinates import ElementCoordinates"
-        txt += "\ncoordinates=ElementCoordinates(p=%g,q=%g,angle_radial=%g)" % \
-               (coordinates.p(), coordinates.q(), coordinates.angle_radial())
+        txt += "\ncoordinates = ElementCoordinates(p=%g, q=%g, angle_radial=%g, angle_azimuthal=%g, angle_radial_out=%g)" % \
+               (coordinates.p(), coordinates.q(), coordinates.angle_radial(), coordinates.angle_azimuthal(), coordinates.angle_radial_out())
         txt += "\nfrom shadow4.beamline.optical_elements.mirrors.s4_numerical_mesh_mirror import S4NumericalMeshMirrorElement"
         txt += "\nbeamline_element = S4NumericalMeshMirrorElement(optical_element=optical_element,coordinates=coordinates,input_beam=beam)"
         txt += "\n\nbeam, mirr = beamline_element.trace_beam()"

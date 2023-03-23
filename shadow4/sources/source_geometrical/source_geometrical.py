@@ -150,7 +150,7 @@ class SourceGeometrical(S4LightSourceBase):
         self.angular_distribution = "Conical"
         self.__cone_max = cone_max
         self.__cone_min = cone_min
-        self.__fdist = 5
+        self.__fdist = 4
 
     def set_polarization(self,
                          polarization_degree=1, # cos_s / (cos_s + sin_s)
@@ -574,7 +574,7 @@ class SourceGeometrical(S4LightSourceBase):
             txt += "\nlight_source.set_angular_distribution_gaussian(sigdix=%f,sigdiz=%f)" % \
                    (self.__sigdix, self.__sigdiz)
         elif self.__fdist == 4:  # cone
-            txt += "\nlight_source.set_angular_distribution_conical(cone_max=%f,cone_min=%f" % \
+            txt += "\nlight_source.set_angular_distribution_conical(cone_max=%f,cone_min=%f)" % \
                    (self.__cone_max, self.__cone_min)
         elif self.__fdist == 5:  # Zero (collimated) - New in shadow4
             txt += "\nlight_source.set_angular_distribution_collimated()"
