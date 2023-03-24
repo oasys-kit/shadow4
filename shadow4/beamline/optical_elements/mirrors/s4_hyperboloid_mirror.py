@@ -18,14 +18,19 @@ class S4HyperboloidMirror(S4Mirror, S4HyperboloidOpticalElementDecorator):
                  q_focus=0.0,
                  grazing_angle=0.0,
                  # inputs related to mirror reflectivity
-                 f_reflec=0,  # reflectivity of surface: 0=no reflectivity, 1=full polarization
-                 f_refl=0,  # 0=prerefl file
-                 # 1=electric susceptibility
-                 # 2=user defined file (1D reflectivity vs angle)
-                 # 3=user defined file (1D reflectivity vs energy)
-                 # 4=user defined file (2D reflectivity vs energy and angle)
+                 f_reflec=0, # reflectivity of surface: 0=no reflectivity, 1=full polarization
+                 f_refl=0,   # 0=prerefl file
+                             # 1=electric susceptibility
+                             # 2=user defined file (1D reflectivity vs angle)
+                             # 3=user defined file (1D reflectivity vs energy)
+                             # 4=user defined file (2D reflectivity vs energy and angle)
+                             # 5=direct calculation using xraylib
+                             # 6=direct calculation using dabax
                  file_refl="",  # preprocessor file fir f_refl=0,2,3,4
-                 refraction_index=1.0  # refraction index (complex) for f_refl=1
+                 refraction_index=1.0,  # refraction index (complex) for f_refl=1
+                 coating_material="",   # string with coating material formula for f_refl=5,6
+                 coating_density=1.0,   # coating material density for f_refl=5,6
+                 coating_roughness=0.0, # coating material roughness in A for f_refl=5,6
                  ):
         S4HyperboloidOpticalElementDecorator.__init__(self, surface_calculation, is_cylinder, cylinder_direction, convexity,
                                                       min_axis, maj_axis, p_focus, q_focus, grazing_angle)
@@ -48,6 +53,9 @@ class S4HyperboloidMirror(S4Mirror, S4HyperboloidOpticalElementDecorator):
             "f_refl": f_refl,
             "file_refl": file_refl,
             "refraction_index": refraction_index,
+            "coating_material": coating_material,
+            "coating_density": coating_density,
+            "coating_roughness": coating_roughness,
         }
 
     def to_python_code(self, **kwargs):
@@ -59,8 +67,9 @@ optical_element = S4HyperboloidMirror(name='{name:s}',boundary_shape=boundary_sh
     surface_calculation={surface_calculation:d},is_cylinder={is_cylinder:d},cylinder_direction={cylinder_direction:d},
     convexity={convexity:d},min_axis={min_axis:f},maj_axis={maj_axis:f},p_focus={p_focus:f},q_focus={q_focus:f},
     grazing_angle={grazing_angle:f},
-    f_reflec={f_reflec:d},f_refl={f_refl:d},file_refl='{file_refl:s}',refraction_index={refraction_index:g})
-    """
+    f_reflec={f_reflec:d},f_refl={f_refl:d},file_refl='{file_refl:s}',refraction_index={refraction_index:g},
+    coating_material='{coating_material:s}',coating_density={coating_density:g},coating_roughness={coating_roughness:g})
+"""
         txt += txt_pre.format(**self.__inputs)
         return txt
 

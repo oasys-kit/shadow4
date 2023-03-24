@@ -129,7 +129,7 @@ class PreRefl(object):
         :param grazing_angle_mrad: scalar with grazing angle in mrad
         :param roughness_rms_A: scalar with roughness rms in Angstroms
         :param photon_energy_ev: scalar or array with photon energies in eV
-        :param method: 0=Born&Wolf, 1=Parratt, 2=shadow3
+        :param method: 0=Born&Wolf, 1=Parratt, 2=shadow3  (avoid using 0 or 1, experimental!!)
         :return: (rs,rp,runp) the s-polarized, p-pol and unpolarized reflectivities
         """
 
@@ -138,56 +138,106 @@ class PreRefl(object):
                                                       grazing_angle_mrad=grazing_angle_mrad,
                                                       roughness_rms_A=roughness_rms_A,
                                                       method=method)
-        # refraction_index = self.get_refraction_index(photon_energy_ev)
-        #
-        # theta1 = grazing_angle_mrad * 1e-3     # in rad
-        # rough1 = roughness_rms_A
-        #
-        # # ; epsi = 1 - alpha - i gamma
-        # # alpha = 2.0D0*k*f1
-        # # gamma = 2.0D0*k*f2
-        #
-        # alpha = 2 * (1.0 - refraction_index.real)
-        # gamma = 2 * refraction_index.imag
-        #
-        # rho = (numpy.sin(theta1))**2 - alpha
-        # rho += numpy.sqrt((numpy.sin(theta1)**2 - alpha)**2 + gamma**2)
-        # rho = numpy.sqrt(rho / 2)
-        #
-        # rs1 = 4 * (rho**2) * (numpy.sin(theta1) - rho)**2 + gamma**2
-        # rs2 = 4 * (rho**2) * (numpy.sin(theta1) + rho)**2 + gamma**2
-        # rs = rs1 / rs2
-        #
-        # ratio1 = 4 * rho**2 * (rho * numpy.sin(theta1) - numpy.cos(theta1)**2)**2 + gamma**2 * numpy.sin(theta1)**2
-        # ratio2 = 4 * rho**2 * (rho * numpy.sin(theta1) + numpy.cos(theta1)**2)**2 + gamma**2 * numpy.sin(theta1)**2
-        # ratio = ratio1 / ratio2
-        #
-        # rp = rs * ratio
-        # runp = 0.5 * (rs + rp)
-        #
-        # wavelength_m = codata.h * codata.c / codata.e / photon_energy_ev
-        #
-        # debyewaller = numpy.exp( -(4.0 * numpy.pi * numpy.sin(theta1) * rough1 / (wavelength_m * 1e10))**2 )
-        #
-        # return rs*debyewaller, rp*debyewaller, runp*debyewaller
+
         return numpy.abs(rs)**2, numpy.abs(rp)**2, numpy.abs(0.5 * (rs + rp))**2,
 
     def reflectivity_amplitudes_fresnel(self, photon_energy_ev=10000.0, grazing_angle_mrad=3.0, roughness_rms_A=0.0,
-                                        method=2 # 0=born & wold, 1=parratt, 2=shadow3
+                                        method=2 # 0=born & wolf, 1=parratt, 2=shadow3 (avoid using 0 or 1, experimental!!)
                                         ):
 
-        refraction_index_1 = 1.0
         refraction_index_2 = self.get_refraction_index(photon_energy_ev)
+        refraction_index_1 = numpy.ones_like(refraction_index_2)
+
+        return PreRefl.reflectivity_amplitudes_fresnel_external(
+                                                 photon_energy_ev=photon_energy_ev,
+                                                 refraction_index_1=refraction_index_1,
+                                                 refraction_index_2=refraction_index_2,
+                                                 grazing_angle_mrad=grazing_angle_mrad,
+                                                 roughness_rms_A=roughness_rms_A,
+                                                 method=method)
+
+    # to be used externally
+    @classmethod
+    def reflectivity_amplitudes_fresnel_external_xraylib(cls,
+                                                         photon_energy_ev=10000.0,
+                                                         coating_material="SiC",
+                                                         coating_density=3.217,
+                                                         grazing_angle_mrad=3.0,
+                                                         roughness_rms_A=0.0,
+                                                         method=2,
+                                                         # 0=born & wolf, 1=parratt, 2=shadow3 (avoid using 0 or 1, experimental!!) ):
+                                                         ):
+
+        import xraylib
+        photon_energy_ev_array = numpy.array(photon_energy_ev)
+        refraction_index_2 = numpy.zeros_like(photon_energy_ev_array, dtype=complex)
+
+        for i,photon_energy_ev in enumerate(photon_energy_ev_array):
+            refraction_index_2[i] = xraylib.Refractive_Index_Re(coating_material, photon_energy_ev*1e-3, coating_density) + \
+                                1j * xraylib.Refractive_Index_Im(coating_material, photon_energy_ev * 1e-3, coating_density)
+
+        refraction_index_1 = numpy.ones_like(refraction_index_2)
+
+        return PreRefl.reflectivity_amplitudes_fresnel_external(
+                                                 photon_energy_ev=photon_energy_ev,
+                                                 refraction_index_1=refraction_index_1,
+                                                 refraction_index_2=refraction_index_2,
+                                                 grazing_angle_mrad=grazing_angle_mrad,
+                                                 roughness_rms_A=roughness_rms_A,
+                                                 method=method)
+
+    @classmethod
+    def reflectivity_amplitudes_fresnel_external_dabax(cls,
+                                                         photon_energy_ev=10000.0,
+                                                         coating_material="SiC",
+                                                         coating_density=3.217,
+                                                         grazing_angle_mrad=3.0,
+                                                         roughness_rms_A=0.0,
+                                                         method=2, # 0=born & wolf, 1=parratt, 2=shadow3 (avoid using 0 or 1, experimental!!) ):
+                                                         dabax=None,
+                                                       ):
+
+        from dabax.dabax_xraylib import DabaxXraylib
+        if isinstance(dabax, DabaxXraylib):
+            dx = dabax
+        else:
+            dx = DabaxXraylib()
+
+        refraction_index_2 = dx.Refractive_Index_Re(coating_material, photon_energy_ev * 1e-3, coating_density) + \
+                                1j * dx.Refractive_Index_Im(coating_material, photon_energy_ev * 1e-3, coating_density)
+
+        refraction_index_1 = numpy.ones_like(refraction_index_2)
+
+        return PreRefl.reflectivity_amplitudes_fresnel_external(
+                                                 photon_energy_ev=photon_energy_ev,
+                                                 refraction_index_1=refraction_index_1,
+                                                 refraction_index_2=refraction_index_2,
+                                                 grazing_angle_mrad=grazing_angle_mrad,
+                                                 roughness_rms_A=roughness_rms_A,
+                                                 method=method)
+
+
+
+    @classmethod
+    def reflectivity_amplitudes_fresnel_external(cls,
+                                                 photon_energy_ev=10000.0,
+                                                 refraction_index_1=1.0,
+                                                 refraction_index_2=1.0,
+                                                 grazing_angle_mrad=3.0,
+                                                 roughness_rms_A=0.0,
+                                                 method=2, # 0=born & wolf, 1=parratt, 2=shadow3 (avoid using 0 or 1, experimental!!) ):
+                                                 ):
+
 
         theta1g = grazing_angle_mrad * 1e-3     # in rad
         theta1 = numpy.pi / 2 - theta1g
         rough1 = roughness_rms_A
 
         sin_theta1 = numpy.sin(theta1)
-        cos_theta1 = numpy.sqrt(1 - sin_theta1**2, dtype=numpy.complex)
+        cos_theta1 = numpy.sqrt(1 - sin_theta1**2, dtype=complex)
 
         sin_theta2 = refraction_index_1 * sin_theta1 / refraction_index_2
-        cos_theta2 = numpy.sqrt(1 - sin_theta2**2, dtype=numpy.complex)
+        cos_theta2 = numpy.sqrt(1 - sin_theta2**2, dtype=complex)
 
 
         if method == 0: # born & wolf
@@ -205,8 +255,8 @@ class PreRefl(object):
             beta1 = numpy.imag(refraction_index_1)
             delta2 = 1.0 - numpy.real(refraction_index_2)
             beta2 = numpy.imag(refraction_index_2)
-            f1 = numpy.sqrt(phi ** 2 - 2 * delta1 - 2 * 1j * beta1, dtype=numpy.complex)
-            f2 = numpy.sqrt(phi ** 2 - 2 * delta2 - 2 * 1j * beta2, dtype=numpy.complex)
+            f1 = numpy.sqrt(phi ** 2 - 2 * delta1 - 2 * 1j * beta1, dtype=complex)
+            f2 = numpy.sqrt(phi ** 2 - 2 * delta2 - 2 * 1j * beta2, dtype=complex)
             rs = (f1 - f2) / (f1 + f2)
             rp = rs
 
@@ -234,8 +284,8 @@ class PreRefl(object):
 
             rp = rs * ratio
 
-            rs = numpy.sqrt(rs, dtype=numpy.complex)
-            rp = numpy.sqrt(rp, dtype = numpy.complex)
+            rs = numpy.sqrt(rs, dtype = complex)
+            rp = numpy.sqrt(rp, dtype = complex)
 
 
 
@@ -534,7 +584,7 @@ if __name__ == "__main__":
              Energy, rs2, legend=["xraylib","cxro"],
              xtitle="Photon energy [eV]", ytitle="Reflectivity", title="Au@%g mrad" % grazing_angle_mrad)
 
-    if True: # comparing with f1f2_calc
+    if False: # comparing with f1f2_calc
 
         # """
 
@@ -584,3 +634,60 @@ if __name__ == "__main__":
              legend=["RS0",'f1f2_calc'])
 
 
+    if True:
+        prerefl_file = "reflec1.dat"
+
+        PreRefl.prerefl(interactive=False, SYMBOL="Au", DENSITY=19.3, FILE=prerefl_file,
+                        E_MIN=1000.0, E_MAX=5000.0, E_STEP=100.0)
+
+
+        a = PreRefl()
+        a.read_preprocessor_file(prerefl_file)
+
+        # for method in (0,1,2):
+        #     print(
+        #         a.reflectivity_amplitudes_fresnel(photon_energy_ev=200.0,
+        #                                                  grazing_angle_mrad=3.0,
+        #                                                  roughness_rms_A=0.0,
+        #                                                  method=method, # 0=born & wolf, 1=parratt, 2=shadow3
+        #                                                 )
+        #     )
+
+        for energy in (2000,3000,4000):
+            print(
+                a.reflectivity_amplitudes_fresnel(photon_energy_ev=energy,
+                                                         grazing_angle_mrad=3.0,
+                                                         roughness_rms_A=0.0,
+                                                         method=2 # 0=born & wolf, 1=parratt, 2=shadow3
+                                                        )
+            )
+
+        print(
+                        a.reflectivity_amplitudes_fresnel(photon_energy_ev=numpy.array((2000,3000,4000,4000)),
+                                                                 grazing_angle_mrad=numpy.array((3.0,3.0,3.0,1.0)),
+                                                                 roughness_rms_A=0.0,
+                                                                 method=2 # 0=born & wolf, 1=parratt, 2=shadow3
+                                                                )
+                    )
+
+        tmp_xrl = PreRefl.reflectivity_amplitudes_fresnel_external_xraylib(
+                                          photon_energy_ev=numpy.array((2000, 3000, 4000, 4000)),
+                                          SYMBOL="Au",
+                                          DENSITY=19.3,
+                                          grazing_angle_mrad=numpy.array((3.0, 3.0, 3.0, 1.0)),
+                                          roughness_rms_A=0.0,
+                                          method=2  # 0=born & wolf, 1=parratt, 2=shadow3
+                                          )
+
+        tmp_dx = PreRefl.reflectivity_amplitudes_fresnel_external_dabax(
+                                          photon_energy_ev=numpy.array((2000, 3000, 4000, 4000)),
+                                          SYMBOL="Au",
+                                          DENSITY=19.3,
+                                          grazing_angle_mrad=numpy.array((3.0, 3.0, 3.0, 1.0)),
+                                          roughness_rms_A=0.0,
+                                          method=2  # 0=born & wolf, 1=parratt, 2=shadow3
+                                          )
+
+        print(">>>> tmp_xrl", tmp_xrl)
+        print(">>>> tmp_dx", tmp_dx)
+        # array([0.97964125+0.j, 0.94972277+0.j, 0.95617705+0.j, 0.98532469+0.j]), array([0.97962098+0.j, 0.94969218+0.j, 0.9561607 +0.j, 0.98531913+0.j]))

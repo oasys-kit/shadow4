@@ -21,12 +21,15 @@ class S4ToroidalMirror(S4Mirror, S4ToroidalOpticalElementDecorator):
                  # 3=user defined file (1D reflectivity vs energy)
                  # 4=user defined file (2D reflectivity vs energy and angle)
                  file_refl="",  # preprocessor file fir f_refl=0,2,3,4
-                 refraction_index=1.0  # refraction index (complex) for f_refl=1
+                 refraction_index=1.0,  # refraction index (complex) for f_refl=1
+                 coating_material="",   # string with coating material formula for f_refl=5,6
+                 coating_density=1.0,   # coating material density for f_refl=5,6
+                 coating_roughness=0.0, # coating material roughness in A for f_refl=5,6
                  ):
         S4ToroidalOpticalElementDecorator.__init__(self, surface_calculation,
                                                    min_radius, maj_radius, p_focus, q_focus, grazing_angle)
         S4Mirror.__init__(self, name, boundary_shape, self.get_surface_shape_instance(),
-                          f_reflec, f_refl, file_refl, refraction_index)
+                          f_reflec, f_refl, file_refl, refraction_index, coating_material, coating_density, coating_roughness)
 
         self.__inputs = {
             "name": name,
@@ -41,6 +44,9 @@ class S4ToroidalMirror(S4Mirror, S4ToroidalOpticalElementDecorator):
             "f_refl": f_refl,
             "file_refl": file_refl,
             "refraction_index": refraction_index,
+            "coating_material": coating_material,
+            "coating_density": coating_density,
+            "coating_roughness": coating_roughness,
         }
 
     def to_python_code(self, **kwargs):
@@ -52,7 +58,8 @@ optical_element = S4ToroidalMirror(name='{name:s}',boundary_shape=boundary_shape
     surface_calculation={surface_calculation:d},
     min_radius={min_radius:f},maj_radius={maj_radius:f},
     p_focus={p_focus:f},q_focus={q_focus:f},grazing_angle={grazing_angle:f},
-    f_reflec={f_reflec:d},f_refl={f_refl:d},file_refl='{file_refl:s}',refraction_index={refraction_index:g})
+    f_reflec={f_reflec:d},f_refl={f_refl:d},file_refl='{file_refl:s}',refraction_index={refraction_index:g},
+    coating_material='{coating_material:s}',coating_density={coating_density:g},coating_roughness={coating_roughness:g})
 """
         txt += txt_pre.format(**self.__inputs)
         return txt

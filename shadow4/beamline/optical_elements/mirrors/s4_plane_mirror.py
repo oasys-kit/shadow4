@@ -9,17 +9,23 @@ class S4PlaneMirror(S4Mirror, S4PlaneOpticalElementDecorator):
                  name="Plane Mirror",
                  boundary_shape=None,
                  # inputs related to mirror reflectivity
-                 f_reflec=0,  # reflectivity of surface: 0=no reflectivity, 1=full polarization
-                 f_refl=0,  # 0=prerefl file
-                 # 1=electric susceptibility
-                 # 2=user defined file (1D reflectivity vs angle)
-                 # 3=user defined file (1D reflectivity vs energy)
-                 # 4=user defined file (2D reflectivity vs energy and angle)
+                 f_reflec=0, # reflectivity of surface: 0=no reflectivity, 1=full polarization
+                 f_refl=0,   # 0=prerefl file
+                             # 1=electric susceptibility
+                             # 2=user defined file (1D reflectivity vs angle)
+                             # 3=user defined file (1D reflectivity vs energy)
+                             # 4=user defined file (2D reflectivity vs energy and angle)
+                             # 5=direct calculation using xraylib
+                             # 6=direct calculation using dabax
                  file_refl="",  # preprocessor file fir f_refl=0,2,3,4
-                 refraction_index=1.0  # refraction index (complex) for f_refl=1
+                 refraction_index=1.0,  # refraction index (complex) for f_refl=1
+                 coating_material="",   # string with coating material formula for f_refl=5,6
+                 coating_density=1.0,   # coating material density for f_refl=5,6
+                 coating_roughness=0.0, # coating material roughness in A for f_refl=5,6
                  ):
         S4PlaneOpticalElementDecorator.__init__(self)
-        S4Mirror.__init__(self, name, boundary_shape, self.get_surface_shape_instance(), f_reflec, f_refl, file_refl, refraction_index)
+        S4Mirror.__init__(self, name, boundary_shape, self.get_surface_shape_instance(),
+                          f_reflec, f_refl, file_refl, refraction_index, coating_material, coating_density, coating_roughness)
 
         self.__inputs = {
             "name": name,
@@ -28,6 +34,9 @@ class S4PlaneMirror(S4Mirror, S4PlaneOpticalElementDecorator):
             "f_refl": f_refl,
             "file_refl": file_refl,
             "refraction_index": refraction_index,
+            "coating_material": coating_material,
+            "coating_density": coating_density,
+            "coating_roughness": coating_roughness,
         }
 
     def to_python_code(self, **kwargs):
@@ -36,8 +45,9 @@ class S4PlaneMirror(S4Mirror, S4PlaneOpticalElementDecorator):
    
 from shadow4.beamline.optical_elements.mirrors.s4_plane_mirror import S4PlaneMirror
 optical_element = S4PlaneMirror(name='{name:s}',boundary_shape=boundary_shape,
-    f_reflec={f_reflec:d},f_refl={f_refl:d},file_refl='{file_refl:s}',refraction_index={refraction_index:g})
-    """
+    f_reflec={f_reflec:d},f_refl={f_refl:d},file_refl='{file_refl:s}',refraction_index={refraction_index:g},
+    coating_material='{coating_material:s}',coating_density={coating_density:g},coating_roughness={coating_roughness:g})
+"""
         txt += txt_pre.format(**self.__inputs)
         return txt
 

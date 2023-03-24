@@ -17,13 +17,18 @@ class S4Mirror(Mirror):
                  surface_shape=None,
                  # inputs related to mirror reflectivity
                  f_reflec=0,  # reflectivity of surface: 0=no reflectivity, 1=full polarization
-                 f_refl=0,  # 0=prerefl file
-                 # 1=electric susceptibility
-                 # 2=user defined file (1D reflectivity vs angle)
-                 # 3=user defined file (1D reflectivity vs energy)
-                 # 4=user defined file (2D reflectivity vs energy and angle)
+                 f_refl=0,   # 0=prerefl file
+                             # 1=electric susceptibility
+                             # 2=user defined file (1D reflectivity vs angle)
+                             # 3=user defined file (1D reflectivity vs energy)
+                             # 4=user defined file (2D reflectivity vs energy and angle)
+                             # 5=direct calculation using xraylib
+                             # 6=direct calculation using dabax
                  file_refl="",  # preprocessor file fir f_refl=0,2,3,4
                  refraction_index=1.0,  # refraction index (complex) for f_refl=1
+                 coating_material="", # string with coating material formula for f_refl=5,6
+                 coating_density=1.0,  # coating material density for f_refl=5,6
+                 coating_roughness=0.0,  # coating material roughness in A for f_refl=5,6
                  ):
         """
 
@@ -45,12 +50,16 @@ class S4Mirror(Mirror):
                 name if user defined file
         refraction_index
                 complex scalar with refraction index n (for f_refl=1)
+        material
+                string with material formula (for f_refl=5,6)
+        density
+                material density in g/cm^3 (for f_refl=5,6)
         """
         Mirror.__init__(self,
                         name=name,
                         surface_shape=surface_shape,
                         boundary_shape=boundary_shape,
-                        coating=None,  # not used
+                        coating=coating_material,
                         coating_thickness=None,  #not used
                         )
 
@@ -60,6 +69,8 @@ class S4Mirror(Mirror):
         self._f_refl = f_refl
         self._file_refl = file_refl
         self._refraction_index = refraction_index
+        self._coating_density = coating_density
+        self._coating_roughness = coating_roughness
 
     def set_boundaries_rectangle(self, x_left=-1e3, x_right=1e3, y_bottom=-1e3, y_top=1e3):
         self._boundary_shape = Rectangle(x_left=x_left, x_right=x_right, y_bottom=y_bottom, y_top=y_top)
@@ -150,9 +161,11 @@ class S4MirrorElement(S4BeamlineElement):
                 Rs, Rp, Ru = pr.reflectivity_fresnel(grazing_angle_mrad=grazing_angle_mrad,
                                                      photon_energy_ev=input_beam.get_column(-11),
                                                      roughness_rms_A=0.0)
+                footprint.apply_reflectivities(numpy.sqrt(Rs), numpy.sqrt(Rp))
 
             elif soe._f_refl == 1:  # alpha, gamma, electric susceptibilities
                 Rs, Rp, Ru = self.reflectivity_fresnel(soe._refraction_index , grazing_angle_mrad=grazing_angle_mrad)
+                footprint.apply_reflectivities(numpy.sqrt(Rs), numpy.sqrt(Rp))
 
             elif soe._f_refl == 2:  # user angle, mrad ref
                 # raise Exception("Not implemented f_refl == 2")
@@ -178,6 +191,8 @@ class S4MirrorElement(S4BeamlineElement):
                                   left=mirror_reflectivities[0],
                                   right=mirror_reflectivities[-1])
                 Rp = Rs
+                footprint.apply_reflectivities(numpy.sqrt(Rs), numpy.sqrt(Rp))
+
             elif soe._f_refl == 3:  # user energy
 
                 beam_energies = input_beam.get_photon_energy_eV()
@@ -193,6 +208,7 @@ class S4MirrorElement(S4BeamlineElement):
                                   left=mirror_reflectivities[0],
                                   right=mirror_reflectivities[-1])
                 Rp = Rs
+                footprint.apply_reflectivities(numpy.sqrt(Rs), numpy.sqrt(Rp))
 
             elif soe._f_refl == 4:  # user 2D
                 values = numpy.loadtxt(soe._file_refl)
@@ -223,6 +239,9 @@ class S4MirrorElement(S4BeamlineElement):
 
                     Rs = get_interpolator_weight_2D(mirror_energies, mirror_grazing_angles, mirror_reflectivities)
                     Rp = Rs
+                    footprint.apply_reflectivities(numpy.sqrt(Rs), numpy.sqrt(Rp))
+                    footprint.apply_reflectivities(numpy.sqrt(Rs), numpy.sqrt(Rp))
+
                 elif values.shape[1] == 4:
                     mirror_reflectivities_s = values[:, 2]
                     mirror_reflectivities_p = values[:, 3]
@@ -230,10 +249,37 @@ class S4MirrorElement(S4BeamlineElement):
                     Rs = get_interpolator_weight_2D(mirror_energies, mirror_grazing_angles, mirror_reflectivities_s)
                     Rp = get_interpolator_weight_2D(mirror_energies, mirror_grazing_angles, mirror_reflectivities_p)
 
+                footprint.apply_reflectivities(numpy.sqrt(Rs), numpy.sqrt(Rp))
+
+            elif soe._f_refl == 5: # xraylib
+
+                rs, rp = PreRefl.reflectivity_amplitudes_fresnel_external_xraylib(
+                        photon_energy_ev=input_beam.get_column(-11),
+                        coating_material=soe._coating,
+                        coating_density=soe._coating_density,
+                        grazing_angle_mrad=grazing_angle_mrad,
+                        roughness_rms_A=soe._coating_roughness,
+                        method=2,  # 0=born & wolf, 1=parratt, 2=shadow3
+                    )
+                footprint.apply_reflectivities(numpy.abs(rs), numpy.abs(rp))
+
+            elif soe._f_refl == 6: # xraylib
+
+                rs, rp = PreRefl.reflectivity_amplitudes_fresnel_external_dabax(
+                        photon_energy_ev=input_beam.get_column(-11),
+                        coating_material=soe._coating,
+                        coating_density=soe._coating_density,
+                        grazing_angle_mrad=grazing_angle_mrad,
+                        roughness_rms_A=soe._coating_roughness,
+                        method=2,  # 0=born & wolf, 1=parratt, 2=shadow3
+                        dabax=None,
+                    )
+                footprint.apply_reflectivities(numpy.abs(rs),numpy.abs(rp))
+
             else:
                 raise Exception("Not implemented source of mirror reflectivity")
 
-            footprint.apply_reflectivities(numpy.sqrt(Rs), numpy.sqrt(Rp))
+
 
         #
         # TODO: write angle.xx for comparison
