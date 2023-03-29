@@ -32,6 +32,39 @@ class S4Screen(Absorber, S4OpticalElementDecorator):
         self._thick = thick
         self._file_abs = file_abs
 
+        self.__inputs = {
+            "name": name,
+            "boundary_shape": boundary_shape,
+            "i_abs":    i_abs,
+            "i_stop":   i_stop,
+            "thick":    thick ,
+            "file_abs": file_abs,
+        }
+
+    def to_python_code_boundary_shape(self):
+        txt = "" # "\nfrom shadow4.beamline.optical_elements.mirrors.s4_plane_mirror import S4PlaneMirror"
+        bs = self._boundary_shape
+        if bs is None:
+            txt += "\nboundary_shape = None"
+        elif isinstance(bs, Rectangle):
+            txt += "\nfrom syned.beamline.shape import Rectangle"
+            txt += "\nboundary_shape = Rectangle(x_left=%g, x_right=%g, y_bottom=%g, y_top=%g)" % bs.get_boundaries()
+        elif isinstance(bs, Ellipse):
+            txt += "\nfrom syned.beamline.shape import Ellipse"
+            txt += "\nboundary_shape = Ellipse(a_axis_min=%g, a_axis_max=%g, b_axis_min=%g, b_axis_max=%g)" % bs.get_boundaries()
+        return txt
+
+    def to_python_code(self, **kwargs):
+        txt = self.to_python_code_boundary_shape()
+        txt_pre = """
+
+from shadow4.beamline.optical_elements.absorbers.s4_screen import S4Screen
+optical_element = S4Screen(name='{name:s}', boundary_shape=boundary_shape,
+    i_abs={i_abs:d}, i_stop={i_stop:d}, thick={thick:g}, file_abs='{file_abs:s}')
+"""
+        txt += txt_pre.format(**self.__inputs)
+        return txt
+
 class S4ScreenElement(S4BeamlineElement):
 
     def __init__(self, optical_element : S4Screen = None, coordinates : ElementCoordinates = None, input_beam : S4Beam = None):
@@ -130,5 +163,21 @@ class S4ScreenElement(S4BeamlineElement):
 
         return output_beam, footprint
 
+    def to_python_code(self, **kwargs):
+        txt = "\n\n# optical element number XX"
+        txt += self.get_optical_element().to_python_code()
+        coordinates = self.get_coordinates()
+        txt += "\nfrom syned.beamline.element_coordinates import ElementCoordinates"
+        txt += "\ncoordinates = ElementCoordinates(p=%g, q=%g, angle_radial=%g, angle_azimuthal=%g, angle_radial_out=%g)" % \
+               (coordinates.p(), coordinates.q(), coordinates.angle_radial(), coordinates.angle_azimuthal(), coordinates.angle_radial_out())
+        txt += "\nfrom shadow4.beamline.optical_elements.absorbers.s4_screen import S4ScreenElement"
+        txt += "\nbeamline_element = S4ScreenElement(optical_element=optical_element, coordinates=coordinates, input_beam=beam)"
+        txt += "\n\nbeam, footprint = beamline_element.trace_beam()"
+        return txt
 
+if __name__ == "__main__":
+    o = S4Screen()
 
+    e = S4ScreenElement()
+
+    print(e.to_python_code())
