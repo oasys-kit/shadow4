@@ -42,16 +42,18 @@ class S4Screen(Absorber, S4OpticalElementDecorator):
         }
 
     def to_python_code_boundary_shape(self):
-        txt = "" # "\nfrom shadow4.beamline.optical_elements.mirrors.s4_plane_mirror import S4PlaneMirror"
+        txt = ""
         bs = self._boundary_shape
         if bs is None:
             txt += "\nboundary_shape = None"
-        elif isinstance(bs, Rectangle):
+        if isinstance(bs, Rectangle):
             txt += "\nfrom syned.beamline.shape import Rectangle"
             txt += "\nboundary_shape = Rectangle(x_left=%g, x_right=%g, y_bottom=%g, y_top=%g)" % bs.get_boundaries()
         elif isinstance(bs, Ellipse):
             txt += "\nfrom syned.beamline.shape import Ellipse"
             txt += "\nboundary_shape = Ellipse(a_axis_min=%g, a_axis_max=%g, b_axis_min=%g, b_axis_max=%g)" % bs.get_boundaries()
+        else:
+            txt += "\nboundary_shape = None"
         return txt
 
     def to_python_code(self, **kwargs):
