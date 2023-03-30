@@ -12,6 +12,14 @@ class S4IdealLens(IdealLens, S4OpticalElementDecorator):
     def __init__(self, name="Undefined",focal_x=0.0,focal_y=0.0):
         super().__init__(name=name,focal_x=focal_x,focal_y=focal_y)
 
+    def to_python_code(self, **kwargs):
+        txt_pre = """
+
+from shadow4.beamline.optical_elements.ideal_elements.s4_ideal_lens import S4IdealLens
+optical_element = S4IdealLens(name='{name:s}', focal_x={focal_x:g},focal_y={focal_x:g})
+"""
+        txt = txt_pre.format(**{'name':self.get_name(), 'focal_x': self._focal_x, 'focal_y': self._focal_y})
+        return txt
 
 class S4IdealLensElement(S4BeamlineElement):
     def __init__(self,
@@ -52,10 +60,21 @@ class S4IdealLensElement(S4BeamlineElement):
 
         return output_beam, footprint
 
+    def to_python_code(self, **kwargs):
+        txt = "\n\n# optical element number XX"
+        txt += self.get_optical_element().to_python_code()
+        coordinates = self.get_coordinates()
+        txt += "\nfrom syned.beamline.element_coordinates import ElementCoordinates"
+        txt += "\ncoordinates = ElementCoordinates(p=%g, q=%g, angle_radial=%g, angle_azimuthal=%g, angle_radial_out=%g)" % \
+               (coordinates.p(), coordinates.q(), coordinates.angle_radial(), coordinates.angle_azimuthal(), coordinates.angle_radial_out())
+        txt += "\nfrom shadow4.beamline.optical_elements.ideal_elements.s4_ideal_lens import S4IdealLensElement"
+        txt += "\nbeamline_element = S4IdealLensElement(optical_element=optical_element, coordinates=coordinates, input_beam=beam)"
+        txt += "\n\nbeam, mirr = beamline_element.trace_beam()"
+        return txt
 
 class S4SuperIdealLens(IdealLens, S4OpticalElementDecorator):
-    def __init__(self, name="Undefined",focal_p_x=0.0, focal_p_y=0.0,
-                                        focal_q_x=0.0, focal_q_y=0.0,):
+    def __init__(self, name="Undefined",focal_p_x=1.0, focal_p_y=1.0,
+                                        focal_q_x=1.0, focal_q_y=1.0,):
         super().__init__(name=name,focal_x=1.0/(1/focal_p_x+1/focal_q_x),focal_y=1.0/(1/focal_p_y+1/focal_q_y))
 
         self._focal_p_x = focal_p_x
@@ -63,6 +82,24 @@ class S4SuperIdealLens(IdealLens, S4OpticalElementDecorator):
         self._focal_q_x = focal_q_x
         self._focal_q_y = focal_q_y
 
+        self.__inputs = {
+            "name": name,
+            "focal_p_x": focal_p_x,
+            "focal_q_x": focal_q_x,
+            "focal_p_y": focal_p_y,
+            "focal_q_y": focal_q_y,
+        }
+
+    def to_python_code(self, **kwargs):
+        txt_pre = """
+
+from shadow4.beamline.optical_elements.ideal_elements.s4_ideal_lens import S4SuperIdealLens
+optical_element = S4SuperIdealLens(name='{name:s}', 
+    focal_p_x={focal_p_x:g}, focal_q_x={focal_q_x:g},
+    focal_p_y={focal_p_y:g}, focal_q_y={focal_q_y:g})
+"""
+        txt = txt_pre.format(**self.__inputs)
+        return txt
 
 class S4SuperIdealLensElement(S4BeamlineElement):
     def __init__(self,
@@ -116,3 +153,24 @@ class S4SuperIdealLensElement(S4BeamlineElement):
 
         return output_beam, footprint
 
+    def to_python_code(self, **kwargs):
+        txt = "\n\n# optical element number XX"
+        txt += self.get_optical_element().to_python_code()
+        coordinates = self.get_coordinates()
+        txt += "\nfrom syned.beamline.element_coordinates import ElementCoordinates"
+        txt += "\ncoordinates = ElementCoordinates(p=%g, q=%g, angle_radial=%g, angle_azimuthal=%g, angle_radial_out=%g)" % \
+               (coordinates.p(), coordinates.q(), coordinates.angle_radial(), coordinates.angle_azimuthal(), coordinates.angle_radial_out())
+        txt += "\nfrom shadow4.beamline.optical_elements.ideal_elements.s4_ideal_lens import S4IdealLensElement"
+        txt += "\nbeamline_element = S4IdealLensElement(optical_element=optical_element, coordinates=coordinates, input_beam=beam)"
+        txt += "\n\nbeam, mirr = beamline_element.trace_beam()"
+        return txt
+
+if __name__ == "__main__":
+    # a = S4IdealLens()
+    # print(a.to_python_code())
+    # a = S4SuperIdealLens()
+    # print(a.to_python_code())
+    b = S4IdealLensElement()
+    print(b.to_python_code())
+    # b = S4SuperIdealLensElement()
+    # print(b.to_python_code())
