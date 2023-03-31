@@ -88,7 +88,6 @@ class PreRefl(object):
         ALFA = self.prerefl_dict["ZF1"][index1] + (self.prerefl_dict["ZF1"][index1+1]-self.prerefl_dict["ZF1"][index1]) * DEL_X
         GAMMA = self.prerefl_dict["ZF2"][index1] + (self.prerefl_dict["ZF2"][index1+1]-self.prerefl_dict["ZF2"][index1]) * DEL_X
 
-        print(">>>", ALFA.shape, GAMMA.shape)
         refraction_index = (1.0 - ALFA / 2) + (GAMMA / 2)*1j
 
         if verbose:
@@ -118,6 +117,37 @@ class PreRefl(object):
         wnum = 2 * numpy.pi * energy1 / tocm
 
         return 2*refraction_index.imag*wnum
+
+    @classmethod
+    def get_attenuation_coefficient_external_xraylib(self,
+                                                     photon_energy_ev=10000.0,
+                                                     material="SiC",
+                                                     density=3.217,):
+
+        import xraylib
+        photon_energy_ev_array = numpy.array(photon_energy_ev)
+        attenuation_coefficient = numpy.zeros_like(photon_energy_ev_array, dtype=float)
+
+        for i,photon_energy_ev in enumerate(photon_energy_ev_array):
+            attenuation_coefficient[i] = xraylib.CS_Total_CP(material, photon_energy_ev*1e-3) * density
+        return attenuation_coefficient
+
+    @classmethod
+    def get_attenuation_coefficient_external_dabax(self,
+                                                     photon_energy_ev=10000.0,
+                                                     material="SiC",
+                                                     density=3.217,
+                                                     dabax=None,
+                                                     ):
+
+        from dabax.dabax_xraylib import DabaxXraylib
+        if isinstance(dabax, DabaxXraylib):
+            dx = dabax
+        else:
+            dx = DabaxXraylib()
+
+        return dx.CS_Total_CP(material, photon_energy_ev*1e-3) * density
+
 
     def reflectivity_fresnel(self,photon_energy_ev=10000.0,grazing_angle_mrad=3.0,
                              roughness_rms_A=0.0, method=2):
@@ -634,7 +664,7 @@ if __name__ == "__main__":
              legend=["RS0",'f1f2_calc'])
 
 
-    if True:
+    if False:
         prerefl_file = "reflec1.dat"
 
         PreRefl.prerefl(interactive=False, SYMBOL="Au", DENSITY=19.3, FILE=prerefl_file,
@@ -644,16 +674,10 @@ if __name__ == "__main__":
         a = PreRefl()
         a.read_preprocessor_file(prerefl_file)
 
-        # for method in (0,1,2):
-        #     print(
-        #         a.reflectivity_amplitudes_fresnel(photon_energy_ev=200.0,
-        #                                                  grazing_angle_mrad=3.0,
-        #                                                  roughness_rms_A=0.0,
-        #                                                  method=method, # 0=born & wolf, 1=parratt, 2=shadow3
-        #                                                 )
-        #     )
 
-        for energy in (2000,3000,4000):
+        energies = (2000,3000,4000)
+        print("Energies: ", energies)
+        for energy in energies:
             print(
                 a.reflectivity_amplitudes_fresnel(photon_energy_ev=energy,
                                                          grazing_angle_mrad=3.0,
@@ -672,8 +696,8 @@ if __name__ == "__main__":
 
         tmp_xrl = PreRefl.reflectivity_amplitudes_fresnel_external_xraylib(
                                           photon_energy_ev=numpy.array((2000, 3000, 4000, 4000)),
-                                          SYMBOL="Au",
-                                          DENSITY=19.3,
+                                          coating_material="Au",
+                                          coating_density=19.3,
                                           grazing_angle_mrad=numpy.array((3.0, 3.0, 3.0, 1.0)),
                                           roughness_rms_A=0.0,
                                           method=2  # 0=born & wolf, 1=parratt, 2=shadow3
@@ -681,8 +705,8 @@ if __name__ == "__main__":
 
         tmp_dx = PreRefl.reflectivity_amplitudes_fresnel_external_dabax(
                                           photon_energy_ev=numpy.array((2000, 3000, 4000, 4000)),
-                                          SYMBOL="Au",
-                                          DENSITY=19.3,
+                                          coating_material="Au",
+                                          coating_density=19.3,
                                           grazing_angle_mrad=numpy.array((3.0, 3.0, 3.0, 1.0)),
                                           roughness_rms_A=0.0,
                                           method=2  # 0=born & wolf, 1=parratt, 2=shadow3
@@ -690,4 +714,35 @@ if __name__ == "__main__":
 
         print(">>>> tmp_xrl", tmp_xrl)
         print(">>>> tmp_dx", tmp_dx)
-        # array([0.97964125+0.j, 0.94972277+0.j, 0.95617705+0.j, 0.98532469+0.j]), array([0.97962098+0.j, 0.94969218+0.j, 0.9561607 +0.j, 0.98531913+0.j]))
+
+    if True:
+        prerefl_file = "reflec1.dat"
+
+        PreRefl.prerefl(interactive=False, SYMBOL="Au", DENSITY=19.3, FILE=prerefl_file,
+                        E_MIN=1000.0, E_MAX=5000.0, E_STEP=100.0)
+
+
+        a = PreRefl()
+        a.read_preprocessor_file(prerefl_file)
+
+
+        energies = (2000,3000,4000)
+        print("Energies: ", energies)
+        for energy in energies:
+            print(
+                a.get_attenuation_coefficient(energy, verbose=1))
+
+        tmp_xrl = PreRefl.get_attenuation_coefficient_external_xraylib(
+                                          photon_energy_ev=numpy.array((2000, 3000, 4000, 4000)),
+                                          material="Au",
+                                          density=19.3,
+                                            )
+
+        tmp_dx = PreRefl.get_attenuation_coefficient_external_dabax(
+                                          photon_energy_ev=numpy.array((2000, 3000, 4000, 4000)),
+                                          material="Au",
+                                          density=19.3,
+                                            )
+
+        print(">>>> tmp_xrl", tmp_xrl)
+        print(">>>> tmp_dx", tmp_dx)

@@ -21,16 +21,23 @@ from shadow4.beam.s4_beam import S4Beam
 class S4Screen(Absorber, S4OpticalElementDecorator):
     def __init__(self,
                  name="Undefined", boundary_shape=None,  # for syned absorber
-                 i_abs=False,  # include absorption
+                 i_abs=0,      # include absorption: 0=No, 1=using preprocessor file
+                               # 2=direct calculation using xraylib
+                               # 3=direct calculation using dabax
                  i_stop=False, # aperture/stop
                  thick=0.0,    # thickness of the absorber (in SI)
-                 file_abs="",  # if i_abs=True, the material file (from prerefl)
+                 file_abs="",  # if i_abs=1, the material file (from prerefl)
+                 material="",  # if i_abs=2,3, the material name
+                 density=1.0,  # if i_abs=2,3, the material density in g/cm^3
                 ):
         super().__init__(name=name, boundary_shape=boundary_shape)
         self._i_abs = i_abs
         self._i_stop = i_stop
         self._thick = thick
         self._file_abs = file_abs
+        self._material = material
+        self._density = density
+
 
         self.__inputs = {
             "name": name,
@@ -38,7 +45,9 @@ class S4Screen(Absorber, S4OpticalElementDecorator):
             "i_abs":    i_abs,
             "i_stop":   i_stop,
             "thick":    thick ,
+            "material": material,
             "file_abs": file_abs,
+            "density": density,
         }
 
     def to_python_code_boundary_shape(self):
@@ -62,7 +71,8 @@ class S4Screen(Absorber, S4OpticalElementDecorator):
 
 from shadow4.beamline.optical_elements.absorbers.s4_screen import S4Screen
 optical_element = S4Screen(name='{name:s}', boundary_shape=boundary_shape,
-    i_abs={i_abs:d}, i_stop={i_stop:d}, thick={thick:g}, file_abs='{file_abs:s}')
+    i_abs={i_abs:d}, # 0=No, 1=prerefl file_abs, 2=xraylib, 3=dabax
+    i_stop={i_stop:d}, thick={thick:g}, file_abs='{file_abs:s}', material='{material:s}', density={density:g})
 """
         txt += txt_pre.format(**self.__inputs)
         return txt
@@ -125,8 +135,6 @@ class S4ScreenElement(S4BeamlineElement):
                     inside = patch.check_inside_vector(x, y)
                     INSIDE = numpy.logical_or(INSIDE,inside)
 
-                # print(">>>>",x[0:10],y[0:10],inside[0:10])
-
                 flag = output_beam.get_column(10)
                 if negative:
                     flag[numpy.where(INSIDE)] = flag_lost_value
@@ -135,30 +143,40 @@ class S4ScreenElement(S4BeamlineElement):
                 output_beam.rays[:, 9] = flag
 
             else:
-                print(">>>>>>>>>>>>  NO CROP !", shape)
                 pass
 
 
-        if oe._i_abs:
+        # reflectivity calculations
+        if oe._i_abs > 0:
             thickness = oe._thick
             # the thickness in Filter syned is ignored. TODO: discuss it it could overwrite
             # thickness = oe._beamline_element_syned._optical_element.get_thickness()
+            energy = output_beam.get_column(26)
 
-            if oe._file_abs != "":
-                try:
-                    pr = PreRefl()
-                    pr.read_preprocessor_file(oe._file_abs)
-                    print(pr.info())
-                except:
-                    raise Exception("Failed to load preprocessor (prerefl) file %s " % oe._file_abs)
+            if oe._i_abs == 1:  # prerefl preprocessor file
 
-                energy = output_beam.get_column(26)
-                # tmp = pr.get_attenuation_coefficient(energy[0],verbose=1)
-                coeff = pr.get_attenuation_coefficient(energy)
-                I_over_I0 = numpy.exp(- coeff * thickness * 1e2)
-                sqrt_I_over_I0 = numpy.sqrt(I_over_I0)
-                print(energy, coeff, I_over_I0)
-                output_beam.apply_reflectivities(sqrt_I_over_I0, sqrt_I_over_I0)
+                if oe._file_abs != "":
+                    try:
+                        pr = PreRefl()
+                        pr.read_preprocessor_file(oe._file_abs)
+                        print(pr.info())
+                    except:
+                        raise Exception("Failed to load preprocessor (prerefl) file %s " % oe._file_abs)
+
+                    coeff = pr.get_attenuation_coefficient(energy)
+            elif oe._i_abs == 2: # xraylib
+                coeff = PreRefl.get_attenuation_coefficient_external_xraylib(photon_energy_ev=energy,
+                                                                             material=oe._material,
+                                                                             density=oe._density)
+            elif oe._i_abs == 3: # dabax
+                coeff = PreRefl.get_attenuation_coefficient_external_dabax(photon_energy_ev=energy,
+                                                                             material=oe._material,
+                                                                             density=oe._density)
+
+
+            I_over_I0 = numpy.exp(- coeff * thickness * 1e2)
+            sqrt_I_over_I0 = numpy.sqrt(I_over_I0)
+            output_beam.apply_reflectivities(sqrt_I_over_I0, sqrt_I_over_I0)
 
 
         if q != 0.0: output_beam.retrace(q, resetY=True)
