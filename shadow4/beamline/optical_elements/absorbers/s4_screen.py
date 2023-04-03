@@ -120,12 +120,10 @@ class S4ScreenElement(S4BeamlineElement):
 
             if isinstance(shape, Rectangle):
                 x_left, x_right, y_bottom, y_top = shape.get_boundaries()
-                output_beam.crop_rectangle(1, x_left, x_right, 3, y_bottom, y_top,
-                                    negative=negative, flag_lost_value=flag_lost_value)
+                output_beam.crop_rectangle(1, x_left, x_right, 3, y_bottom, y_top, negative=negative, flag_lost_value=flag_lost_value)
             elif isinstance(shape, Ellipse):
                 a_axis_min, a_axis_max, b_axis_min, b_axis_max = shape.get_boundaries()
-                output_beam.crop_ellipse(1, a_axis_min, a_axis_max, 3, b_axis_min, b_axis_max,
-                                  negative=negative, flag_lost_value=flag_lost_value)
+                output_beam.crop_ellipse(1, a_axis_min, a_axis_max, 3, b_axis_min, b_axis_max, negative=negative, flag_lost_value=flag_lost_value)
             elif isinstance(shape, MultiplePatch):
                 x = output_beam.get_column(1)
                 y = output_beam.get_column(3)

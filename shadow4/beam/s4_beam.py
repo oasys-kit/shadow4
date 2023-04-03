@@ -293,11 +293,7 @@ class S4Beam(object):
                 else:
                     col_mean = numpy.average(zp, weights=w)
 
-
                 out = numpy.abs(numpy.arcsin(zp - col_mean))
-
-
-
 
         if nolost == 0:
             return out.copy()
@@ -484,114 +480,131 @@ class S4Beam(object):
 
         if factor != 1.0: x *= factor
 
-        if xrange == None:
-            xrange = [x.min(), x.max()]
+        if len(x) == 0: # no rays
+            ticket['error'] = 0
+            ticket['histogram'] = ticket['bins'] = ticket['bin_center'] = \
+                ticket['histogram_path'] =  ticket['bin_path'] = numpy.empty(0)
+            ticket['histogram_sigma'] = 0.0
+            ticket['bin_left'] = ticket['bin_right'] = ticket['intensity'] = numpy.nan
+            ticket['xrange'] = xrange
+            ticket['nrays'] = self.get_number_of_rays(nolost=0)
+            ticket['good_rays'] = 0
+            ticket['fwhm'] = None
 
-        h, bins = numpy.histogram(x, bins=nbins, range=xrange, weights=w)
-        # evaluate the histogram with squares of the weight for error calculations
-        h2, bins2 = numpy.histogram(x, bins=nbins, range=xrange, weights=(w * w))
-
-        # Evaluation of histogram error.
-        # See Pag 17 in Salvat, Fernandez-Varea and Sempau
-        # Penelope, A Code System for Monte Carlo Simulation of
-        # Electron and Photon Transport, AEN NEA  (2003)
-        #
-        # See James, Rep. Prog. Phys., Vol 43 (1980) pp 1145-1189 (special attention to pag. 1184)
-        h_sigma = numpy.sqrt(h2 - h * h / float(len(w)))
-
-        if write != None and write != "":
-            f = open(write, 'w')
-            f.write('#F %s \n' % (write))
-            f.write('#C This file has been created using Shadow.Beam.histo1() \n')
-            f.write('#C COLUMN 1 CORRESPONDS TO ABSCISSAS IN THE CENTER OF EACH BIN\n')
-            f.write('#C COLUMN 2 CORRESPONDS TO ABSCISSAS IN THE THE LEFT CORNER OF THE BIN\n')
-            f.write('#C COLUMN 3 CORRESPONDS TO INTENSITY\n')
-            f.write('#C COLUMN 4 CORRESPONDS TO ERROR: SIGMA_INTENSITY\n')
-            f.write('#C col = %d\n' % (col))
-            f.write('#C nolost = %d\n' % (nolost))
-            f.write('#C nbins = %d\n' % (nbins))
-            f.write('#C ref = %d\n' % (ref), )
-            f.write(' \n')
-            f.write('#S 1 histogram\n')
-            f.write('#N 4\n')
-            f.write('#L X1  X2  Y  YERR\n')
-            for i in range(len(h)):
-                f.write('%f\t%f\t%f\t%f\n' % ((bins[i] + bins[i + 1]) * 0.5, bins[i], h[i], h_sigma[i]))
-            f.close()
-            print('histo1: file written to disk: %s' % (write))
-
-        #
-        # output
-        ticket['error'] = 0
-        ticket['histogram'] = h
-        ticket['bins'] = bins
-        ticket['histogram_sigma'] = h_sigma
-        bin_center = bins[:-1] + (bins[1] - bins[0]) * 0.5
-        ticket['bin_center'] = bin_center
-        ticket['bin_left'] = bins[:-1]
-        ticket['bin_right'] = bins[:-1] + (bins[1] - bins[0])
-        ticket['xrange'] = xrange
-        ticket['intensity'] = self.intensity(nolost=nolost)
-        ticket['fwhm'] = None
-        ticket['nrays'] = self.get_number_of_rays(nolost=0)
-        ticket['good_rays'] = self.get_number_of_rays(nolost=1)
-
-        # for practical purposes, writes the points the will define the histogram area
-        tmp_b = []
-        tmp_h = []
-        for s, t, v in zip(ticket["bin_left"], ticket["bin_right"], ticket["histogram"]):
-            tmp_b.append(s)
-            tmp_h.append(v)
-            tmp_b.append(t)
-            tmp_h.append(v)
-        ticket['histogram_path'] = numpy.array(tmp_h)
-        ticket['bin_path'] = numpy.array(tmp_b)
-
-        if calculate_widths > 0:
-            # CALCULATE fwhm
-            tt = numpy.where(h >= max(h) * 0.5)
-            if h[tt].size > 1:
-                binSize = bins[1] - bins[0]
-                ticket['fwhm'] = binSize * (tt[0][-1] - tt[0][0])
-                ticket['fwhm_coordinates'] = (bin_center[tt[0][0]], bin_center[tt[0][-1]])
-
-            # CALCULATE fwhm with subpixel resolution (as suggested by A Wojdyla)
-            ixl_e = tt[0][0]
-            ixr_e = tt[0][-1]
-            try:
-                xl = ixl_e - (h[ixl_e] - max(h) * 0.5) / (h[ixl_e] - h[ixl_e - 1])
-                xr = ixr_e - (h[ixr_e] - max(h) * 0.5) / (h[ixr_e + 1] - h[ixr_e])
-                ticket['fwhm_subpixel'] = binSize * numpy.abs(xr - xl)
-                ticket['fwhm_subpixel_coordinates'] = \
-                    (numpy.interp(xl, range(bin_center.size), bin_center),
-                     numpy.interp(xr, range(bin_center.size), bin_center))
-            except:
+            if calculate_widths > 0:
                 ticket['fwhm_subpixel'] = None
+                ticket['fwhm_coordinates'] = ticket['fwhm_subpixel_coordinates'] =(numpy.nan, numpy.nan)
+            if calculate_widths == 2: ticket["fw25%m"] = ticket["fw75%m"] = None
+            if calculate_hew:         ticket["hew"] = numpy.nan
+        else:
+            if xrange == None: xrange = [x.min(), x.max()]
 
-        if calculate_widths == 2:
-            # CALCULATE FW at 25% HEIGHT
-            tt = numpy.where(h >= max(h) * 0.25)
-            if h[tt].size > 1:
-                binSize = bins[1] - bins[0]
-                ticket['fw25%m'] = binSize * (tt[0][-1] - tt[0][0])
-            else:
-                ticket["fw25%m"] = None
+            h, bins = numpy.histogram(x, bins=nbins, range=xrange, weights=w)
+            # evaluate the histogram with squares of the weight for error calculations
+            h2, _ = numpy.histogram(x, bins=nbins, range=xrange, weights=(w * w))
 
-            # CALCULATE FW at 75% HEIGHT
-            tt = numpy.where(h >= max(h) * 0.75)
-            if h[tt].size > 1:
-                binSize = bins[1] - bins[0]
-                ticket['fw75%m'] = binSize * (tt[0][-1] - tt[0][0])
-            else:
-                ticket["fw75%m"] = None
+            # Evaluation of histogram error.
+            # See Pag 17 in Salvat, Fernandez-Varea and Sempau
+            # Penelope, A Code System for Monte Carlo Simulation of
+            # Electron and Photon Transport, AEN NEA  (2003)
+            #
+            # See James, Rep. Prog. Phys., Vol 43 (1980) pp 1145-1189 (special attention to pag. 1184)
+            h_sigma = numpy.sqrt(h2 - h * h / float(len(w)))
 
-        if calculate_hew:
-            # CALCULATE HALF-ENERGY-WIDTH
-            cdf = numpy.cumsum(ticket["histogram"])
-            cdf /= cdf.max()
-            # hew is two times  the x value that has cdf=0.5 (Eq. 9 in ﻿https://arxiv.org/pdf/1505.07474v2.pdf)
-            hew = 2 * float(bin_center[numpy.argwhere(cdf > 0.5)][0])
-            ticket["hew"] = hew
+            bin_center = bins[:-1] + (bins[1] - bins[0]) * 0.5
+
+            if write != None and write != "":
+                f = open(write, 'w')
+                f.write('#F %s \n' % (write))
+                f.write('#C This file has been created using Shadow.Beam.histo1() \n')
+                f.write('#C COLUMN 1 CORRESPONDS TO ABSCISSAS IN THE CENTER OF EACH BIN\n')
+                f.write('#C COLUMN 2 CORRESPONDS TO ABSCISSAS IN THE THE LEFT CORNER OF THE BIN\n')
+                f.write('#C COLUMN 3 CORRESPONDS TO INTENSITY\n')
+                f.write('#C COLUMN 4 CORRESPONDS TO ERROR: SIGMA_INTENSITY\n')
+                f.write('#C col = %d\n' % (col))
+                f.write('#C nolost = %d\n' % (nolost))
+                f.write('#C nbins = %d\n' % (nbins))
+                f.write('#C ref = %d\n' % (ref), )
+                f.write(' \n')
+                f.write('#S 1 histogram\n')
+                f.write('#N 4\n')
+                f.write('#L X1  X2  Y  YERR\n')
+                for i in range(len(h)):
+                    f.write('%f\t%f\t%f\t%f\n' % ((bins[i] + bins[i + 1]) * 0.5, bins[i], h[i], h_sigma[i]))
+                f.close()
+                print('histo1: file written to disk: %s' % (write))
+
+            #
+            # output
+            ticket['error'] = 0
+            ticket['histogram'] = h
+            ticket['bins'] = bins
+            ticket['histogram_sigma'] = h_sigma
+            ticket['bin_center'] = bin_center
+            ticket['bin_left'] = bins[:-1]
+            ticket['bin_right'] = bins[:-1] + (bins[1] - bins[0])
+            ticket['xrange'] = xrange
+            ticket['intensity'] = self.intensity(nolost=nolost)
+            ticket['fwhm'] = None
+            ticket['nrays'] = self.get_number_of_rays(nolost=0)
+            ticket['good_rays'] = self.get_number_of_rays(nolost=1)
+
+            # for practical purposes, writes the points the will define the histogram area
+            tmp_b = []
+            tmp_h = []
+            for s, t, v in zip(ticket["bin_left"], ticket["bin_right"], ticket["histogram"]):
+                tmp_b.append(s)
+                tmp_h.append(v)
+                tmp_b.append(t)
+                tmp_h.append(v)
+            ticket['histogram_path'] = numpy.array(tmp_h)
+            ticket['bin_path'] = numpy.array(tmp_b)
+
+            if calculate_widths > 0:
+                # CALCULATE fwhm
+                tt = numpy.where(h >= max(h) * 0.5)
+                if h[tt].size > 1:
+                    binSize = bins[1] - bins[0]
+                    ticket['fwhm'] = binSize * (tt[0][-1] - tt[0][0])
+                    ticket['fwhm_coordinates'] = (bin_center[tt[0][0]], bin_center[tt[0][-1]])
+
+                # CALCULATE fwhm with subpixel resolution (as suggested by A Wojdyla)
+                ixl_e = tt[0][0]
+                ixr_e = tt[0][-1]
+                try:
+                    xl = ixl_e - (h[ixl_e] - max(h) * 0.5) / (h[ixl_e] - h[ixl_e - 1])
+                    xr = ixr_e - (h[ixr_e] - max(h) * 0.5) / (h[ixr_e + 1] - h[ixr_e])
+                    ticket['fwhm_subpixel'] = binSize * numpy.abs(xr - xl)
+                    ticket['fwhm_subpixel_coordinates'] = \
+                        (numpy.interp(xl, range(bin_center.size), bin_center),
+                         numpy.interp(xr, range(bin_center.size), bin_center))
+                except:
+                    ticket['fwhm_subpixel'] = None
+
+            if calculate_widths == 2:
+                # CALCULATE FW at 25% HEIGHT
+                tt = numpy.where(h >= max(h) * 0.25)
+                if h[tt].size > 1:
+                    binSize = bins[1] - bins[0]
+                    ticket['fw25%m'] = binSize * (tt[0][-1] - tt[0][0])
+                else:
+                    ticket["fw25%m"] = None
+
+                # CALCULATE FW at 75% HEIGHT
+                tt = numpy.where(h >= max(h) * 0.75)
+                if h[tt].size > 1:
+                    binSize = bins[1] - bins[0]
+                    ticket['fw75%m'] = binSize * (tt[0][-1] - tt[0][0])
+                else:
+                    ticket["fw75%m"] = None
+
+            if calculate_hew:
+                # CALCULATE HALF-ENERGY-WIDTH
+                cdf = numpy.cumsum(ticket["histogram"])
+                cdf /= cdf.max()
+                # hew is two times  the x value that has cdf=0.5 (Eq. 9 in ﻿https://arxiv.org/pdf/1505.07474v2.pdf)
+                hew = 2 * float(bin_center[numpy.argwhere(cdf > 0.5)][0])
+                ticket["hew"] = hew
 
         return ticket
 
@@ -653,90 +666,102 @@ class S4Beam(object):
 
         (col1,col2) = self.get_columns((col_h,col_v),nolost=nolost)
 
-        if xrange==None: xrange = self.get_good_range(col_h,nolost=nolost)
-        if yrange==None: yrange = self.get_good_range(col_v,nolost=nolost)
-
-        if ref == 0:
-            weights = col1*0+1
+        if len(col1) == 0 or len(col2) == 0:# no rays
+            ticket['xrange'] = xrange
+            ticket['yrange'] = yrange
+            ticket['bin_h_edges'] = ticket['bin_v_edges'] = ticket['bin_h_left'] = \
+                ticket['bin_v_left'] = ticket['bin_h_right'] = ticket['bin_v_right'] = \
+                ticket['histogram'] = ticket['histogram_h'] = ticket['histogram_v'] = numpy.empty(0)
+            ticket['bin_h_center'] = ticket['bin_v_center'] = ticket['intensity'] = numpy.nan
+            ticket['nrays'] = self.get_number_of_rays(nolost=0)
+            ticket['good_rays'] = 0
+            ticket['fwhm_h'] = ticket['fwhm_v'] = None
+            if calculate_widths > 0:  ticket['fwhm_coordinates_h'] = ticket['fwhm_coordinates_v'] = (numpy.nan, numpy.nan)
+            if calculate_widths == 2: ticket["fw25%m_h"] = ticket["fw75%m_h"] = ticket["fw25%m_v"] = ticket["fw75%m_v"] = None
         else:
-            weights = self.get_column(ref,nolost=nolost)
+            if xrange==None: xrange = self.get_good_range(col_h,nolost=nolost)
+            if yrange==None: yrange = self.get_good_range(col_v,nolost=nolost)
 
-        (hh,xx,yy) = numpy.histogram2d(col1, col2, bins=[nbins_h,nbins_v], range=[xrange,yrange], normed=False, weights=weights)
-
-        ticket['xrange'] = xrange
-        ticket['yrange'] = yrange
-        ticket['bin_h_edges'] = xx
-        ticket['bin_v_edges'] = yy
-        ticket['bin_h_left'] = numpy.delete(xx,-1)
-        ticket['bin_v_left'] = numpy.delete(yy,-1)
-        ticket['bin_h_right'] = numpy.delete(xx,0)
-        ticket['bin_v_right'] = numpy.delete(yy,0)
-        ticket['bin_h_center'] = 0.5*(ticket['bin_h_left']+ticket['bin_h_right'])
-        ticket['bin_v_center'] = 0.5*(ticket['bin_v_left']+ticket['bin_v_right'])
-        ticket['histogram'] = hh
-        ticket['histogram_h'] = hh.sum(axis=1)
-        ticket['histogram_v'] = hh.sum(axis=0)
-        ticket['intensity'] = self.intensity(nolost=nolost)
-        ticket['nrays'] = self.get_number_of_rays(nolost=0)
-        ticket['good_rays'] = self.get_number_of_rays(nolost=1)
-
-
-        # CALCULATE fwhm
-
-        if calculate_widths > 0:
-            h = ticket['histogram_h']
-            tt = numpy.where(h>=max(h)*0.5)
-            if h[tt].size > 1:
-                binSize = ticket['bin_h_center'][1]-ticket['bin_h_center'][0]
-                ticket['fwhm_h'] = binSize*(tt[0][-1]-tt[0][0])
-                ticket['fwhm_coordinates_h'] = (ticket['bin_h_center'][tt[0][0]],ticket['bin_h_center'][tt[0][-1]])
+            if ref == 0:
+                weights = col1*0+1
             else:
-                ticket["fwhm_h"] = None
+                weights = self.get_column(ref,nolost=nolost)
 
-            h = ticket['histogram_v']
-            tt = numpy.where(h>=max(h)*0.5)
-            if h[tt].size > 1:
-                binSize = ticket['bin_v_center'][1]-ticket['bin_v_center'][0]
-                ticket['fwhm_v'] = binSize*(tt[0][-1]-tt[0][0])
-                ticket['fwhm_coordinates_v'] = (ticket['bin_v_center'][tt[0][0]],ticket['bin_v_center'][tt[0][-1]])
-            else:
-                ticket["fwhm_v"] = None
+            (hh,xx,yy) = numpy.histogram2d(col1, col2, bins=[nbins_h,nbins_v], range=[xrange,yrange], normed=False, weights=weights)
+
+            ticket['xrange'] = xrange
+            ticket['yrange'] = yrange
+            ticket['bin_h_edges'] = xx
+            ticket['bin_v_edges'] = yy
+            ticket['bin_h_left'] = numpy.delete(xx,-1)
+            ticket['bin_v_left'] = numpy.delete(yy,-1)
+            ticket['bin_h_right'] = numpy.delete(xx,0)
+            ticket['bin_v_right'] = numpy.delete(yy,0)
+            ticket['bin_h_center'] = 0.5*(ticket['bin_h_left']+ticket['bin_h_right'])
+            ticket['bin_v_center'] = 0.5*(ticket['bin_v_left']+ticket['bin_v_right'])
+            ticket['histogram'] = hh
+            ticket['histogram_h'] = hh.sum(axis=1)
+            ticket['histogram_v'] = hh.sum(axis=0)
+            ticket['intensity'] = self.intensity(nolost=nolost)
+            ticket['nrays'] = self.get_number_of_rays(nolost=0)
+            ticket['good_rays'] = self.get_number_of_rays(nolost=1)
+
+            # CALCULATE fwhm
+
+            if calculate_widths > 0:
+                h = ticket['histogram_h']
+                tt = numpy.where(h>=max(h)*0.5)
+                if h[tt].size > 1:
+                    binSize = ticket['bin_h_center'][1]-ticket['bin_h_center'][0]
+                    ticket['fwhm_h'] = binSize*(tt[0][-1]-tt[0][0])
+                    ticket['fwhm_coordinates_h'] = (ticket['bin_h_center'][tt[0][0]],ticket['bin_h_center'][tt[0][-1]])
+                else:
+                    ticket["fwhm_h"] = None
+
+                h = ticket['histogram_v']
+                tt = numpy.where(h>=max(h)*0.5)
+                if h[tt].size > 1:
+                    binSize = ticket['bin_v_center'][1]-ticket['bin_v_center'][0]
+                    ticket['fwhm_v'] = binSize*(tt[0][-1]-tt[0][0])
+                    ticket['fwhm_coordinates_v'] = (ticket['bin_v_center'][tt[0][0]],ticket['bin_v_center'][tt[0][-1]])
+                else:
+                    ticket["fwhm_v"] = None
 
 
-        if calculate_widths == 2:
-            # CALCULATE FW at 25% HEIGHT
-            h = ticket['histogram_h']
-            tt = numpy.where(h>=max(h)*0.25)
-            if h[tt].size > 1:
-                binSize = ticket['bin_h_center'][1]-ticket['bin_h_center'][0]
-                ticket['fw25%m_h'] = binSize*(tt[0][-1]-tt[0][0])
-            else:
-                ticket["fw25%m_h"] = None
+            if calculate_widths == 2:
+                # CALCULATE FW at 25% HEIGHT
+                h = ticket['histogram_h']
+                tt = numpy.where(h>=max(h)*0.25)
+                if h[tt].size > 1:
+                    binSize = ticket['bin_h_center'][1]-ticket['bin_h_center'][0]
+                    ticket['fw25%m_h'] = binSize*(tt[0][-1]-tt[0][0])
+                else:
+                    ticket["fw25%m_h"] = None
 
-            h = ticket['histogram_v']
-            tt = numpy.where(h>=max(h)*0.25)
-            if h[tt].size > 1:
-                binSize = ticket['bin_v_center'][1]-ticket['bin_v_center'][0]
-                ticket['fw25%m_v'] = binSize*(tt[0][-1]-tt[0][0])
-            else:
-                ticket["fw25%m_v"] = None
+                h = ticket['histogram_v']
+                tt = numpy.where(h>=max(h)*0.25)
+                if h[tt].size > 1:
+                    binSize = ticket['bin_v_center'][1]-ticket['bin_v_center'][0]
+                    ticket['fw25%m_v'] = binSize*(tt[0][-1]-tt[0][0])
+                else:
+                    ticket["fw25%m_v"] = None
 
-            # CALCULATE FW at 75% HEIGHT
-            h = ticket['histogram_h']
-            tt = numpy.where(h>=max(h)*0.75)
-            if h[tt].size > 1:
-                binSize = ticket['bin_h_center'][1]-ticket['bin_h_center'][0]
-                ticket['fw75%m_h'] = binSize*(tt[0][-1]-tt[0][0])
-            else:
-                ticket["fw75%m_h"] = None
+                # CALCULATE FW at 75% HEIGHT
+                h = ticket['histogram_h']
+                tt = numpy.where(h>=max(h)*0.75)
+                if h[tt].size > 1:
+                    binSize = ticket['bin_h_center'][1]-ticket['bin_h_center'][0]
+                    ticket['fw75%m_h'] = binSize*(tt[0][-1]-tt[0][0])
+                else:
+                    ticket["fw75%m_h"] = None
 
-            h = ticket['histogram_v']
-            tt = numpy.where(h>=max(h)*0.75)
-            if h[tt].size > 1:
-                binSize = ticket['bin_v_center'][1]-ticket['bin_v_center'][0]
-                ticket['fw75%m_v'] = binSize*(tt[0][-1]-tt[0][0])
-            else:
-                ticket["fw75%m_v"] = None
+                h = ticket['histogram_v']
+                tt = numpy.where(h>=max(h)*0.75)
+                if h[tt].size > 1:
+                    binSize = ticket['bin_v_center'][1]-ticket['bin_v_center'][0]
+                    ticket['fw75%m_v'] = binSize*(tt[0][-1]-tt[0][0])
+                else:
+                    ticket["fw75%m_v"] = None
 
         return ticket
 
