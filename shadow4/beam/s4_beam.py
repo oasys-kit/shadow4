@@ -1467,10 +1467,10 @@ class S4Beam(object):
             "S2-stokes = 2 |E\u209B| |E\u209A| cos(phase\u209B-phase\u209A)",
             "S3-stokes = 2 |E\u209B| |E\u209A| sin(phase\u209B-phase\u209A)",
             "Power = Intensity(col 23) * Energy (col 26)",
-            "Angle-X with Y: |arcsin(X')|",
-            "Angle-Z with Y: |arcsin(Z')|",
-            "Angle-X with Y: |arcsin(X') - mean(arcsin(X'))|",
-            "Angle-Z with Y: |arcsin(Z') - mean(arcsin(Z'))|",
+            "Angle-X with Y = |arcsin(X')|",
+            "Angle-Z with Y = |arcsin(Z')|",
+            "Angle-X with Y = |arcsin(X') - mean(arcsin(X'))|",
+            "Angle-Z with Y = |arcsin(Z') - mean(arcsin(Z'))|",
         ]
 
     @classmethod
