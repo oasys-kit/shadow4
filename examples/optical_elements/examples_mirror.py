@@ -33,7 +33,7 @@ def example_branch_1(do_plot=True):
                  sigmaXprime=1e-6,
                  sigmaZprime=1e-6,)
     beam0 = S4Beam()
-    beam0.genSource(source)
+    beam0.generate_source(source)
     print(beam0.info())
 
     if do_plot:
@@ -123,7 +123,7 @@ def example_branch_2(do_plot=True):
                  sigmaXprime=1e-6,
                  sigmaZprime=1e-6,)
     beam0 = S4Beam()
-    beam0.genSource(source)
+    beam0.generate_source(source)
     print(beam0.info())
 
     if do_plot:
@@ -178,7 +178,7 @@ def example_branch_3(surface_shape_file, do_plot=True):
                  sigmaXprime=1e-4,
                  sigmaZprime=1e-4,)
     beam0 = S4Beam()
-    beam0.genSource(source)
+    beam0.generate_source(source)
     print(beam0.info())
 
     if do_plot:
@@ -236,7 +236,7 @@ def example_branch_4(do_plot=True, f_refl=0):
                  sigmaZprime=1e-6,)
     beam0 = S4Beam()
     numpy.random.seed(123456)
-    beam0.genSource(source)
+    beam0.generate_source(source)
     beam0.set_photon_wavelength(5e-10)
     print(beam0.info())
 
@@ -332,7 +332,7 @@ def example_branch_5(surface_type, do_plot=True):
                  sigmaXprime=1e-6,
                  sigmaZprime=1e-6,)
     beam0 = S4Beam()
-    beam0.genSource(source)
+    beam0.generate_source(source)
     # print(beam0.info())
 
 

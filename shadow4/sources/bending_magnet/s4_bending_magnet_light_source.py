@@ -533,7 +533,7 @@ class S4BendingMagnetLightSource(S4LightSource):
         rays[:,11] =  1 + numpy.arange(NRAYS)
 
         # col 13 (optical path)
-        rays[:,11] = 0.0
+        rays[:,12] = 0.0
 
         POL_ANGLE = 0.5 * numpy.pi
 

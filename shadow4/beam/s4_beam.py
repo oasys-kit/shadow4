@@ -1380,7 +1380,7 @@ class S4Beam(object):
     #  interfaces like in shadow3
     #
 
-    def genSource(self,source_object):
+    def generate_source(self, source_object):
         """
 
         Parameters
@@ -1398,7 +1398,7 @@ class S4Beam(object):
         except:
             raise Exception("shadow4 source class must implement get_rays method")
 
-    def traceOE(self,oe_object,n,overwrite=True):
+    def trace_oe(self, oe_object, n, overwrite=True):
         """
 
         Parameters
@@ -1431,46 +1431,91 @@ class S4Beam(object):
         -------
 
         """
+
         return [
-                        "X spatial coordinate [user's unit]",
-                        "Y spatial coordinate [user's unit]",
-                        "Z spatial coordinate [user's unit]",
-                        "Xp direction or divergence [rads]",
-                        "Yp direction or divergence [rads]",
-                        "Zp direction or divergence [rads]",
-                        "X component of the electromagnetic vector (s-polariz)",
-                        "Y component of the electromagnetic vector (s-polariz)",
-                        "Z component of the electromagnetic vector (s-polariz)",
-                        "Lost ray flag",
-                        "Energy [eV]",
-                        "Wavenumber [cm-1]",
-                        "Optical path length",
-                        "Phase (s-polarization) in rad",
-                        "Phase (p-polarization) in rad",
-                        "X component of the electromagnetic vector (p-polariz)",
-                        "Y component of the electromagnetic vector (p-polariz)",
-                        "Z component of the electromagnetic vector (p-polariz)",
-                        "Wavelength [A]",
-                        "R= SQRT(X^2+Y^2+Z^2)",
-                        "angle from Y axis",
-                        "the magnitude of the Electromagnetic vector",
-                        "|E|^2 (total intensity)",
-                        "total intensity for s-polarization",
-                        "total intensity for p-polarization",
-                        "photon energy [eV]",
-                        "K = 2 pi / lambda * col4 [A^-1]",
-                        "K = 2 pi / lambda * col5 [A^-1]",
-                        "K = 2 pi / lambda * col6 [A^-1]",
-                        "S0-stokes = |Es|^2 + |Ep|^2",
-                        "S1-stokes = |Es|^2 - |Ep|^2",
-                        "S2-stokes = 2 |Es| |Ep| cos(phase_s-phase_p)",
-                        "S3-stokes = 2 |Es| |Ep| sin(phase_s-phase_p)",
-                        "Power = intensity(col 23) * energy (col 11)",
-                        "Angle-X with Y: |arcsin(X')|",
-                        "Angle-Z with Y: |arcsin(Z')|",
-                        "Angle-X with Y: |arcsin(X') - mean(arcsin(X'))|",
-                        "Angle-Z with Y: |arcsin(Z') - mean(arcsin(Z'))|",
-                ]
+            "X spatial coordinate",
+            "Y spatial coordinate",
+            "Z spatial coordinate",
+            "X' direction or divergence",
+            "Y' direction or divergence",
+            "Z' direction or divergence",
+            "X component of the electromagnetic vector (s-polariz)",
+            "Y component of the electromagnetic vector (s-polariz)",
+            "Z component of the electromagnetic vector (s-polariz)",
+            "Lost ray flag",
+            "Wavenumber",
+            "Ray Index",
+            "Optical path length",
+            "Phase (s-polarization)",
+            "Phase (p-polarization)",
+            "X component of the electromagnetic vector (p-polariz)",
+            "Y component of the electromagnetic vector (p-polariz)",
+            "Z component of the electromagnetic vector (p-polariz)",
+            "Wavelength",
+            "R = \u221A(X\u00B2+Y\u00B2+Z\u00B2)",
+            "Angle from Y axis",
+            "Magnitude of the Electromagnetic vector",
+            "|E\u209B|\u00B2 + |E\u209A|\u00B2 (total intensity)",
+            "|E\u209B|\u00B2 (total intensity for s-polarization)",
+            "|E\u209A|\u00B2 (total intensity for p-polarization)",
+            "Photon Energy",
+            "Kx = 2\u03C0 / \u03BB * X'",
+            "Ky = 2\u03C0 / \u03BB * Y'",
+            "Kz = 2\u03C0 / \u03BB * Z'",
+            "S0-stokes = |E\u209B|\u00B2 + |E\u209A|\u00B2",
+            "S1-stokes = |E\u209B|\u00B2 - |E\u209A|\u00B2",
+            "S2-stokes = 2 |E\u209B| |E\u209A| cos(phase\u209B-phase\u209A)",
+            "S3-stokes = 2 |E\u209B| |E\u209A| sin(phase\u209B-phase\u209A)",
+            "Power = Intensity(col 23) * Energy (col 26)",
+            "Angle-X with Y: |arcsin(X')|",
+            "Angle-Z with Y: |arcsin(Z')|",
+            "Angle-X with Y: |arcsin(X') - mean(arcsin(X'))|",
+            "Angle-Z with Y: |arcsin(Z') - mean(arcsin(Z'))|",
+        ]
+
+    @classmethod
+    def column_units(cls):
+        return [
+            "[m]",
+            "[m]",
+            "[m]",
+            "[rad]",
+            "[rad]",
+            "[rad]",
+            "",
+            "",
+            "",
+            "",
+            "[cm\u207B\u00B9]",
+            "",
+            "[m]",
+            "[rad]",
+            "[rad]",
+            "",
+            "",
+            "",
+            "[\u00C5]",
+            "[m]",
+            "[rad]",
+            "",
+            "",
+            "",
+            "",
+            "[eV]",
+            "[\u00C5\u207B\u00B9]",
+            "[\u00C5\u207B\u00B9]",
+            "[\u00C5\u207B\u00B9]",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "[rad]",
+            "[rad]",
+            "[rad]",
+            "[rad]",
+        ]
+
 
     @classmethod
     def column_short_names(cls):
@@ -1481,33 +1526,33 @@ class S4Beam(object):
 
         """
         return [
-                        "x","y","z",
-                        "v_x", "v_y", "v_z",
-                        "Es_x", "Es_y", "Es_z",
-                        "flag","K [cm-1]","idx","OpPath",
-                        "PhaseS","PhaseP",
-                        "Ep_x", "Ep_y", "Ep_z",
-                        "lambda [A]",
-                        "R",
-                        "angle from Y",
-                        "|E|",
-                        "I tot",
-                        "I s-pol",
-                        "I p-pol",
-                        "E[eV]",
-                        "Kx",
-                        "Ky",
-                        "Kz",
-                        "S0",
-                        "S1",
-                        "S2",
-                        "S3",
-                        "PWR",
-                        "Angle X^Y",
-                        "Angle Z^Y",
-                        "Angle X^Y",
-                        "Angle Z^Y",
-                ]
+                "X","Y","Z",
+                "X'", "Z'", "Z'",
+                "Ex\u209B", "Ey\u209B", "Ez\u209B",
+                "Flag","K","Idx","Opt. Path",
+                "Phase\u209B","Phase\u209A",
+                "Ex\u209A", "Ey\u209A", "Ez\u209A",
+                "\u03BB",
+                "R",
+                "Angle from Y",
+                "|E|",
+                "I tot",
+                "I s-pol",
+                "I p-pol",
+                "Energy",
+                "Kx",
+                "Ky",
+                "Kz",
+                "S0",
+                "S1",
+                "S2",
+                "S3",
+                "Power",
+                "Angle X^Y",
+                "Angle Z^Y",
+                "Angle X^Y",
+                "Angle Z^Y",
+        ]
 
     @classmethod
     def column_short_names_with_column_number(cls):
@@ -1518,8 +1563,7 @@ class S4Beam(object):
 
         """
         names = cls.column_short_names()
-        for i in range(len(names)):
-            names[i] = "col%02d %s" % (i+1, names[i])
+        for i in range(len(names)): names[i] = "col%02d %s" % (i+1, names[i])
         return names
 
     def write_h5(self,filename,overwrite=True,simulation_name="run001",beam_name="begin"):

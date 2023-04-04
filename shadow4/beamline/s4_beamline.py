@@ -9,10 +9,10 @@ class S4Beamline(Beamline):
                  beamline_elements_list=[]):
         super().__init__(light_source=light_source, beamline_elements_list=beamline_elements_list)
 
-    def duplicate(self):
+    def duplicate(self, copy_input_beam=True):
         beamline_elements_list = []
         for beamline_element in self._beamline_elements_list:
-            beamline_elements_list.append(beamline_element.duplicate())
+            beamline_elements_list.append(beamline_element.duplicate(copy_input_beam=copy_input_beam))
 
         return S4Beamline(light_source=self._light_source,
                           beamline_elements_list = beamline_elements_list)

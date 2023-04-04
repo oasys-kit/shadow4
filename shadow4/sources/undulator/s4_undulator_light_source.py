@@ -634,7 +634,7 @@ class S4UndulatorLightSource(S4LightSource):
         rays[:,11] =  1 + numpy.arange(NRAYS)
 
         # col 13 (optical path)
-        rays[:,11] = 0.0
+        rays[:,12] = 0.0
 
         return rays
 

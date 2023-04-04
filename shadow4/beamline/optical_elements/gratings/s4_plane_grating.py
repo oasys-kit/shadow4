@@ -82,7 +82,7 @@ if __name__ == "__main__":
                                  )
     beam = S4Beam()
 
-    beam.genSource(src)
+    beam.generate_source(src)
     beam.set_photon_energy_eV(1000.0)
 
     print(beam.info())
