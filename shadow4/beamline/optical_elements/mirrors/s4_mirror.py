@@ -152,6 +152,10 @@ class S4MirrorElement(S4BeamlineElement):
 
             grazing_angle_mrad = 1e3 * (numpy.pi / 2 - angle_in)
 
+            # TODO: it should be checked why s4_conic gives a downwards normal and s4_mesh an upwards normal
+            # This causes negative angles with s4_mesh. Therefore abs() is used
+            grazing_angle_mrad = numpy.abs(grazing_angle_mrad)
+
             if soe._f_refl == 0: # prerefl
                 prerefl_file = soe._file_refl
                 pr = PreRefl()
