@@ -45,12 +45,18 @@ class S4AdditionalNumericalMeshMirror(S4NumericalMeshMirror):
     def set_boundaries_rectangle(self, x_left=-1e3, x_right=1e3, y_bottom=-1e3, y_top=1e3): raise ValueError("Not allowed for this entity")
 
     def to_python_code(self, **kwargs):
-        txt = self.to_python_code_boundary_shape()
+
+
+        txt = self.__ideal_mirror.to_python_code()
+        txt += "ideal_mirror = optical_element"
+        txt += self.__numerical_mesh_mirror.to_python_code()
+        txt += "numerical_mesh_mirror = optical_element"
+
+        txt += self.to_python_code_boundary_shape()
         txt_pre = """
-        
-from shadow4.beamline.optical_elements.mirrors.s4_additional_numerical_mesh_mirror import S4AdditionalNumericalmeshMirror
-optical_element = S4AdditionalNumericalMeshMirror(name='{name:s}',boundary_shape=boundary_shape,
-    ideal_mirror=ideal_mirror,numerical_mesh_mirror=numerical_mesh_mirror)
+
+from shadow4.beamline.optical_elements.mirrors.s4_additional_numerical_mesh_mirror import S4AdditionalNumericalMeshMirror
+optical_element = S4AdditionalNumericalMeshMirror(name='{name:s}', ideal_mirror=ideal_mirror, numerical_mesh_mirror=numerical_mesh_mirror)
     """
         txt += txt_pre.format(**self.__inputs)
         return txt
@@ -168,6 +174,4 @@ if __name__ == "__main__":
     # e = S4NumericalMeshMirrorElement()
     # m = S4AdditionalNumericalMeshMirror()
     # e = S4AdditionalNumericalMeshMirrorElement(None, None, None)
-
-
 
