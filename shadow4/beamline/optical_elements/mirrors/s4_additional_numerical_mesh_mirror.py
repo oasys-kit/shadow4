@@ -42,8 +42,6 @@ class S4AdditionalNumericalMeshMirror(S4NumericalMeshMirror):
             "numerical_mesh_mirror": numerical_mesh_mirror,
         }
 
-    def set_boundaries_rectangle(self, x_left=-1e3, x_right=1e3, y_bottom=-1e3, y_top=1e3): raise ValueError("Not allowed for this entity")
-
     def to_python_code(self, **kwargs):
 
 

@@ -6,6 +6,8 @@ from syned.beamline.optical_elements.refractors.interface import Interface
 from shadow4.beam.s4_beam import S4Beam
 from shadow4.beamline.s4_beamline_element import S4BeamlineElement
 
+from syned.beamline.shape import Rectangle, Ellipse
+
 class S4Interface(Interface):
 
     def __init__(self,
@@ -56,6 +58,25 @@ class S4Interface(Interface):
         self._file_r_ind_obj = file_r_ind_obj
         self._file_r_ind_ima = file_r_ind_ima
 
+    def to_python_code(self, **kwargs):
+        raise Exception("To be implemented in the children class")
+
+    def apply_geometrical_model(self, beam):
+        raise Exception("To be implemented in the children class")
+
+    def to_python_code_boundary_shape(self):
+        txt = "" # "\nfrom shadow4.beamline.optical_elements.mirrors.s4_plane_mirror import S4PlaneMirror"
+        bs = self._boundary_shape
+        if bs is None:
+            txt += "\nboundary_shape = None"
+        elif isinstance(bs, Rectangle):
+            txt += "\nfrom syned.beamline.shape import Rectangle"
+            txt += "\nboundary_shape = Rectangle(x_left=%g, x_right=%g, y_bottom=%g, y_top=%g)" % bs.get_boundaries()
+        elif isinstance(bs, Ellipse):
+            txt += "\nfrom syned.beamline.shape import Ellipse"
+            txt += "\nboundary_shape = Ellipse(a_axis_min=%g, a_axis_max=%g, b_axis_min=%g, b_axis_max=%g)" % bs.get_boundaries()
+        return txt
+
     def get_refraction_indices(self):
         if self._f_r_ind == 0:
             refraction_index_object = self._r_ind_obj
@@ -70,6 +91,8 @@ class S4Interface(Interface):
             raise Exception(NotImplementedError)
 
         return refraction_index_object, refraction_index_image
+
+
 
 class S4InterfaceElement(S4BeamlineElement):
     def __init__(self,
@@ -128,8 +151,14 @@ class S4InterfaceElement(S4BeamlineElement):
         return output_beam, footprint
 
     def apply_local_refraction(self, beam):
-        raise NotImplementedError()
+        return self.get_optical_element().apply_geometrical_model(beam)
 
 
 if __name__ == "__main__":
-    pass
+    i = S4Interface()
+    e = S4InterfaceElement(optical_element=i)
+
+    print(i.get_surface_shape())
+    print(i.info())
+
+    print(i.to_python_code())
