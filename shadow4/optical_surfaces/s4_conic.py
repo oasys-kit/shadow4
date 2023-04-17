@@ -9,7 +9,7 @@ from numpy.testing import assert_equal, assert_almost_equal
 
 
 from shadow4.tools.arrayofvectors import vector_cross, vector_dot, vector_multiply_scalar, vector_sum, vector_diff
-from shadow4.tools.arrayofvectors import vector_modulus_square, vector_norm
+from shadow4.tools.arrayofvectors import vector_modulus_square, vector_norm, vector_reflection
 
 # OE surface in form of conic equation:
 #      ccc[0]*X^2 + ccc[1]*Y^2 + ccc[2]*Z^2 +
@@ -21,10 +21,8 @@ class S4Conic(S4OpticalSurface):
 
     def __init__(self, ccc=numpy.zeros(10)):
 
-        if ccc is not None:
-            self.ccc = ccc.copy()
-        else:
-            self.ccc = numpy.zeros(10)
+        if ccc is not None: self.ccc = ccc.copy()
+        else:               self.ccc = numpy.zeros(10)
 
     @classmethod
     def initialize_from_coefficients(cls, ccc):
@@ -118,8 +116,6 @@ class S4Conic(S4OpticalSurface):
         self.ccc[9-1] =  A_9						 # Z
         self.ccc[10-1]=  A_10
 
-
-
     def set_sphere_from_curvature_radius(self,rmirr):
         self.ccc[1-1] =  1.0	        # X^2  # = 0 in cylinder case
         self.ccc[2-1] =  1.0	        # Y^2
@@ -131,8 +127,6 @@ class S4Conic(S4OpticalSurface):
         self.ccc[8-1] =   .0	        # Y
         self.ccc[9-1] = -2 * rmirr	# Z
         self.ccc[10-1]  =   .0       # G
-
-
 
     def set_ellipsoid_from_external_parameters(self, AXMAJ, AXMIN, ELL_THE):
         YCEN  = AXMAJ*AXMIN
@@ -183,7 +177,6 @@ class S4Conic(S4OpticalSurface):
         self.ccc[7] = 0.0
         self.ccc[8] = 2 * (B * YCEN * RNCEN[2 - 1] + C * ZCEN * RNCEN[3 - 1])
         self.ccc[9] = 0.0
-
 
     #
     # calculations
@@ -344,8 +337,6 @@ class S4Conic(S4OpticalSurface):
 
         return TPAR1.real,TPAR2.real
 
-
-
     def choose_solution(self,TPAR1,TPAR2,reference_distance=10.0, method=0):
         # method = 0: new shadow4 way (essentially the same as in shadow3
         #             but replacing TSOURCE (unavailable here) by reference_distance
@@ -369,7 +360,6 @@ class S4Conic(S4OpticalSurface):
             TPAR = TPAR2
 
         return TPAR,I_FLAG
-
 
     def z_vs_xy(self,x,y):
 
@@ -407,8 +397,6 @@ class S4Conic(S4OpticalSurface):
 
         return TPAR2.real
 
-
-
     def rotation_surface_conic(self, alpha, axis ):
 
         if axis == 'x':
@@ -417,7 +405,6 @@ class S4Conic(S4OpticalSurface):
             self.rotation_surface_conic_y(alpha)
         elif axis == 'z':
             self.rotation_surface_conic_z(alpha)
-
 
     def rotation_surface_conic_x(self, alpha):
 
@@ -474,7 +461,6 @@ class S4Conic(S4OpticalSurface):
 
         self.ccc = numpy.array([c0, c1, c2, c3, c4, c5, c6, c7, c8, c9])
 
-
     def translation_surface_conic (self, x0, axis = 'x'):
 
         if axis == 'x':
@@ -483,7 +469,6 @@ class S4Conic(S4OpticalSurface):
             self.translation_surface_conic_y(x0)
         elif axis == 'z':
             self.translation_surface_conic_z(x0)
-
 
     def translation_surface_conic_x(self, x0):
 
@@ -494,7 +479,6 @@ class S4Conic(S4OpticalSurface):
 
         self.ccc = numpy.array([self.ccc[0], self.ccc[1], self.ccc[2], self.ccc[3], self.ccc[4], self.ccc[5], c6, c7, c8, c9])
 
-
     def translation_surface_conic_y(self, y0):
 
         c6 = - self.ccc[3] * y0 + self.ccc[6]
@@ -503,8 +487,6 @@ class S4Conic(S4OpticalSurface):
         c9 = self.ccc[1] * y0**2 + self.ccc[9] - self.ccc[7] * y0
 
         self.ccc = numpy.array([self.ccc[0], self.ccc[1], self.ccc[2], self.ccc[3], self.ccc[4], self.ccc[5], c6, c7, c8, c9])
-
-
 
     def translation_surface_conic_z(self, z0):
 
@@ -586,7 +568,6 @@ class S4Conic(S4OpticalSurface):
 
         return txt
 
-
     #
     # reflector routines
     #
@@ -603,7 +584,6 @@ class S4Conic(S4OpticalSurface):
         if switch_convexity:
             ccc.switch_convexity()
         return ccc
-
 
     @classmethod
     def initialize_as_ellipsoid_from_focal_distances(cls,p, q, theta1, cylindrical=0, cylangle=0.0, switch_convexity=0):
@@ -686,8 +666,7 @@ class S4Conic(S4OpticalSurface):
         self.ccc[8] = 2 * (B * YCEN * RNCEN[2 - 1] + C * ZCEN * RNCEN[3 - 1])
         self.ccc[9] = 0.0
 
-    def set_paraboloid_from_focal_distances(self, SSOUR, SIMAG, theta_grazing, infinity_location="",
-                                            verbose=True):
+    def set_paraboloid_from_focal_distances(self, SSOUR, SIMAG, theta_grazing, infinity_location="",  verbose=True):
         # ;C
         # ;C Computes the parabola
         # ;C
@@ -865,24 +844,6 @@ class S4Conic(S4OpticalSurface):
             "AXMAJ":AXMAJ, "AXMIN":AXMIN, "ELL_THE":ELL_THE,
             "AFOCI":AFOCI, "YCEN":YCEN, "ZCEN":ZCEN, "YCEN2":YCEN2, "ZCEN2":ZCEN2, "RNCEN":RNCEN, "RTCEN":RTCEN}
 
-
-    # todo: remove and use shadow4.tools.arrayofvectors.vector_reflection
-    def vector_reflection(self, v1, normal):
-        # \vec{r} = \vec{i} - 2 (\vec{i} \vec{n}) \vec{n}
-        # \vec{r} = \vec{i} - 2 tmp3
-        tmp = v1 * normal
-        tmp2 = tmp[0, :] + tmp[1, :] + tmp[2, :]
-        tmp3 = normal.copy()
-
-        for jj in (0, 1, 2):
-            tmp3[jj, :] = tmp3[jj, :] * tmp2
-
-        v2 = v1 - 2 * tmp3
-        v2mod = numpy.sqrt(v2[0, :] ** 2 + v2[1, :] ** 2 + v2[2, :] ** 2)
-        v2 /= v2mod
-
-        return v2
-
     #
     # mirror routines
     #
@@ -920,7 +881,7 @@ class S4Conic(S4OpticalSurface):
         # ; reflection
         # ;
 
-        v2 = self.vector_reflection(v1, normal)
+        v2 = vector_reflection(v1, normal)
 
         # ;
         # ; writes the mirr.XX file
@@ -940,7 +901,6 @@ class S4Conic(S4OpticalSurface):
     #
     # refractor routines
     #
-
 
     def apply_refraction_on_beam(self, newbeam, refraction_index_object, refraction_index_image):
 

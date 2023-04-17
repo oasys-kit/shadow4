@@ -7,6 +7,16 @@ class S4ParaboloidMirror(S4Mirror, S4ParaboloidOpticalElementDecorator):
     def __init__(self,
                  name="Paraboloid Mirror",
                  boundary_shape=None,
+                 surface_calculation=SurfaceCalculation.INTERNAL,
+                 is_cylinder=False,
+                 cylinder_direction=Direction.TANGENTIAL,
+                 convexity=Convexity.UPWARD,
+                 parabola_parameter=0.0,
+                 at_infinity=Side.SOURCE,
+                 pole_to_focus=None,
+                 p_focus=0.0,
+                 q_focus=0.0,
+                 grazing_angle=0.0,
                  # inputs related to mirror reflectivity
                  f_reflec=0,  # reflectivity of surface: 0=no reflectivity, 1=full polarization
                  f_refl=0,  # 0=prerefl file
