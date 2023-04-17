@@ -17,8 +17,3 @@ class S4BeamlineElement(BeamlineElement):
     def trace_beam(self, **params): raise NotImplementedError()
     def info(self): return self.get_optical_element().info() + "\n" + self.get_coordinates().info()
     def to_python_code(self, **kwargs): raise NotImplementedError()
-
-    def duplicate(self, copy_input_beam=True):
-        return S4BeamlineElement(optical_element=self.get_optical_element().duplicate(),
-                                 coordinates=self.get_coordinates().duplicate(),
-                                 input_beam=self.get_input_beam().duplicate() if copy_input_beam else None)

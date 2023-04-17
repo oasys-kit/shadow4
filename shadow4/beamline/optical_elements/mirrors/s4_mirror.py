@@ -116,6 +116,16 @@ class S4MirrorElement(S4BeamlineElement):
         input_beam.rotate(theta_grazing1, axis=1)
         input_beam.translation([0.0, -p * numpy.cos(theta_grazing1), p * numpy.sin(theta_grazing1)])
 
+        # mirror movement: todo: obtain parameters...
+        F_MOVE = 0
+        X_ROT = numpy.radians(1e-3)
+        Y_ROT = 0
+        Z_ROT = numpy.radians(1)
+        OFFX = 0
+        OFFY = 0
+        OFFZ = 0
+        if F_MOVE: input_beam.rot_for(OFFX=OFFX, OFFY=OFFY, OFFZ=OFFZ, X_ROT=X_ROT, Y_ROT=Y_ROT, Z_ROT=Z_ROT)
+
         #
         # reflect beam in the mirror surface
         #
@@ -125,6 +135,7 @@ class S4MirrorElement(S4BeamlineElement):
 
         footprint, normal = self.apply_local_reflection(input_beam)
 
+        if F_MOVE: footprint.rot_back(OFFX=OFFX, OFFY=OFFY, OFFZ=OFFZ, X_ROT=X_ROT, Y_ROT=Y_ROT, Z_ROT=Z_ROT)
         #
         # apply mirror boundaries
         #
@@ -332,4 +343,49 @@ class S4MirrorElement(S4BeamlineElement):
         return rs*debyewaller, rp*debyewaller, runp*debyewaller
 
 if __name__ == "__main__":
-    pass
+    #
+    # testing mirror movements...
+    #
+
+    #
+    #
+    #
+    from shadow4.sources.source_geometrical.source_geometrical import SourceGeometrical
+
+    light_source = SourceGeometrical(name='SourceGeometrical', nrays=10000, seed=5676561)
+    light_source.set_spatial_type_gaussian(sigma_h=5e-06, sigma_v=0.000001)
+    light_source.set_angular_distribution_gaussian(sigdix=0.000001, sigdiz=0.000001)
+    light_source.set_energy_distribution_singleline(1.000000, unit='A')
+    light_source.set_polarization(polarization_degree=1.000000, phase_diff=0.000000, coherent_beam=0)
+    beam = light_source.get_beam()
+
+    # optical element number XX
+    boundary_shape = None
+
+    from shadow4.beamline.optical_elements.mirrors.s4_ellipsoid_mirror import S4EllipsoidMirror
+
+    optical_element = S4EllipsoidMirror(name='Ellipsoid Mirror', boundary_shape=boundary_shape,
+                                        surface_calculation=0, is_cylinder=0, cylinder_direction=0,
+                                        convexity=1, min_axis=0.000000, maj_axis=0.000000, p_focus=10.000000,
+                                        q_focus=6.000000,
+                                        grazing_angle=0.020944,
+                                        f_reflec=0, f_refl=1, file_refl='<none>', refraction_index=0.99999 + 0.001j,
+                                        coating_material='Si', coating_density=2.33, coating_roughness=0)
+
+    from syned.beamline.element_coordinates import ElementCoordinates
+
+    coordinates = ElementCoordinates(p=10, q=6, angle_radial=1.54985, angle_azimuthal=0, angle_radial_out=1.54985)
+    from shadow4.beamline.optical_elements.mirrors.s4_ellipsoid_mirror import S4EllipsoidMirrorElement
+
+    beamline_element = S4EllipsoidMirrorElement(optical_element=optical_element, coordinates=coordinates,
+                                                input_beam=beam)
+
+    beam, mirr = beamline_element.trace_beam()
+
+    # test plot
+    if True:
+        from srxraylib.plot.gol import plot_scatter
+
+        # plot_scatter(beam.get_photon_energy_eV(nolost=1), beam.get_column(23, nolost=1),
+        #              title='(Intensity,Photon Energy)', plot_histograms=0)
+        plot_scatter(1e6 * beam.get_column(1, nolost=1), 1e6 * beam.get_column(3, nolost=1), title='(X,Z) in microns')

@@ -8,7 +8,8 @@ import os
 
 from syned.beamline.shape import Rectangle, Ellipse, TwoEllipses
 
-# IMPORTANT: Column 11 (index 10) is wavenumber (cm^-1) as internally in Shadow
+# IMPORTANT: Column 11 (index 10) is wavenumber (cm^-1) as internally in Shadow.
+#            Photon energy in eV is now column 26 (index 25).
 
 class S4Beam(object):
     """
@@ -1039,8 +1040,242 @@ class S4Beam(object):
 
         # optical path col 13
         self.rays[:, 12] += numpy.abs(DIST) * refraction_index
+
+    @classmethod
+    def get_UVW(self, X_ROT=0, Y_ROT=0, Z_ROT=0): # in radians!!
+
+        COSX =  numpy.cos(X_ROT)
+        SINX = -numpy.sin(X_ROT)
+        COSY =  numpy.cos(Y_ROT)
+        SINY = -numpy.sin(Y_ROT)
+        COSZ =  numpy.cos(Z_ROT)
+        SINZ = -numpy.sin(Z_ROT)
+        # ! C
+        # ! C Computes the rotation matrix coefficients
+        # ! C
+        U_MIR_1 =  COSZ * COSY
+        V_MIR_1 =  COSZ * SINX * SINY - SINZ * COSX
+        W_MIR_1 =  COSZ * SINY * COSX + SINZ * SINX
+        U_MIR_2 =  SINZ * COSY
+        V_MIR_2 =  SINZ * SINX * SINY + COSZ * COSX
+        W_MIR_2 =  SINZ * SINY * COSX - SINX * COSZ
+        U_MIR_3 = -SINY
+        V_MIR_3 =  COSY * SINX
+        W_MIR_3 =  COSY * COSX
+
+        return U_MIR_1, U_MIR_2, U_MIR_3,\
+               V_MIR_1, V_MIR_2, V_MIR_3,\
+               W_MIR_1, W_MIR_2, W_MIR_3,
+
+    def rot_for(self, OFFX=0, OFFY=0, OFFZ=0, X_ROT=0, Y_ROT=0, Z_ROT=0):
+
+        # ! C+++
+        # ! C	SUBROUTINE	ROT_FOR
+        # ! C
+        # ! C	PURPOSE		Applies the roto-translation of the mirror movements
+        # ! C			to the beam. This allows a complete decoupling of the system.
+        # ! C
+        # ! C	ARGUMENT	[ I ]	RAY	: the beam, as computed by RESTART.
+        # ! C			    [ O ] 	RAY	: the beam, as seen by a MOVED mirror.
+        # ! C
+        # ! C---
+
+
+        print(">>>>>", self.rays.shape)
+        P_IN_1 = self.rays[:, 1-1].copy()
+        P_IN_2 = self.rays[:, 2-1].copy()
+        P_IN_3 = self.rays[:, 3-1].copy()
+        V_IN_1 = self.rays[:, 4-1].copy()
+        V_IN_2 = self.rays[:, 5-1].copy()
+        V_IN_3 = self.rays[:, 6-1].copy()
+        A_IN_1 = self.rays[:, 7-1].copy()
+        A_IN_2 = self.rays[:, 8-1].copy()
+        A_IN_3 = self.rays[:, 9-1].copy()
+
+        # the P compunent is not implemented in shadow3. Buggy there?
+        AP_IN_1 = self.rays[:, 16-1].copy()
+        AP_IN_2 = self.rays[:, 17-1].copy()
+        AP_IN_3 = self.rays[:, 18-1].copy()
+
+        U_MIR_1, U_MIR_2, U_MIR_3, V_MIR_1, V_MIR_2, V_MIR_3, W_MIR_1, W_MIR_2, W_MIR_3 = \
+            self.get_UVW(X_ROT=X_ROT, Y_ROT=Y_ROT, Z_ROT=Z_ROT)
+        print(U_MIR_1, U_MIR_2, U_MIR_3, V_MIR_1, V_MIR_2, V_MIR_3, W_MIR_1, W_MIR_2, W_MIR_3)
+        #      	P_OUT(1)=    (P_IN(1) - OFFX)*U_MIR(1) + &
+        #      		     (P_IN(2) - OFFY)*U_MIR(2) + &
+        #      		     (P_IN(3) - OFFZ)*U_MIR(3)
+        P_OUT_1 = (P_IN_1 - OFFX) * U_MIR_1 + (P_IN_2 - OFFY) * U_MIR_2 + (P_IN_3 - OFFZ) * U_MIR_3
+        print(">>>>", P_OUT_1.shape)
+
+        #
+        #      	P_OUT(2)=    (P_IN(1) - OFFX)*V_MIR(1) + &
+        #      		     (P_IN(2) - OFFY)*V_MIR(2) + &
+        #      		     (P_IN(3) - OFFZ)*V_MIR(3)
+        P_OUT_2 = (P_IN_1 - OFFX) * V_MIR_1 + (P_IN_2 - OFFY) * V_MIR_2 + (P_IN_3 - OFFZ) * V_MIR_3
+
+        #
+        #      	P_OUT(3)=    (P_IN(1) - OFFX)*W_MIR(1) + &
+        #      		     (P_IN(2) - OFFY)*W_MIR(2) + &
+        #      		     (P_IN(3) - OFFZ)*W_MIR(3)
+        P_OUT_3 = (P_IN_1 - OFFX) * W_MIR_1 + (P_IN_2 - OFFY) * W_MIR_2 + (P_IN_3 - OFFZ) * W_MIR_3
+
+
+        #
+        #      	V_OUT(1)=    V_IN(1)*U_MIR(1) + &
+        #      		     V_IN(2)*U_MIR(2) + &
+        #      		     V_IN(3)*U_MIR(3)
+        V_OUT_1 = V_IN_1 * U_MIR_1 + V_IN_2 * U_MIR_2 + V_IN_3 * U_MIR_3
+
+
+        #
+        #      	V_OUT(2)=    V_IN(1)*V_MIR(1) + &
+        #      		     V_IN(2)*V_MIR(2) + &
+        #      		     V_IN(3)*V_MIR(3)
+        V_OUT_2 = V_IN_1 * V_MIR_1 + V_IN_2 * V_MIR_2 + V_IN_3 * V_MIR_3
+
+        #
+        #      	V_OUT(3)=    V_IN(1)*W_MIR(1) + &
+        #      		     V_IN(2)*W_MIR(2) + &
+        #      		     V_IN(3)*W_MIR(3)
+        V_OUT_3 = V_IN_1 * W_MIR_1 + V_IN_2 * W_MIR_2 + V_IN_3 * W_MIR_3
+
+        #
+        #      	A_OUT(1)=    A_IN(1)*U_MIR(1) + &
+        #      		     A_IN(2)*U_MIR(2) + &
+        #      		     A_IN(3)*U_MIR(3)
+
+        A_OUT_1 = A_IN_1 * U_MIR_1 + A_IN_2 * U_MIR_2 + A_IN_3 * U_MIR_3
+        AP_OUT_1 = AP_IN_1 * U_MIR_1 + AP_IN_2 * U_MIR_2 + AP_IN_3 * U_MIR_3
+
+
+        #
+        #      	A_OUT(2)=    A_IN(1)*V_MIR(1) + &
+        #      		     A_IN(2)*V_MIR(2) + &
+        #      		     A_IN(3)*V_MIR(3)
+        A_OUT_2 = A_IN_1 * V_MIR_1 + A_IN_2 * V_MIR_2 + A_IN_3 * V_MIR_3
+        AP_OUT_2 = AP_IN_1 * V_MIR_1 + AP_IN_2 * V_MIR_2 + AP_IN_3 * V_MIR_3
+
+        #
+        #      	A_OUT(3)=    A_IN(1)*W_MIR(1) + &
+        #      		     A_IN(2)*W_MIR(2) + &
+        #      		     A_IN(3)*W_MIR(3)
+        A_OUT_3 = A_IN_1 * W_MIR_1 + A_IN_2 * W_MIR_2 + A_IN_3 * W_MIR_3
+        AP_OUT_3 = AP_IN_1 * W_MIR_1 + AP_IN_2 * W_MIR_2 + AP_IN_3 * W_MIR_3
+
+        self.rays[:, 1-1 ] = P_OUT_1
+        self.rays[:, 2-1 ] = P_OUT_2
+        self.rays[:, 3-1 ] = P_OUT_3
+        self.rays[:, 4-1 ] = V_OUT_1
+        self.rays[:, 5-1 ] = V_OUT_2
+        self.rays[:, 6-1 ] = V_OUT_3
+        self.rays[:, 7-1 ] = A_OUT_1
+        self.rays[:, 8-1 ] = A_OUT_2
+        self.rays[:, 9-1 ] = A_OUT_3
+        self.rays[:, 16-1] = AP_OUT_1
+        self.rays[:, 17-1] = AP_OUT_2
+        self.rays[:, 18-1] = AP_OUT_3
+
+    def rot_back(self, OFFX=0, OFFY=0, OFFZ=0, X_ROT=0, Y_ROT=0, Z_ROT=0):
+        # ! C+++
+        # ! C	SUBROUTINE	ROT_BACK
+        # ! C
+        # ! C	PURPOSE		Applies the roto-translation of the mirror movements
+        # ! C			to the beam. This will bring bak the beam in the normal MIRROR frame.
+        # ! C
+        # ! C	ARGUMENT	[ I ]	RAY	: the beam, as computed by MIRROR.
+        # ! C               [ O ] 	RAY	: the beam, as seen back in the mirror refernece frame.
+        # ! C
+        # ! C---
+
+        P_IN_1  = self.rays[:, 1-1 ].copy()
+        P_IN_2  = self.rays[:, 2-1 ].copy()
+        P_IN_3  = self.rays[:, 3-1 ].copy()
+        V_IN_1  = self.rays[:, 4-1 ].copy()
+        V_IN_2  = self.rays[:, 5-1 ].copy()
+        V_IN_3  = self.rays[:, 6-1 ].copy()
+        A_IN_1  = self.rays[:, 7-1 ].copy()
+        A_IN_2  = self.rays[:, 8-1 ].copy()
+        A_IN_3  = self.rays[:, 9-1 ].copy()
+        AP_IN_1 = self.rays[:, 16-1].copy()
+        AP_IN_2 = self.rays[:, 17-1].copy()
+        AP_IN_3 = self.rays[:, 18-1].copy()
+
+
+        U_MIR_1, U_MIR_2, U_MIR_3, V_MIR_1, V_MIR_2, V_MIR_3, W_MIR_1, W_MIR_2, W_MIR_3 = \
+            self.get_UVW(X_ROT=X_ROT, Y_ROT=Y_ROT, Z_ROT=Z_ROT)
+
+        #      	P_OUT(1)=    P_IN(1)*U_MIR(1) + &
+        #      		     P_IN(2)*V_MIR(1) + &
+        #      		     P_IN(3)*W_MIR(1) + OFFX
+        P_OUT_1 = P_IN_1 * U_MIR_1 + P_IN_2 * V_MIR_1 + P_IN_3 * W_MIR_1 + OFFX
+
+        #
+        #      	P_OUT(2)=    P_IN(1)*U_MIR(2) + &
+        #      		     P_IN(2)*V_MIR(2) + &
+        #      		     P_IN(3)*W_MIR(2) + OFFY
+        P_OUT_2 = P_IN_1 * U_MIR_2 + P_IN_2 * V_MIR_2 + P_IN_3 * W_MIR_2 + OFFY
+
+
+        #
+        #      	P_OUT(3)=    P_IN(1)*U_MIR(3) + &
+        #      		     P_IN(2)*V_MIR(3) + &
+        #      		     P_IN(3)*W_MIR(3) + OFFZ
+        P_OUT_3 = P_IN_1 * U_MIR_3 + P_IN_2 * V_MIR_3 + P_IN_3 * W_MIR_3 + OFFZ
+
+        #
+        #      	V_OUT(1)=    V_IN(1)*U_MIR(1) + &
+        #      		     V_IN(2)*V_MIR(1) + &
+        #      		     V_IN(3)*W_MIR(1)
+        V_OUT_1 = V_IN_1 * U_MIR_1 + V_IN_2 * V_MIR_1 + V_IN_3 * W_MIR_1
+
+        #
+        #      	V_OUT(2)=    V_IN(1)*U_MIR(2) + &
+        #      		     V_IN(2)*V_MIR(2) + &
+        #      		     V_IN(3)*W_MIR(2)
+        V_OUT_2 = V_IN_1 * U_MIR_2 + V_IN_2 * V_MIR_2 + V_IN_3 * W_MIR_2
+
+        #
+        #      	V_OUT(3)=    V_IN(1)*U_MIR(3) + &
+        #      		     V_IN(2)*V_MIR(3) + &
+        #      		     V_IN(3)*W_MIR(3)
+        V_OUT_3 = V_IN_1 * U_MIR_3 + V_IN_2 * V_MIR_3 + V_IN_3 * W_MIR_3
+
+        #
+        #      	A_OUT(1)=    A_IN(1)*U_MIR(1) + &
+        #      		     A_IN(2)*V_MIR(1) + &
+        #      		     A_IN(3)*W_MIR(1)
+        A_OUT_1 = A_IN_1 * U_MIR_1 + A_IN_2 * V_MIR_1 + A_IN_3 * W_MIR_1
+        AP_OUT_1 = AP_IN_1 * U_MIR_1 + AP_IN_2 * V_MIR_1 + AP_IN_3 * W_MIR_1
+
+        #
+        #      	A_OUT(2)=    A_IN(1)*U_MIR(2) + &
+        #      		     A_IN(2)*V_MIR(2) + &
+        #      		     A_IN(3)*W_MIR(2)
+        A_OUT_2 = A_IN_1 * U_MIR_2 + A_IN_2 * V_MIR_2 + A_IN_3 * W_MIR_2
+        AP_OUT_2 = AP_IN_1 * U_MIR_2 + AP_IN_2 * V_MIR_2 + AP_IN_3 * W_MIR_2
+
+        #
+        #      	A_OUT(3)=    A_IN(1)*U_MIR(3) + &
+        #      		     A_IN(2)*V_MIR(3) + &
+        #      		     A_IN(3)*W_MIR(3)
+        A_OUT_3 = A_IN_1 * U_MIR_3 + A_IN_2 * V_MIR_3 + A_IN_3 * W_MIR_3
+        AP_OUT_3 = AP_IN_1 * U_MIR_3 + AP_IN_2 * V_MIR_3 + AP_IN_3 * W_MIR_3
+
+        self.rays[:, 1-1 ] = P_OUT_1
+        self.rays[:, 2-1 ] = P_OUT_2
+        self.rays[:, 3-1 ] = P_OUT_3
+        self.rays[:, 4-1 ] = V_OUT_1
+        self.rays[:, 5-1 ] = V_OUT_2
+        self.rays[:, 6-1 ] = V_OUT_3
+        self.rays[:, 7-1 ] = A_OUT_1
+        self.rays[:, 8-1 ] = A_OUT_2
+        self.rays[:, 9-1 ] = A_OUT_3
+        self.rays[:, 16-1] = AP_OUT_1
+        self.rays[:, 17-1] = AP_OUT_2
+        self.rays[:, 18-1] = AP_OUT_3
+
+
     #
-    # crop
+    # crop & boundaries
     #
     def crop_rectangle(self, x_col, x_min, x_max, y_col, y_min, y_max, negative=False, flag_lost_value=-1):
         """
@@ -1419,9 +1654,8 @@ class S4Beam(object):
         except:
             raise Exception("shadow4 class used a optical element must implement the trace_beam method")
     #
-    # histograms
+    # useful tools (labels)
     #
-    # TODO: histo1, histo2
 
     @classmethod
     def column_names(cls):
@@ -1555,6 +1789,18 @@ class S4Beam(object):
         ]
 
     @classmethod
+    def column_names_with_column_number(cls):
+        """
+
+        Returns
+        -------
+
+        """
+        names = cls.column_names()
+        for i in range(len(names)): names[i] = "%2d: %s" % (i+1, names[i])
+        return names
+
+    @classmethod
     def column_short_names_with_column_number(cls):
         """
 
@@ -1563,8 +1809,12 @@ class S4Beam(object):
 
         """
         names = cls.column_short_names()
-        for i in range(len(names)): names[i] = "col%02d %s" % (i+1, names[i])
+        for i in range(len(names)): names[i] = "%2d: %s" % (i+1, names[i])
         return names
+
+    #
+    # useful tools (h5 files)
+    #
 
     def write_h5(self,filename,overwrite=True,simulation_name="run001",beam_name="begin"):
         """
@@ -1664,6 +1914,11 @@ class S4Beam(object):
 
         return S4Beam.initialize_from_array(rays)
 
+
+    #
+    # useful tools (compare beams)
+    #
+
     def identical(self,beam2):
         """
 
@@ -1713,3 +1968,9 @@ class S4Beam(object):
 
 if __name__ == "__main__":
     pass
+    print(S4Beam.column_names_with_column_number())
+    print(S4Beam.column_short_names_with_column_number())
+    print(S4Beam.get_UVW())
+
+    B = S4Beam.initialize_as_pencil(N=1)
+    print(B.info())
