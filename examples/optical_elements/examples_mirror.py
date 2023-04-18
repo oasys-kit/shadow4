@@ -10,7 +10,7 @@ from syned.beamline.shape import Rectangle, Direction, Side
 from shadow4.beamline.s4_optical_element_decorators import SurfaceCalculation
 
 from shadow4.beamline.optical_elements.mirrors.s4_conic_mirror import S4ConicMirror, S4ConicMirrorElement
-from shadow4.beamline.optical_elements.mirrors.s4_toroidal_mirror import S4ToroidalMirror, S4ToroidalMirrorElement
+from shadow4.beamline.optical_elements.mirrors.s4_toroidal_mirror import S4ToroidMirror, S4ToroidalMirrorElement
 from shadow4.beamline.optical_elements.mirrors.s4_numerical_mesh_mirror import S4NumericalMeshMirror, S4NumericalMeshMirrorElement
 from shadow4.beamline.optical_elements.mirrors.s4_plane_mirror import S4PlaneMirror, S4PlaneMirrorElement
 from shadow4.beamline.optical_elements.mirrors.s4_ellipsoid_mirror import S4EllipsoidMirror, S4EllipsoidMirrorElement
@@ -139,11 +139,11 @@ def example_branch_2(do_plot=True):
     #
     # shadow definitions
     #
-    mirror1 = S4ToroidalMirrorElement(optical_element=S4ToroidalMirror(name="M1",
-                                                                       surface_calculation=SurfaceCalculation.EXTERNAL,
-                                                                       min_radius=0.157068,
-                                                                       maj_radius=358.124803 - 0.157068,
-                                                                       boundary_shape=boundary_shape),
+    mirror1 = S4ToroidalMirrorElement(optical_element=S4ToroidMirror(name="M1",
+                                                                     surface_calculation=SurfaceCalculation.EXTERNAL,
+                                                                     min_radius=0.157068,
+                                                                     maj_radius=358.124803 - 0.157068,
+                                                                     boundary_shape=boundary_shape),
                                       coordinates=ElementCoordinates(p = 10.0,
                                                                      q = 6.0,
                                                                      angle_radial = numpy.radians(88.8)),

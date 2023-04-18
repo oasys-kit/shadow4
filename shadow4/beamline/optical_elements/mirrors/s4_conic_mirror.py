@@ -10,7 +10,7 @@ class S4ConicMirror(S4Mirror, S4ConicOpticalElementDecorator):
     def __init__(self,
                  name="Conic Mirror",
                  boundary_shape=None,
-                 conic_coefficients=numpy.zeros(10),
+                 conic_coefficients=[0.0]*10,
                  # inputs related to mirror reflectivity
                  f_reflec=0, # reflectivity of surface: 0=no reflectivity, 1=full polarization
                  f_refl=0,   # 0=prerefl file

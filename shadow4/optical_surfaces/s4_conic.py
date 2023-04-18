@@ -18,38 +18,67 @@ from shadow4.tools.arrayofvectors import vector_modulus_square, vector_norm
 
 
 class S4Conic(S4OpticalSurface):
-
     def __init__(self, ccc=numpy.zeros(10)):
-
-        if ccc is not None: self.ccc = ccc.copy()
-        else:               self.ccc = numpy.zeros(10)
+        self.set_coefficients(ccc)
 
     @classmethod
     def initialize_from_coefficients(cls, ccc):
-        if numpy.array(ccc).size != 10:
-            raise Exception("Invalid coefficients (dimension must be 10)")
-        return S4Conic(ccc=ccc)
+        return S4Conic(ccc=ccc) # errors are taken care in set_coefficients
 
     @classmethod
     def initialize_as_plane(cls):
         return S4Conic(numpy.array([0, 0, 0, 0, 0, 0, 0, 0, -1., 0]))
-
 
     #
     # initializers from surface parameters
     #
     @classmethod
     def initialize_as_sphere_from_curvature_radius(cls, radius, cylindrical=0, cylangle=0.0, switch_convexity=0):
-        ccc = S4Conic()
-        ccc.set_sphere_from_curvature_radius(radius)
-        if cylindrical:
-            ccc.set_cylindrical(cylangle)
-        if switch_convexity:
-            ccc.switch_convexity()
-        return ccc
+        conic = S4Conic()
+        conic.set_sphere_from_curvature_radius(radius)
+
+        return cls._transform_conic(conic, cylindrical, cylangle, switch_convexity)
+
+    #
+    # initializers from focal distances
+    #
+    @classmethod
+    def initialize_as_sphere_from_focal_distances(cls, p, q, theta1, cylindrical=0, cylangle=0.0, switch_convexity=0):
+        conic = S4Conic()
+        conic.set_sphere_from_focal_distances(p, q, theta1)
+
+        return cls._transform_conic(conic, cylindrical, cylangle, switch_convexity)
+
+    @classmethod
+    def initialize_as_ellipsoid_from_focal_distances(cls, p, q, theta1, cylindrical=0, cylangle=0.0, switch_convexity=0):
+        conic = S4Conic()
+        conic.set_ellipsoid_from_focal_distances(p, q, theta1)
+
+        return cls._transform_conic(conic, cylindrical, cylangle, switch_convexity)
+
+    @classmethod
+    def initialize_as_paraboloid_from_focal_distances(cls, p, q, theta1, cylindrical=0, cylangle=0.0, switch_convexity=0):
+        conic = S4Conic()
+        conic.set_paraboloid_from_focal_distances(p, q, theta1)
+
+        return cls._transform_conic(conic, cylindrical, cylangle, switch_convexity)
+
+    @classmethod
+    def initialize_as_hyperboloid_from_focal_distances(cls, p, q, theta1, cylindrical=0, cylangle=0.0, switch_convexity=0):
+        conic = S4Conic()
+        conic.set_hyperboloid_from_focal_distances(p, q, theta1)
+
+        return cls._transform_conic(conic, cylindrical, cylangle, switch_convexity)
+
+    @classmethod
+    def _transform_conic(cls, conic, cylindrical, cylangle, switch_convexity):
+        if cylindrical:      conic.set_cylindrical(cylangle)
+        if switch_convexity: conic.switch_convexity()
+
+        return conic
 
     def duplicate(self):
-        return S4Conic.initialize_from_coefficients(self.ccc.copy())
+        return S4Conic.initialize_from_coefficients(self.ccc) # already copied in set coefficients
 
     #
     # getters
@@ -58,35 +87,16 @@ class S4Conic(S4OpticalSurface):
     def get_coefficients(self):
         return self.ccc.copy()
 
-    def get_normal(self,x2):
-        # ;
-        # ; Calculates the normal at intercept points x2 [see shadow's normal.F]
-        # ;
-        # VOUT(1) = 2*CCC(1)*X_IN +  CCC(4)*Y_IN + CCC(6)*Z_IN + CCC(7)
-        # VOUT(2) = 2*CCC(2)*Y_IN +  CCC(4)*X_IN + CCC(5)*Z_IN + CCC(8)
-        # VOUT(3) = 2*CCC(3)*Z_IN +  CCC(5)*Y_IN + CCC(6)*X_IN + CCC(9)
-
-        normal = numpy.zeros_like(x2)
-
-        normal[0,:] = 2 * self.ccc[1-1] * x2[0,:] + self.ccc[4-1] * x2[1,:] + self.ccc[6-1] * x2[2,:] + self.ccc[7-1]
-        normal[1,:] = 2 * self.ccc[2-1] * x2[1,:] + self.ccc[4-1] * x2[0,:] + self.ccc[5-1] * x2[2,:] + self.ccc[8-1]
-        normal[2,:] = 2 * self.ccc[3-1] * x2[2,:] + self.ccc[5-1] * x2[1,:] + self.ccc[6-1] * x2[0,:] + self.ccc[9-1]
-
-        normalmod =  numpy.sqrt( normal[0,:]**2 + normal[1,:]**2 + normal[2,:]**2 )
-        normal[0,:] /= normalmod
-        normal[1,:] /= normalmod
-        normal[2,:] /= normalmod
-
-        return normal
-
     #
     # setters
     #
 
-    def set_coefficients(self,ccc):
-        if numpy.array(ccc).size != 10:
-            raise Exception("Invalid coefficients (dimension must be 10)")
-        self.ccc = ccc
+    def set_coefficients(self, ccc):
+        if ccc is not None:
+            if isinstance(ccc, list): ccc = numpy.array(ccc)
+            self.ccc = ccc.copy()
+        else:
+            self.ccc = numpy.zeros(10)
 
     def set_cylindrical(self,CIL_ANG):
 
@@ -185,6 +195,27 @@ class S4Conic(S4OpticalSurface):
         self.ccc[5-1]  = - self.ccc[5-1]
         self.ccc[6-1]  = - self.ccc[6-1]
         self.ccc[9-1]  = - self.ccc[9-1]
+
+    def get_normal(self,x2):
+        # ;
+        # ; Calculates the normal at intercept points x2 [see shadow's normal.F]
+        # ;
+        # VOUT(1) = 2*CCC(1)*X_IN +  CCC(4)*Y_IN + CCC(6)*Z_IN + CCC(7)
+        # VOUT(2) = 2*CCC(2)*Y_IN +  CCC(4)*X_IN + CCC(5)*Z_IN + CCC(8)
+        # VOUT(3) = 2*CCC(3)*Z_IN +  CCC(5)*Y_IN + CCC(6)*X_IN + CCC(9)
+
+        normal = numpy.zeros_like(x2)
+
+        normal[0,:] = 2 * self.ccc[1-1] * x2[0,:] + self.ccc[4-1] * x2[1,:] + self.ccc[6-1] * x2[2,:] + self.ccc[7-1]
+        normal[1,:] = 2 * self.ccc[2-1] * x2[1,:] + self.ccc[4-1] * x2[0,:] + self.ccc[5-1] * x2[2,:] + self.ccc[8-1]
+        normal[2,:] = 2 * self.ccc[3-1] * x2[2,:] + self.ccc[5-1] * x2[1,:] + self.ccc[6-1] * x2[0,:] + self.ccc[9-1]
+
+        normalmod =  numpy.sqrt( normal[0,:]**2 + normal[1,:]**2 + normal[2,:]**2 )
+        normal[0,:] /= normalmod
+        normal[1,:] /= normalmod
+        normal[2,:] /= normalmod
+
+        return normal
 
     def calculate_intercept(self,XIN,VIN):
 
@@ -572,49 +603,6 @@ class S4Conic(S4OpticalSurface):
     # reflector routines
     #
 
-    #
-    # initializers from focal distances
-    #
-    @classmethod
-    def initialize_as_sphere_from_focal_distances(cls,p, q, theta1, cylindrical=0, cylangle=0.0, switch_convexity=0):
-        ccc = S4Conic()
-        ccc.set_sphere_from_focal_distances(p,q,theta1)
-        if cylindrical:
-            ccc.set_cylindrical(cylangle)
-        if switch_convexity:
-            ccc.switch_convexity()
-        return ccc
-
-    @classmethod
-    def initialize_as_ellipsoid_from_focal_distances(cls,p, q, theta1, cylindrical=0, cylangle=0.0, switch_convexity=0):
-        ccc = S4Conic()
-        ccc.set_ellipsoid_from_focal_distances(p,q,theta1)
-        if cylindrical:
-            ccc.set_cylindrical(cylangle)
-        if switch_convexity:
-            ccc.switch_convexity()
-        return ccc
-
-    @classmethod
-    def initialize_as_paraboloid_from_focal_distances(cls,p, q, theta1, cylindrical=0, cylangle=0.0, switch_convexity=0):
-        ccc = S4Conic()
-        ccc.set_paraboloid_from_focal_distances(p,q,theta1)
-        if cylindrical:
-            ccc.set_cylindrical(cylangle)
-        if switch_convexity:
-            ccc.switch_convexity()
-        return ccc
-
-    @classmethod
-    def initialize_as_hyperboloid_from_focal_distances(cls,p, q, theta1, cylindrical=0, cylangle=0.0, switch_convexity=0):
-        ccc = S4Conic()
-        ccc.set_hyperboloid_from_focal_distances(p,q,theta1)
-        if cylindrical:
-            ccc.set_cylindrical(cylangle)
-        if switch_convexity:
-            ccc.switch_convexity()
-        return ccc
-
     def set_sphere_from_focal_distances(self, ssour, simag, theta_grazing, verbose=True):
         # todo: implement also sagittal bending
         print("Theta grazing is: %f" % (theta_grazing))
@@ -639,7 +627,6 @@ class S4Conic(S4OpticalSurface):
         self.ccc[10 - 1] = .0  # G
 
     def set_ellipsoid_from_focal_distances(self, ssour, simag, theta_grazing, verbose=True):
-
         tkt = self.calculate_ellipsoid_parameters_from_focal_distances(ssour, simag, theta_grazing, verbose=verbose)
 
         AXMAJ = tkt["AXMAJ"]

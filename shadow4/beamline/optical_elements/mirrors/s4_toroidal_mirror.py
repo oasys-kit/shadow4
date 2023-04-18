@@ -1,10 +1,10 @@
 from syned.beamline.shape import Toroid
 from shadow4.beam.s4_beam import S4Beam
 from shadow4.beamline.optical_elements.mirrors.s4_mirror import S4MirrorElement, S4Mirror, ElementCoordinates
-from shadow4.beamline.s4_optical_element_decorators import SurfaceCalculation, S4ToroidalOpticalElementDecorator
+from shadow4.beamline.s4_optical_element_decorators import SurfaceCalculation, S4ToroidOpticalElementDecorator
 from shadow4.beamline.s4_beamline_element_movements import S4BeamlineElementMovements
 
-class S4ToroidalMirror(S4Mirror, S4ToroidalOpticalElementDecorator):
+class S4ToroidMirror(S4Mirror, S4ToroidOpticalElementDecorator):
     def __init__(self,
                  name="Toroidal Mirror",
                  boundary_shape=None,
@@ -27,8 +27,8 @@ class S4ToroidalMirror(S4Mirror, S4ToroidalOpticalElementDecorator):
                  coating_density=1.0,   # coating material density for f_refl=5,6
                  coating_roughness=0.0, # coating material roughness in A for f_refl=5,6
                  ):
-        S4ToroidalOpticalElementDecorator.__init__(self, surface_calculation,
-                                                   min_radius, maj_radius, p_focus, q_focus, grazing_angle)
+        S4ToroidOpticalElementDecorator.__init__(self, surface_calculation,
+                                                 min_radius, maj_radius, p_focus, q_focus, grazing_angle)
         S4Mirror.__init__(self, name, boundary_shape, self.get_surface_shape_instance(),
                           f_reflec, f_refl, file_refl, refraction_index, coating_material, coating_density, coating_roughness)
 
@@ -73,11 +73,11 @@ optical_element = S4ToroidalMirror(name='{name:s}',boundary_shape=boundary_shape
 
 class S4ToroidalMirrorElement(S4MirrorElement):
     def __init__(self,
-                 optical_element : S4ToroidalMirror = None,
+                 optical_element : S4ToroidMirror = None,
                  coordinates : ElementCoordinates = None,
                  movements: S4BeamlineElementMovements = None,
                  input_beam : S4Beam = None):
-        super().__init__(optical_element=optical_element if optical_element is not None else S4ToroidalMirror(),
+        super().__init__(optical_element=optical_element if optical_element is not None else S4ToroidMirror(),
                          coordinates=coordinates if coordinates is not None else ElementCoordinates(),
                          movements=movements,
                          input_beam=input_beam)
@@ -100,6 +100,6 @@ class S4ToroidalMirrorElement(S4MirrorElement):
         return txt
 
 if __name__ == "__main__":
-    a = S4ToroidalMirror(refraction_index=6j)
+    a = S4ToroidMirror(refraction_index=6j)
     b= S4ToroidalMirrorElement(optical_element=a)
     print(b.to_python_code())
