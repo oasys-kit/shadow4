@@ -2,6 +2,7 @@ from syned.beamline.shape import Paraboloid, ParabolicCylinder, Convexity, Direc
 from shadow4.beamline.s4_optical_element_decorators import SurfaceCalculation, S4ParaboloidOpticalElementDecorator
 from shadow4.beamline.optical_elements.mirrors.s4_mirror import S4MirrorElement, S4Mirror, ElementCoordinates
 from shadow4.beam.s4_beam import S4Beam
+from shadow4.beamline.s4_beamline_element_movements import S4BeamlineElementMovements
 
 class S4ParaboloidMirror(S4Mirror, S4ParaboloidOpticalElementDecorator):
     def __init__(self,
@@ -83,9 +84,11 @@ class S4ParaboloidMirrorElement(S4MirrorElement):
     def __init__(self,
                  optical_element : S4ParaboloidMirror = None,
                  coordinates : ElementCoordinates = None,
+                 movements: S4BeamlineElementMovements = None,
                  input_beam : S4Beam = None):
         super().__init__(optical_element=optical_element if optical_element is not None else S4ParaboloidMirror(),
                          coordinates=coordinates if coordinates is not None else ElementCoordinates(),
+                         movements=movements,
                          input_beam=input_beam)
         if not (isinstance(self.get_optical_element().get_surface_shape(), ParabolicCylinder) or
                 isinstance(self.get_optical_element().get_surface_shape(), Paraboloid)):
@@ -98,7 +101,10 @@ class S4ParaboloidMirrorElement(S4MirrorElement):
         txt += "\nfrom syned.beamline.element_coordinates import ElementCoordinates"
         txt += "\ncoordinates = ElementCoordinates(p=%g, q=%g, angle_radial=%g, angle_azimuthal=%g, angle_radial_out=%g)" % \
                (coordinates.p(), coordinates.q(), coordinates.angle_radial(), coordinates.angle_azimuthal(), coordinates.angle_radial_out())
+
+        txt += self.to_python_code_movements()
+
         txt += "\nfrom shadow4.beamline.optical_elements.mirrors.s4_ellipsoid_mirror import S4EllipsoidMirrorElement"
-        txt += "\nbeamline_element = S4EllipsoidMirrorElement(optical_element=optical_element,coordinates=coordinates,input_beam=beam)"
+        txt += "\nbeamline_element = S4EllipsoidMirrorElement(optical_element=optical_element, coordinates=coordinates, movements=movements, input_beam=beam)"
         txt += "\n\nbeam, mirr = beamline_element.trace_beam()"
         return txt

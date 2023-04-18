@@ -3,6 +3,7 @@ from shadow4.beam.s4_beam import S4Beam
 from shadow4.beamline.optical_elements.mirrors.s4_mirror import S4MirrorElement, S4Mirror, ElementCoordinates
 
 from shadow4.beamline.s4_optical_element_decorators import S4NumericalMeshOpticalElementDecorator
+from shadow4.beamline.s4_beamline_element_movements import S4BeamlineElementMovements
 
 class S4NumericalMeshMirror(S4Mirror, S4NumericalMeshOpticalElementDecorator):
     def __init__(self,
@@ -69,9 +70,11 @@ class S4NumericalMeshMirrorElement(S4MirrorElement):
     def __init__(self,
                  optical_element: S4NumericalMeshMirror = None,
                  coordinates: ElementCoordinates = None,
+                 movements: S4BeamlineElementMovements = None,
                  input_beam: S4Beam = None):
         super().__init__(optical_element=optical_element if optical_element is not None else S4NumericalMeshMirror(),
                          coordinates=coordinates if coordinates is not None else ElementCoordinates(),
+                         movements=movements,
                          input_beam=input_beam)
         if not isinstance(self.get_optical_element().get_surface_shape(), NumericalMesh):
             raise ValueError("Wrong Optical Element: only Surface Data shape is accepted")
@@ -83,8 +86,11 @@ class S4NumericalMeshMirrorElement(S4MirrorElement):
         txt += "\nfrom syned.beamline.element_coordinates import ElementCoordinates"
         txt += "\ncoordinates = ElementCoordinates(p=%g, q=%g, angle_radial=%g, angle_azimuthal=%g, angle_radial_out=%g)" % \
                (coordinates.p(), coordinates.q(), coordinates.angle_radial(), coordinates.angle_azimuthal(), coordinates.angle_radial_out())
+
+        txt += self.to_python_code_movements()
+
         txt += "\nfrom shadow4.beamline.optical_elements.mirrors.s4_numerical_mesh_mirror import S4NumericalMeshMirrorElement"
-        txt += "\nbeamline_element = S4NumericalMeshMirrorElement(optical_element=optical_element,coordinates=coordinates,input_beam=beam)"
+        txt += "\nbeamline_element = S4NumericalMeshMirrorElement(optical_element=optical_element, coordinates=coordinates, movements=movements, input_beam=beam)"
         txt += "\n\nbeam, mirr = beamline_element.trace_beam()"
         return txt
 

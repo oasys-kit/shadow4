@@ -8,6 +8,7 @@ from syned.beamline.optical_elements.mirrors.mirror import Mirror
 from shadow4.physical_models.prerefl.prerefl import PreRefl
 from shadow4.beamline.s4_beamline_element import S4BeamlineElement
 from shadow4.beam.s4_beam import S4Beam
+from shadow4.beamline.s4_beamline_element_movements import S4BeamlineElementMovements
 
 class S4Mirror(Mirror):
 
@@ -93,9 +94,11 @@ class S4MirrorElement(S4BeamlineElement):
     def __init__(self,
                  optical_element : S4Mirror = None,
                  coordinates : ElementCoordinates = None,
+                 movements : S4BeamlineElementMovements = None,
                  input_beam : S4Beam = None):
         super().__init__(optical_element=optical_element if optical_element is not None else S4Mirror(),
                          coordinates=coordinates if coordinates is not None else ElementCoordinates(),
+                         movements=movements,
                          input_beam=input_beam)
     
     def trace_beam(self, **params):
@@ -116,15 +119,16 @@ class S4MirrorElement(S4BeamlineElement):
         input_beam.rotate(theta_grazing1, axis=1)
         input_beam.translation([0.0, -p * numpy.cos(theta_grazing1), p * numpy.sin(theta_grazing1)])
 
-        # mirror movement: todo: obtain parameters...
-        F_MOVE = 0
-        X_ROT = numpy.radians(1e-3)
-        Y_ROT = 0
-        Z_ROT = numpy.radians(1)
-        OFFX = 0
-        OFFY = 0
-        OFFZ = 0
-        if F_MOVE: input_beam.rot_for(OFFX=OFFX, OFFY=OFFY, OFFZ=OFFZ, X_ROT=X_ROT, Y_ROT=Y_ROT, Z_ROT=Z_ROT)
+        # mirror movement:
+        movements = self.get_movements()
+        if movements is not None:
+            if movements.f_move:
+                input_beam.rot_for(OFFX=movements.offset_x,
+                                   OFFY=movements.offset_y,
+                                   OFFZ=movements.offset_z,
+                                   X_ROT=movements.rotation_x,
+                                   Y_ROT=movements.rotation_y,
+                                   Z_ROT=movements.rotation_z)
 
         #
         # reflect beam in the mirror surface
@@ -135,7 +139,14 @@ class S4MirrorElement(S4BeamlineElement):
 
         footprint, normal = self.apply_local_reflection(input_beam)
 
-        if F_MOVE: footprint.rot_back(OFFX=OFFX, OFFY=OFFY, OFFZ=OFFZ, X_ROT=X_ROT, Y_ROT=Y_ROT, Z_ROT=Z_ROT)
+        if movements is not None:
+            if movements.f_move:
+                footprint.rot_back(OFFX=movements.offset_x,
+                                   OFFY=movements.offset_y,
+                                   OFFZ=movements.offset_z,
+                                   X_ROT=movements.rotation_x,
+                                   Y_ROT=movements.rotation_y,
+                                   Z_ROT=movements.rotation_z)
         #
         # apply mirror boundaries
         #
@@ -377,7 +388,11 @@ if __name__ == "__main__":
     coordinates = ElementCoordinates(p=10, q=6, angle_radial=1.54985, angle_azimuthal=0, angle_radial_out=1.54985)
     from shadow4.beamline.optical_elements.mirrors.s4_ellipsoid_mirror import S4EllipsoidMirrorElement
 
-    beamline_element = S4EllipsoidMirrorElement(optical_element=optical_element, coordinates=coordinates,
+    from shadow4.beamline.s4_beamline_element_movements import S4BeamlineElementMovements
+    movements = S4BeamlineElementMovements(f_move=1,rotation_x=numpy.radians(1e-3),rotation_z=numpy.radians(1))
+    beamline_element = S4EllipsoidMirrorElement(optical_element=optical_element,
+                                                coordinates=coordinates,
+                                                movements=movements,
                                                 input_beam=beam)
 
     beam, mirr = beamline_element.trace_beam()
@@ -389,3 +404,5 @@ if __name__ == "__main__":
         # plot_scatter(beam.get_photon_energy_eV(nolost=1), beam.get_column(23, nolost=1),
         #              title='(Intensity,Photon Energy)', plot_histograms=0)
         plot_scatter(1e6 * beam.get_column(1, nolost=1), 1e6 * beam.get_column(3, nolost=1), title='(X,Z) in microns')
+
+    print(beamline_element.to_python_code())
