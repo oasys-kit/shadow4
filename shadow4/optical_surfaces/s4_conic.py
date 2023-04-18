@@ -9,7 +9,7 @@ from numpy.testing import assert_equal, assert_almost_equal
 
 
 from shadow4.tools.arrayofvectors import vector_cross, vector_dot, vector_multiply_scalar, vector_sum, vector_diff
-from shadow4.tools.arrayofvectors import vector_modulus_square, vector_norm, vector_reflection
+from shadow4.tools.arrayofvectors import vector_modulus_square, vector_norm
 
 # OE surface in form of conic equation:
 #      ccc[0]*X^2 + ccc[1]*Y^2 + ccc[2]*Z^2 +
@@ -881,7 +881,7 @@ class S4Conic(S4OpticalSurface):
         # ; reflection
         # ;
 
-        v2 = vector_reflection(v1, normal)
+        v2 = self.vector_reflection(v1, normal)
 
         # ;
         # ; writes the mirr.XX file
@@ -898,6 +898,22 @@ class S4Conic(S4OpticalSurface):
 
         return newbeam, normal
 
+    # todo: remove and use shadow4.tools.arrayofvectors.vector_reflection *** CHECK SHAPES BEFORE DOING IT, IT MAY NEED TRANSPOSE ****
+    def vector_reflection(self, v1, normal):
+        # \vec{r} = \vec{i} - 2 (\vec{i} \vec{n}) \vec{n}
+        # \vec{r} = \vec{i} - 2 tmp3
+        tmp = v1 * normal
+        tmp2 = tmp[0, :] + tmp[1, :] + tmp[2, :]
+        tmp3 = normal.copy()
+
+        for jj in (0, 1, 2):
+            tmp3[jj, :] = tmp3[jj, :] * tmp2
+
+        v2 = v1 - 2 * tmp3
+        v2mod = numpy.sqrt(v2[0, :] ** 2 + v2[1, :] ** 2 + v2[2, :] ** 2)
+        v2 /= v2mod
+
+        return v2
     #
     # refractor routines
     #
