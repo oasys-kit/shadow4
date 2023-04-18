@@ -74,7 +74,7 @@ def vector_reflection(v1,normal): # copied from s4_conic()
     normal_norm = vector_norm(normal)
     return v1 - 2 * vector_multiply_scalar( normal_norm, vector_dot(v1, normal_norm))
 
-def vector_refraction(vin, normal, n1, n2):
+def vector_refraction(vin, normal, n1, n2, do_check=0):
     # http://www.starkeffects.com/snells-law-vector.shtml
 
     vin_norm = vector_norm(vin)
@@ -83,8 +83,17 @@ def vector_refraction(vin, normal, n1, n2):
     n_cross_vin = vector_cross(normal_norm, vin_norm)
     n_opp_cross_vin = vector_cross(normal_norm * (-1), vin_norm)
 
-    sq2 = 1 - vector_multiply_scalar(vector_dot(n_cross_vin, n_cross_vin), (n1/n2)**2)
-    vout = (n1/n2) * vector_cross(normal_norm,n_opp_cross_vin) - vector_multiply_scalar(normal_norm, numpy.sqrt(sq2))
+    # sq2 = 1 - vector_multiply_scalar(vector_dot(n_cross_vin, n_cross_vin), (n1/n2)**2)
+    sq2 = 1 - vector_dot(n_cross_vin, n_cross_vin) *  (n1 / n2) ** 2
+    # vout = (n1/n2) * vector_cross(normal_norm,n_opp_cross_vin) - vector_multiply_scalar(normal_norm, numpy.sqrt(sq2))
+    vout = vector_multiply_scalar(vector_cross(normal_norm, n_opp_cross_vin), (n1 / n2)) - vector_multiply_scalar(normal_norm, numpy.sqrt(sq2))
+
+    if do_check:
+        theta1 = numpy.arccos( vector_dot(vin_norm, normal_norm) * (-1))
+        theta2 = numpy.arccos(vector_dot(vout, vector_multiply_scalar(normal_norm, -1)))
+        print(">>>>> theta1: ", numpy.degrees(theta1))
+        print(">>>>> theta2: ", numpy.degrees(theta2))
+        print(">>>>> theta2 check: ", numpy.degrees(numpy.arcsin(n1/n2*numpy.sin(theta1))))
     return vout
 
 if __name__ == "__main__":
@@ -113,12 +122,17 @@ if __name__ == "__main__":
     # refraction
     npoints = 1
     n = numpy.zeros((npoints,3))
-    n[:,2] = 1.0
+    n[:,2] = -1.0
 
     v1 = numpy.zeros((npoints, 3))
     v1[:, 0] = numpy.sqrt(2) / 2
-    v1[:, 2] = -numpy.sqrt(2) / 2
+    v1[:, 2] = numpy.sqrt(2) / 2
     v2 = vector_refraction(v1, n, n1=1.0, n2=1.5)
     print('v1: ', v1)
     print('n: ', n)
     print('v2: ', v2)
+
+    # http://www.starkeffects.com/snells-law-vector.shtml
+    assert (numpy.abs(v2[0][0] - 0.471) < 1e-3)
+    assert (numpy.abs(v2[0][1] - 0) < 1e-3)
+    assert (numpy.abs(v2[0][2] - 0.882) < 1e-3)
