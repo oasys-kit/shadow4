@@ -954,7 +954,11 @@ class S4Beam(object):
             self.rays[:,newtoroti[1]] = -a1[:,newtoroti[0]] * sinth + a1[:,newtoroti[1]] * costh
             self.rays[:,newaxisi]     =  a1[:,newaxisi]
 
-    def change_to_image_reference_system(self, theta, T_IMAGE, rad=True, refraction_index=1.0):
+    def change_to_image_reference_system(self, theta, T_IMAGE, rad=True,
+                                         refraction_index=1.0,
+                                         apply_attenuation=0,
+                                         linear_attenuation_coefficient=0.0, # in SI, i.e. m^-1
+                                         ):
         """
         Implements the propagation from the mirror reference frame to the screen (image) reference.
         Mimics IMREF and IMAGE1 subrutines in shadow3
@@ -1040,6 +1044,15 @@ class S4Beam(object):
 
         # optical path col 13
         self.rays[:, 12] += numpy.abs(DIST) * refraction_index
+
+        if apply_attenuation:
+            att1 = numpy.exp(-numpy.abs(DIST) * linear_attenuation_coefficient)
+            self.rays[:, 7 - 1 ] *= att1
+            self.rays[:, 8 - 1 ] *= att1
+            self.rays[:, 9 - 1 ] *= att1
+            self.rays[:, 16 - 1] *= att1
+            self.rays[:, 17 - 1] *= att1
+            self.rays[:, 18 - 1] *= att1
 
     @classmethod
     def get_UVW(self, X_ROT=0, Y_ROT=0, Z_ROT=0): # in radians!!
