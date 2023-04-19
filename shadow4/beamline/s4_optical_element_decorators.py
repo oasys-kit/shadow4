@@ -339,7 +339,6 @@ class S4RefractiveOpticalElementDecorator(S4ConicOpticalElementDecorator):
 
         return conic_coefficients
 
-#todo (suggestion srio) can we remove S4RefractiveOpticalElementDecorator and merge the code here? It is not used elsewhere
 class S4LensOpticalElementDecorator(S4RefractiveOpticalElementDecorator):
     def __init__(self,
                  surface_shape=1,      # now: 0=plane, 1=sphere, 2=parabola, 3=conic coefficients
@@ -367,7 +366,7 @@ class S4LensOpticalElementDecorator(S4RefractiveOpticalElementDecorator):
                                                             attenuation_coefficient,
                                                             None,
                                                             None)
-        conic_coefficients = self._get_conic_coefficients_of_both_interfaces(surface_shape,
+        conic_coefficients = self._get_conic_coefficients(surface_shape,
                                                           radius,
                                                           cylinder_angle,
                                                           convex_to_the_beam,
@@ -376,7 +375,7 @@ class S4LensOpticalElementDecorator(S4RefractiveOpticalElementDecorator):
         print(">>>>> conic_coefficients: ", conic_coefficients)
         self._curved_surface_shape = [Conic(conic_coefficients=conic_coefficients), Conic(conic_coefficients=conic_coefficients)]
 
-    def _get_conic_coefficients_of_both_interfaces(self, surface_shape, radius, cylinder_angle, convex_to_the_beam, conic_coefficients):
+    def _get_conic_coefficients(self, surface_shape, radius, cylinder_angle, convex_to_the_beam, conic_coefficients):
         conic_coefficients_1 = super(S4LensOpticalElementDecorator, self)._get_conic_coefficients(surface_shape,
                                                                                                  radius,
                                                                                                  cylinder_angle,
@@ -389,5 +388,4 @@ class S4LensOpticalElementDecorator(S4RefractiveOpticalElementDecorator):
         return [conic_coefficients_1, conic_coefficients_2]
 
     def get_optical_surface_instance(self):
-        return [S4Conic.initialize_from_coefficients(numpy.array(surface_shape.get_conic_coefficients())) \
-                for surface_shape in self.get_surface_shape_instance()]
+        return [S4Conic.initialize_from_coefficients(numpy.array(surface_shape.get_conic_coefficients())) for surface_shape in self.get_surface_shape_instance()]
