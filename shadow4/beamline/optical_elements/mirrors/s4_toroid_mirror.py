@@ -6,7 +6,7 @@ from shadow4.beamline.s4_beamline_element_movements import S4BeamlineElementMove
 
 class S4ToroidMirror(S4Mirror, S4ToroidOpticalElementDecorator):
     def __init__(self,
-                 name="Toroidal Mirror",
+                 name="Toroid Mirror",
                  boundary_shape=None,
                  surface_calculation=SurfaceCalculation.EXTERNAL,
                  min_radius=0.1,
@@ -54,8 +54,8 @@ class S4ToroidMirror(S4Mirror, S4ToroidOpticalElementDecorator):
         txt = self.to_python_code_boundary_shape()
         txt_pre = """
         
-from shadow4.beamline.optical_elements.mirrors.s4_toroidal_mirror import S4ToroidalMirror
-optical_element = S4ToroidalMirror(name='{name:s}',boundary_shape=boundary_shape,
+from shadow4.beamline.optical_elements.mirrors.s4_toroid_mirror import S4ToroidMirror
+optical_element = S4ToroidMirror(name='{name:s}',boundary_shape=boundary_shape,
     surface_calculation={surface_calculation:d},
     min_radius={min_radius:f},maj_radius={maj_radius:f},
     p_focus={p_focus:f},q_focus={q_focus:f},grazing_angle={grazing_angle:f},
@@ -71,7 +71,7 @@ optical_element = S4ToroidalMirror(name='{name:s}',boundary_shape=boundary_shape
         return footprint, normal
 
 
-class S4ToroidalMirrorElement(S4MirrorElement):
+class S4ToroidMirrorElement(S4MirrorElement):
     def __init__(self,
                  optical_element : S4ToroidMirror = None,
                  coordinates : ElementCoordinates = None,
@@ -94,12 +94,12 @@ class S4ToroidalMirrorElement(S4MirrorElement):
 
         txt += self.to_python_code_movements()
 
-        txt += "\nfrom shadow4.beamline.optical_elements.mirrors.s4_toroidal_mirror import S4ToroidalMirrorElement"
-        txt += "\nbeamline_element = S4ToroidalMirrorElement(optical_element=optical_element, coordinates=coordinates, movements=movements, input_beam=beam)"
+        txt += "\nfrom shadow4.beamline.optical_elements.mirrors.s4_toroid_mirror import S4ToroidMirrorElement"
+        txt += "\nbeamline_element = S4ToroidMirrorElement(optical_element=optical_element, coordinates=coordinates, movements=movements, input_beam=beam)"
         txt += "\n\nbeam, mirr = beamline_element.trace_beam()"
         return txt
 
 if __name__ == "__main__":
     a = S4ToroidMirror(refraction_index=6j)
-    b= S4ToroidalMirrorElement(optical_element=a)
+    b= S4ToroidMirrorElement(optical_element=a)
     print(b.to_python_code())
