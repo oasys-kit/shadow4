@@ -1046,7 +1046,9 @@ class S4Beam(object):
         self.rays[:, 12] += numpy.abs(DIST) * refraction_index
 
         if apply_attenuation:
-            att1 = numpy.exp(-numpy.abs(DIST) * linear_attenuation_coefficient)
+            att1 = numpy.sqrt(numpy.exp(-numpy.abs(DIST) * linear_attenuation_coefficient))
+            print(">>> mu (image space): ", linear_attenuation_coefficient)
+            print(">>> attenuation amplitudes (image space): ", att1)
             self.rays[:, 7 - 1 ] *= att1
             self.rays[:, 8 - 1 ] *= att1
             self.rays[:, 9 - 1 ] *= att1

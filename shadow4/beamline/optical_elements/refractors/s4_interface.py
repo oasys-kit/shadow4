@@ -135,25 +135,25 @@ class S4Interface(Interface):
 
 
         if self._f_r_ind == 0:
-            attenuation_coefficient_object = self._r_attenuation_obj
+            attenuation_coefficient_object = self._r_attenuation_obj # already in m^-1
             attenuation_coefficient_image  = self._r_attenuation_ima
         elif self._f_r_ind == 1:
             preprefl1 = PreRefl()
             preprefl1.read_preprocessor_file(self._file_r_ind_obj)
-            attenuation_coefficient_object = (preprefl1.get_attenuation_coefficient(photon_energy_eV))
+            attenuation_coefficient_object = (preprefl1.get_attenuation_coefficient(photon_energy_eV)) * 100 # in m^-1
             attenuation_coefficient_image  = self._r_attenuation_ima * numpy.ones_like(attenuation_coefficient_object)
         elif self._f_r_ind == 2:
             preprefl2 = PreRefl()
             preprefl2.read_preprocessor_file(self._file_r_ind_ima)
-            attenuation_coefficient_image = (preprefl2.get_attenuation_coefficient(photon_energy_eV))
-            attenuation_coefficient_object = self._r_ind_obj * numpy.ones_like(attenuation_coefficient_image)
+            attenuation_coefficient_image = (preprefl2.get_attenuation_coefficient(photon_energy_eV)) * 100
+            attenuation_coefficient_object = self._r_attenuation_obj * numpy.ones_like(attenuation_coefficient_image)
         elif self._f_r_ind == 3:
             preprefl1 = PreRefl()
             preprefl2 = PreRefl()
             preprefl1.read_preprocessor_file(self._file_r_ind_obj)
             preprefl2.read_preprocessor_file(self._file_r_ind_ima)
-            attenuation_coefficient_object = (preprefl1.get_attenuation_coefficient(photon_energy_eV))
-            attenuation_coefficient_image  = (preprefl2.get_attenuation_coefficient(photon_energy_eV))
+            attenuation_coefficient_object = (preprefl1.get_attenuation_coefficient(photon_energy_eV)) * 100
+            attenuation_coefficient_image  = (preprefl2.get_attenuation_coefficient(photon_energy_eV)) * 100
 
         return attenuation_coefficient_object, attenuation_coefficient_image
 
@@ -190,8 +190,8 @@ class S4InterfaceElement(S4BeamlineElement):
         soe = self.get_optical_element() #._optical_element_syned
         # print(">>> CCC", soe.get_surface_shape().get_conic_coefficients())
 
-        # TODO: no check for total reflection is done...
-        # TODO: implement correctly in shadow4 via Fresnel equations for the transmitted beam
+        # TODO (maybe): no check for total reflection is done...
+        # TODO (maybe): implement correctly in shadow4 via Fresnel equations for the transmitted beam
 
         footprint, normal = self.apply_local_refraction(input_beam)
 
@@ -199,9 +199,6 @@ class S4InterfaceElement(S4BeamlineElement):
         # apply mirror boundaries
         #
         footprint.apply_boundaries_syned(soe.get_boundary_shape(), flag_lost_value=flag_lost_value)
-        #
-        # TODO" apply lens absorption
-        #
 
         #
         # from element reference system to image plane
@@ -212,8 +209,7 @@ class S4InterfaceElement(S4BeamlineElement):
         oe = self.get_optical_element()
         _, n2 = oe.get_refraction_indices(energy1)
 
-        _, mu2 = oe.get_attenuation_coefficients(energy1)
-        mu2 *= 100 # in m^-1
+        _, mu2 = oe.get_attenuation_coefficients(energy1) # in m^-1
 
         output_beam.change_to_image_reference_system(theta_grazing2, q,
                                                      refraction_index=n2,

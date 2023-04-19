@@ -905,7 +905,13 @@ class S4Conic(S4OpticalSurface):
     # refractor routines
     #
 
-    def apply_refraction_on_beam(self, newbeam, refraction_index_object, refraction_index_image):
+    def apply_refraction_on_beam(self,
+                                 newbeam,
+                                 refraction_index_object,
+                                 refraction_index_image,
+                                 apply_attenuation=0,
+                                 linear_attenuation_coefficient=0.0,  # in SI, i.e. m^-1
+                                 ):
 
         # ;
         # ; TRACING...
@@ -960,6 +966,17 @@ class S4Conic(S4OpticalSurface):
         newbeam.set_column(10, flag)
         newbeam.set_column(11, k_in_mod * refraction_index_image / refraction_index_object)
         newbeam.set_column(13, optical_path + t * refraction_index_object)
+
+        if apply_attenuation:
+            att1 = numpy.sqrt(numpy.exp(-numpy.abs(t) * linear_attenuation_coefficient))
+            print(">>> mu (object space): ", linear_attenuation_coefficient)
+            print(">>> attenuation of amplitides (object space): ", att1)
+            newbeam.rays[:, 7 - 1 ] *= att1
+            newbeam.rays[:, 8 - 1 ] *= att1
+            newbeam.rays[:, 9 - 1 ] *= att1
+            newbeam.rays[:, 16 - 1] *= att1
+            newbeam.rays[:, 17 - 1] *= att1
+            newbeam.rays[:, 18 - 1] *= att1
 
         return newbeam, normal
 
