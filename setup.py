@@ -1,9 +1,10 @@
 # coding: utf-8
 # /*##########################################################################
 #
-# Copyright (c) 2016 European Synchrotron Radiation Facility
-# Copyright (c) 2019 Lawrence Berkeley National Laboratory
-# Copyright (c) 2020 European Synchrotron Radiation Facility
+# Copyright (c) 2016-2019 European Synchrotron Radiation Facility
+# Copyright (c) 2019-2020 Lawrence Berkeley National Laboratory
+# Copyright (c) 2020-now European Synchrotron Radiation Facility
+# Copyright (c) 2023-now Argonne National Laboratory
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -29,22 +30,22 @@
 # Memorandum: 
 #
 # Install from sources: 
-#     git clone https://github.com/srio/shadow4
+#     git clone https://github.com/oasys-kit/shadow4
 #     cd shadow4
 #     python -m pip install -e . --no-deps --no-binary :all:
 #
 # Upload to pypi (when uploading, increment the version number):
 #     python setup.py register (only once, not longer needed)
 #     python setup.py sdist
-#     python setup.py upload
+#     python -m twine upload dist/...
 #          
 # Install from pypi:
-#     pip install <name>
+#     pip install OASYS1-shadow4
 #
 
-__authors__ = ["M Sanchez del Rio - ESRF - LBNL - ESRF "]
+__authors__ = ["M Sanchez del Rio, Luca Rebuffi"]
 __license__ = "MIT"
-__date__ = "2016-2020"
+__date__ = "2016-now"
 
 from setuptools import setup
 
@@ -83,9 +84,9 @@ INSTALL_REQUIRES = (
 setup(name='shadow4',
       version='0.1.11',
       description='shadow implementation in python',
-      author='Manuel Sanchez del Rio',
-      author_email='srio@esrf.eu, ',
-      url='https://github.com/srio/shadow4/',
+      author='Manuel Sanchez del Rio, Luca Rebuffi',
+      author_email='srio at esrf dot eu, ',
+      url='https://github.com/oasys-kit/shadow4/',
       packages=PACKAGES,
       install_requires=INSTALL_REQUIRES,
      )
