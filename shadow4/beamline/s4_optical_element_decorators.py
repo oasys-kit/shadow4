@@ -339,6 +339,7 @@ class S4RefractiveOpticalElementDecorator(S4ConicOpticalElementDecorator):
 
         return conic_coefficients
 
+#todo (suggestion srio) can we remove S4RefractiveOpticalElementDecorator and merge the code here? It is not used elsewhere
 class S4LensOpticalElementDecorator(S4RefractiveOpticalElementDecorator):
     def __init__(self,
                  surface_shape=1,      # now: 0=plane, 1=sphere, 2=parabola, 3=conic coefficients
@@ -366,20 +367,22 @@ class S4LensOpticalElementDecorator(S4RefractiveOpticalElementDecorator):
                                                             attenuation_coefficient,
                                                             None,
                                                             None)
-        conic_coefficients = self._get_conic_coefficients(surface_shape,
+        conic_coefficients = self._get_conic_coefficients_of_both_interfaces(surface_shape,
                                                           radius,
                                                           cylinder_angle,
                                                           convex_to_the_beam,
                                                           conic_coefficients)
 
-        self._curved_surface_shape = [Conic(conic_coefficients=conic_coefficients[0].tolist()), Conic(conic_coefficients=conic_coefficients[1].tolist())]
+        print(">>>>> conic_coefficients: ", conic_coefficients)
+        self._curved_surface_shape = [Conic(conic_coefficients=conic_coefficients), Conic(conic_coefficients=conic_coefficients)]
 
-    def _get_conic_coefficients(self, surface_shape, radius, cylinder_angle, convex_to_the_beam, conic_coefficients):
+    def _get_conic_coefficients_of_both_interfaces(self, surface_shape, radius, cylinder_angle, convex_to_the_beam, conic_coefficients):
         conic_coefficients_1 = super(S4LensOpticalElementDecorator, self)._get_conic_coefficients(surface_shape,
                                                                                                  radius,
                                                                                                  cylinder_angle,
                                                                                                  convex_to_the_beam,
                                                                                                  conic_coefficients)
+
         conic_coefficients_2 = conic_coefficients_1.copy()
         conic_coefficients_2[8] *= -1
 
