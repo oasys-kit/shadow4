@@ -104,7 +104,7 @@ def _get_lens_interfaces(lens_optical_surfaces, boundary_shape, ri_calculation_m
 
         half_lens_2 = S4ConicInterface(
             name="Second half-lens",
-            boundary_shape=boundary_shape(),
+            boundary_shape=boundary_shape,
             material_object=None,
             material_image=None,
             f_r_ind=0,  # source of optical constants, from constant value or PREREFL preprocessor (file):
@@ -123,7 +123,7 @@ def _get_lens_interfaces(lens_optical_surfaces, boundary_shape, ri_calculation_m
     else:
         half_lens_1 = S4ConicInterface(
             name="First half-lens",
-            boundary_shape=boundary_shape(),
+            boundary_shape=boundary_shape,
             material_object=None,
             material_image=None,
             f_r_ind=2,  # source of optical constants, from constant value or PREREFL preprocessor (file):
@@ -142,7 +142,7 @@ def _get_lens_interfaces(lens_optical_surfaces, boundary_shape, ri_calculation_m
 
         half_lens_2 = S4ConicInterface(
             name="Second half-lens",
-            boundary_shape=boundary_shape(),
+            boundary_shape=boundary_shape,
             material_object=None,
             material_image=None,
             f_r_ind=1,  # source of optical constants, from constant value or PREREFL preprocessor (file):

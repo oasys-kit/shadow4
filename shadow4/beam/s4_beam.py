@@ -6,7 +6,7 @@ import h5py
 import time
 import os
 
-from syned.beamline.shape import Rectangle, Ellipse, TwoEllipses
+from syned.beamline.shape import Rectangle, Ellipse, TwoEllipses, Circle
 
 # IMPORTANT: Column 11 (index 10) is wavenumber (cm^-1) as internally in Shadow.
 #            Photon energy in eV is now column 26 (index 25).
@@ -1455,6 +1455,15 @@ class S4Beam(object):
             self.crop_rectangle(1, x_left, x_right, 2, y_bottom, y_top, flag_lost_value=flag_lost_value)
         elif isinstance(syned_boundary_object, Ellipse):
             a_axis_min, a_axis_max, b_axis_min, b_axis_max = syned_boundary_object.get_boundaries()
+            self.crop_ellipse(1, a_axis_min, a_axis_max, 2, b_axis_min, b_axis_max, flag_lost_value=flag_lost_value)
+        elif isinstance(syned_boundary_object, Circle):
+            radius, x_center, y_center = syned_boundary_object.get_boundaries()
+
+            a_axis_min = x_center - radius
+            a_axis_max = x_center + radius
+            b_axis_min = y_center - radius
+            b_axis_max = y_center + radius
+
             self.crop_ellipse(1, a_axis_min, a_axis_max, 2, b_axis_min, b_axis_max, flag_lost_value=flag_lost_value)
         elif isinstance(syned_boundary_object, TwoEllipses):
             a1_axis_min, a1_axis_max, b1_axis_min, b1_axis_max, \
