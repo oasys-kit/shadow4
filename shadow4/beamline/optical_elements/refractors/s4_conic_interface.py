@@ -29,9 +29,9 @@ class S4ConicInterface(S4Interface, S4ConicOpticalElementDecorator):
 
         S4ConicOpticalElementDecorator.__init__(self, conic_coefficients)
         S4Interface.__init__(self,
-                             name,
-                             boundary_shape,
-                             self._curved_surface_shape,
+                             name=name,
+                             boundary_shape=boundary_shape,
+                             surface_shape=self._curved_surface_shape,
                              material_object=material_object,
                              material_image=material_image,
                              f_r_ind=f_r_ind,

@@ -5,9 +5,9 @@ from syned.beamline.optical_elements.refractors.lens import Lens
 from shadow4.beam.s4_beam import S4Beam
 from shadow4.beamline.s4_beamline_element import S4BeamlineElement
 from shadow4.beamline.optical_elements.refractors.s4_conic_interface import S4ConicInterface, S4ConicInterfaceElement
-from shadow4.beamline.s4_optical_element_decorators import S4LensOpticalElementDecorator
+from shadow4.beamline.s4_optical_element_decorators import S4RefractiveLensOpticalElementDecorator
 
-class S4Lens(Lens, S4LensOpticalElementDecorator):
+class S4Lens(Lens, S4RefractiveLensOpticalElementDecorator):
 
     def __init__(self,
                  name="Undefined",
@@ -30,27 +30,23 @@ class S4Lens(Lens, S4LensOpticalElementDecorator):
                  radius=500e-6,        # for surface_shape=(1,2): lens radius [m] (for spherical, or radius at the tip for paraboloid)
                  conic_coefficients=[0.0]*10,   # for surface_shape = 3: the conic coefficients
                  ):
-        S4LensOpticalElementDecorator.__init__(self,
-                                               surface_shape,
-                                               convex_to_the_beam,
-                                               cylinder_angle,
-                                               ri_calculation_mode,
-                                               prerefl_file,
-                                               refraction_index,
-                                               attenuation_coefficient,
-                                               radius,
-                                               conic_coefficients)
-
-        surface_shapes = self.get_surface_shape_instance()
-
+        S4RefractiveLensOpticalElementDecorator.__init__(self,
+                                                         surface_shape,
+                                                         convex_to_the_beam,
+                                                         cylinder_angle,
+                                                         ri_calculation_mode,
+                                                         prerefl_file,
+                                                         refraction_index,
+                                                         attenuation_coefficient,
+                                                         radius,
+                                                         conic_coefficients)
         Lens.__init__(self,
                       name=name,
-                      surface_shape1=surface_shapes[0],
-                      surface_shape2=surface_shapes[1],
+                      surface_shape1=self.get_surface_shape_instance()[0],
+                      surface_shape2=self.get_surface_shape_instance()[1],
                       boundary_shape=boundary_shape,
                       material=material,
                       thickness=thickness)
-
 
         self.__inputs = {
             "name": name,
@@ -76,89 +72,96 @@ class S4Lens(Lens, S4LensOpticalElementDecorator):
         pass
 
     def get_lens_interfaces(self):
-        interface_shapes = self.get_optical_surface_instance()
+        return _get_lens_interfaces(lens_optical_surfaces=self.get_optical_surface_instance(),
+                                    boundary_shape=self.get_boundary_shape(),
+                                    ri_calculation_mode=self._ri_calculation_mode,
+                                    refraction_index=self._refraction_index,
+                                    attenuation_coefficient=self._attenuation_coefficient,
+                                    prerefl_file=self._prerefl_file)
 
-        conic_coefficients1 = interface_shapes[0].get_coefficients()
-        conic_coefficients2 = interface_shapes[1].get_coefficients()
+def _get_lens_interfaces(lens_optical_surfaces, boundary_shape, ri_calculation_mode, refraction_index, attenuation_coefficient, prerefl_file):
+    conic_coefficients1 = lens_optical_surfaces[0].get_coefficients()
+    conic_coefficients2 = lens_optical_surfaces[1].get_coefficients()
 
-        if self._ri_calculation_mode == 0:
-            half_lens_1 = S4ConicInterface(
-                name="First half-lens",
-                boundary_shape=self.get_boundary_shape(),
-                material_object=None,
-                material_image=None,
-                f_r_ind=0,  # source of optical constants, from constant value or PREREFL preprocessor (file):
-                            #      (0) constant value in both object and image spaces
-                            #      (1) file in object space, constant value in image space
-                            #      (2) constant value in object space, file in image space
-                            #      (3) file in both object and image space
-                r_ind_obj=1.0,  # (for f_r_ind=0,2): index of refraction in object space.
-                r_ind_ima=self._refraction_index,  # (for f_r_ind=0,1): index of refraction in image space.
-                r_attenuation_obj=0.0,  # (for f_r_ind=0,2): attenuation coefficient in object space. Units of UserUnitLength^(-1)
-                r_attenuation_ima=self._attenuation_coefficient,  # (for f_r_ind=0,1): attenuation coefficient in image space. Units of UserUnitLength^(-1)
-                file_r_ind_obj="",  # (for f_r_ind=1,3): file generated by PREREFL
-                file_r_ind_ima="",  # (for f_r_ind=2,3): file generated by PREREFL
-                conic_coefficients=conic_coefficients1,
-            )
+    if ri_calculation_mode == 0:
+        half_lens_1 = S4ConicInterface(
+            name="First half-lens",
+            boundary_shape=boundary_shape,
+            material_object=None,
+            material_image=None,
+            f_r_ind=0,  # source of optical constants, from constant value or PREREFL preprocessor (file):
+            #      (0) constant value in both object and image spaces
+            #      (1) file in object space, constant value in image space
+            #      (2) constant value in object space, file in image space
+            #      (3) file in both object and image space
+            r_ind_obj=1.0,  # (for f_r_ind=0,2): index of refraction in object space.
+            r_ind_ima=refraction_index,  # (for f_r_ind=0,1): index of refraction in image space.
+            r_attenuation_obj=0.0,  # (for f_r_ind=0,2): attenuation coefficient in object space. Units of UserUnitLength^(-1)
+            r_attenuation_ima=attenuation_coefficient,  # (for f_r_ind=0,1): attenuation coefficient in image space. Units of UserUnitLength^(-1)
+            file_r_ind_obj="",  # (for f_r_ind=1,3): file generated by PREREFL
+            file_r_ind_ima="",  # (for f_r_ind=2,3): file generated by PREREFL
+            conic_coefficients=conic_coefficients1,
+        )
 
-            half_lens_2 = S4ConicInterface(
-                name="Second half-lens",
-                boundary_shape=self.get_boundary_shape(),
-                material_object=None,
-                material_image=None,
-                f_r_ind=0,               # source of optical constants, from constant value or PREREFL preprocessor (file):
-                                         #      (0) constant value in both object and image spaces
-                                         #      (1) file in object space, constant value in image space
-                                         #      (2) constant value in object space, file in image space
-                                         #      (3) file in both object and image space
-                r_ind_obj=self._refraction_index,           # (for f_r_ind=0,2): index of refraction in object space.
-                r_ind_ima=1.0,           # (for f_r_ind=0,1): index of refraction in image space.
-                r_attenuation_obj=self._attenuation_coefficient,   # (for f_r_ind=0,2): attenuation coefficient in object space. Units of UserUnitLength^(-1)
-                r_attenuation_ima=0.0,   # (for f_r_ind=0,1): attenuation coefficient in image space. Units of UserUnitLength^(-1)
-                file_r_ind_obj="",       # (for f_r_ind=1,3): file generated by PREREFL
-                file_r_ind_ima="",       # (for f_r_ind=2,3): file generated by PREREFL
-                conic_coefficients=conic_coefficients2,
-            )
-        else:
-            half_lens_1 = S4ConicInterface(
-                name="First half-lens",
-                boundary_shape=self.get_boundary_shape(),
-                material_object=None,
-                material_image=None,
-                f_r_ind=2,  # source of optical constants, from constant value or PREREFL preprocessor (file):
-                            #      (0) constant value in both object and image spaces
-                            #      (1) file in object space, constant value in image space
-                            #      (2) constant value in object space, file in image space
-                            #      (3) file in both object and image space
-                r_ind_obj=1.0,  # (for f_r_ind=0,2): index of refraction in object space.
-                r_ind_ima=1.0,  # (for f_r_ind=0,1): index of refraction in image space.
-                r_attenuation_obj=0.0,  # (for f_r_ind=0,2): attenuation coefficient in object space. Units of UserUnitLength^(-1)
-                r_attenuation_ima=0.0,  # (for f_r_ind=0,1): attenuation coefficient in image space. Units of UserUnitLength^(-1)
-                file_r_ind_obj="",  # (for f_r_ind=1,3): file generated by PREREFL
-                file_r_ind_ima=self._prerefl_file,  # (for f_r_ind=2,3): file generated by PREREFL
-                conic_coefficients=conic_coefficients1,
-            )
+        half_lens_2 = S4ConicInterface(
+            name="Second half-lens",
+            boundary_shape=boundary_shape(),
+            material_object=None,
+            material_image=None,
+            f_r_ind=0,  # source of optical constants, from constant value or PREREFL preprocessor (file):
+            #      (0) constant value in both object and image spaces
+            #      (1) file in object space, constant value in image space
+            #      (2) constant value in object space, file in image space
+            #      (3) file in both object and image space
+            r_ind_obj=refraction_index,  # (for f_r_ind=0,2): index of refraction in object space.
+            r_ind_ima=1.0,  # (for f_r_ind=0,1): index of refraction in image space.
+            r_attenuation_obj=attenuation_coefficient,  # (for f_r_ind=0,2): attenuation coefficient in object space. Units of UserUnitLength^(-1)
+            r_attenuation_ima=0.0,  # (for f_r_ind=0,1): attenuation coefficient in image space. Units of UserUnitLength^(-1)
+            file_r_ind_obj="",  # (for f_r_ind=1,3): file generated by PREREFL
+            file_r_ind_ima="",  # (for f_r_ind=2,3): file generated by PREREFL
+            conic_coefficients=conic_coefficients2,
+        )
+    else:
+        half_lens_1 = S4ConicInterface(
+            name="First half-lens",
+            boundary_shape=boundary_shape(),
+            material_object=None,
+            material_image=None,
+            f_r_ind=2,  # source of optical constants, from constant value or PREREFL preprocessor (file):
+            #      (0) constant value in both object and image spaces
+            #      (1) file in object space, constant value in image space
+            #      (2) constant value in object space, file in image space
+            #      (3) file in both object and image space
+            r_ind_obj=1.0,  # (for f_r_ind=0,2): index of refraction in object space.
+            r_ind_ima=1.0,  # (for f_r_ind=0,1): index of refraction in image space.
+            r_attenuation_obj=0.0,  # (for f_r_ind=0,2): attenuation coefficient in object space. Units of UserUnitLength^(-1)
+            r_attenuation_ima=0.0,  # (for f_r_ind=0,1): attenuation coefficient in image space. Units of UserUnitLength^(-1)
+            file_r_ind_obj="",  # (for f_r_ind=1,3): file generated by PREREFL
+            file_r_ind_ima=prerefl_file,  # (for f_r_ind=2,3): file generated by PREREFL
+            conic_coefficients=conic_coefficients1,
+        )
 
-            half_lens_2 = S4ConicInterface(
-                name="Second half-lens",
-                boundary_shape=self.get_boundary_shape(),
-                material_object=None,
-                material_image=None,
-                f_r_ind=1,               # source of optical constants, from constant value or PREREFL preprocessor (file):
-                                         #      (0) constant value in both object and image spaces
-                                         #      (1) file in object space, constant value in image space
-                                         #      (2) constant value in object space, file in image space
-                                         #      (3) file in both object and image space
-                r_ind_obj=1.0,           # (for f_r_ind=0,2): index of refraction in object space.
-                r_ind_ima=1.0,           # (for f_r_ind=0,1): index of refraction in image space.
-                r_attenuation_obj=0.0,   # (for f_r_ind=0,2): attenuation coefficient in object space. Units of UserUnitLength^(-1)
-                r_attenuation_ima=0.0,   # (for f_r_ind=0,1): attenuation coefficient in image space. Units of UserUnitLength^(-1)
-                file_r_ind_obj=self._prerefl_file,       # (for f_r_ind=1,3): file generated by PREREFL
-                file_r_ind_ima="",       # (for f_r_ind=2,3): file generated by PREREFL
-                conic_coefficients=conic_coefficients2,
-            )
+        half_lens_2 = S4ConicInterface(
+            name="Second half-lens",
+            boundary_shape=boundary_shape(),
+            material_object=None,
+            material_image=None,
+            f_r_ind=1,  # source of optical constants, from constant value or PREREFL preprocessor (file):
+            #      (0) constant value in both object and image spaces
+            #      (1) file in object space, constant value in image space
+            #      (2) constant value in object space, file in image space
+            #      (3) file in both object and image space
+            r_ind_obj=1.0,  # (for f_r_ind=0,2): index of refraction in object space.
+            r_ind_ima=1.0,  # (for f_r_ind=0,1): index of refraction in image space.
+            r_attenuation_obj=0.0,  # (for f_r_ind=0,2): attenuation coefficient in object space. Units of UserUnitLength^(-1)
+            r_attenuation_ima=0.0,  # (for f_r_ind=0,1): attenuation coefficient in image space. Units of UserUnitLength^(-1)
+            file_r_ind_obj=prerefl_file,  # (for f_r_ind=1,3): file generated by PREREFL
+            file_r_ind_ima="",  # (for f_r_ind=2,3): file generated by PREREFL
+            conic_coefficients=conic_coefficients2,
+        )
 
-        return half_lens_1, half_lens_2
+    return half_lens_1, half_lens_2
+
 
 class S4LensElement(S4BeamlineElement):
     def __init__(self,

@@ -296,50 +296,7 @@ class S4NumericalMeshOpticalElementDecorator(S4CurvedOpticalElementDecorator):
 # LENS OPTICAL ELEMENTS
 ##################################################
 
-class S4RefractiveOpticalElementDecorator(S4ConicOpticalElementDecorator):
-    def __init__(self,
-                 surface_shape=1,  # now: 0=plane, 1=sphere, 2=parabola, 3=conic coefficients
-                 # (in shadow3: 1=sphere 4=paraboloid, 5=plane)
-                 convex_to_the_beam=1,  # for surface_shape (1,2): convexity of the first interface exposed to the beam 0=No, 1=Yes
-                 # the second interface has opposite convexity
-                 cylinder_angle=0,  # for surface_shape (1,2): 0=not cylindricaL, 1=meridional 2=sagittal
-                 ri_calculation_mode=0,  # source of refraction indices and absorption coefficients
-                 # 0=User
-                 # 1=prerefl file
-                 # 2=direct calculation using xraylib
-                 # 3=direct calculation using dabax
-                 prerefl_file=None,  # for ri_calculation_mode=0: file name (from prerefl) to get the refraction index.
-                 refraction_index=1.0,  # for ri_calculation_mode=1: n (real)
-                 attenuation_coefficient=0.0,  # for ri_calculation_mode=1: mu in cm^-1 (real)
-                 radius=500e-6,  # for surface_shape=(1,2): lens radius [m] (for spherical, or radius at the tip for paraboloid)
-                 conic_coefficients=[0.0]*10,  # for surface_shape = 3: the conic coefficients
-                 ):
-        S4ConicOpticalElementDecorator.__init__(self, conic_coefficients=self._get_conic_coefficients(surface_shape,
-                                                                                                      radius,
-                                                                                                      cylinder_angle,
-                                                                                                      convex_to_the_beam,
-                                                                                                      conic_coefficients))
-
-        self._ri_calculation_mode     = ri_calculation_mode
-        self._prerefl_file            = prerefl_file
-        self._refraction_index        = refraction_index
-        self._attenuation_coefficient = attenuation_coefficient
-
-    def _get_conic_coefficients(self, surface_shape, radius, cylinder_angle, convex_to_the_beam, conic_coefficients):
-        if surface_shape == 0:   conic_coefficients = [0, 0, 0, 0, 0, 0, 0, 0, -1, 0]
-        elif surface_shape == 1: conic_coefficients = [1.0, 1.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, -2.0 * radius, 0.0]
-        elif surface_shape == 2: conic_coefficients = [1.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, -2.0 * radius, 0.0]
-        elif surface_shape == 3: conic_coefficients = conic_coefficients.copy()
-        else: return None
-
-        if   cylinder_angle == 1: conic_coefficients[0] = conic_coefficients[3] = conic_coefficients[5] = conic_coefficients[6] = 0
-        elif cylinder_angle == 2: conic_coefficients[1] = conic_coefficients[3] = conic_coefficients[4] = conic_coefficients[7] = 0
-
-        if convex_to_the_beam == 1: conic_coefficients[8] *= -1
-
-        return conic_coefficients
-
-class S4LensOpticalElementDecorator(S4RefractiveOpticalElementDecorator):
+class S4RefractiveLensOpticalElementDecorator(S4CurvedOpticalElementDecorator):
     def __init__(self,
                  surface_shape=1,      # now: 0=plane, 1=sphere, 2=parabola, 3=conic coefficients
                                        # (in shadow3: 1=sphere 4=paraboloid, 5=plane)
@@ -357,30 +314,38 @@ class S4LensOpticalElementDecorator(S4RefractiveOpticalElementDecorator):
                  radius=500e-6,        # for surface_shape=(1,2): lens radius [m] (for spherical, or radius at the tip for paraboloid)
                  conic_coefficients=[0.0]*10,   # for surface_shape = 3: the conic coefficients
                  ):
-        super(S4LensOpticalElementDecorator, self).__init__(-1,
-                                                            None,
-                                                            None,
-                                                            ri_calculation_mode,
-                                                            prerefl_file,
-                                                            refraction_index,
-                                                            attenuation_coefficient,
-                                                            None,
-                                                            None)
+
         conic_coefficients = self._get_conic_coefficients(surface_shape,
                                                           radius,
                                                           cylinder_angle,
                                                           convex_to_the_beam,
                                                           conic_coefficients)
 
+        curved_surface_shape = [Conic(conic_coefficients=conic_coefficients[0]),
+                                Conic(conic_coefficients=conic_coefficients[1])]
+
+        S4CurvedOpticalElementDecorator.__init__(self,
+                                                 surface_calculation=SurfaceCalculation.EXTERNAL,
+                                                 curved_surface_shape=curved_surface_shape)
+
+        self._ri_calculation_mode     = ri_calculation_mode
+        self._prerefl_file            = prerefl_file
+        self._refraction_index        = refraction_index
+        self._attenuation_coefficient = attenuation_coefficient
+
         print(">>>>> conic_coefficients: ", conic_coefficients)
-        self._curved_surface_shape = [Conic(conic_coefficients=conic_coefficients), Conic(conic_coefficients=conic_coefficients)]
 
     def _get_conic_coefficients(self, surface_shape, radius, cylinder_angle, convex_to_the_beam, conic_coefficients):
-        conic_coefficients_1 = super(S4LensOpticalElementDecorator, self)._get_conic_coefficients(surface_shape,
-                                                                                                 radius,
-                                                                                                 cylinder_angle,
-                                                                                                 convex_to_the_beam,
-                                                                                                 conic_coefficients)
+        if surface_shape == 0:   conic_coefficients_1 = [0, 0, 0, 0, 0, 0, 0, 0, -1, 0]
+        elif surface_shape == 1: conic_coefficients_1 = [1.0, 1.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, -2.0 * radius, 0.0]
+        elif surface_shape == 2: conic_coefficients_1 = [1.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, -2.0 * radius, 0.0]
+        elif surface_shape == 3: conic_coefficients_1 = conic_coefficients.copy()
+        else: return None
+
+        if   cylinder_angle == 1: conic_coefficients_1[0] = conic_coefficients_1[3] = conic_coefficients_1[5] = conic_coefficients_1[6] = 0
+        elif cylinder_angle == 2: conic_coefficients_1[1] = conic_coefficients_1[3] = conic_coefficients_1[4] = conic_coefficients_1[7] = 0
+
+        if convex_to_the_beam == 1: conic_coefficients_1[8] *= -1
 
         conic_coefficients_2 = conic_coefficients_1.copy()
         conic_coefficients_2[8] *= -1
@@ -388,4 +353,7 @@ class S4LensOpticalElementDecorator(S4RefractiveOpticalElementDecorator):
         return [conic_coefficients_1, conic_coefficients_2]
 
     def get_optical_surface_instance(self):
-        return [S4Conic.initialize_from_coefficients(numpy.array(surface_shape.get_conic_coefficients())) for surface_shape in self.get_surface_shape_instance()]
+        surface_shapes = self.get_surface_shape_instance()
+
+        return [S4Conic.initialize_from_coefficients(numpy.array(surface_shapes[0].get_conic_coefficients())),
+                S4Conic.initialize_from_coefficients(numpy.array(surface_shapes[1].get_conic_coefficients()))]
