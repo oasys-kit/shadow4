@@ -8,7 +8,6 @@ from shadow4.beamline.optical_elements.refractors.s4_conic_interface import S4Co
 from shadow4.beamline.s4_optical_element_decorators import S4RefractiveLensOpticalElementDecorator
 
 class S4Lens(Lens, S4RefractiveLensOpticalElementDecorator):
-
     def __init__(self,
                  name="Undefined",
                  boundary_shape=None,  # syned stuff, replaces "diameter" in the shadow3 append_lens

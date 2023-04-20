@@ -13,12 +13,12 @@ class S4CRL(CRL, S4RefractiveLensOpticalElementDecorator):
     def __init__(self,
                  name="Undefined",
                  n_lens=1,
-                 surface_shape=None,   # now: 0=plane, 1=sphere, 2=parabola, 3=conic coefficients
-                                       # (in shadow3: 1=sphere 4=paraboloid, 5=plane)
+                 piling_thickness=0.0,  # syned stuff,
                  boundary_shape=None,  # syned stuff, replaces "diameter" in the shadow3 append_lens
                  material="",          # syned stuff, not (yet) used
                  thickness=0.0,        # syned stuff, lens thickness [m] (distance between the two interfaces at the center of the lenses)
-                 piling_thickness=0.0,  # syned stuff,
+                 surface_shape=1,      # now: 0=plane, 1=sphere, 2=parabola, 3=conic coefficients
+                                       # (in shadow3: 1=sphere 4=paraboloid, 5=plane)
                  convex_to_the_beam=1,  # for surface_shape: convexity of the first interface exposed to the beam 0=No, 1=Yes
                                         # the second interface has opposite convexity
                  cylinder_angle=0,      # for surface_shape: 0=not cylindricaL, 1=meridional 2=sagittal
