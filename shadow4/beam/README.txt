@@ -1,1 +1,0 @@
-This directory contains the shadow4 Beam
