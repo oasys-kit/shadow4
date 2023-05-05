@@ -7,7 +7,7 @@ from syned.beamline.optical_elements.crystals.crystal import Crystal, Diffractio
 from shadow4.beam.s4_beam import S4Beam
 from shadow4.beamline.s4_beamline_element import S4BeamlineElement
 
-from crystalpy.diffraction.DiffractionSetup import DiffractionSetup
+from crystalpy.diffraction.DiffractionSetupXraylib import DiffractionSetupXraylib
 from crystalpy.diffraction.DiffractionSetupDabax import DiffractionSetupDabax
 from crystalpy.diffraction.DiffractionSetupShadowPreprocessorV1 import DiffractionSetupShadowPreprocessorV1
 from crystalpy.diffraction.DiffractionSetupShadowPreprocessorV2 import DiffractionSetupShadowPreprocessorV2
@@ -16,7 +16,7 @@ from crystalpy.diffraction.GeometryType import BraggDiffraction
 from crystalpy.diffraction.Diffraction import Diffraction
 from crystalpy.util.Vector import Vector
 from crystalpy.util.Photon import Photon
-from crystalpy.util.ComplexAmplitudePhoton import ComplexAmplitidePhoton
+from crystalpy.util.ComplexAmplitudePhoton import ComplexAmplitudePhoton
 from crystalpy.util.ComplexAmplitudePhotonBunch import ComplexAmplitudePhotonBunch
 
 import scipy.constants as codata
@@ -122,7 +122,7 @@ class S4CrystalElement(S4BeamlineElement):
 
         if oe._material_constants_library_flag == 0:
             print("\nCreating a diffraction setup (XRAYLIB) for material:", oe._material)
-            diffraction_setup = DiffractionSetup(geometry_type=BraggDiffraction(),  # todo: use oe._diffraction_geometry
+            diffraction_setup = DiffractionSetupXraylib(geometry_type=BraggDiffraction(),  # todo: use oe._diffraction_geometry
                                                  crystal_name=oe._material,  # string
                                                  thickness=oe._thickness,  # meters
                                                  miller_h=oe._miller_index_h,  # int
