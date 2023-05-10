@@ -291,8 +291,8 @@ class S4CrystalElement(S4BeamlineElement):
                 # perform the calculation
                 coeffs = diffraction.calculateDiffractedComplexAmplitudes(self._crystalpy_diffraction_setup, photon)
                 # store results
-                complex_reflectivity_S[ia] = coeffs['S'].complexAmplitude()
-                complex_reflectivity_P[ia] = coeffs['P'].complexAmplitude()
+                complex_reflectivity_S[ia] = coeffs['S']
+                complex_reflectivity_P[ia] = coeffs['P']
 
             footprint.apply_complex_reflectivities(complex_reflectivity_S, complex_reflectivity_P)
         elif scan_type == 2: # from beam, bunch
