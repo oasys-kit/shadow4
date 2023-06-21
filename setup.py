@@ -40,7 +40,7 @@
 #     python -m twine upload dist/...
 #          
 # Install from pypi:
-#     pip install OASYS1-shadow4
+#     pip install shadow4
 #
 
 __authors__ = ["M Sanchez del Rio, Luca Rebuffi"]
@@ -75,14 +75,15 @@ INSTALL_REQUIRES = (
     'setuptools',
     'numpy',
     'scipy',
-    'syned>=1.0.26',
+    'syned>=1.0.29',
     'srxraylib',
-    'wofryimpl>=1.0.20',
+    'wofryimpl>=1.0.21',
+    # 'crystalpy',
 )
 
 
 setup(name='shadow4',
-      version='0.1.11',
+      version='0.1.12',
       description='shadow implementation in python',
       author='Manuel Sanchez del Rio, Luca Rebuffi',
       author_email='srio at esrf dot eu, ',
