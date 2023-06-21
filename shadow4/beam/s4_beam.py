@@ -82,7 +82,7 @@ class S4Beam(object):
     # getters
     #
 
-    def get_rays(self):
+    def get_rays(self, nolost=0):
         """
 
         Returns
@@ -90,7 +90,24 @@ class S4Beam(object):
         numpy array (npoints,18)
         """
 
-        return self.rays.copy()
+        if nolost == 0:
+            return self.rays.copy()
+        elif nolost == 1:
+            f  = numpy.where(self.rays[:,9] > 0.0)
+            if len(f[0])==0:
+                print ('S4Beam.get_rays: no GOOD rays, returning empty array')
+                return numpy.empty(0)
+            else:
+                return self.rays[f[0],:].copy()
+        elif nolost == 2:
+            f  = numpy.where(self.rays[:,9] < 0.0)
+            if len(f[0])==0:
+                print ('S4Beam.get_rays: no BAD rays, returning empty array')
+                return numpy.empty(0)
+            else:
+                return self.rays[f[0],:].copy()
+
+
 
     def get_number_of_rays(self,nolost=0):
         """
@@ -1998,3 +2015,8 @@ if __name__ == "__main__":
 
     B = S4Beam.initialize_as_pencil(N=1)
     print(B.info())
+
+    B = S4Beam.initialize_as_pencil(N=100)
+    print("all : ", (B.get_rays(nolost=0)).shape)
+    print("good: ", (B.get_rays(nolost=1)).shape)
+    print("bad : ", (B.get_rays(nolost=2)).shape)
