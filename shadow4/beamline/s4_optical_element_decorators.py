@@ -220,7 +220,7 @@ class S4ParaboloidOpticalElementDecorator(S4CurvedOpticalElementDecorator):
                  convexity=Convexity.UPWARD,
                  parabola_parameter=0.0,
                  at_infinity=Side.SOURCE,
-                 pole_to_focus=None,
+                 pole_to_focus=0.0,
                  p_focus=0.0,
                  q_focus=0.0,
                  grazing_angle=0.0,

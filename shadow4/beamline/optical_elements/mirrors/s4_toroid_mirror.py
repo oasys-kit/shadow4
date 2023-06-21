@@ -57,8 +57,8 @@ class S4ToroidMirror(S4Mirror, S4ToroidOpticalElementDecorator):
 from shadow4.beamline.optical_elements.mirrors.s4_toroid_mirror import S4ToroidMirror
 optical_element = S4ToroidMirror(name='{name:s}',boundary_shape=boundary_shape,
     surface_calculation={surface_calculation:d},
-    min_radius={min_radius:f},maj_radius={maj_radius:f},
-    p_focus={p_focus:f},q_focus={q_focus:f},grazing_angle={grazing_angle:f},
+    min_radius={min_radius:g},maj_radius={maj_radius:g},
+    p_focus={p_focus:g},q_focus={q_focus:g},grazing_angle={grazing_angle:g},
     f_reflec={f_reflec:d},f_refl={f_refl:d},file_refl='{file_refl:s}',refraction_index={refraction_index:g},
     coating_material='{coating_material:s}',coating_density={coating_density:g},coating_roughness={coating_roughness:g})
 """
@@ -89,7 +89,7 @@ class S4ToroidMirrorElement(S4MirrorElement):
         txt += self.get_optical_element().to_python_code()
         coordinates = self.get_coordinates()
         txt += "\nfrom syned.beamline.element_coordinates import ElementCoordinates"
-        txt += "\ncoordinates = ElementCoordinates(p=%g, q=%g, angle_radial=%g, angle_azimuthal=%g, angle_radial_out=%g)" % \
+        txt += "\ncoordinates = ElementCoordinates(p=%g, q=%g, angle_radial=%.10g, angle_azimuthal=%.10g, angle_radial_out=%.10g)" % \
                (coordinates.p(), coordinates.q(), coordinates.angle_radial(), coordinates.angle_azimuthal(), coordinates.angle_radial_out())
 
         txt += self.to_python_code_movements()

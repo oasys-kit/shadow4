@@ -14,7 +14,7 @@ class S4ParaboloidMirror(S4Mirror, S4ParaboloidOpticalElementDecorator):
                  convexity=Convexity.UPWARD,
                  parabola_parameter=0.0,
                  at_infinity=Side.SOURCE,
-                 pole_to_focus=None,
+                 pole_to_focus=0.0, # for external calculation
                  p_focus=0.0,
                  q_focus=0.0,
                  grazing_angle=0.0,
@@ -60,17 +60,17 @@ class S4ParaboloidMirror(S4Mirror, S4ParaboloidOpticalElementDecorator):
 
     def to_python_code(self, **kwargs):
         txt = self.to_python_code_boundary_shape()
-        txt = "\n"
+
         txt_pre = """
 from shadow4.beamline.optical_elements.mirrors.s4_paraboloid_mirror import S4ParaboloidMirror
-optical_element = S4ParaboloidMirror(name='{name:s}',boundary_shape=boundary_shape,
-    surface_calculation={surface_calculation:d},is_cylinder={is_cylinder:d},cylinder_direction={cylinder_direction:d},
+optical_element = S4ParaboloidMirror(name='{name:s}', boundary_shape=boundary_shape,
+    surface_calculation={surface_calculation:d}, is_cylinder={is_cylinder:d}, cylinder_direction={cylinder_direction:d},
     convexity={convexity:d},
-    parabola_parameter={parabola_parameter:f},at_infinity={at_infinity:d},pole_to_focus={pole_to_focus:f},
-    p_focus={p_focus:f},q_focus={q_focus:f},
+    parabola_parameter={parabola_parameter:f}, at_infinity={at_infinity:d}, pole_to_focus={pole_to_focus:f},
+    p_focus={p_focus:f}, q_focus={q_focus:f},
     grazing_angle={grazing_angle:f},
-    f_reflec={f_reflec:d},f_refl={f_refl:d},file_refl='{file_refl:s}',refraction_index={refraction_index:g},
-    coating_material='{coating_material:s}',coating_density={coating_density:g},coating_roughness={coating_roughness:g})
+    f_reflec={f_reflec:d}, f_refl={f_refl:d}, file_refl='{file_refl:s}', refraction_index={refraction_index:g},
+    coating_material='{coating_material:s}', coating_density={coating_density:g}, coating_roughness={coating_roughness:g})
 """
         txt += txt_pre.format(**self.__inputs)
         return txt
@@ -104,7 +104,18 @@ class S4ParaboloidMirrorElement(S4MirrorElement):
 
         txt += self.to_python_code_movements()
 
-        txt += "\nfrom shadow4.beamline.optical_elements.mirrors.s4_ellipsoid_mirror import S4EllipsoidMirrorElement"
-        txt += "\nbeamline_element = S4EllipsoidMirrorElement(optical_element=optical_element, coordinates=coordinates, movements=movements, input_beam=beam)"
+        txt += "\nfrom shadow4.beamline.optical_elements.mirrors.s4_paraboloid_mirror import S4ParaboloidMirrorElement"
+        txt += "\nbeamline_element = S4ParaboloidMirrorElement(optical_element=optical_element, coordinates=coordinates, movements=movements, input_beam=beam)"
         txt += "\n\nbeam, mirr = beamline_element.trace_beam()"
         return txt
+
+if __name__=="__main__":
+    from syned.beamline.shape import Rectangle
+    import numpy
+
+    angle_radial = 88.0
+
+    el = S4ParaboloidMirrorElement(optical_element=S4ParaboloidMirror(),
+                                    coordinates=ElementCoordinates(p=20000, q=1000, angle_radial=88.0, angle_azimuthal=0.0))
+
+    print(el.to_python_code())
