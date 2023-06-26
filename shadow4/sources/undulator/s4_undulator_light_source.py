@@ -809,9 +809,12 @@ class S4UndulatorLightSource(S4LightSource):
 
         print(a.info())
         beam = a.get_beam()
-        if emax != emin:
+        if emax == emin:
+            e = numpy.zeros(NRAYS) + emin
+        else:
             e = numpy.random.random(NRAYS) * (emax - emin) + emin
-            beam.set_photon_energy_eV(e)
+
+        beam.set_photon_energy_eV(e)
 
         return beam
 
