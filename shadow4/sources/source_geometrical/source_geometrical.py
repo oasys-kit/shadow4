@@ -15,6 +15,7 @@ class SourceGeometrical(S4LightSourceBase):
                     spatial_type="Point",
                     angular_distribution = "Flat",
                     energy_distribution = "Single line",
+                    depth_distribution = "Off",
                     nrays=5000,
                     seed=1234567,
                  ):
@@ -22,6 +23,7 @@ class SourceGeometrical(S4LightSourceBase):
         self.set_spatial_type_by_name(spatial_type)  # see SourceGeometrical.spatial_type_list()
         self.set_angular_distribution_by_name(angular_distribution) # see SourceGeometrical.angular_distribution_list()
         self.set_energy_distribution_by_name(energy_distribution) # see SourceGeometrical.energy_distribution_list()
+        self.set_depth_distribution_by_name(depth_distribution)
         self.set_polarization(polarization_degree=1.0, phase_diff=0.0, coherent_beam=0)
 
 
@@ -191,6 +193,42 @@ class SourceGeometrical(S4LightSourceBase):
         else:
             raise Exception("Wrong angular distribution: %s"%name)
 
+    def set_depth_distribution_by_name(self, name, value=0.0):
+        if name == "Off":
+            self.set_depth_distribution(depth=0, source_depth_y=value)
+        elif name == "Uniform":
+            self.set_depth_distribution(depth=1, source_depth_y=value)
+        elif name == "Gaussian":
+            self.set_depth_distribution(depth=2, source_depth_y=value)
+        else:
+            raise Exception("Wrong depth distribution: %s"%name)
+
+    def set_depth_distribution(self,
+                               depth=0,             #0=off, 1=uniform, 2=Gaussian
+                               source_depth_y=0.0,  #width if depth=1, sigma if depth=2
+                               ):
+
+        self.__fsource_depth = depth
+        self.__wysou = source_depth_y
+
+        if self.__fsource_depth == 0:
+            self.depth_distribution = "Off"
+        elif self.__fsource_depth == 1:
+            self.depth_distribution = "Uniform"
+        elif self.__fsource_depth == 2:
+            self.depth_distribution = "Gaussian"
+        else:
+            raise Exception("Not implemented depth type (index=%d)" % self.__fsour)
+
+    def set_depth_distribution_off(self):
+        self.set_depth_distribution(0)
+
+    def set_depth_distribution_uniform(self, value):
+        self.set_depth_distribution(1, value)
+
+    def set_depth_distribution_gaussian(self, value):
+        self.set_depth_distribution(2, value)
+
     def _set_energy_distribution_unit(self,name='eV'):
         if name == 'eV':
             self.__f_phot = 0
@@ -328,6 +366,21 @@ class SourceGeometrical(S4LightSourceBase):
             raise Exception("Bad value of spatial_type")
 
         #
+        # depth distribution
+        #
+        print(">> Depth distribution: %s"%(self.depth_distribution))
+
+        if self.depth_distribution == "Off":
+            pass
+        elif self.depth_distribution == "Uniform":
+            rays[:,1] = (numpy.random.rand(N) - 0.5) * self.__wysou
+        elif self.depth_distribution == "Gaussian":
+            rays[:,1] = numpy.random.normal(loc=0.0, scale=self.__wysou, size=N)
+        else:
+            raise Exception("Bad value of depth_distribution")
+
+
+        #
         # angular distribution
         #
         print(">> Angular distribution: %s"%(self.angular_distribution))
@@ -359,11 +412,13 @@ class SourceGeometrical(S4LightSourceBase):
         else:
             raise Exception("Bad value of angular_distribution")
 
+
+
         #
         # energy distribution
         # ["Single line","Several lines","Uniform","Relative intensities","Gaussian","User defined"]
         #
-        print(">> energy distribution: ",self.energy_distribution)
+        print(">> Energy distribution: ",self.energy_distribution)
 
         if self.energy_distribution == "Single line":
             if self.__f_phot == 0:
@@ -561,6 +616,13 @@ class SourceGeometrical(S4LightSourceBase):
             txt += "\nlight_source.set_spatial_type_gaussian(sigma_h=%s,sigma_v=%f)" % \
                    (self.__sigmax, self.__sigdiz)
 
+        # depth
+        if self.__fsource_depth == 0:  # off
+            txt += "\nlight_source.set_depth_distribution_off()"
+        elif self.__fsource_depth == 1:  # uniform
+            txt += "\nlight_source.set_depth_distribution_uniform(%f)" % (self.__wysou)
+        elif self.__fsource_depth == 2:  # gaussian
+            txt += "\nlight_source.set_depth_distribution_gaussian(%f)" % (self.__wysou)
 
         # divergence
         if self.__fdist == 1:  # flat
@@ -622,5 +684,5 @@ class SourceGeometrical(S4LightSourceBase):
 
         return txt
 if __name__ == "__main__":
-    pass
-
+    a = SourceGeometrical(depth_distribution="Gaussian")
+    print(a.to_python_code())
