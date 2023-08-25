@@ -13,16 +13,25 @@ from syned.beamline.shape import Rectangle, Ellipse, TwoEllipses, Circle
 
 class S4Beam(object):
     """
+    Implements a beam. Internally it is an array of N rays and 18 columns.
+
+    Parameters
+    ----------
+    N : int, optional
+        The number of rays.
+
+    array numpy array, optional
+        The numpy array (N,18) with the data.
+
+    See Also
+    --------
+    shadow4.S4Beam.column_names :
+        columns contents.
+
 
     """
 
     def __init__(self, N=1000, array=None):
-        """
-
-        :param N:
-        :param array:
-        :return:
-        """
         if array is not None:
             N, ncol = array.shape
             if ncol != 18:
@@ -34,13 +43,16 @@ class S4Beam(object):
     @classmethod
     def initialize_from_array(cls, array):
         """
+        Creates an S4Beam instance from an array.
 
         Parameters
         ----------
-        array
+        array : numpy array
+            array to initialize the S4beam.
 
         Returns
         -------
+            an instance of S4Beam.
 
         """
         if array.shape[1] != 18:
@@ -53,10 +65,13 @@ class S4Beam(object):
 
         Parameters
         ----------
-        N
+        N : int, optional
+            Number of rays.
 
         Returns
         -------
+        S4Beam instance
+            A pencil beam (zero cross section, zero divergence).
 
         """
         beam = S4Beam(N)
@@ -71,9 +86,12 @@ class S4Beam(object):
 
     def duplicate(self):
         """
+        Duplicates a S4Beam instance.
 
         Returns
         -------
+        S4Beam instance
+            A copy of the S4Beam instance.
 
         """
         return S4Beam.initialize_from_array(self.rays.copy())
@@ -84,10 +102,18 @@ class S4Beam(object):
 
     def get_rays(self, nolost=0):
         """
+        Returns a numpy array (N,18) with the rays.
+
+        Parameters
+        ----------
+        nolost : int, optional
+            0=return all rays, 1=Return only good rays (non-lost rays), 2=Return only lost rays.
 
         Returns
         -------
         numpy array (npoints,18)
+            The rays.
+
         """
 
         if nolost == 0:
@@ -108,19 +134,21 @@ class S4Beam(object):
                 return self.rays[f[0],:].copy()
 
 
-
-    def get_number_of_rays(self,nolost=0):
+    def get_number_of_rays(self, nolost=0):
         """
+        Returns the number of rays.
 
         Parameters
         ----------
-        nolost: flag (default=0)
+        nolost : int, optional
+            0=return all rays, 1=Return only good rays (non-lost rays), 2=Return only lost rays.
 
         Returns
         -------
-        number of rays
-        """
+        int
+            The number of rays.
 
+        """
         try:
             w = self.get_column(10)
         except Exception:
@@ -134,43 +162,59 @@ class S4Beam(object):
         if nolost == 2:
             return numpy.array(numpy.where(w < 0)).size
 
-
         return self.rays.shape[0]
 
-    def get_photon_energy_eV(self,nolost=0):
+    def get_photon_energy_eV(self, nolost=0):
         """
+        Returns a numpy array with the photon energy of the rays in eV.
 
         Parameters
         ----------
-        nolost: 0: all rays  1: good rays, 2: bad rays
+        nolost : int, optional
+            0=return all rays, 1=Return only good rays (non-lost rays), 2=Return only lost rays.
 
         Returns
         -------
-        array
-        """
-
-        A2EV = 2.0*numpy.pi/(codata.h*codata.c/codata.e*1e2)
-        return self.get_column(11,nolost=nolost) / A2EV
-
-    def get_photon_wavelength(self):
-        """
-
-        Returns
-        -------
+        numpy array (npoints)
+            The photon energies (in eV) of the rays.
 
         """
-        return 2*numpy.pi/self.get_column(11) * 1e-2
+        A2EV = 2.0 * numpy.pi / (codata.h * codata.c / codata.e * 1e2)
+        return self.get_column(11, nolost=nolost) / A2EV
 
-    def get_intensity(self,nolost=0,polarization=0):
+    def get_photon_wavelength(self, nolost=0):
         """
+        Returns a numpy array with the photon energy of the rays in eV.
 
         Parameters
         ----------
-        nolost
-        polarization
+        nolost : int, optional
+            0=return all rays, 1=Return only good rays (non-lost rays), 2=Return only lost rays.
 
         Returns
         -------
+        numpy array (npoints)
+            The wavelengths (in m) of the rays.
+
+        """
+        return 2 * numpy.pi / self.get_column(11, nolost=nolost) * 1e-2
+
+    def get_intensity(self, nolost=0, polarization=0):
+        """
+        Returns a numpy array with the intensities of the rays.
+
+        Parameters
+        ----------
+        nolost : int, optional
+            0=return all rays, 1=Return only good rays (non-lost rays), 2=Return only lost rays.
+
+        polarization : int, optional
+            0=total, 1=sigma, 2=pi.
+
+        Returns
+        -------
+        numpy array (npoints)
+            The intensities of the rays.
 
         """
         if polarization == 0:
@@ -181,13 +225,18 @@ class S4Beam(object):
             w = self.get_column(25, nolost=nolost)
         return w.sum()
 
-    def get_column(self,column,nolost=0):
+    def get_column(self, column, nolost=0):
         """
+        Returns a numpy array with the values of the rays in a given column.
+
+        The column number can be 1:18 (stored data) or > 18 for other parameters
+        calculated from the 18 stored ones.
 
         Parameters
         ----------
-        column
-            Possible choice for column are:
+        column : int
+            Number of column (starting with 1). Possible choice for column are:
+
              1   X spatial coordinate [user's unit]
              2   Y spatial coordinate [user's unit]
              3   Z spatial coordinate [user's unit]
@@ -230,11 +279,14 @@ class S4Beam(object):
 
             -11: column 26
 
-        nolost
+        nolost : int, optional
+            0=return all rays, 1=Return only good rays (non-lost rays), 2=Return only lost rays.
 
         Returns
         -------
-        a copy of the arrays
+        numpy array
+            the required array (a copy).
+
         """
 
         if column == -11: column = 26
@@ -330,16 +382,29 @@ class S4Beam(object):
                 return numpy.empty(0)
             return out[f].copy()
 
-    def get_columns(self,columns,nolost=0):
+    def get_columns(self, columns, nolost=0):
         """
+        Returns a numpy array with the values of the rays several selected column.
+
+        The column numbers can be 1:18 (stored data) or > 18 for other parameters
+        calculated from the 18 stored ones.
 
         Parameters
         ----------
-        columns
-        nolost
+        columns : list
+            The number of the columns (column numbers start from 1).
+
+        nolost : int, optional
+            0=return all rays, 1=Return only good rays (non-lost rays), 2=Return only lost rays.
 
         Returns
         -------
+        numpy array
+            the required array (N, len(columns)).
+
+        See Also
+        --------
+        shadow4.S4Beam.get_column
 
         """
         ret = []
@@ -352,17 +417,27 @@ class S4Beam(object):
 
     def get_standard_deviation(self,col, nolost=1, ref=0):
         """
-        returns the standard deviation of one viariable in the beam
+        Returns the standard deviation of one variable in the beam.
+
         Parameters
         ----------
-        col: variable (shadow column number)
-        nolost: 0 = use all rays, 1=good only, 2= lost only
-        ref: 0 = no weight, 1=weight with intensity (col23)
+        col : int
+            The column number.
+
+
+        nolost : int, optional
+            0=use all rays, 1=use only good rays (non-lost rays), 2=use only lost rays.
+
+        ref : int, optional
+            ref: 0 = no weight, 1=weight with intensity (col23)
 
         Returns
         -------
+        float
+            the st dev.
 
         """
+
         x = self.get_column(col,nolost=nolost)
         if ref == 0:
             return x.std()
@@ -372,15 +447,21 @@ class S4Beam(object):
             variance = numpy.average( (x-average)**2, weights=w)
             return(numpy.sqrt(variance))
 
-    def intensity(self,nolost=0):
+    def intensity(self, nolost=0):
         """
+        Returns the intensity of the beam.
 
         Parameters
         ----------
-        nolost
+
+        nolost : int, optional
+            0=use all rays, 1=use only good rays (non-lost rays), 2=use only lost rays.
+
 
         Returns
         -------
+        float
+            total intensity.
 
         """
         w = self.get_column(23,nolost=nolost)
@@ -388,15 +469,21 @@ class S4Beam(object):
 
     def get_good_range(self, icol, nolost=0):
         """
+        Computes a good limits for a given column. Typically used for plots.
 
         Parameters
         ----------
-        icol: the column number (SHADOW convention, starting from 1)
-        nolost: lost rays flag (0=all, 1=good, 2=losses)
+        icol: int
+            the column number (SHADOW convention, starting from 1)
+
+        nolost : int, optional
+            0=use all rays, 1=use only good rays (non-lost rays), 2=use only lost rays.
 
         Returns
         -------
-        [rmin,rmax] the selected range
+        list
+            [rmin,rmax] the selected range
+
         """
 
         col = self.get_column(icol, nolost=nolost)
@@ -420,45 +507,53 @@ class S4Beam(object):
             rmax = 1.0
         return [rmin, rmax]
 
-    def histo1(self, col, xrange=None, nbins=50, nolost=0, ref=0, write=None, factor=1.0, calculate_widths=1,
-               calculate_hew=0):
+    def histo1(self, col, xrange=None, nbins=50, nolost=0, ref=0,
+               write=None, factor=1.0, calculate_widths=1, calculate_hew=0):
         """
         Calculate the histogram of a column, simply counting the rays, or weighting with another column.
+
         It returns a dictionary which contains the histogram data.
 
         Parameters
         ----------
-        col
-            int for the chosen column.
-        xrange
-            tuple or list of length 2 describing the interval of interest for x, the data read from the chosen column.
+        col : int
+            the number of the chosen column.
+
+        xrange : 2 elements tuple or list, optional
+            tuple or list describing the interval of interest for x, the data read from the chosen column.
                       (default: None, thus using min and max of the array)
-        nbins
+
+        nbins : int, optional
             number of bins of the histogram.
-        nolost
-                 0   All rays
-                 1   Only good rays
-                 2   Only lost rays
-        ref
-                 0, None, "no", "NO" or "No":   only count the rays
-                 23, "Yes", "YES" or "yes":     weight with intensity (look at col=23 |E|^2 total intensity)
-                 other value: use that column as weight
-        write
-                 None (default)   don't write any file
-                 file_name   write the histogram into the file 'file_name'.
-        factor
+
+        nolost : int, optional
+            0=use all rays, 1=use only good rays (non-lost rays), 2=use only lost rays.
+
+        ref : int (or str), optional
+                 0, None, "no", "NO" or "No":   only count the rays.
+                 23, "Yes", "YES" or "yes":     weight with intensity (look at col=23 |E|^2 total intensity).
+                 other value: use that column as weight.
+
+        write : str, optional
+                file name with the histogram (default=None, do not write any file).
+
+        factor : float, optional
             a scalar factor to multiply the selected column before histogramming
-                      (e.g., for changing scale from cm to um then factor=1e4).
-        calculate_widths
-        calculate_hew
+            (e.g., for changing scale from cm to um then factor=1e4).
+
+        calculate_widths : int, optional
+            0: do not calculate full-width at half-maximum (FWHM). 1=Do calculate FWHM.
+
+        calculate_hew : int, optional
+            0: do not calculate Half-Energy Width (HEW). 1=Do calculate HEW.
 
         Returns
         -------
-
-        a python dictionary with the calculated histogram. The following keys are set:
-                 error, col, write, nolost, nbins, xrange, factor
-                 histogram, bins, histogram_sigma, bin_center, bin_left, bin_right,
-                 intensity, fwhm, nrays, good_rays,
+        dict
+            a python dictionary with the calculated histogram. Some of the keys are:
+                 'error', 'col', 'write', 'nolost', 'nbins', 'xrange', 'factor'
+                 'histogram', 'bins', 'histogram_sigma', 'bin_center', 'bin_left', 'bin_right',
+                 'intensity', 'fwhm', 'nrays', 'good_rays'.
 
         """
 
@@ -478,7 +573,7 @@ class S4Beam(object):
 
         if ref == 1:
             print(
-                "Shadow.Beam.histo1: Warning: weighting with column 1 (X) [not with intensity as may happen in old versions]")
+                "Shadow.S4Beam.histo1: Warning: weighting with column 1 (X) [not with intensity as may happen in old versions]")
 
         # copy the inputs
         ticket['col'] = col
@@ -626,38 +721,55 @@ class S4Beam(object):
 
         return ticket
 
-    def histo2(self,col_h,col_v,nbins=25,ref=23, nbins_h=None, nbins_v=None, nolost=0,xrange=None,yrange=None,
-             calculate_widths=1):
+    def histo2(self, col_h, col_v, nbins=25, ref=23, nbins_h=None, nbins_v=None, nolost=0,
+               xrange=None, yrange=None, calculate_widths=1):
         """
-        performs 2d histogram to prepare data for a plotxy plot
-        It uses histogram2d for calculations
-        Note that this Shadow.Beam.histo2 was previously called Shadow.Beam.plotxy
+        Performs 2d histogram. Typically used to prepare data for a plotxy plot.
+        It uses histogram2d for calculations.
+
+        Note that this shadow4.S4Beam.histo2 was previously called Shadow.Beam.plotxy in shadow3.
 
         Parameters
         ----------
-        col_h: the horizontal column
-        col_v: the vertical column
-        nbins: number of bins
-        ref:
-                   0, None, "no", "NO" or "No":   only count the rays
-                   23, "Yes", "YES" or "yes":     weight with intensity (look at col=23 |E|^2 total intensity)
-                   other value: use that column as weight
-        nbins_h: number of bins in H
-        nbins_v: number of bins in V
-        nolost: 0 or None: all rays, 1=good rays, 2=only losses
-        xrange: range for H
-        yrange: range for V
-        calculate_widths: 0=No, 1=calculate FWHM (default), 2=Calculate FWHM and FW at 25% and 75% if Maximum
+        col_h: int
+            the horizontal column.
+
+        col_v: int
+            the vertical column.
+
+        nbins: int
+            The number of bins.
+
+        ref : int (or str), optional
+                 0, None, "no", "NO" or "No":   only count the rays.
+                 23, "Yes", "YES" or "yes":     weight with intensity (look at col=23 |E|^2 total intensity).
+                 other value: use that column as weight.
+
+        nbins_h: int
+            number of bins in H.
+
+        nbins_v: int
+            number of bins in V.
+
+        nolost : int, optional
+            0=use all rays, 1=use only good rays (non-lost rays), 2=use only lost rays.
+
+        xrange: tuple or list:
+            range for H.
+
+        yrange: tuple or list
+            range for V.
+
+        calculate_widths: int
+            0=No, 1=calculate FWHM (default), 2=Calculate FWHM and FW at 25% and 75% if Maximum.
 
         Returns
         -------
+        dict
+            a dictionary with the histogram and all the data needed (e.g. for a plot).
 
-        a dictionary with all data needed for plot
         """
-
-
         ticket = {'error':1}
-
 
         if ref == None: ref = 0
         if ref == "No": ref = 0
@@ -669,7 +781,7 @@ class S4Beam(object):
         if ref == "yes": ref = 23
 
         if ref == 1:
-              print("Shadow.Beam.histo2: Warning: weighting with column 1 (X) [not with intensity as may happen in old versions]")
+              print("shadow4.S4Beam.histo2: Warning: weighting with column 1 (X) [not with intensity]")
 
         if nbins_h == None: nbins_h = nbins
         if nbins_v == None: nbins_v = nbins
@@ -787,30 +899,30 @@ class S4Beam(object):
     # setters
     #
 
-    def set_column(self,column,value):
+    def set_column(self, column, value):
         """
+        Sets a given array in a given column number.
 
         Parameters
         ----------
-        column
-        value
+        column : int
+            The column number.
 
-        Returns
-        -------
+        value : numpy array (or a float or int scalar)
+            The values to be set.
 
         """
-
         self.rays[:,column-1] = value
 
-    def set_photon_energy_eV(self,energy_eV):
+    def set_photon_energy_eV(self, nergy_eV):
         """
+        Sets photon energies from a given array.
 
         Parameters
         ----------
-        energy_eV
 
-        Returns
-        -------
+        value : numpy array (or a float or int scalar)
+            The values of the photon energies in eV.
 
         """
         A2EV = 2.0*numpy.pi/(codata.h*codata.c/codata.e*1e2)
@@ -818,13 +930,13 @@ class S4Beam(object):
 
     def set_photon_wavelength(self,wavelength):
         """
+        Sets photon wavelengths from a given array.
 
         Parameters
         ----------
-        wavelength
 
-        Returns
-        -------
+        value : numpy array (or a float or int scalar)
+            The values of the wavelengths in m.
 
         """
         self.rays[:,10] =  2*numpy.pi/(wavelength * 1e2)
@@ -835,12 +947,15 @@ class S4Beam(object):
     #
     def info(self):
         """
+        Returns string containing some information of the beam (min, max, center, stDev) for
+        several columns (1:6,26). It also gives the mean photon energy and intensity.
 
         Returns
         -------
+        str
+            The text.
 
         """
-
         try:
             txt = "col   name         min         max      center       stDev\n"
             for col in [1,2,3,4,5,6,26]:
@@ -865,16 +980,18 @@ class S4Beam(object):
     # propagation / movements
     #
 
-    def retrace(self,dist,resetY=False):
+    def retrace(self, dist, resetY=False):
         """
+        Propagates a beam at a given distance (in vacuum).
 
         Parameters
         ----------
-        dist
-        resetY
+        dist : float
+            The distance to be re-traced.
 
-        Returns
-        -------
+        resetY : boolean, optional
+            If True, reset all Y values to zero (which physically is like calculating the
+            beam intersections with a plane perpendicular to the optical axis)
 
         """
 
@@ -894,23 +1011,21 @@ class S4Beam(object):
             self.rays[:,12] += tof
 
         except AttributeError:
-            print ('Beam.retrace: No rays')
+            print ('shadow4.S4Beam.retrace: No rays')
 
 
 
-    def translation(self,qdist1):
+    def translation(self, qdist1):
         """
+        Translates spatially a beam by a given vector.
 
         Parameters
         ----------
-        qdist1: translation vector
-
-        Returns
-        -------
+        qdist1 : 3 elements list or tuple
+            The distances to translate the X,Y and Z components.
 
         """
 
-        # print(">>>>translation: ", qdist1)
         if numpy.array(qdist1).size != 3:
             raise Exception("Input must be a vector [x,y,z]")
 
@@ -923,18 +1038,20 @@ class S4Beam(object):
         #
 
 
-    def rotate(self,theta,axis=1,rad=True):
+    def rotate(self, theta, axis=1, rad=True):
         """
+        Rotates a beam by a given angle along a given axis.
 
         Parameters
         ----------
-        theta: the rotation angle in degrees or radiants (default=0)
-        axis: The axis number (Shadow's column) for the rotation
-                    (i.e, 1:x (default), 2:y, 3:z)
-        rad: set True if theta1 is in radiants (default)
+        theta: float
+            the rotation angle radians (of degress if rad=False).
 
-        Returns
-        -------
+        axis: int
+            The axis number (Shadow's column) for the rotation (i.e, 1:x (default), 2:y, 3:z)
+
+        rad: boolean, optional
+            set False if theta is given in degrees.
 
         """
 
@@ -965,7 +1082,6 @@ class S4Beam(object):
             newaxisi = newaxis - 1
             newtorot = torot + tstart[i] - 1
             newtoroti = newtorot - 1
-            # print(">>>>> rotating columns, angle", 1+newtoroti[0], 1+newtoroti[1], theta1)
 
             self.rays[:,newtoroti[0]] =  a1[:,newtoroti[0]] * costh + a1[:,newtoroti[1]] * sinth
             self.rays[:,newtoroti[1]] = -a1[:,newtoroti[0]] * sinth + a1[:,newtoroti[1]] * costh
@@ -982,12 +1098,14 @@ class S4Beam(object):
 
         Parameters
         ----------
-        theta: the grazing angle in rad or deg
-        T_IMAGE: the distance o.e. to image
-        rad: True is angle is in rad
+        theta: float
+            the grazing angle in rad (default) or deg (if deg=False).
 
-        Returns
-        -------
+        T_IMAGE: float
+            the distance o.e. to image in m.
+
+        rad: boolean, optional
+            set False if theta is given in degrees.
 
         """
 
@@ -999,8 +1117,6 @@ class S4Beam(object):
         T_REFLECTION = numpy.pi / 2 - theta1
 
         a1 = self.rays.copy()
-
-        # print(">>>>> rotate_imref T_REFLECTION = ", T_REFLECTION, T_REFLECTION * 180 / numpy.pi)
 
         nrays = self.rays.shape[0]
         UXIM_x = numpy.ones(nrays)
@@ -1075,6 +1191,26 @@ class S4Beam(object):
 
     @classmethod
     def get_UVW(self, X_ROT=0, Y_ROT=0, Z_ROT=0): # in radians!!
+        """
+        returns the rotation matrix given resulting from sequential rotations around the 3 axes X,Y,Z [todo: verify the order]
+
+        Parameters
+        ----------
+        X_ROT : float
+            rotation angle in rad around the X axis.
+
+        Y_ROT : float
+            rotation angle in rad around the Y axis.
+
+        Z_ROT : float
+            rotation angle in rad around the Z axis.
+
+        Returns
+        -------
+        tuple
+            the 9 matrix elements.
+
+        """
 
         COSX =  numpy.cos(X_ROT)
         SINX = -numpy.sin(X_ROT)
