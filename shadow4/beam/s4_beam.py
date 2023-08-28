@@ -1236,6 +1236,32 @@ class S4Beam(object):
                W_MIR_1, W_MIR_2, W_MIR_3,
 
     def rot_for(self, OFFX=0, OFFY=0, OFFZ=0, X_ROT=0, Y_ROT=0, Z_ROT=0):
+        """
+        Applies the roto-translation of the optical movement movements to the beam.
+
+
+        Parameters
+        ----------
+        OFFX : float
+            translation distance in m along the X axis.
+
+        OFFX : float
+            translation distance in m along the Y axis.
+
+        OFFX : float
+            translation distance in m along the Z axis.
+
+        X_ROT : float
+            rotation angle in rad around the X axis.
+
+        Y_ROT : float
+            rotation angle in rad around the Y axis.
+
+        Z_ROT : float
+            rotation angle in rad around the Z axis.
+
+
+        """
 
         # ! C+++
         # ! C	SUBROUTINE	ROT_FOR
@@ -1248,8 +1274,6 @@ class S4Beam(object):
         # ! C
         # ! C---
 
-
-        print(">>>>>", self.rays.shape)
         P_IN_1 = self.rays[:, 1-1].copy()
         P_IN_2 = self.rays[:, 2-1].copy()
         P_IN_3 = self.rays[:, 3-1].copy()
@@ -1267,12 +1291,11 @@ class S4Beam(object):
 
         U_MIR_1, U_MIR_2, U_MIR_3, V_MIR_1, V_MIR_2, V_MIR_3, W_MIR_1, W_MIR_2, W_MIR_3 = \
             self.get_UVW(X_ROT=X_ROT, Y_ROT=Y_ROT, Z_ROT=Z_ROT)
-        print(U_MIR_1, U_MIR_2, U_MIR_3, V_MIR_1, V_MIR_2, V_MIR_3, W_MIR_1, W_MIR_2, W_MIR_3)
+        # print(U_MIR_1, U_MIR_2, U_MIR_3, V_MIR_1, V_MIR_2, V_MIR_3, W_MIR_1, W_MIR_2, W_MIR_3)
         #      	P_OUT(1)=    (P_IN(1) - OFFX)*U_MIR(1) + &
         #      		     (P_IN(2) - OFFY)*U_MIR(2) + &
         #      		     (P_IN(3) - OFFZ)*U_MIR(3)
         P_OUT_1 = (P_IN_1 - OFFX) * U_MIR_1 + (P_IN_2 - OFFY) * U_MIR_2 + (P_IN_3 - OFFZ) * U_MIR_3
-        print(">>>>", P_OUT_1.shape)
 
         #
         #      	P_OUT(2)=    (P_IN(1) - OFFX)*V_MIR(1) + &
@@ -1343,6 +1366,34 @@ class S4Beam(object):
         self.rays[:, 18-1] = AP_OUT_3
 
     def rot_back(self, OFFX=0, OFFY=0, OFFZ=0, X_ROT=0, Y_ROT=0, Z_ROT=0):
+        """
+        Applies the roto-translation of the optical movement movements to the beam.
+        This will bring back the beam in the normal optical-element frame.
+
+
+        Parameters
+        ----------
+        OFFX : float
+            translation distance in m along the X axis.
+
+        OFFX : float
+            translation distance in m along the Y axis.
+
+        OFFX : float
+            translation distance in m along the Z axis.
+
+        X_ROT : float
+            rotation angle in rad around the X axis.
+
+        Y_ROT : float
+            rotation angle in rad around the Y axis.
+
+        Z_ROT : float
+            rotation angle in rad around the Z axis.
+
+
+        """
+
         # ! C+++
         # ! C	SUBROUTINE	ROT_BACK
         # ! C
@@ -1447,20 +1498,33 @@ class S4Beam(object):
     #
     def crop_rectangle(self, x_col, x_min, x_max, y_col, y_min, y_max, negative=False, flag_lost_value=-1):
         """
+        Crops the beam to a rectangle along the axes x_col and y_col.
 
         Parameters
         ----------
-        x_col
-        x_min
-        x_max
-        y_col
-        y_min
-        y_max
-        negative
-        flag_lost_value
+        x_col : int
+            column 1 of the cropping surface.
 
-        Returns
-        -------
+        x_min : float
+            minimum for x_col.
+
+        x_max : float
+            maximum for x_col.
+
+        y_col : int
+            column 2 of the cropping surface.
+
+        y_min : float
+            minimum for y_col.
+
+        y_max : float
+            maximum for y_col.
+
+        negative : boolean, optional
+            makes the negative (i.e. obstruction instead of aperture).
+
+        flag_lost_value : float, optional
+            the value to be assigned to the flagged bad rays.
 
         """
 
@@ -1487,20 +1551,33 @@ class S4Beam(object):
 
     def crop_ellipse(self, x_col, a1, a2, y_col, b1, b2, negative=False, flag_lost_value=-1):
         """
+        Crops the beam to an ellipse along the axes x_col and y_col.
 
         Parameters
         ----------
-        x_col
-        a1
-        a2
-        y_col
-        b1
-        b2
-        negative
-        flag_lost_value
+        x_col : int
+            column 1 of the cropping surface.
 
-        Returns
-        -------
+        a1 : float
+            minimum for x_col.
+
+        a2 : float
+            maximum for x_col.
+
+        y_col : int
+            column 2 of the cropping surface.
+
+        b1 : float
+            minimum for y_col.
+
+        b2 : float
+            maximum for y_col.
+
+        negative : boolean, optional
+            makes the negative (i.e. obstruction instead of aperture).
+
+        flag_lost_value : float, optional
+            the value to be assigned to the flagged bad rays.
 
         """
 
@@ -1534,24 +1611,45 @@ class S4Beam(object):
     def crop_ellipse_with_hole(self, x_col, a1, a2, a3, a4,
                                     y_col, b1, b2, b3, b4, negative=False, flag_lost_value=-1):
         """
+        Crops the beam to an elliptical annulus along the axes x_col and y_col.
 
         Parameters
         ----------
-        x_col
-        a1
-        a2
-        a3
-        a4
-        y_col
-        b1
-        b2
-        b3
-        b4
-        negative
-        flag_lost_value
+        x_col : int
+            column 1 of the cropping surface.
 
-        Returns
-        -------
+        a1 : float
+            inner ellipse minimum for x_col.
+
+        a2 : float
+            inner ellipse maximum for x_col.
+
+        a3 : float
+            outer ellipse minimum for x_col.
+
+        a4 : float
+            outer ellipse maximum for x_col.
+
+        y_col : int
+            column 2 of the cropping surface.
+
+        b1 : float
+            inner ellipse minimum for y_col.
+
+        b2 : float
+            inner ellipse maximum for y_col.
+
+        b3 : float
+            outer ellipse minimum for y_col.
+
+        b4 : float
+            outer ellipse maximum for y_col.
+
+        negative : boolean, optional
+            makes the negative (i.e. obstruction instead of aperture).
+
+        flag_lost_value : float, optional
+            the value to be asigned to the flagged bad rays.
 
         """
 
@@ -1589,15 +1687,22 @@ class S4Beam(object):
 
     def apply_boundaries_syned(self, syned_boundary_object, flag_lost_value=-1):
         """
+        Crops the beam to a shape defined in a syned object.
 
         Parameters
         ----------
-        syned_boundary_object
-        flag_lost_value
+        syned_boundary_object : instance of syned.beamline.shape.Shape
+            The cropping shape.
 
-        Returns
-        -------
 
+        flag_lost_value : float, optional
+            the value to be assigned to the flagged bad rays.
+
+        See Also
+        --------
+        syned.beamline.shape.Shape
+
+        --
         """
         # print(">>>>> apply_boundaries_syned: ", syned_boundary_object, Rectangle)
         if isinstance(syned_boundary_object, type(None)):
@@ -1630,30 +1735,36 @@ class S4Beam(object):
     def apply_boundaries_shadow(self, fhit_c=0, fshape=1, rlen1=0.0, rlen2=0.0, rwidx1=0.0, rwidx2=0.0,
                                 flag_lost_value=-1):
         """
+        Apply boundaries using the shadow3 flags and variables.
 
         Parameters
         ----------
-        fhit_c: 0 - flag: mirror dimensions finite: yes (1), no(0).
-        fshape: 0 - for fhit_c=1:
-                mirror shape rectangular (1)
+        fhit_c: int, optional
+            flag: mirror dimensions finite: yes (1), no(0).
+
+        fshape: int, optional
+            for fhit_c=1: mirror shape rectangular (1)
                 full ellipse (2)
                 ellipse with hole (3).
-        rlen1: 0.0
-                fshape=1: mirror half length +Y.
-                 fshape=3: internal minor axis (Y).
-        rlen2: 0.0
-                fshape=1: mirror half length -Y.
-                fshape=2,3: external outline minor
-        rwidx1: 0.0
-                fshape=1: mirror half width +X.
-                fshape=3: internal major axis (X).
-        rwidx2: 0.0
-                fshape=1: mirror half width -X.
-                fshape=2,3: external outline major axis (X).
-        flag_lost_value:
 
-        Returns
-        -------
+        rlen1: float, optional
+            fshape=1: mirror half length +Y.
+            fshape=3: internal minor axis (Y).
+
+        rlen2: float, optional
+            fshape=1: mirror half length -Y.
+            fshape=2,3: external outline minor
+
+        rwidx1: float, optional
+            fshape=1: mirror half width +X.
+            fshape=3: internal major axis (X).
+
+        rwidx2: float, optional
+            fshape=1: mirror half width -X.
+            fshape=2,3: external outline major axis (X).
+
+        flag_lost_value : float, optional
+            the value to be assigned to the flagged bad rays.
 
         """
 
@@ -1679,13 +1790,12 @@ class S4Beam(object):
 
     def apply_reflectivity_s(self, Rs):
         """
+        Apply sigma-reflectivity to the beam.
 
         Parameters
         ----------
-        Rs
-
-        Returns
-        -------
+        Rs : float
+            The reflectivity value (real number, if complex, use apply_complex_reflectivity_s()).
 
         """
         if numpy.iscomplexobj(Rs):
@@ -1697,13 +1807,12 @@ class S4Beam(object):
 
     def apply_reflectivity_p(self, Rp):
         """
+        Apply pi-reflectivity to the beam.
 
         Parameters
         ----------
-        Rp
-
-        Returns
-        -------
+        Rp : float
+            The reflectivity value (real number, if complex, use apply_complex_reflectivity_p()).
 
         """
 
@@ -1716,14 +1825,15 @@ class S4Beam(object):
 
     def apply_reflectivities(self, Rs, Rp):
         """
+        Apply sigma- and pi- reflectivities to the beam.
 
         Parameters
         ----------
-        Rs
-        Rp
+        Rs : float
+            The reflectivity value (real number, if complex, use apply_complex_reflectivities()).
 
-        Returns
-        -------
+        Rp : float
+            The reflectivity value (real number, if complex, use apply_complex_reflectivities()).
 
         """
         self.apply_reflectivity_s(Rs)
@@ -1733,13 +1843,12 @@ class S4Beam(object):
 
     def apply_complex_reflectivity_s(self, Rs):
         """
+        Apply sigma-reflectivity to the beam.
 
         Parameters
         ----------
-        Rs
-
-        Returns
-        -------
+        Rs : complex
+            The reflectivity value.
 
         """
         self.rays[:, 6] *= numpy.abs(Rs)
@@ -1749,13 +1858,12 @@ class S4Beam(object):
 
     def apply_complex_reflectivity_p(self, Rp):
         """
+        Apply pi-reflectivity to the beam.
 
         Parameters
         ----------
-        Rp
-
-        Returns
-        -------
+        Rp : complex
+            The reflectivity value.
 
         """
         self.rays[:, 15] *= numpy.abs(Rp)
@@ -1765,14 +1873,15 @@ class S4Beam(object):
 
     def apply_complex_reflectivities(self, Rs, Rp):
         """
+        Apply sigma- and pi- reflectivities to the beam.
 
         Parameters
         ----------
-        Rs
-        Rp
+        Rs : complex
+            The reflectivity value.
 
-        Returns
-        -------
+        Rp : complex
+            The reflectivity value.
 
         """
         self.apply_complex_reflectivity_s(Rs)
@@ -1780,12 +1889,43 @@ class S4Beam(object):
 
     # phases
     def add_phase_s(self, phase):
+        """
+        Add a sigma-phase to the beam.
+
+        Parameters
+        ----------
+        phase : float
+            phase angle in rad.
+
+        """
         self.rays[:, 13] += phase
 
     def add_phase_p(self, phase):
+        """
+        Add a pi-phase to the beam.
+
+        Parameters
+        ----------
+        phase : float
+            phase angle in rad.
+
+        """
+
         self.rays[:, 14] += phase
 
     def add_phases(self, phase_s, phase_p):
+        """
+        Add a sigma and pi phases to the beam.
+
+        Parameters
+        ----------
+        phase_s : float
+            The sigma phase in rad.
+
+        phase_p : float
+            the pi phase in rad.
+
+        """
         self.add_phase_s(phase_s)
         self.add_phase_p(phase_p)
     #
@@ -1793,14 +1933,20 @@ class S4Beam(object):
     #
 
     def generate_source(self, source_object):
+        #todo: remove?
         """
+        Put rays that sample a given source_object. This option mimics the obsolete "source" in shadow3.
+        It should not be used, only for compatibility purposes.
 
         Parameters
         ----------
-        source_object
+        source_object : instance of a shadow4.source
+            Instance of a source class that implements the get_rays() method.
 
         Returns
         -------
+        S4Beam instance
+            the new source. Note that the calling beam is also modified.
 
         """
         try:
@@ -1811,16 +1957,18 @@ class S4Beam(object):
             raise Exception("shadow4 source class must implement get_rays method")
 
     def trace_oe(self, oe_object, n, overwrite=True):
+        #todo remove?
         """
+        Modify rays to trace an optical element. This option mimics the obsolete "trace" in shadow3.
+        It should not be used, only for compatibility purposes.
 
         Parameters
         ----------
-        oe_object
-        n
-        overwrite
+        oe_object : instance of a shadow4 optical element.
+            Instance of a source class that implements the trace_beam() method.
 
-        Returns
-        -------
+        n : int
+            The element number (not used here)
 
         """
         try:
@@ -1837,9 +1985,12 @@ class S4Beam(object):
     @classmethod
     def column_names(cls):
         """
+        returns a list with the names of shadow4 beam columns (the 18 columns in the beam plus the extended columns).
 
         Returns
         -------
+        list
+            The column names.
 
         """
 
@@ -1886,6 +2037,15 @@ class S4Beam(object):
 
     @classmethod
     def column_units(cls):
+        """
+        returns a list with the column units of shadow4 beam columns (the 18 columns in the beam plus the extended columns).
+
+        Returns
+        -------
+        list
+            The column units.
+
+        """
         return [
             "[m]",
             "[m]",
@@ -1931,9 +2091,13 @@ class S4Beam(object):
     @classmethod
     def column_short_names(cls):
         """
+        returns a list with the short-names of shadow4 beam columns (the 18 columns in the beam plus the extended columns).
+        Useful for labeling plots.
 
         Returns
         -------
+        list
+            The column short-names.
 
         """
         return [
@@ -1968,9 +2132,12 @@ class S4Beam(object):
     @classmethod
     def column_names_with_column_number(cls):
         """
+        returns a list with the names of shadow4 beam columns including the column number (the 18 columns in the beam plus the extended columns).
 
         Returns
         -------
+        list
+            The column names.
 
         """
         names = cls.column_names()
@@ -1980,9 +2147,12 @@ class S4Beam(object):
     @classmethod
     def column_short_names_with_column_number(cls):
         """
+        returns a list with the short-names of shadow4 beam columns including the column number (the 18 columns in the beam plus the extended columns).
 
         Returns
         -------
+        list
+            The column names.
 
         """
         names = cls.column_short_names()
@@ -1993,18 +2163,23 @@ class S4Beam(object):
     # useful tools (h5 files)
     #
 
-    def write_h5(self,filename,overwrite=True,simulation_name="run001",beam_name="begin"):
+    def write_h5(self, filename, overwrite=True, simulation_name="run001", beam_name="begin"):
         """
+        writes a beam in an h5 file.
 
         Parameters
         ----------
-        filename
-        overwrite
-        simulation_name
-        beam_name
+        filename : str
+            file name.
 
-        Returns
-        -------
+        overwrite : boolean, optional
+            if True, overwrite existing file (if False, the beam is appended in the existing file).
+
+        simulation_name : str, optional
+            a simulation name,
+
+        beam_name : str, optional
+            a beam name.
 
         """
 
@@ -2056,17 +2231,25 @@ class S4Beam(object):
         print("File written/updated: %s"%filename)
 
     @classmethod
-    def load_h5(cls,filename,simulation_name="run001",beam_name="begin"):
+    def load_h5(cls, filename, simulation_name="run001", beam_name="begin"):
         """
+        loads a beam from an h5 file.
 
         Parameters
         ----------
-        filename
-        simulation_name
-        beam_name
+        filename : str
+            file name.
+
+        simulation_name : str, optional
+            a simulation name,
+
+        beam_name : str, optional
+            a beam name.
 
         Returns
         -------
+        S4beam instance
+            The beam
 
         """
 
@@ -2096,15 +2279,19 @@ class S4Beam(object):
     # useful tools (compare beams)
     #
 
-    def identical(self,beam2):
+    def identical(self, beam2):
         """
+        Compares two beams
 
         Parameters
         ----------
-        beam2
+        beam2 : S4 instance
+            the beam to compare with.
 
         Returns
         -------
+        boolean
+            True if the two beams are almost equal.
 
         """
         try:
@@ -2113,15 +2300,15 @@ class S4Beam(object):
         except:
             return False
 
-    def difference(self,beam2):
+    def difference(self, beam2):
         """
+        Compares two beams and prints the diferences in different columns.
 
         Parameters
         ----------
-        beam2
+        beam2 : S4 instance
+            the beam to compare with.
 
-        Returns
-        -------
 
         """
         raysnew = beam2.rays
