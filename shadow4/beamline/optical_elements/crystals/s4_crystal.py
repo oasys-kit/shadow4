@@ -184,9 +184,12 @@ class S4CrystalElement(S4BeamlineElement):
 
             print("Bragg angle for E=%f eV is %f deg" % (energy, setting_angle * 180.0 / numpy.pi))
 
-            coor.set_angles(angle_radial=numpy.pi/2-setting_angle,
-                            angle_radial_out=numpy.pi/2-setting_angle,
+            coor.set_angles(angle_radial=    numpy.pi/2 - (setting_angle - oe._asymmetry_angle),
+                            angle_radial_out=numpy.pi/2 - (setting_angle + oe._asymmetry_angle),
                             angle_azimuthal=0.0)
+
+            print(">>>>>> incident angle: ", numpy.degrees(setting_angle - oe._asymmetry_angle))
+            print(">>>>>> output angle  : ", numpy.degrees(setting_angle + oe._asymmetry_angle))
         else:
             print("align_crystal: nothing to align: f_central=0")
 
@@ -365,9 +368,20 @@ class S4CrystalElement(S4BeamlineElement):
         print(">>>>>>surface_shape_instalce: ", ssi)
         ccc = oe.get_optical_surface_instance()
 
+        print(">>>>>dSpacingSI", self._crystalpy_diffraction_setup.dSpacingSI())
+        print(">>>>>asymmetryAngle", numpy.degrees(self._crystalpy_diffraction_setup.asymmetryAngle()),
+              numpy.degrees(oe._asymmetry_angle))
+
+
         if isinstance(ssi, Plane):
-            if oe._diffraction_geometry == DiffractionGeometry.BRAGG and oe._asymmetry_angle == 0.0:
-                beam_mirr, normal = ccc.apply_crystal_diffraction_bragg_symmetric_on_beam(beam)
+            if oe._diffraction_geometry == DiffractionGeometry.BRAGG:
+                if oe._asymmetry_angle == 0.0:
+                    print(">>>>>> Using non-dispersive reflection")
+                    beam_mirr, normal = ccc.apply_crystal_diffraction_bragg_symmetric_on_beam(beam)
+                else:
+                    ruling = self._crystalpy_diffraction_setup.dSpacingSI() / oe._asymmetry_angle
+                    print(">>>>>> Using dispersive reflection", ruling)
+                    beam_mirr, normal = ccc.apply_crystal_diffraction_dispersive_on_beam(beam, ruling=ruling)
             else:
                 raise Exception(NotImplementedError)
         else:
@@ -407,3 +421,5 @@ if __name__ == "__main__":
 
     ce = S4CrystalElement()
     ce.set_optical_element(c)
+
+    print(ce.info())
