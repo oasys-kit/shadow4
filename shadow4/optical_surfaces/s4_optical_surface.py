@@ -34,6 +34,8 @@ class S4OpticalSurface(object):
     def apply_crystal_diffraction_bragg_symmetric_on_beam(self, beam, **kwargs):
         raise NotImplementedError
 
+    def apply_crystal_diffraction_dispersive_on_beam(self, beam, **kwargs):
+        raise NotImplementedError
     #
     # common utilities
     #

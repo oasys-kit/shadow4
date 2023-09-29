@@ -26,7 +26,7 @@ def crystal_diffraction_with_collimated_beam(do_plot=True):
     #
 
     if True:
-        src = SourceGeometrical()
+        src = SourceGeometrical(nrays=300)
         src.set_energy_distribution_singleline(value=8000, unit='eV')
         src.set_spatial_type_rectangle(width=1e-3, height=1e-3)
         src.set_angular_distribution_uniform(0,0,-100e-6,100e-6)

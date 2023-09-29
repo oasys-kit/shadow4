@@ -96,6 +96,66 @@ def vector_refraction(vin, normal, n1, n2, do_check=0):
         print(">>>>> theta2 check: ", numpy.degrees(numpy.arcsin(n1/n2*numpy.sin(theta1))))
     return vout
 
+def vector_scattering(K_IN, H, NORMAL):
+    H_perp = vector_multiply_scalar(NORMAL, vector_dot(H, NORMAL))
+    H_par = vector_diff(H, H_perp)
+
+    K_IN_perp = vector_multiply_scalar(NORMAL, vector_dot(K_IN, NORMAL))
+    K_IN_par = vector_diff(K_IN, K_IN_perp)
+
+    K_OUT_par = vector_sum(K_IN_par, H_par)
+    K_OUT_perp = vector_multiply_scalar(NORMAL, numpy.sqrt(vector_modulus_square(K_IN) - vector_modulus_square(K_OUT_par)))
+    K_OUT = vector_sum(K_OUT_par, K_OUT_perp)
+    return K_OUT
+
+def vector_rotate_around_axis(u, rotation_axis, angle):
+    """Rotates the vector around an axis. It uses the Rodrigues formula [rf]_
+
+    Parameters
+    ----------
+    rotation_axis : Vector instance
+        Vector specifying the rotation axis (not necessarily unit vector).
+
+    angle : float
+        Rotation angle in radiants.
+
+    Returns
+    -------
+    Vector instance
+        Rotated vector as a new vector.
+
+    References
+    ----------
+    .. [rf] http://en.wikipedia.org/wiki/Rodrigues%27_rotation_formula
+
+    """
+    if isinstance(rotation_axis, numpy.ndarray):
+        rotation_axis1 = rotation_axis
+    else:
+        rotation_axis1 = numpy.array(rotation_axis)
+
+    if rotation_axis1.shape != u.shape:
+        if len(rotation_axis1.shape) == 1: # e.g. rotation_axis=[1,0,0]
+            rotation_axis2 = numpy.zeros_like(u)
+            rotation_axis2[:, 0] = rotation_axis1[0]
+            rotation_axis2[:, 1] = rotation_axis1[1]
+            rotation_axis2[:, 2] = rotation_axis1[2]
+            rotation_axis1 = rotation_axis2
+
+    unit_rotation_axis = vector_norm(rotation_axis1)
+
+    rotated_vector = vector_multiply_scalar(u, numpy.cos(angle))
+
+    tmp_vector = vector_cross(unit_rotation_axis, u)
+    tmp_vector = vector_multiply_scalar(tmp_vector, numpy.sin(angle))
+    rotated_vector = vector_sum(rotated_vector, tmp_vector)
+
+    scalar_factor = vector_dot(u, unit_rotation_axis) * (1.0 - numpy.cos(angle))
+    tmp_vector = vector_multiply_scalar(unit_rotation_axis, scalar_factor)
+    rotated_vector = vector_sum(rotated_vector, tmp_vector)
+
+    return rotated_vector
+
 if __name__ == "__main__":
 
     v1 = numpy.ones((200,3))
@@ -136,3 +196,18 @@ if __name__ == "__main__":
     assert (numpy.abs(v2[0][0] - 0.471) < 1e-3)
     assert (numpy.abs(v2[0][1] - 0) < 1e-3)
     assert (numpy.abs(v2[0][2] - 0.882) < 1e-3)
+
+
+
+
+    u = numpy.zeros((11,3))
+    u[:, 0] = numpy.linspace(1, 2, 11) * 0
+    u[:, 1] = numpy.linspace(2, 3, 11) * 0
+    u[:, 2] = numpy.linspace(3, 4, 11) * 0 + 1
+    print(vector_rotate_around_axis(u, [1,0,0], -numpy.radians(10)))
+
+
+    axis = numpy.zeros((11, 3))
+    axis[:,0] = 1
+    print(axis.shape)
+    print(vector_rotate_around_axis(u, axis, numpy.radians(10) ))

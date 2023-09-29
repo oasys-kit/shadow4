@@ -6,6 +6,7 @@ from syned.beamline.optical_elements.crystals.crystal import Crystal, Diffractio
 
 from shadow4.beam.s4_beam import S4Beam
 from shadow4.beamline.s4_beamline_element import S4BeamlineElement
+from shadow4.optical_surfaces.s4_conic import S4Conic
 
 from crystalpy.diffraction.DiffractionSetupXraylib import DiffractionSetupXraylib
 from crystalpy.diffraction.DiffractionSetupDabax import DiffractionSetupDabax
@@ -18,6 +19,7 @@ from crystalpy.util.Vector import Vector
 from crystalpy.util.Photon import Photon
 from crystalpy.util.ComplexAmplitudePhoton import ComplexAmplitudePhoton
 from crystalpy.util.ComplexAmplitudePhotonBunch import ComplexAmplitudePhotonBunch
+
 
 import scipy.constants as codata
 
@@ -167,7 +169,7 @@ class S4CrystalElement(S4BeamlineElement):
 
         self._crystalpy_diffraction_setup = diffraction_setup
 
-    def align_crystal(self):
+    def align_crystal(self, verbose=False):
         oe = self.get_optical_element()
         coor = self.get_coordinates()
 
@@ -181,19 +183,30 @@ class S4CrystalElement(S4BeamlineElement):
                 energy = codata.h * codata.c / codata.e * 1e2 / (oe._phot_cent * 1e-8)
 
             setting_angle = self._crystalpy_diffraction_setup.angleBraggCorrected(energy)
+            theta_in_grazing  = setting_angle + oe._asymmetry_angle
 
-            print("Bragg angle for E=%f eV is %f deg" % (energy, setting_angle * 180.0 / numpy.pi))
+            if verbose:
+                print(">>>>> align_crystal: dSpacingSI: " , (self._crystalpy_diffraction_setup.dSpacingSI()))
+                print(">>>>> align_crystal: Bragg angle (uncorrected) for E=%f eV is %f deg" % (energy, numpy.degrees(self._crystalpy_diffraction_setup.angleBragg(energy))))
+                print(">>>>> align_crystal: Bragg angle (corrected) for E=%f eV is %f deg" % (energy, numpy.degrees(setting_angle)))
+                print(">>>>> align_crystal: (normal) Incident   angle",  numpy.degrees(numpy.pi/2 - (theta_in_grazing ) ))
+                print(">>>>> align_crystal: grazing incident angle: ", numpy.degrees(theta_in_grazing ))
 
-            coor.set_angles(angle_radial=    numpy.pi/2 - (setting_angle - oe._asymmetry_angle),
-                            angle_radial_out=numpy.pi/2 - (setting_angle + oe._asymmetry_angle),
+                theta_out_grazing = setting_angle - oe._asymmetry_angle # wrong because this just applies the Laue equation
+                print(">>>>> align_crystal: (normal) Reflection angle [LAUE EQUATION]",  numpy.degrees(numpy.pi/2 - (theta_out_grazing) ))
+                print(">>>>> align_crystal: grazing output angle [LAUE EQUATION]: ", numpy.degrees(theta_out_grazing))
+
+
+            KIN = self._crystalpy_diffraction_setup.vectorKscattered(energy=energy)
+            theta_out = KIN.angle(self._crystalpy_diffraction_setup.vectorNormalSurface())
+            if verbose: print(">>>>> align_crystal: (normal) Reflection angle [SCATTERING EQUATION]: ", numpy.degrees(theta_out))
+            coor.set_angles(angle_radial=    numpy.pi/2 - theta_in_grazing ,
+                            angle_radial_out=theta_out,
                             angle_azimuthal=0.0)
-
-            print(">>>>>> incident angle: ", numpy.degrees(setting_angle - oe._asymmetry_angle))
-            print(">>>>>> output angle  : ", numpy.degrees(setting_angle + oe._asymmetry_angle))
         else:
-            print("align_crystal: nothing to align: f_central=0")
+            if verbose: print("align_crystal: nothing to align: f_central=0")
 
-        print(coor.info())
+        if verbose: print(coor.info())
 
     def trace_beam(self, **params):
         flag_lost_value = params.get("flag_lost_value", -1)
@@ -245,11 +258,12 @@ class S4CrystalElement(S4BeamlineElement):
         diffraction = Diffraction()
 
 
-        scan_type = 1 # 0=scan, 1=loop on rays, 2=bunch of photons (not functional)  # TODO: delete 0,2
+        scan_type = 2 # 0=scan, 1=loop on rays, 2=bunch of photons (not functional)  # TODO: delete 0,2
         if scan_type == 0: # scan
             energy = 8000.0  # eV
             # setting_angle = self._crystalpy_diffraction_setup.angleBragg(energy)
             setting_angle = self._crystalpy_diffraction_setup.angleBraggCorrected(energy)
+            theta_in_grazing = setting_angle + self.get_optical_element()._asymmetry_angle
 
             angle_deviation_points = nrays
             # initialize arrays for storing outputs
@@ -262,7 +276,7 @@ class S4CrystalElement(S4BeamlineElement):
             deviations = numpy.zeros(angle_deviation_points)
             for ia in range(angle_deviation_points):
                 deviation = angle_deviation_min + ia * angle_step
-                angle = deviation + setting_angle
+                angle = deviation + theta_in_grazing
 
                 # calculate the components of the unitary vector of the incident photon scan
                 # Note that diffraction plane is YZ
@@ -276,8 +290,10 @@ class S4CrystalElement(S4BeamlineElement):
 
                 # store results
                 deviations[ia] = deviation
-                intensityS[ia] = coeffs['S'].intensity()
-                intensityP[ia] = coeffs['P'].intensity()
+                intensityS[ia] = numpy.abs(coeffs['S'])**2
+                intensityP[ia] = numpy.abs(coeffs['P'])**2
+            from srxraylib.plot.gol import plot
+            plot(deviations, intensityS)
         elif scan_type == 1: # from beam, loop
             # initialize arrays for storing outputs
             complex_reflectivity_S = numpy.zeros(nrays, dtype=complex)
@@ -316,7 +332,7 @@ class S4CrystalElement(S4BeamlineElement):
             photons = ComplexAmplitudePhotonBunch()
             for ia in range(nrays):
                 photons.addPhoton(
-                    ComplexAmplitidePhoton(energy_in_ev=energies[ia],
+                    ComplexAmplitudePhoton(energy_in_ev=energies[ia],
                                     direction_vector=Vector(xp[ia], yp[ia], zp[ia]),
                                     Esigma= 1.0, # Esigma[ia],
                                     Epi   = 1.0, # [ia],
@@ -364,28 +380,17 @@ class S4CrystalElement(S4BeamlineElement):
     def apply_crystal_diffraction(self, beam):
 
         oe = self.get_optical_element()
-        ssi = oe.get_surface_shape_instance()
-        print(">>>>>>surface_shape_instalce: ", ssi)
         ccc = oe.get_optical_surface_instance()
 
-        print(">>>>>dSpacingSI", self._crystalpy_diffraction_setup.dSpacingSI())
-        print(">>>>>asymmetryAngle", numpy.degrees(self._crystalpy_diffraction_setup.asymmetryAngle()),
-              numpy.degrees(oe._asymmetry_angle))
+        dSpacingSI = self._crystalpy_diffraction_setup.dSpacingSI()
+        alphaX = oe._asymmetry_angle
 
-
-        if isinstance(ssi, Plane):
-            if oe._diffraction_geometry == DiffractionGeometry.BRAGG:
-                if oe._asymmetry_angle == 0.0:
-                    print(">>>>>> Using non-dispersive reflection")
-                    beam_mirr, normal = ccc.apply_crystal_diffraction_bragg_symmetric_on_beam(beam)
-                else:
-                    ruling = self._crystalpy_diffraction_setup.dSpacingSI() / oe._asymmetry_angle
-                    print(">>>>>> Using dispersive reflection", ruling)
-                    beam_mirr, normal = ccc.apply_crystal_diffraction_dispersive_on_beam(beam, ruling=ruling)
-            else:
-                raise Exception(NotImplementedError)
+        if oe._diffraction_geometry == DiffractionGeometry.BRAGG and oe._asymmetry_angle == 0.0:
+            print(">>>>>> Using non-dispersive reflection (BRAGG-SYMMETRIC)")
+            beam_mirr, normal = ccc.apply_crystal_diffraction_bragg_symmetric_on_beam(beam)
         else:
-            raise NotImplementedError
+            print(">>>>>> Using dispersive reflection (BRAGG or LAUE), dSpacingSI, alphaX[deg]", dSpacingSI, numpy.degrees(oe._asymmetry_angle))
+            beam_mirr, normal = ccc.apply_crystal_diffraction_dispersive_on_beam(beam, dSpacingSI=dSpacingSI, alphaX=alphaX)
 
         return beam_mirr, normal
 
