@@ -200,9 +200,10 @@ class S4CrystalElement(S4BeamlineElement):
             KIN = self._crystalpy_diffraction_setup.vectorKscattered(energy=energy)
             theta_out = KIN.angle(self._crystalpy_diffraction_setup.vectorNormalSurface())
             if verbose: print(">>>>> align_crystal: (normal) Reflection angle [SCATTERING EQUATION]: ", numpy.degrees(theta_out))
+            _,_,angle_azimuthal = coor.get_angles()
             coor.set_angles(angle_radial=    numpy.pi/2 - theta_in_grazing ,
                             angle_radial_out=theta_out,
-                            angle_azimuthal=0.0)
+                            angle_azimuthal=angle_azimuthal)
         else:
             if verbose: print("align_crystal: nothing to align: f_central=0")
 
