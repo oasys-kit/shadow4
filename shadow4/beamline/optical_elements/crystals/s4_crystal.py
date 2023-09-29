@@ -169,7 +169,7 @@ class S4CrystalElement(S4BeamlineElement):
 
         self._crystalpy_diffraction_setup = diffraction_setup
 
-    def align_crystal(self, verbose=False):
+    def align_crystal(self, verbose=True):
         oe = self.get_optical_element()
         coor = self.get_coordinates()
 
