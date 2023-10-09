@@ -131,17 +131,13 @@ class S4WigglerLightSource(S4LightSource):
                                                      ener_gev=electron_beam._energy_in_GeV,
                                                      per=wiggler.period_length(),
                                                      kValue=wiggler.K_vertical(),
-                                                     trajFile="",)
+                                                     trajFile="",
+                                                     shift_x_flag=wiggler._shift_x_flag,
+                                                     shift_x_value=wiggler._shift_x_value,
+                                                     shift_betax_flag=wiggler._shift_betax_flag,
+                                                     shift_betax_value=wiggler._shift_betax_value, )
 
         elif wiggler._magnetic_field_periodic == 0:
-
-            print(">>>>>>>>>>>>>>>>>>>>>>",
-                "shift_x_flag =      ",wiggler._shift_x_flag,
-                "shift_x_value =     ",wiggler._shift_x_value,
-                "shift_betax_flag =  ",wiggler._shift_betax_flag,
-                "shift_betax_value = ",wiggler._shift_betax_value
-                  )
-
 
             (traj, pars) = wiggler_trajectory(b_from=1,
                                                      inData=wiggler._file_with_magnetic_field,

@@ -159,20 +159,20 @@ class S4Wiggler(Wiggler):
 #magnetic structure
 from shadow4.sources.wiggler.s4_wiggler import S4Wiggler
 source = S4Wiggler(
-    magnetic_field_periodic  = {magnetic_field_periodic},   # 0=external, 1=periodic
-    file_with_magnetic_field = "{file_with_magnetic_field}",  # useful if magnetic_field_periodic=0
-    K_vertical        = {K_vertical},
-    period_length     = {period_length},
-    number_of_periods = {number_of_periods}, # syned Wiggler pars: useful if magnetic_field_periodic=1
-    emin              = {emin},     # Photon energy scan from energy (in eV)
-    emax              = {emax},     # Photon energy scan to energy (in eV)
-    ng_e              = {ng_e},            # Photon energy scan number of points
-    ng_j              = {ng_j} ,          # Number of points in electron trajectory (per period) for internal calculation only
+    magnetic_field_periodic  = {magnetic_field_periodic},  # 0=external, 1=periodic
+    file_with_magnetic_field = "{file_with_magnetic_field}",  # used only if magnetic_field_periodic=0
+    K_vertical        = {K_vertical},  # syned Wiggler pars: used only if magnetic_field_periodic=1
+    period_length     = {period_length}, # syned Wiggler pars: used only if magnetic_field_periodic=1
+    number_of_periods = {number_of_periods},  # syned Wiggler pars: used only if magnetic_field_periodic=1
+    emin              = {emin},  # Photon energy scan from energy (in eV)
+    emax              = {emax},  # Photon energy scan to energy (in eV)
+    ng_e              = {ng_e},  # Photon energy scan number of points
+    ng_j              = {ng_j} , # Number of points in electron trajectory (per period) for internal calculation only
     flag_emittance    = {flag_emittance}, # Use emittance (0=No, 1=Yes)
-    shift_x_flag      = {shift_x_flag},
-    shift_x_value     = {shift_x_value},
-    shift_betax_flag  = {shift_betax_flag},
-    shift_betax_value = {shift_betax_value},
+    shift_x_flag      = {shift_x_flag}, # 0="No shift", 1="Half excursion", 2="Minimum", 3="Maximum", 4="Value at zero", 5="User value"
+    shift_x_value     = {shift_x_value}, # used only if shift_x_flag=5
+    shift_betax_flag  = {shift_betax_flag}, # 0="No shift", 1="Half excursion", 2="Minimum", 3="Maximum", 4="Value at zero", 5="User value"
+    shift_betax_value = {shift_betax_value},#  used only if shift_betax_flag=5
     )"""
 
 
