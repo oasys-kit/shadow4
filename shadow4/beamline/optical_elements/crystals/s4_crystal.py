@@ -232,7 +232,7 @@ class S4CrystalElement(S4BeamlineElement):
         input_beam.translation([0.0, -p * numpy.cos(theta_grazing1), p * numpy.sin(theta_grazing1)])
 
         #
-        # reflect beam in the mirror surface
+        # reflect beam in the crystal surface
         #
         soe = self.get_optical_element()
 
@@ -259,7 +259,7 @@ class S4CrystalElement(S4BeamlineElement):
         diffraction = Diffraction()
 
 
-        scan_type = 2 # 0=scan, 1=loop on rays, 2=bunch of photons (not functional)  # TODO: delete 0,2
+        scan_type = 2 # 0=scan, 1=loop on rays, 2=bunch of photons # TODO: delete 0,1
         if scan_type == 0: # scan
             energy = 8000.0  # eV
             # setting_angle = self._crystalpy_diffraction_setup.angleBragg(energy)
@@ -330,25 +330,20 @@ class S4CrystalElement(S4BeamlineElement):
             Epi = numpy.sqrt(beam_in_crystal_frame_before_reflection.get_column(25)) * \
                 numpy.exp(1j * beam_in_crystal_frame_before_reflection.get_column(15))
 
-            photons = ComplexAmplitudePhotonBunch()
-            for ia in range(nrays):
-                photons.addPhoton(
-                    ComplexAmplitudePhoton(energy_in_ev=energies[ia],
-                                    direction_vector=Vector(xp[ia], yp[ia], zp[ia]),
-                                    Esigma= 1.0, # Esigma[ia],
-                                    Epi   = 1.0, # [ia],
-                                           )
-                    )
-            bunch_out = diffraction.calculateDiffractedComplexAmplitudePhotonBunch(self._crystalpy_diffraction_setup, photons)
-            bunch_out_dict = bunch_out.toDictionary()
-            reflectivity_S = numpy.sqrt(numpy.array(bunch_out_dict["intensityS"]))
-            reflectivity_P = numpy.sqrt(numpy.array(bunch_out_dict["intensityP"]))
 
-            footprint.apply_reflectivities(reflectivity_S, reflectivity_P)
-            footprint.add_phases(numpy.array(bunch_out_dict["intensityS"]),
-                                 numpy.array(bunch_out_dict["intensityP"]))
+            photons_in = ComplexAmplitudePhoton(energies, Vector(xp,yp,zp), Esigma=Esigma, Epi=Epi)
+            photons_out = diffraction.calculateDiffractedComplexAmplitudePhoton(self._crystalpy_diffraction_setup, photons_in)
 
+            footprint.apply_reflectivities(
+                numpy.sqrt(photons_out.getIntensityS()),
+                numpy.sqrt(photons_out.getIntensityP()))
 
+            footprint.add_phases(photons_out.getPhaseS(),
+                                 photons_out.getPhaseP())
+
+            # just for check they are equal (for plane crystals only....)
+            # print(">>>> shadow4 vz: ", footprint.rays[:,5][0:20])
+            # print(">>>> crystalpy vz: ", photons_out.unitDirectionVector().components()[2][0:20])
 
 ########################################################################################
         #
