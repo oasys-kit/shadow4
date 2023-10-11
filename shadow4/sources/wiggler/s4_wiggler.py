@@ -12,7 +12,12 @@ class S4Wiggler(Wiggler):
                  ng_e=11,                    # Photon energy scan number of points
                  ng_j=20,                    # Number of points in electron trajectory (per period) for internal calculation only
                  flag_emittance=0,           # when sampling rays: Use emittance (0=No, 1=Yes)
-                 shift_x_flag=0, shift_x_value=0.0, shift_betax_flag=0, shift_betax_value=0.0, # ele
+                 shift_x_flag=0,        # Shift x? 0:No, 1:Half excursion, 2:min, 3:max, 4:value at y=0, 5:user value
+                 shift_x_value=0.0,     # for shift_x_flag=5, the x value
+                 shift_betax_flag=0,    # Shift x'? 0:No, 1:Half excursion, 2:min, 3:max, 4:value at y=0, 5:user value
+                 shift_betax_value=0.0, # for shift_betax_flag=5, the x' value
+                 epsi_dx=0.0, # distance from waist X
+                 epsi_dz=0.0, # distance from waist Z
                  ):
 
         self._magnetic_field_periodic = magnetic_field_periodic
@@ -35,6 +40,8 @@ class S4Wiggler(Wiggler):
         self._shift_betax_flag  = shift_betax_flag
         self._shift_betax_value = shift_betax_value
 
+        self._EPSI_DX           = epsi_dx
+        self._EPSI_DZ           = epsi_dz
 
     def info(self,debug=False):
 
@@ -66,6 +73,9 @@ class S4Wiggler(Wiggler):
         txt += "        number of energy points: %d\n"%(self._NG_E)
         txt += "        number of points for the trajectory: %d\n"%(self._NG_J)
 
+        txt += "\n\n"
+        txt += "        distance from waist X: %f m\n" % (self._EPSI_DX)
+        txt += "        distance from waist Z: %f m\n" % (self._EPSI_DZ)
         # txt += "-----------------------------------------------------\n"
 
         return txt
@@ -168,6 +178,8 @@ source = S4Wiggler(
     emax              = {emax},  # Photon energy scan to energy (in eV)
     ng_e              = {ng_e},  # Photon energy scan number of points
     ng_j              = {ng_j} , # Number of points in electron trajectory (per period) for internal calculation only
+    epsi_dx           = {epsi_dx},  # distance to waist in X [m]
+    epsi_dz           = {epsi_dZ} , # distance to waist in Z [m]
     flag_emittance    = {flag_emittance}, # Use emittance (0=No, 1=Yes)
     shift_x_flag      = {shift_x_flag}, # 0="No shift", 1="Half excursion", 2="Minimum", 3="Maximum", 4="Value at zero", 5="User value"
     shift_x_value     = {shift_x_value}, # used only if shift_x_flag=5
@@ -186,6 +198,8 @@ source = S4Wiggler(
             "emax"                     : self._EMAX            ,
             "ng_e"                     : self._NG_E            ,
             "ng_j"                     : self._NG_J            ,
+            "epsi_dx"                  : self._EPSI_DX,
+            "epsi_dz"                  : self._EPSI_DZ,
             "flag_emittance"           : self._FLAG_EMITTANCE  ,
             "shift_x_flag"             : self._shift_x_flag     ,
             "shift_x_value"            : self._shift_x_value    ,

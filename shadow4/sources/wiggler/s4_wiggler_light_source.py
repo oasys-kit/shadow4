@@ -484,21 +484,18 @@ class S4WigglerLightSource(S4LightSource):
                 #     [  c21  c22  ]  =  [  rho*sigma1*sigma2  sigma2^2            ]
                 sigmaX,sigmaXp,sigmaZ,sigmaZp = syned_electron_beam.get_sigmas_all()
 
-                epsi_wX = sigmaX * sigmaXp
-                rSigmaX = numpy.sqrt( (epsi_wX**2) * (sigmaXp**2) + sigmaX**2 )
+                rSigmaX = numpy.sqrt( (EPSI_WX**2) * (sigmaXp**2) + sigmaX**2 )
                 rSigmaXp = sigmaXp
-                rhoX = epsi_wX * sigmaXp**2 / (rSigmaX * rSigmaXp)
+                rhoX = EPSI_WX * sigmaXp**2 / (rSigmaX * rSigmaXp)
                 mean = [0, 0]
                 cov = [[sigmaX**2, rhoX*sigmaX*sigmaXp], [rhoX*sigmaX*sigmaXp, sigmaXp**2]]  # diagonal covariance
                 sampled_x, sampled_xp = numpy.random.multivariate_normal(mean, cov, 1).T
-                # plot_scatter(sampled_x,sampled_xp)
                 XXX = sampled_x
                 E_BEAM1 = sampled_xp
 
-                epsi_wZ = sigmaZ * sigmaZp
-                rSigmaZ = numpy.sqrt( (epsi_wZ**2) * (sigmaZp**2) + sigmaZ**2 )
+                rSigmaZ = numpy.sqrt( (EPSI_WZ**2) * (sigmaZp**2) + sigmaZ**2 )
                 rSigmaZp = sigmaZp
-                rhoZ = epsi_wZ * sigmaZp**2 / (rSigmaZ * rSigmaZp)
+                rhoZ = EPSI_WZ * sigmaZp**2 / (rSigmaZ * rSigmaZp)
                 mean = [0, 0]
                 cov = [[sigmaZ**2, rhoZ*sigmaZ*sigmaZp], [rhoZ*sigmaZ*sigmaZp, sigmaZp**2]]  # diagonal covariance
                 sampled_z, sampled_zp = numpy.random.multivariate_normal(mean, cov, 1).T
@@ -506,11 +503,8 @@ class S4WigglerLightSource(S4LightSource):
                 E_BEAM3 = sampled_zp
 
             else:
-                sigmaXp = 0.0
                 XXX = 0.0
                 E_BEAM1 = 0.0
-                rhoX = 0.0
-                sigmaZp = 0.0
                 ZZZ = 0.0
                 E_BEAM3 = 0.0
 
@@ -852,8 +846,8 @@ class S4WigglerLightSource(S4LightSource):
 
         user_unit_to_m = 1.0
         F_COHER = 0
-        EPSI_DX = 0.0
-        EPSI_DZ = 0.0
+        EPSI_DX = self.get_magnetic_structure()._EPSI_DX
+        EPSI_DZ = self.get_magnetic_structure()._EPSI_DZ
         psi_interval_in_units_one_over_gamma = None
         psi_interval_number_of_points = 1001
         verbose = True
@@ -930,67 +924,105 @@ if __name__ == "__main__":
     from srxraylib.plot.gol import plot_scatter, set_qt
     set_qt()
 
-    e_min = 5000.0 # 70490.0 #
-    e_max = 100000.0 # 70510.0 #
-    e_min = 70490.0 #
-    e_max = 70510.0 #
-    NRAYS = 5000
-    use_emittances=True
-
-
-
-    wigFile = "xshwig.sha"
-    inData = ""
-
-    nPer = 5 # 50
-    nTrajPoints = 501
-    ener_gev = 6.04
-    per = 0.040
-    kValue = 7.85
-    trajFile = "tmp.traj"
-    shift_x_flag = 0
-    shift_x_value = 0.0
-    shift_betax_flag = 0
-    shift_betax_value = 0.0
-
-
-
-
+    # e_min = 5000.0 # 70490.0 #
+    # e_max = 100000.0 # 70510.0 #
+    # e_min = 70490.0 #
+    # e_max = 70510.0 #
+    # NRAYS = 5000
+    # use_emittances=True
     #
-    # syned
     #
+    #
+    # wigFile = "xshwig.sha"
+    # inData = ""
+    #
+    # nPer = 5 # 50
+    # nTrajPoints = 501
+    # ener_gev = 6.04
+    # per = 0.040
+    # kValue = 7.85
+    # trajFile = "tmp.traj"
+    # shift_x_flag = 0
+    # shift_x_value = 0.0
+    # shift_betax_flag = 0
+    # shift_betax_value = 0.0
+    #
+    #
+    #
+    #
+    # #
+    # # syned
+    # #
+    #
+    # electron_beam = S4ElectronBeam(energy_in_GeV=6.04,
+    #                                energy_spread = 0.0,
+    #                                current = 0.2,
+    #                                number_of_bunches = 400,
+    #                                moment_xx=(400e-6)**2,
+    #                                moment_xxp=0.0,
+    #                                moment_xpxp=(10e-6)**2,
+    #                                moment_yy=(10e-6)**2,
+    #                                moment_yyp=0.0,
+    #                                moment_ypyp=(4e-6)**2)
+    #
+    #
+    # w = S4Wiggler(K_vertical=kValue,period_length=per,number_of_periods=nPer,
+    #                             flag_emittance=use_emittances,
+    #                             emin=e_min, emax=e_max,ng_e=10, ng_j=nTrajPoints)
+    #
+    #
+    #
+    # # print(w.info())
+    #
+    # ls = S4WigglerLightSource(name="Undefined", electron_beam=electron_beam, magnetic_structure=w,
+    #                           nrays=NRAYS)
+    #
+    # print(ls.info())
+    #
+    #
+    # beam = ls.get_beam()
+    #
+    # rays = beam.rays
+    #
+    # plot_scatter(rays[:,1],rays[:,0],title="trajectory",show=False)
+    # plot_scatter(rays[:,0],rays[:,2],title="real space",show=False)
+    # plot_scatter(rays[:,3],rays[:,5],title="divergence space")
 
-    electron_beam = S4ElectronBeam(energy_in_GeV=6.04,
-                                   energy_spread = 0.0,
-                                   current = 0.2,
-                                   number_of_bunches = 400,
-                                   moment_xx=(400e-6)**2,
-                                   moment_xxp=0.0,
-                                   moment_xpxp=(10e-6)**2,
-                                   moment_yy=(10e-6)**2,
-                                   moment_yyp=0.0,
-                                   moment_ypyp=(4e-6)**2)
+    # electron beam
+    from shadow4.sources.s4_electron_beam import S4ElectronBeam
 
+    electron_beam = S4ElectronBeam(energy_in_GeV=6, energy_spread=0.001, current=0.2)
+    electron_beam.set_sigmas_all(sigma_x=2.377e-05, sigma_y=2.472e-05, sigma_xp=3.58e-06, sigma_yp=3.04e-06)
 
-    w = S4Wiggler(K_vertical=kValue,period_length=per,number_of_periods=nPer,
-                                flag_emittance=use_emittances,
-                                emin=e_min, emax=e_max,ng_e=10, ng_j=nTrajPoints)
+    # magnetic structure
+    from shadow4.sources.wiggler.s4_wiggler import S4Wiggler
 
+    source = S4Wiggler(
+        magnetic_field_periodic=0,  # 0=external, 1=periodic
+        file_with_magnetic_field="/nobackup/gurb1/srio/Oasys/SW_BM18_Joel.txt",  # used only if magnetic_field_periodic=0
+        K_vertical=10.0,  # syned Wiggler pars: used only if magnetic_field_periodic=1
+        period_length=0.1,  # syned Wiggler pars: used only if magnetic_field_periodic=1
+        number_of_periods=10,  # syned Wiggler pars: used only if magnetic_field_periodic=1
+        emin=100.0,  # Photon energy scan from energy (in eV)
+        emax=200000.0,  # Photon energy scan to energy (in eV)
+        ng_e=101,  # Photon energy scan number of points
+        ng_j=501,  # Number of points in electron trajectory (per period) for internal calculation only
+        flag_emittance=1,  # Use emittance (0=No, 1=Yes)
+        shift_x_flag=4,  # 0="No shift", 1="Half excursion", 2="Minimum", 3="Maximum", 4="Value at zero", 5="User value"
+        shift_x_value=0.001,  # used only if shift_x_flag=5
+        shift_betax_flag=4,  # 0="No shift", 1="Half excursion", 2="Minimum", 3="Maximum", 4="Value at zero", 5="User value"
+        shift_betax_value=0.0,  # used only if shift_betax_flag=5
+    )
 
+    # light source
+    from shadow4.sources.wiggler.s4_wiggler_light_source import S4WigglerLightSource
 
-    # print(w.info())
+    light_source = S4WigglerLightSource(name='wiggler', electron_beam=electron_beam, magnetic_structure=source, nrays=2000,
+                                        seed=5676561)
+    beam = light_source.get_beam()
 
-    ls = S4WigglerLightSource(name="Undefined", electron_beam=electron_beam, magnetic_structure=w,
-                              nrays=NRAYS)
+    # test plot
+    from srxraylib.plot.gol import plot_scatter
 
-    print(ls.info())
-
-
-    beam = ls.get_beam()
-
-    rays = beam.rays
-
-    plot_scatter(rays[:,1],rays[:,0],title="trajectory",show=False)
-    plot_scatter(rays[:,0],rays[:,2],title="real space",show=False)
-    plot_scatter(rays[:,3],rays[:,5],title="divergence space")
-
+    rays = beam.get_rays()
+    plot_scatter(1e6 * rays[:, 0], 1e6 * rays[:, 2], title='(X,Z) in microns')
