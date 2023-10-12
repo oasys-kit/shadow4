@@ -232,15 +232,89 @@ class S4CrystalElement(S4BeamlineElement):
         input_beam.translation([0.0, -p * numpy.cos(theta_grazing1), p * numpy.sin(theta_grazing1)])
 
         #
-        # reflect beam in the crystal surface
+        # reflect beam in the crystal surface and apply crystal reflectivity
         #
         soe = self.get_optical_element()
 
-        beam_in_crystal_frame_before_reflection = input_beam.duplicate()
-        if not isinstance(soe, Crystal): # undefined
-            raise Exception("Undefined Crystal")
-        else:
+        if not isinstance(soe, Crystal): raise Exception("Undefined Crystal")
+
+
+        if 1:
+            # two steps (diffraction delegated to optical surface, reflectivity with crystalpy)
             footprint, normal = self.apply_crystal_diffraction(input_beam) # warning, beam is also changed!!
+            beam_in_crystal_frame_before_reflection = input_beam.duplicate()
+            footprint = self.apply_crystal_reflectivities(beam_in_crystal_frame_before_reflection, footprint)
+        else:
+            # one steps (diffraction and reflectivity with crystalpy)
+
+            ccc = soe.get_optical_surface_instance()
+            newbeam = input_beam.duplicate()
+
+            x1 = newbeam.get_columns([1, 2, 3])  # numpy.array(a3.getshcol([1,2,3]))
+            v1 = newbeam.get_columns([4, 5, 6])  # numpy.array(a3.getshcol([4,5,6]))
+            flag = newbeam.get_column(10)  # numpy.array(a3.getshonecol(10))
+            optical_path = newbeam.get_column(13)
+
+            t1, t2 = ccc.calculate_intercept(x1, v1)
+            reference_distance = -newbeam.get_column(2).mean() + newbeam.get_column(3).mean()
+            t, iflag = ccc.choose_solution(t1, t2, reference_distance=reference_distance)
+
+            x2 = x1 + v1 * t
+            for i in range(flag.size):
+                if iflag[i] < 0: flag[i] = -100
+
+            newbeam.set_column(1, x2[0])
+            newbeam.set_column(2, x2[1])
+            newbeam.set_column(3, x2[2])
+            # newbeam.set_column(4, v2[0])
+            # newbeam.set_column(5, v2[1])
+            # newbeam.set_column(6, v2[2])
+            newbeam.set_column(10, flag)
+            newbeam.set_column(13, optical_path + t)
+
+
+            #$$$$$$$$$$$$$$$$
+            # we retrieve data from "beam" meaning the beam before reflection, in the crystal frame (incident beam...)
+            xp = v1[0] # beam_in_crystal_frame_before_reflection.get_column(4)
+            yp = v1[1] # beam_in_crystal_frame_before_reflection.get_column(5)
+            zp = v1[2] # beam_in_crystal_frame_before_reflection.get_column(6)
+            energies = newbeam.get_photon_energy_eV()
+
+            Esigma = numpy.sqrt(newbeam.get_column(24)) * \
+                     numpy.exp(1j * newbeam.get_column(14))
+            Epi = numpy.sqrt(newbeam.get_column(25)) * \
+                  numpy.exp(1j * newbeam.get_column(15))
+
+            photons_in = ComplexAmplitudePhoton(energies, Vector(xp, yp, zp), Esigma=Esigma, Epi=Epi)
+            photons_out = Diffraction.calculateDiffractedComplexAmplitudePhoton(self._crystalpy_diffraction_setup,
+                                                                                photons_in)
+
+            newbeam.apply_reflectivities(
+                numpy.sqrt(photons_out.getIntensityS()),
+                numpy.sqrt(photons_out.getIntensityP()))
+
+            newbeam.add_phases(photons_out.getPhaseS(),
+                                 photons_out.getPhaseP())
+
+            newbeam.set_column(4, photons_out.unitDirectionVector().components()[0])
+            newbeam.set_column(5, photons_out.unitDirectionVector().components()[1])
+            newbeam.set_column(6, photons_out.unitDirectionVector().components()[2])
+
+            # for i in [1,2,3,4,5,6,10,13]:
+            #     print(">>> ", i, numpy.round(footprint.get_column(i) - newbeam.get_column(i)) ) #, footprint.get_column(i), newbeam.get_column(i))
+
+
+            footprint = newbeam
+
+            #$$$$$$$$$$$$$$$$$$$$
+            #
+            # # ; Calculates the normal at each intercept [see shadow's normal.F]
+            # normal2 = ccc.get_normal(x2)
+            # print(">>>>>>>>>>>>************ ", input_beam.rays[:, 0:3].T.shape)
+            # normal3 = ccc.get_normal(footprint.rays[:, 0:3].T)
+            # print(">>>>>", normal.shape, normal2.shape, normal3.shape)
+            # print(">>>>>", normal[2], normal2[2], normal3[2])
+
 
         #
         # apply mirror boundaries
@@ -248,104 +322,6 @@ class S4CrystalElement(S4BeamlineElement):
         footprint.apply_boundaries_syned(soe.get_boundary_shape(), flag_lost_value=flag_lost_value)
 
 
-        ########################################################################################
-        #
-        # TODO" apply crystal reflectivity
-        #
-        nrays = footprint.get_number_of_rays()
-        # energy = 8000.0  # eV
-
-        # Create a Diffraction object (the calculator)
-        diffraction = Diffraction()
-
-
-        scan_type = 2 # 0=scan, 1=loop on rays, 2=bunch of photons # TODO: delete 0,1
-        if scan_type == 0: # scan
-            energy = 8000.0  # eV
-            # setting_angle = self._crystalpy_diffraction_setup.angleBragg(energy)
-            setting_angle = self._crystalpy_diffraction_setup.angleBraggCorrected(energy)
-            theta_in_grazing = setting_angle + self.get_optical_element()._asymmetry_angle
-
-            angle_deviation_points = nrays
-            # initialize arrays for storing outputs
-            intensityS = numpy.zeros(nrays)
-            intensityP = numpy.zeros(nrays)
-
-            angle_deviation_min = -100e-6  # radians
-            angle_deviation_max = 100e-6  # radians
-            angle_step = (angle_deviation_max - angle_deviation_min) / angle_deviation_points
-            deviations = numpy.zeros(angle_deviation_points)
-            for ia in range(angle_deviation_points):
-                deviation = angle_deviation_min + ia * angle_step
-                angle = deviation + theta_in_grazing
-
-                # calculate the components of the unitary vector of the incident photon scan
-                # Note that diffraction plane is YZ
-                yy = numpy.cos(angle)
-                zz = - numpy.abs(numpy.sin(angle))
-                photon = Photon(energy_in_ev=energy, direction_vector=Vector(0.0, yy, zz))
-                # if ia < 10: print(ia, 0.0, yy, zz)
-
-                # perform the calculation
-                coeffs = diffraction.calculateDiffractedComplexAmplitudes(self._crystalpy_diffraction_setup, photon)
-
-                # store results
-                deviations[ia] = deviation
-                intensityS[ia] = numpy.abs(coeffs['S'])**2
-                intensityP[ia] = numpy.abs(coeffs['P'])**2
-            from srxraylib.plot.gol import plot
-            plot(deviations, intensityS)
-        elif scan_type == 1: # from beam, loop
-            # initialize arrays for storing outputs
-            complex_reflectivity_S = numpy.zeros(nrays, dtype=complex)
-            complex_reflectivity_P = numpy.zeros(nrays, dtype=complex)
-
-            # we retrieve data from "beam" meaning the beam before reflection, in the crystal frame (incident beam...)
-            xp = beam_in_crystal_frame_before_reflection.get_column(4)
-            yp = beam_in_crystal_frame_before_reflection.get_column(5)
-            zp = beam_in_crystal_frame_before_reflection.get_column(6)
-            energies = beam_in_crystal_frame_before_reflection.get_photon_energy_eV()
-            for ia in range(nrays):
-                photon = Photon(energy_in_ev=energies[ia], direction_vector=Vector(xp[ia], yp[ia], zp[ia]))
-                # if ia < 10: print(ia, xp[ia], yp[ia], zp[ia])
-                # perform the calculation
-                coeffs = diffraction.calculateDiffractedComplexAmplitudes(self._crystalpy_diffraction_setup, photon)
-                # store results
-                complex_reflectivity_S[ia] = coeffs['S']
-                complex_reflectivity_P[ia] = coeffs['P']
-
-            footprint.apply_complex_reflectivities(complex_reflectivity_S, complex_reflectivity_P)
-        elif scan_type == 2: # from beam, bunch
-            # this is complicated... and not faster...
-            # todo: accelerate crystalpy create calculateDiffractedComplexAmplitudes for a PhotonBunch
-
-            # we retrieve data from "beam" meaning the beam before reflection, in the crystal frame (incident beam...)
-            xp = beam_in_crystal_frame_before_reflection.get_column(4)
-            yp = beam_in_crystal_frame_before_reflection.get_column(5)
-            zp = beam_in_crystal_frame_before_reflection.get_column(6)
-            energies = beam_in_crystal_frame_before_reflection.get_photon_energy_eV()
-
-            Esigma = numpy.sqrt(beam_in_crystal_frame_before_reflection.get_column(24)) * \
-                numpy.exp(1j * beam_in_crystal_frame_before_reflection.get_column(14))
-            Epi = numpy.sqrt(beam_in_crystal_frame_before_reflection.get_column(25)) * \
-                numpy.exp(1j * beam_in_crystal_frame_before_reflection.get_column(15))
-
-
-            photons_in = ComplexAmplitudePhoton(energies, Vector(xp,yp,zp), Esigma=Esigma, Epi=Epi)
-            photons_out = diffraction.calculateDiffractedComplexAmplitudePhoton(self._crystalpy_diffraction_setup, photons_in)
-
-            footprint.apply_reflectivities(
-                numpy.sqrt(photons_out.getIntensityS()),
-                numpy.sqrt(photons_out.getIntensityP()))
-
-            footprint.add_phases(photons_out.getPhaseS(),
-                                 photons_out.getPhaseP())
-
-            # just for check they are equal (for plane crystals only....)
-            # print(">>>> shadow4 vz: ", footprint.rays[:,5][0:20])
-            # print(">>>> crystalpy vz: ", photons_out.unitDirectionVector().components()[2][0:20])
-
-########################################################################################
         #
         # from element reference system to image plane
         #
@@ -390,7 +366,189 @@ class S4CrystalElement(S4BeamlineElement):
 
         return beam_mirr, normal
 
+    def apply_crystal_reflectivities(self, beam_in_crystal_frame_before_reflection, footprint):
+        ########################################################################################
+        #
+        # apply crystal reflectivity
+        #
+        nrays = footprint.get_number_of_rays()
+        # energy = 8000.0  # eV
 
+        # Create a Diffraction object (the calculator)
+        diffraction = Diffraction()
+
+
+        scan_type = 2 # 0=scan, 1=loop on rays, 2=bunch of photons, 3=bunch in, c.a. out # TODO: delete 0,1,2
+        if scan_type == 0: # scan
+            energy = 8000.0  # eV
+            # setting_angle = self._crystalpy_diffraction_setup.angleBragg(energy)
+            setting_angle = self._crystalpy_diffraction_setup.angleBraggCorrected(energy)
+            theta_in_grazing = setting_angle + self.get_optical_element()._asymmetry_angle
+
+            angle_deviation_points = nrays
+            # initialize arrays for storing outputs
+            intensityS = numpy.zeros(nrays)
+            intensityP = numpy.zeros(nrays)
+
+            angle_deviation_min = -100e-6  # radians
+            angle_deviation_max = 100e-6  # radians
+            angle_step = (angle_deviation_max - angle_deviation_min) / angle_deviation_points
+            deviations = numpy.zeros(angle_deviation_points)
+            for ia in range(angle_deviation_points):
+                deviation = angle_deviation_min + ia * angle_step
+                angle = deviation + theta_in_grazing
+
+                # calculate the components of the unitary vector of the incident photon scan
+                # Note that diffraction plane is YZ
+                yy = numpy.cos(angle)
+                zz = - numpy.abs(numpy.sin(angle))
+                photon = Photon(energy_in_ev=energy, direction_vector=Vector(0.0, yy, zz))
+                # if ia < 10: print(ia, 0.0, yy, zz)
+
+                # perform the calculation
+                coeffs = diffraction.calculateDiffractedComplexAmplitudes(self._crystalpy_diffraction_setup, photon)
+
+                # store results
+                deviations[ia] = deviation
+                intensityS[ia] = numpy.abs(coeffs['S'])**2
+                intensityP[ia] = numpy.abs(coeffs['P'])**2
+            from srxraylib.plot.gol import plot
+            plot(deviations, intensityS)
+
+        elif scan_type == 1: # from beam, loop
+            # initialize arrays for storing outputs
+            complex_reflectivity_S = numpy.zeros(nrays, dtype=complex)
+            complex_reflectivity_P = numpy.zeros(nrays, dtype=complex)
+
+            # we retrieve data from "beam" meaning the beam before reflection, in the crystal frame (incident beam...)
+            xp = beam_in_crystal_frame_before_reflection.get_column(4)
+            yp = beam_in_crystal_frame_before_reflection.get_column(5)
+            zp = beam_in_crystal_frame_before_reflection.get_column(6)
+            energies = beam_in_crystal_frame_before_reflection.get_photon_energy_eV()
+            for ia in range(nrays):
+                photon = Photon(energy_in_ev=energies[ia], direction_vector=Vector(xp[ia], yp[ia], zp[ia]))
+                # if ia < 10: print(ia, xp[ia], yp[ia], zp[ia])
+                # perform the calculation
+                coeffs = diffraction.calculateDiffractedComplexAmplitudes(self._crystalpy_diffraction_setup, photon)
+                # store results
+                complex_reflectivity_S[ia] = coeffs['S']
+                complex_reflectivity_P[ia] = coeffs['P']
+
+            footprint.apply_complex_reflectivities(complex_reflectivity_S, complex_reflectivity_P)
+
+        elif scan_type == 2: # from beam, bunch
+            # we retrieve data from "beam" meaning the beam before reflection, in the crystal frame (incident beam...)
+            xp = beam_in_crystal_frame_before_reflection.get_column(4)
+            yp = beam_in_crystal_frame_before_reflection.get_column(5)
+            zp = beam_in_crystal_frame_before_reflection.get_column(6)
+            energies = beam_in_crystal_frame_before_reflection.get_photon_energy_eV()
+
+            Esigma = numpy.sqrt(beam_in_crystal_frame_before_reflection.get_column(24)) * \
+                numpy.exp(1j * beam_in_crystal_frame_before_reflection.get_column(14))
+            Epi = numpy.sqrt(beam_in_crystal_frame_before_reflection.get_column(25)) * \
+                numpy.exp(1j * beam_in_crystal_frame_before_reflection.get_column(15))
+
+
+            photons_in = ComplexAmplitudePhoton(energies, Vector(xp,yp,zp), Esigma=Esigma, Epi=Epi)
+            photons_out = diffraction.calculateDiffractedComplexAmplitudePhoton(self._crystalpy_diffraction_setup, photons_in)
+
+            footprint.apply_reflectivities(
+                numpy.sqrt(photons_out.getIntensityS()),
+                numpy.sqrt(photons_out.getIntensityP()))
+
+            footprint.add_phases(photons_out.getPhaseS(),
+                                 photons_out.getPhaseP())
+
+
+        elif scan_type == 3:  # from beam, complex amplitides
+
+            # we retrieve data from "beam" meaning the beam before reflection, in the crystal frame (incident beam...)
+            xp = beam_in_crystal_frame_before_reflection.get_column(4)
+            yp = beam_in_crystal_frame_before_reflection.get_column(5)
+            zp = beam_in_crystal_frame_before_reflection.get_column(6)
+            energies = beam_in_crystal_frame_before_reflection.get_photon_energy_eV()
+
+            Esigma = numpy.sqrt(beam_in_crystal_frame_before_reflection.get_column(24)) * \
+                     numpy.exp(1j * beam_in_crystal_frame_before_reflection.get_column(14))
+            Epi = numpy.sqrt(beam_in_crystal_frame_before_reflection.get_column(25)) * \
+                  numpy.exp(1j * beam_in_crystal_frame_before_reflection.get_column(15))
+
+            photons_in = ComplexAmplitudePhoton(energies, Vector(xp, yp, zp), Esigma=Esigma, Epi=Epi)
+
+            # photons_out = diffraction.calculateDiffractedComplexAmplitudePhoton(self._crystalpy_diffraction_setup,
+            #                                                                     photons_in)
+
+            coeff = diffraction.calculateDiffractedComplexAmplitudes(self._crystalpy_diffraction_setup,
+                                                                                photons_in)
+
+            footprint.apply_reflectivities(
+                numpy.sqrt(numpy.abs(coeff['S'])**2),
+                numpy.sqrt(numpy.abs(coeff['P'])**2))
+
+            footprint.add_phases(
+                numpy.angle(coeff['S']),
+                numpy.angle(coeff['P']))
+
+            # just for check they are equal (for plane crystals only....)
+            # print(">>>> shadow4 vz: ", footprint.rays[:,5][0:20])
+            # print(">>>> crystalpy vz: ", photons_out.unitDirectionVector().components()[2][0:20])
+
+        ########################################################################################
+
+        return footprint
+
+    def apply_crystal_diffraction_and_reflectivities(self, beam):
+
+        beam_in_crystal_frame_before_reflection = beam.duplicate()
+
+        oe = self.get_optical_element()
+        ccc = oe.get_optical_surface_instance()
+
+        dSpacingSI = self._crystalpy_diffraction_setup.dSpacingSI()
+        alphaX = oe._asymmetry_angle
+
+        if oe._diffraction_geometry == DiffractionGeometry.BRAGG and oe._asymmetry_angle == 0.0:
+            print(">>>>>> Using non-dispersive reflection (BRAGG-SYMMETRIC)")
+            footprint, normal = ccc.apply_crystal_diffraction_bragg_symmetric_on_beam(beam)
+        else:
+            print(">>>>>> Using dispersive reflection (BRAGG or LAUE), dSpacingSI, alphaX[deg]", dSpacingSI, numpy.degrees(oe._asymmetry_angle))
+            footprint, normal = ccc.apply_crystal_diffraction_dispersive_on_beam(beam, dSpacingSI=dSpacingSI, alphaX=alphaX)
+
+        ########################################################################################
+        #
+        # apply crystal reflectivity
+        #
+        nrays = footprint.get_number_of_rays()
+        # energy = 8000.0  # eV
+
+        # Create a Diffraction object (the calculator)
+        diffraction = Diffraction()
+
+
+        # we retrieve data from "beam" meaning the beam before reflection, in the crystal frame (incident beam...)
+        xp = beam_in_crystal_frame_before_reflection.get_column(4)
+        yp = beam_in_crystal_frame_before_reflection.get_column(5)
+        zp = beam_in_crystal_frame_before_reflection.get_column(6)
+        energies = beam_in_crystal_frame_before_reflection.get_photon_energy_eV()
+
+        Esigma = numpy.sqrt(beam_in_crystal_frame_before_reflection.get_column(24)) * \
+            numpy.exp(1j * beam_in_crystal_frame_before_reflection.get_column(14))
+        Epi = numpy.sqrt(beam_in_crystal_frame_before_reflection.get_column(25)) * \
+            numpy.exp(1j * beam_in_crystal_frame_before_reflection.get_column(15))
+
+
+        photons_in = ComplexAmplitudePhoton(energies, Vector(xp,yp,zp), Esigma=Esigma, Epi=Epi)
+        photons_out = diffraction.calculateDiffractedComplexAmplitudePhoton(self._crystalpy_diffraction_setup, photons_in)
+
+        footprint.apply_reflectivities(
+            numpy.sqrt(photons_out.getIntensityS()),
+            numpy.sqrt(photons_out.getIntensityP()))
+
+        footprint.add_phases(photons_out.getPhaseS(),
+                             photons_out.getPhaseP())
+
+
+        return footprint, normal
 
 if __name__ == "__main__":
     c = S4Crystal(
