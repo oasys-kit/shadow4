@@ -22,20 +22,24 @@ class S4OpticalSurface(object):
     def get_normal(self, x, **kwargs):
         raise NotImplementedError
 
-    def calculate_intercept(self, XIN, VIN, **kwargs):
+    def calculate_intercept(self, XIN, VIN, **kwargs): # todo: remove?
         raise NotImplementedError
 
-    def apply_specular_reflection_on_beam(self, beam, **kwargs):
+    def calculate_intercept_and_choose_solution(self, XIN, VIN, **kwargs): # todo: common implementation it here
         raise NotImplementedError
 
-    def apply_refraction_on_beam(self, beam, **kwargs):
+    def apply_specular_reflection_on_beam(self, beam, **kwargs):  # todo: common implementation it here?
         raise NotImplementedError
 
-    def apply_crystal_diffraction_bragg_symmetric_on_beam(self, beam, **kwargs):
+    def apply_refraction_on_beam(self, beam, **kwargs):  # todo: common implementation it here?
         raise NotImplementedError
 
-    def apply_crystal_diffraction_dispersive_on_beam(self, beam, **kwargs):
-        raise NotImplementedError
+    # def apply_crystal_diffraction_bragg_symmetric_on_beam(self, beam, **kwargs):
+    #     raise NotImplementedError
+    #
+    # def apply_crystal_diffraction_dispersive_on_beam(self, beam, **kwargs):
+    #     raise NotImplementedError
+
     #
     # common utilities
     #

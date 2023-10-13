@@ -392,6 +392,13 @@ class S4Conic(S4OpticalSurface):
 
         return TPAR,I_FLAG
 
+    def calculate_intercept_and_choose_solution(self, x1, v1, reference_distance=10.0, method=0):
+        t1, t2 = self.calculate_intercept(x1, v1)
+        return self.choose_solution(t1, t2, reference_distance=reference_distance, method=method)
+
+
+
+
     def z_vs_xy(self,x,y):
 
         if isinstance(x, numpy.ndarray):
@@ -982,68 +989,70 @@ class S4Conic(S4OpticalSurface):
 
         return newbeam, normal
 
+    # #
+    # # crystal routines
+    # #
+    # def apply_crystal_diffraction_bragg_symmetric_on_beam(self, newbeam):
+    #     return self.apply_specular_reflection_on_beam(newbeam)
     #
-    # crystal routines
+    # def apply_crystal_diffraction_dispersive_on_beam(self, beam, dSpacingSI=3.135416e-10, alphaX=0.0):
+    #     newbeam = beam.duplicate()
     #
-    def apply_crystal_diffraction_bragg_symmetric_on_beam(self, newbeam):
-        return self.apply_specular_reflection_on_beam(newbeam)
+    #     x1 = newbeam.get_columns([1, 2, 3])  # numpy.array(a3.getshcol([1,2,3]))
+    #     v1 = newbeam.get_columns([4, 5, 6])  # numpy.array(a3.getshcol([4,5,6]))
+    #     flag = newbeam.get_column(10)  # numpy.array(a3.getshonecol(10))
+    #     kin = newbeam.get_column(11) * 1e2 # in m^-1
+    #     optical_path = newbeam.get_column(13)
+    #
+    #     t1, t2 = self.calculate_intercept(x1, v1)
+    #     reference_distance = -newbeam.get_column(2).mean() + newbeam.get_column(3).mean()
+    #     t, iflag = self.choose_solution(t1, t2, reference_distance=reference_distance)
+    #
+    #     x2 = x1 + v1 * t
+    #     for i in range(flag.size):
+    #         if iflag[i] < 0: flag[i] = -100
+    #
+    #     # ;
+    #     # ; Calculates the normal at each intercept [see shadow's normal.F]
+    #     # ;
+    #     normal = self.get_normal(x2)
+    #     # capilatized vectors are [:,3] as required for vector_* operations
+    #     NORMAL = normal.T
+    #     NORMAL = vector_multiply_scalar(NORMAL, -1.0) # outward normal
+    #
+    #     #
+    #     # calculate the reciprocal lattice vector H
+    #     # (see pag 487 in https://doi.org/10.1107/S1600576715002782 J. Appl. Cryst. (2015). 48, 477–491 Manuel Sanchez del Rio et al.)
+    #     #
+    #     H = vector_rotate_around_axis(NORMAL, [1,0,0], -alphaX)
+    #     H = vector_multiply_scalar(H, 2 * numpy.pi / dSpacingSI)
+    #
+    #
+    #     #
+    #     # calculate K_OUT
+    #     #
+    #     K_IN = vector_multiply_scalar(v1.T, kin)
+    #     K_OUT = vector_scattering(K_IN, H, NORMAL)
+    #
+    #     V_OUT = vector_norm(K_OUT)
+    #
+    #     #
+    #     # set output beam
+    #     #
+    #     newbeam.set_column(1, x2[0])
+    #     newbeam.set_column(2, x2[1])
+    #     newbeam.set_column(3, x2[2])
+    #     newbeam.set_column(4, V_OUT.T[0])
+    #     newbeam.set_column(5, V_OUT.T[1])
+    #     newbeam.set_column(6, V_OUT.T[2])
+    #     newbeam.set_column(10, flag)
+    #     newbeam.set_column(13, optical_path + t)
+    #
+    #     return newbeam, normal
 
-    def apply_crystal_diffraction_dispersive_on_beam(self, beam, dSpacingSI=3.135416e-10, alphaX=0.0):
-        newbeam = beam.duplicate()
-
-        x1 = newbeam.get_columns([1, 2, 3])  # numpy.array(a3.getshcol([1,2,3]))
-        v1 = newbeam.get_columns([4, 5, 6])  # numpy.array(a3.getshcol([4,5,6]))
-        flag = newbeam.get_column(10)  # numpy.array(a3.getshonecol(10))
-        kin = newbeam.get_column(11) * 1e2 # in m^-1
-        optical_path = newbeam.get_column(13)
-
-        t1, t2 = self.calculate_intercept(x1, v1)
-        reference_distance = -newbeam.get_column(2).mean() + newbeam.get_column(3).mean()
-        t, iflag = self.choose_solution(t1, t2, reference_distance=reference_distance)
-
-        x2 = x1 + v1 * t
-        for i in range(flag.size):
-            if iflag[i] < 0: flag[i] = -100
-
-        # ;
-        # ; Calculates the normal at each intercept [see shadow's normal.F]
-        # ;
-        normal = self.get_normal(x2)
-        # capilatized vectors are [:,3] as required for vector_* operations
-        NORMAL = normal.T
-        NORMAL = vector_multiply_scalar(NORMAL, -1.0) # outward normal
-
-        #
-        # calculate the reciprocal lattice vector H
-        # (see pag 487 in https://doi.org/10.1107/S1600576715002782 J. Appl. Cryst. (2015). 48, 477–491 Manuel Sanchez del Rio et al.)
-        #
-        H = vector_rotate_around_axis(NORMAL, [1,0,0], -alphaX)
-        H = vector_multiply_scalar(H, 2 * numpy.pi / dSpacingSI)
-
-
-        #
-        # calculate K_OUT
-        #
-        K_IN = vector_multiply_scalar(v1.T, kin)
-        K_OUT = vector_scattering(K_IN, H, NORMAL)
-
-        V_OUT = vector_norm(K_OUT)
-
-        #
-        # set output beam
-        #
-        newbeam.set_column(1, x2[0])
-        newbeam.set_column(2, x2[1])
-        newbeam.set_column(3, x2[2])
-        newbeam.set_column(4, V_OUT.T[0])
-        newbeam.set_column(5, V_OUT.T[1])
-        newbeam.set_column(6, V_OUT.T[2])
-        newbeam.set_column(10, flag)
-        newbeam.set_column(13, optical_path + t)
-
-        return newbeam, normal
-
-
+    #
+    # grating routines
+    #
     def apply_grating_diffraction_on_beam(self, beam, ruling=[0.0], order=0, f_ruling=0):
 
         newbeam = beam.duplicate()
