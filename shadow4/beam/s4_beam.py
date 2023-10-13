@@ -914,7 +914,7 @@ class S4Beam(object):
         """
         self.rays[:,column-1] = value
 
-    def set_photon_energy_eV(self, nergy_eV):
+    def set_photon_energy_eV(self, energy_eV):
         """
         Sets photon energies from a given array.
 
