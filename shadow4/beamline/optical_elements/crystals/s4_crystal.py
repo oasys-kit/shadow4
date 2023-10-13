@@ -597,8 +597,9 @@ class S4CrystalElement(S4BeamlineElement):
         photons_in = ComplexAmplitudePhoton(
             energies,
             Vector(v1[0], v1[1], v1[2]),
-            Esigma=numpy.sqrt(footprint.get_column(24)) * numpy.exp(1j * footprint.get_column(14)),
-            Epi   =numpy.sqrt(footprint.get_column(25)) * numpy.exp(1j * footprint.get_column(15)))
+            Esigma=numpy.ones(energies.size, dtype=complex), #numpy.sqrt(footprint.get_column(24)) * numpy.exp(1j * footprint.get_column(14)),
+            Epi   =numpy.ones(energies.size, dtype=complex), #numpy.sqrt(footprint.get_column(25)) * numpy.exp(1j * footprint.get_column(15)),
+            )
 
         # create crystalpy PerfectCrystalDiffraction instance
         surface_normal = Vector(normal[0], normal[1], normal[2]).scalarMultiplication(-1.0)  # normal is inwards!
@@ -640,7 +641,7 @@ class S4CrystalElement(S4BeamlineElement):
         )
 
         # Calculate outgoing Photon.
-        # apply_reflectivity = True  # todo set always  True
+        # apply_reflectivity = False  # todo set always  True
         outgoing_complex_amplitude_photon = perfect_crystal._calculatePhotonOut(photons_in,
                                                                                 apply_reflectivity=True,
                                                                                 calculation_method=1,
@@ -656,7 +657,7 @@ class S4CrystalElement(S4BeamlineElement):
         #     outgoing_complex_amplitude_photon.rescaleEsigma(coeffs["S"])
         #     outgoing_complex_amplitude_photon.rescaleEpi(coeffs["P"])
 
-        # copy values from crystalpy photon stack to shadow4 beam
+        # copy/apply values from crystalpy photon stack to shadow4 beam
         footprint.apply_reflectivities(
             numpy.sqrt(outgoing_complex_amplitude_photon.getIntensityS()),
             numpy.sqrt(outgoing_complex_amplitude_photon.getIntensityP()))
