@@ -80,9 +80,9 @@ optical_element = S4Screen(name='{name:s}', boundary_shape=boundary_shape,
 class S4ScreenElement(S4BeamlineElement):
 
     def __init__(self, optical_element : S4Screen = None, coordinates : ElementCoordinates = None, input_beam : S4Beam = None):
-        super().__init__(optical_element if optical_element is not None else S4Screen(),
-                         coordinates if coordinates is not None else ElementCoordinates(),
-                         input_beam)
+        super().__init__(optical_element=optical_element if optical_element is not None else S4Screen(),
+                         coordinates=coordinates if coordinates is not None else ElementCoordinates(),
+                         input_beam=input_beam)
 
     def trace_beam(self, **params):
         flag_lost_value = params.get("flag_lost_value", -1)
