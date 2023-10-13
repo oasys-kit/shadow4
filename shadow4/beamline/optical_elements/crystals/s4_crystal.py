@@ -36,7 +36,8 @@ class S4Crystal(Crystal):
                  miller_index_k=1,
                  miller_index_l=1,
                  asymmetry_angle=0.0,
-                 thickness=0.010, ###########################
+                 is_thick=0,       # 1=Use thick crystal approximation
+                 thickness=0.010, #n
                  f_central=False,
                  f_phot_cent=0,
                  phot_cent=8000.0,
@@ -97,14 +98,13 @@ class S4Crystal(Crystal):
         self._f_ext = f_ext
         self._r_johansson = r_johansson
         self._material_constants_library_flag = material_constants_library_flag
+        self._is_thick = is_thick
 
         self.congruence()
 
     def congruence(self):
         print(self._material)
-        if self._f_mosaic or \
-            self._f_bragg_a or \
-            self._f_johansson:
+        if self._f_mosaic or self._f_johansson:
             raise Exception("Not implemented")
 
 class S4CrystalElement(S4BeamlineElement):
@@ -645,7 +645,7 @@ class S4CrystalElement(S4BeamlineElement):
         outgoing_complex_amplitude_photon = perfect_crystal._calculatePhotonOut(photons_in,
                                                                                 apply_reflectivity=True,
                                                                                 calculation_method=1,
-                                                                                is_thick=0,
+                                                                                is_thick=soe._is_thick,
                                                                                 use_transfer_matrix=0
                                                                                 )
 
@@ -682,6 +682,7 @@ if __name__ == "__main__":
             miller_index_k=1,
             miller_index_l=1,
             asymmetry_angle=0.0,
+            is_thick=0,
             thickness=0.010, ###########################
             f_central=False,
             f_phot_cent=0,
