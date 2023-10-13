@@ -25,7 +25,25 @@ from crystalpy.diffraction.PerfectCrystalDiffraction import PerfectCrystalDiffra
 import scipy.constants as codata
 
 class S4Crystal(Crystal):
+    """
+     f_crystal	=             1 - flag: crystal -- yes (1), no (0).
+     f_mosaic	=	  1 - if f_crystal=1; flag: mosaic crystal - yes (1), no (0).
 
+     f_central	 =    1 - flag: autotuning of grating or crystal - yes (1), no (0).
+     f_phot_cent =    0 - for f_central=1: tune to eV(0) or Angstroms (1).
+     phot_cent	=  11160.0 - for f_phot_cent=1: photon energ
+     file_refl	= 'GAAS.SHA         - for f_crystal=1: file containing the crystal parameters.
+
+     f_bragg_a	=     0 - flag: is the crystal asymmetric - yes (1), no (0).
+     f_johansson =	  0 - if f_crystal=1; flag: johansson geometry - yes (1), no (0).
+     asymmetry_angle =  0.0 - f_bragg_a=1: angle between crystal planes and surface.
+
+     spread_mos	=  0.4 - f_mosaic=1: mosaic spread FWHM (degrees).
+     thickness	=  0.1 - crystal thickness in m.
+     f_ext	=  0 - flag for internal/calculated (0) parameters vs. external/user defined parameters (1).
+     r_johansson =  0.0 - f_ext=1: johansson radius.
+
+    """
     def __init__(self,
                  name="Undefined",
                  boundary_shape=None,
@@ -43,7 +61,6 @@ class S4Crystal(Crystal):
                  phot_cent=8000.0,
                  file_refl="",
                  f_bragg_a=False,
-                 # a_bragg=0.0,
                  f_johansson=False,
                  r_johansson=1.0,
                  f_mosaic=False,
@@ -54,25 +71,7 @@ class S4Crystal(Crystal):
                                                     # 3=shadow preprocessor file v1
                  ):
 
-        """
-         f_crystal	=             1 - flag: crystal -- yes (1), no (0).
-         f_mosaic	=	  1 - if f_crystal=1; flag: mosaic crystal - yes (1), no (0).
 
-         f_central	 =    1 - flag: autotuning of grating or crystal - yes (1), no (0).
-         f_phot_cent =    0 - for f_central=1: tune to eV(0) or Angstroms (1).
-         phot_cent	=  11160.0 - for f_phot_cent=1: photon energ
-         file_refl	= 'GAAS.SHA         - for f_crystal=1: file containing the crystal parameters.
-
-         f_bragg_a	=     0 - flag: is the crystal asymmetric - yes (1), no (0).
-         f_johansson =	  0 - if f_crystal=1; flag: johansson geometry - yes (1), no (0).
-         a_bragg =  0.0 - f_bragg_a=1: angle between crystal planes and surface.
-
-         spread_mos	=  0.4 - f_mosaic=1: mosaic spread FWHM (degrees).
-         thickness	=  0.1 - crystal thickness in m.
-         f_ext	=  0 - flag for internal/calculated (0) parameters vs. external/user defined parameters (1).
-         r_johansson =  0.0 - f_ext=1: johansson radius.
-
-        """
 
         Crystal.__init__(self,
                          name=name,
@@ -99,6 +98,16 @@ class S4Crystal(Crystal):
         self._r_johansson = r_johansson
         self._material_constants_library_flag = material_constants_library_flag
         self._is_thick = is_thick
+
+        # support text containg name of variable, help text and unit. Will be stored in self._support_dictionary
+        self._add_support_text([
+                    ("f_central",           "S4: autotuning",                              ""),
+                    ("f_phot_cent",         "S4: for f_central=1: tune to eV(0) or A (1)", ""),
+                    ("phot_cent",           "S4: for f_central=1: value in eV or A",       ""),
+                    ("f_bragg_a",           "S4: use asymmetruc cut",                      ""),
+                    ("material_constants_library_flag", "S4: crystal data from: 0=xraylib, 1=dabax, 2=file v1, 3=file v1", ""),
+                    ("is_thick",            "S4: use thick crystal approximation",         ""),
+            ] )
 
         self.congruence()
 
@@ -238,7 +247,6 @@ class S4CrystalElement(S4BeamlineElement):
         soe = self.get_optical_element()
 
         if not isinstance(soe, Crystal): raise Exception("Undefined Crystal")
-
 
         # if 0:
         #     # two steps (diffraction delegated to optical surface, reflectivity with crystalpy)
@@ -689,7 +697,6 @@ if __name__ == "__main__":
             phot_cent=8000.0,
             file_refl="",
             f_bragg_a=False,
-            # a_bragg=0.0,
             f_johansson=False,
             r_johansson=1.0,
             f_mosaic=False,

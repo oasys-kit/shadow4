@@ -11,7 +11,34 @@ from shadow4.beam.s4_beam import S4Beam
 from shadow4.beamline.s4_beamline_element_movements import S4BeamlineElementMovements
 
 class S4Mirror(Mirror):
+    """
+    S4Mirror
 
+    Constructor.
+
+    Parameters
+    ----------
+    name
+    boundary_shape
+    element_coordinates_syned
+    surface_shape
+    f_reflec
+            reflectivity of surface: 0=no reflectivity, 1=full polarization
+    f_refl
+            0=prerefl file
+            1=electric susceptibility
+            2=user defined file (1D angle in mrad, reflectivity)
+            3=user defined file (1D energy in eV, reflectivity)
+            4=user defined file (2D energy in eV, angle in mrad, reflectivity)
+    file_refl
+            name if user defined file
+    refraction_index
+            complex scalar with refraction index n (for f_refl=1)
+    material
+            string with material formula (for f_refl=5,6)
+    density
+            material density in g/cm^3 (for f_refl=5,6)
+    """
     def __init__(self,
                  name="Undefined",
                  boundary_shape=None,
@@ -31,31 +58,7 @@ class S4Mirror(Mirror):
                  coating_density=1.0,  # coating material density for f_refl=5,6
                  coating_roughness=0.0,  # coating material roughness in A for f_refl=5,6
                  ):
-        """
 
-        Parameters
-        ----------
-        name
-        boundary_shape
-        element_coordinates_syned
-        surface_shape
-        f_reflec
-                reflectivity of surface: 0=no reflectivity, 1=full polarization
-        f_refl
-                0=prerefl file
-                1=electric susceptibility
-                2=user defined file (1D angle in mrad, reflectivity)
-                3=user defined file (1D energy in eV, reflectivity)
-                4=user defined file (2D energy in eV, angle in mrad, reflectivity)
-        file_refl
-                name if user defined file
-        refraction_index
-                complex scalar with refraction index n (for f_refl=1)
-        material
-                string with material formula (for f_refl=5,6)
-        density
-                material density in g/cm^3 (for f_refl=5,6)
-        """
         Mirror.__init__(self,
                         name=name,
                         surface_shape=surface_shape,
@@ -72,6 +75,17 @@ class S4Mirror(Mirror):
         self._refraction_index = refraction_index
         self._coating_density = coating_density
         self._coating_roughness = coating_roughness
+
+        # support text containg name of variable, help text and unit. Will be stored in self._support_dictionary
+        self._add_support_text([
+                    ("f_reflec",           "S4: flag for reflectivity",                 ""),
+                    ("f_refl",             "S4: refl. source for f_reflec=1: 0=prerefl, 5=xraylib, 6=dabax", ""),
+                    ("file_refl",          "S4: for f_refl=0: file name",               ""),
+                    ("refraction_index",   "S4: refraction index",                      ""),
+                    ("coating_density",    "S4: density of coating material",           "g/cm3"),
+                    ("coating_roughness",  "S4: roughness of coating material",         "A"),
+            ] )
+
 
     def apply_geometrical_model(self, beam):
         raise Exception("To be implemented in the children class")
@@ -406,3 +420,5 @@ if __name__ == "__main__":
         plot_scatter(1e6 * beam.get_column(1, nolost=1), 1e6 * beam.get_column(3, nolost=1), title='(X,Z) in microns')
 
     print(beamline_element.to_python_code())
+
+    print(optical_element.info())

@@ -264,3 +264,5 @@ if __name__ == "__main__":
         #              title='(Intensity,Photon Energy)', plot_histograms=0)
         plot_scatter(1e6 * beam.get_column(1, nolost=1), 1e6 * beam.get_column(3, nolost=1), title="(X,Z) in microns")
         plot_scatter(1e6 * beam.get_column(4, nolost=1), 1e6 * beam.get_column(6, nolost=1), title="(X',Z') in microns")
+
+    print(lens.info())
