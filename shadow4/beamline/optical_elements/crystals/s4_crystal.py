@@ -1,12 +1,10 @@
 import numpy
 
-from syned.beamline.shape import Plane
 from syned.beamline.element_coordinates import ElementCoordinates
 from syned.beamline.optical_elements.crystals.crystal import Crystal, DiffractionGeometry
 
 from shadow4.beam.s4_beam import S4Beam
 from shadow4.beamline.s4_beamline_element import S4BeamlineElement
-from shadow4.optical_surfaces.s4_conic import S4Conic
 
 from crystalpy.diffraction.DiffractionSetupXraylib import DiffractionSetupXraylib
 from crystalpy.diffraction.DiffractionSetupDabax import DiffractionSetupDabax
@@ -26,22 +24,57 @@ import scipy.constants as codata
 
 class S4Crystal(Crystal):
     """
-     f_crystal	=             1 - flag: crystal -- yes (1), no (0).
-     f_mosaic	=	  1 - if f_crystal=1; flag: mosaic crystal - yes (1), no (0).
+    Shadow4 Crystal Class
+    This is a base class for perfect crystal in reflection geometry (Bragg), using the diffracted beam.
 
-     f_central	 =    1 - flag: autotuning of grating or crystal - yes (1), no (0).
-     f_phot_cent =    0 - for f_central=1: tune to eV(0) or Angstroms (1).
-     phot_cent	=  11160.0 - for f_phot_cent=1: photon energ
-     file_refl	= 'GAAS.SHA         - for f_crystal=1: file containing the crystal parameters.
+    Use derived classes for plane or other curved crystal surfaces.
 
-     f_bragg_a	=     0 - flag: is the crystal asymmetric - yes (1), no (0).
-     f_johansson =	  0 - if f_crystal=1; flag: johansson geometry - yes (1), no (0).
-     asymmetry_angle =  0.0 - f_bragg_a=1: angle between crystal planes and surface.
+    Use other classes for
+        * S4TransmissionCrystal : Perfect crystal in transmission (Bragg-transmitted beam, Laue-diffracted and Laue-transmited)
+        * S4JohanssonCrystal : Johenssong curved perfect crystals (in Bragg reflection).
+        * S4MosaicCrystal : Mosaic crystals (in Bragg reflection).
 
-     spread_mos	=  0.4 - f_mosaic=1: mosaic spread FWHM (degrees).
-     thickness	=  0.1 - crystal thickness in m.
-     f_ext	=  0 - flag for internal/calculated (0) parameters vs. external/user defined parameters (1).
-     r_johansson =  0.0 - f_ext=1: johansson radius.
+    Constructor.
+
+    Parameters
+    ----------
+    name :  str, optional
+        A name for the crystal
+    boundary_shape : instance of BoundaryShape, optional
+        The information on the crystal boundaries.
+    surface_shape : instance of SurfaceShape, optional
+        The information on crystal surface.
+    material : str, optional
+        The crystal material name (a name accepted by crystalpy).
+    miller_index_h : int, optional
+        The Miller index H.
+    miller_index_k : int, optional
+        The Miller index K.
+    miller_index_l : int, optional
+        The Miller index L.
+    f_bragg_a : int, optional
+        Asymmetric crystal 0:No, 1:Yes.
+    asymmetry_angle : float, optional
+        For f_bragg_a=1, the asymmetry angle (angle between crystal planes and surface) in rads.
+    is_thick : int, optional
+        Use thick crystal approximation.
+    thickness : float, optional
+        For is_thick=0, the crystal thickness in m.
+    f_central : int, optional
+        Flag for autosetting the crystal to the corrected Bragg angle.
+    f_phot_cent : int, optional
+        0: setting photon energy in eV, 1:setting photon wavelength in m.
+    phot_cent : float, optional
+        for f_central=1, the value of the photon energy (f_phot_cent=0) or photon wavelength (f_phot_cent=1).
+    f_ext : inf, optional
+        Flag for autosetting the crystal surface parameters.
+        0: internal/calculated parameters, 1:external/user defined parameters. TODO: delete?
+    material_constants_library_flag : int, optional
+        Flag for indicating the origin of the crystal data:
+        0: xraylib, 1: dabax, 2: preprocessor file v1, 3: preprocessor file v2.
+    file_refl : str, optional
+        for material_constants_library_flag=2,3, the name of the file containing the crystal parameters.
+
 
     """
     def __init__(self,
@@ -49,26 +82,26 @@ class S4Crystal(Crystal):
                  boundary_shape=None,
                  surface_shape=None,
                  material=None,
-                 diffraction_geometry=DiffractionGeometry.BRAGG, #?? not supposed to be in syned...
+                 # diffraction_geometry=DiffractionGeometry.BRAGG,
                  miller_index_h=1,
                  miller_index_k=1,
                  miller_index_l=1,
+                 f_bragg_a=False,
                  asymmetry_angle=0.0,
-                 is_thick=0,       # 1=Use thick crystal approximation
-                 thickness=0.010, #n
+                 is_thick=0,          # 1=Use thick crystal approximation
+                 thickness=0.010,
                  f_central=False,
                  f_phot_cent=0,
                  phot_cent=8000.0,
-                 file_refl="",
-                 f_bragg_a=False,
-                 f_johansson=False,
-                 r_johansson=1.0,
-                 f_mosaic=False,
-                 spread_mos=0.4*numpy.pi/180,
+                 # f_johansson=False,
+                 # r_johansson=1.0,
+                 # f_mosaic=False,
+                 # spread_mos=0.4*numpy.pi/180,
                  f_ext=0,
                  material_constants_library_flag=0, # 0=xraylib, 1=dabax
                                                     # 2=shadow preprocessor file v1
                                                     # 3=shadow preprocessor file v1
+                 file_refl="",
                  ):
 
 
@@ -78,7 +111,7 @@ class S4Crystal(Crystal):
                          surface_shape=surface_shape,
                          boundary_shape=boundary_shape,
                          material=material,
-                         diffraction_geometry=diffraction_geometry,
+                         diffraction_geometry=DiffractionGeometry.BRAGG,
                          miller_index_h=miller_index_h,
                          miller_index_k=miller_index_k,
                          miller_index_l=miller_index_l,
@@ -86,18 +119,20 @@ class S4Crystal(Crystal):
                          thickness=thickness,
                         )
 
-        self._f_mosaic = f_mosaic
+
         self._f_central = f_central
         self._f_phot_cent = f_phot_cent
         self._phot_cent = phot_cent
-        self._file_refl = file_refl
         self._f_bragg_a = f_bragg_a
-        self._f_johansson = f_johansson
-        self._spread_mos = spread_mos
-        self._f_ext = f_ext
-        self._r_johansson = r_johansson
-        self._material_constants_library_flag = material_constants_library_flag
         self._is_thick = is_thick
+        self._f_ext = f_ext
+        self._material_constants_library_flag = material_constants_library_flag
+        self._file_refl = file_refl
+
+        # self._f_mosaic = f_mosaic
+        # self._r_johansson = r_johansson
+        # self._f_johansson = f_johansson
+        # self._spread_mos = spread_mos
 
         # support text containg name of variable, help text and unit. Will be stored in self._support_dictionary
         self._add_support_text([
@@ -105,18 +140,33 @@ class S4Crystal(Crystal):
                     ("f_phot_cent",         "S4: for f_central=1: tune to eV(0) or A (1)", ""),
                     ("phot_cent",           "S4: for f_central=1: value in eV or A",       ""),
                     ("f_bragg_a",           "S4: use asymmetruc cut",                      ""),
+                    ("is_thick",            "S4: use thick crystal approximation", ""),
+                    ("f_ext",               "S4: autosetting curved surface parms.",       ""),
                     ("material_constants_library_flag", "S4: crystal data from: 0=xraylib, 1=dabax, 2=file v1, 3=file v1", ""),
-                    ("is_thick",            "S4: use thick crystal approximation",         ""),
+                    ("file_refl",           "S4: preprocessor file name",                  ""),
             ] )
 
-        self.congruence()
-
-    def congruence(self):
-        print(self._material)
-        if self._f_mosaic or self._f_johansson:
-            raise Exception("Not implemented")
 
 class S4CrystalElement(S4BeamlineElement):
+    """
+    The base class for Shadow4 crystal element.
+    It is made of a S4Crystal and an ElementCoordinates instance. It also includes the input beam.
+
+    Use derived classes for plane or other curved crystal surfaces.
+
+    Constructor.
+
+    Parameters
+    ----------
+    optical_element : instance of S4Crystal
+        The crystal data.
+    coordinates : instance of ElementCoordinates
+        The position data.
+    input_beam : instance od S4Beam
+        The input beam.
+
+    """
+
     def __init__(self,
                  optical_element : S4Crystal = None,
                  coordinates : ElementCoordinates = None,
@@ -685,27 +735,29 @@ if __name__ == "__main__":
             boundary_shape=None,
             surface_shape=None,
             material="Si",
-            diffraction_geometry=DiffractionGeometry.BRAGG, #?? not supposed to be in syned...
+            # diffraction_geometry=DiffractionGeometry.BRAGG, #?? not supposed to be in syned...
             miller_index_h=1,
             miller_index_k=1,
             miller_index_l=1,
             asymmetry_angle=0.0,
             is_thick=0,
-            thickness=0.010, ###########################
+            thickness=0.010,
             f_central=False,
             f_phot_cent=0,
             phot_cent=8000.0,
             file_refl="",
             f_bragg_a=False,
-            f_johansson=False,
-            r_johansson=1.0,
-            f_mosaic=False,
-            spread_mos=0.4*numpy.pi/180,
+            # f_johansson=False,
+            # r_johansson=1.0,
+            # f_mosaic=False,
+            # spread_mos=0.4*numpy.pi/180,
             f_ext=0,)
-    # print(c.info())
 
-    # ce = S4CrystalElement(optical_element=c)
-    # print(ce.info())
+    print(c.info())
+
+
+    ce = S4CrystalElement(optical_element=c)
+    print(ce.info())
 
     ce = S4CrystalElement()
     ce.set_optical_element(c)
