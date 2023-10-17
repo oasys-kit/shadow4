@@ -1,16 +1,14 @@
-import numpy
 from syned.beamline.element_coordinates import ElementCoordinates
 
 from shadow4.beam.s4_beam import S4Beam
 from shadow4.beamline.optical_elements.crystals.s4_crystal import S4CrystalElement, S4Crystal
-from shadow4.beamline.s4_optical_element_decorators import S4PlaneOpticalElementDecorator
+from shadow4.beamline.s4_optical_element_decorators import SurfaceCalculation, S4ToroidOpticalElementDecorator
+from syned.beamline.shape import Toroid, Convexity, Direction
 
-from syned.beamline.optical_elements.crystals.crystal import DiffractionGeometry
-
-class S4PlaneCrystal(S4Crystal, S4PlaneOpticalElementDecorator):
+class S4ToroidCrystal(S4Crystal, S4ToroidOpticalElementDecorator):
     """
-    Shadow4 Plane Crystal Class
-    This is a plane perfect crystal in reflection geometry (Bragg), using the diffracted beam.
+    Shadow4 Toroid Crystal Class
+    This is a toroid curved perfect crystal in reflection geometry (Bragg), using the diffracted beam.
 
     Constructor.
 
@@ -50,11 +48,15 @@ class S4PlaneCrystal(S4Crystal, S4PlaneOpticalElementDecorator):
         0: xraylib, 1: dabax, 2: preprocessor file v1, 3: preprocessor file v2.
     file_refl : str, optional
         for material_constants_library_flag=2,3, the name of the file containing the crystal parameters.
-
+    min_radius : float, optional
+        The surface minor radius in m.
+    maj_radius : float, optional
+        The surface major radius in m. Note that this is the radius of the optical surface (it is not the radius
+        of the toroid).
 
     """
     def __init__(self,
-                 name="Plane crystal",
+                 name="Sphere crystal",
                  boundary_shape=None,
                  material=None,
                  # diffraction_geometry=DiffractionGeometry.BRAGG,  # ?? not supposed to be in syned...
@@ -73,12 +75,20 @@ class S4PlaneCrystal(S4Crystal, S4PlaneOpticalElementDecorator):
                  material_constants_library_flag=0,  # 0=xraylib, 1=dabax
                                                      # 2=shadow preprocessor file v1
                                                      # 3=shadow preprocessor file v2
+                 min_radius=0.1,
+                 maj_radius=1.0,
+                 is_cylinder=False,
+                 cylinder_direction=Direction.TANGENTIAL,
+                 convexity=Convexity.UPWARD,
                  ):
+        p_focus, q_focus, grazing_angle = 1.0, 1.0, 1e-3
+        S4ToroidOpticalElementDecorator.__init__(self, SurfaceCalculation.EXTERNAL,
+                                                 min_radius, maj_radius, p_focus, q_focus, grazing_angle)
 
-        S4PlaneOpticalElementDecorator.__init__(self)
         S4Crystal.__init__(self,
                            name=name,
                            boundary_shape=boundary_shape,
+                           surface_shape=self.get_surface_shape_instance(),
                            material=material,
                            # diffraction_geometry=diffraction_geometry,  # ?? not supposed to be in syned...
                            miller_index_h=miller_index_h,
@@ -114,6 +124,11 @@ class S4PlaneCrystal(S4Crystal, S4PlaneOpticalElementDecorator):
             "f_bragg_a": f_bragg_a,
             "f_ext": f_ext,
             "material_constants_library_flag": material_constants_library_flag,
+            "min_radius": min_radius,
+            "maj_radius": maj_radius,
+            "is_cylinder": is_cylinder,
+            "cylinder_direction": cylinder_direction,
+            "convexity": convexity,
             }
 
     def to_python_code(self, **kwargs):
@@ -131,9 +146,9 @@ class S4PlaneCrystal(S4Crystal, S4PlaneOpticalElementDecorator):
 
         """
 
-        txt = "\nfrom shadow4.beamline.optical_elements.crystals.s4_plane_crystal import S4PlaneCrystal"
+        txt = "\nfrom shadow4.beamline.optical_elements.crystals.s4_toroid_crystal import S4ToroidCrystal"
 
-        txt_pre = """\noptical_element = S4PlaneCrystal(name='{name}',
+        txt_pre = """\noptical_element = S4ToroidCrystal(name='{name}',
     boundary_shape=None, material='{material}',
     miller_index_h={miller_index_h}, miller_index_k={miller_index_k}, miller_index_l={miller_index_l},
     f_bragg_a={f_bragg_a}, asymmetry_angle={asymmetry_angle},
@@ -142,39 +157,43 @@ class S4PlaneCrystal(S4Crystal, S4PlaneOpticalElementDecorator):
     file_refl='{file_refl}',
     f_ext={f_ext},
     material_constants_library_flag={material_constants_library_flag}, # 0=xraylib,1=dabax,2=preprocessor v1,3=preprocessor v2
+    min_radius={min_radius:f},maj_radius={maj_radius:f},
     )"""
         txt += txt_pre.format(**self.__inputs)
 
         return txt
 
-class S4PlaneCrystalElement(S4CrystalElement):
+class S4ToroidCrystalElement(S4CrystalElement):
     """
-    The Shadow4 plane crystal element.
-    It is made of a S4PlaneCrystal and an ElementCoordinates instance. It also includes the input beam.
+    The Shadow4 toroid crystal element.
+    It is made of a S4ToroidCrystal and an ElementCoordinates instance. It also includes the input beam.
 
     Constructor.
 
     Parameters
     ----------
-    optical_element : instance of S4PlaneCrystal
+    optical_element : instance of S4ToroidCrystal
         The crystal data.
     coordinates : instance of ElementCoordinates
         The position data.
-    input_beam : instance od S4Beam
+    input_beam : instance of S4Beam
         The input beam.
 
     """
     def __init__(self,
-                 optical_element : S4PlaneCrystal = None,
+                 optical_element : S4ToroidCrystal = None,
                  coordinates : ElementCoordinates = None,
                  input_beam : S4Beam = None):
-        super().__init__(optical_element=optical_element if optical_element is not None else S4PlaneCrystal(),
+        super().__init__(optical_element=optical_element if optical_element is not None else S4ToroidCrystal(),
                          coordinates=coordinates if coordinates is not None else ElementCoordinates(),
                          input_beam=input_beam)
 
+        if not (isinstance(self.get_optical_element().get_surface_shape(), Toroid)):
+            raise ValueError("Wrong Optical Element: only Toroid shape is accepted")
+
     def to_python_code(self, **kwargs):
         """
-        Auxiliar method to automatically create python scripts.
+        Auxiliat method to automatically create python scripts.
 
         Parameters
         ----------
@@ -192,13 +211,13 @@ class S4PlaneCrystalElement(S4CrystalElement):
         txt += "\nfrom syned.beamline.element_coordinates import ElementCoordinates"
         txt += "\ncoordinates = ElementCoordinates(p=%g, q=%g, angle_radial=%g, angle_azimuthal=%g, angle_radial_out=%g)" % \
                (coordinates.p(), coordinates.q(), coordinates.angle_radial(), coordinates.angle_azimuthal(), coordinates.angle_radial_out())
-        txt += "\nfrom shadow4.beamline.optical_elements.crystals.s4_plane_crystal import S4PlaneCrystalElement"
-        txt += "\nbeamline_element = S4PlaneCrystalElement(optical_element=optical_element,coordinates=coordinates,input_beam=beam)"
+        txt += "\nfrom shadow4.beamline.optical_elements.crystals.s4_toroid_crystal import S4ToroidCrystalElement"
+        txt += "\nbeamline_element = S4ToroidCrystalElement(optical_element=optical_element,coordinates=coordinates,input_beam=beam)"
         txt += "\n\nbeam, mirr = beamline_element.trace_beam()"
         return txt
 
 if __name__ == "__main__":
-    c = S4PlaneCrystal(
+    c = S4ToroidCrystal(
             name="Undefined",
             boundary_shape=None,
             material="Si",
@@ -207,19 +226,21 @@ if __name__ == "__main__":
             miller_index_k=1,
             miller_index_l=1,
             asymmetry_angle=0.0,
-            thickness=0.010, ###########################
+            thickness=0.010,
             f_central=False,
             f_phot_cent=0,
             phot_cent=8000.0,
             file_refl="",
             f_bragg_a=False,
-            f_ext=0,)
+            f_ext=0,
+            min_radius=1.0,
+            maj_radius=10.0)
     # print(c.info())
     # print(c.to_python_code())
 
 
-    ce = S4PlaneCrystalElement(optical_element=c)
+    ce = S4ToroidCrystalElement(optical_element=c)
     print(ce.info())
     print(ce.to_python_code())
 
-    cc = S4PlaneCrystalElement()
+    cc = S4ToroidCrystalElement()

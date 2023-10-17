@@ -1,16 +1,14 @@
-import numpy
 from syned.beamline.element_coordinates import ElementCoordinates
 
 from shadow4.beam.s4_beam import S4Beam
 from shadow4.beamline.optical_elements.crystals.s4_crystal import S4CrystalElement, S4Crystal
-from shadow4.beamline.s4_optical_element_decorators import S4PlaneOpticalElementDecorator
+from shadow4.beamline.s4_optical_element_decorators import SurfaceCalculation, S4ParaboloidOpticalElementDecorator
+from syned.beamline.shape import Paraboloid, ParabolicCylinder, Convexity, Direction, Side
 
-from syned.beamline.optical_elements.crystals.crystal import DiffractionGeometry
-
-class S4PlaneCrystal(S4Crystal, S4PlaneOpticalElementDecorator):
+class S4ParaboloidCrystal(S4Crystal, S4ParaboloidOpticalElementDecorator):
     """
-    Shadow4 Plane Crystal Class
-    This is a plane perfect crystal in reflection geometry (Bragg), using the diffracted beam.
+    Shadow4 Paraboloid Crystal Class
+    This is a spherically curved perfect crystal in reflection geometry (Bragg), using the diffracted beam.
 
     Constructor.
 
@@ -50,11 +48,22 @@ class S4PlaneCrystal(S4Crystal, S4PlaneOpticalElementDecorator):
         0: xraylib, 1: dabax, 2: preprocessor file v1, 3: preprocessor file v2.
     file_refl : str, optional
         for material_constants_library_flag=2,3, the name of the file containing the crystal parameters.
-
+    parabola_parameter : float, optional
+        The parabola parameter in m.
+    pole_to_focus : float, optional
+        The distance from the crystal pole to the focus in m.
+    is_cylinder : int, optional
+        Flag to indicate that the surface has cylindrical symmetry (it is flat in one direction).
+    cylinder_direction : int, optional
+       For is_cylinder=1, the direction where the surface is flat.
+       Use synedDirection.TANGENTIAL (0) or Direction.SAGITTAL (1).
+    convexity : int, optional
+        The surface is concave (0) or convex (1).
+        Use syned Convexity.UPWARD (0) for concave or Convexity.DOWNWARD (1).
 
     """
     def __init__(self,
-                 name="Plane crystal",
+                 name="Paraboloid crystal",
                  boundary_shape=None,
                  material=None,
                  # diffraction_geometry=DiffractionGeometry.BRAGG,  # ?? not supposed to be in syned...
@@ -73,12 +82,21 @@ class S4PlaneCrystal(S4Crystal, S4PlaneOpticalElementDecorator):
                  material_constants_library_flag=0,  # 0=xraylib, 1=dabax
                                                      # 2=shadow preprocessor file v1
                                                      # 3=shadow preprocessor file v2
+                 parabola_parameter=0.0,
+                 pole_to_focus=0.0,  # for external calculation
+                 is_cylinder=False,
+                 cylinder_direction=Direction.TANGENTIAL,
+                 convexity=Convexity.UPWARD,
                  ):
+        at_infinity = Side.SOURCE # todo: check this is not used
+        p_focus, q_focus, grazing_angle = 1.0, 1.0, 1e-3
+        S4ParaboloidOpticalElementDecorator.__init__(self, SurfaceCalculation.EXTERNAL, is_cylinder, cylinder_direction, convexity,
+                                                 parabola_parameter, at_infinity, pole_to_focus, p_focus, q_focus, grazing_angle)
 
-        S4PlaneOpticalElementDecorator.__init__(self)
         S4Crystal.__init__(self,
                            name=name,
                            boundary_shape=boundary_shape,
+                           surface_shape=self.get_surface_shape_instance(),
                            material=material,
                            # diffraction_geometry=diffraction_geometry,  # ?? not supposed to be in syned...
                            miller_index_h=miller_index_h,
@@ -114,6 +132,11 @@ class S4PlaneCrystal(S4Crystal, S4PlaneOpticalElementDecorator):
             "f_bragg_a": f_bragg_a,
             "f_ext": f_ext,
             "material_constants_library_flag": material_constants_library_flag,
+            "is_cylinder": is_cylinder,
+            "cylinder_direction": cylinder_direction,
+            "convexity": convexity,
+            "parabola_parameter": parabola_parameter,
+            "pole_to_focus": pole_to_focus,
             }
 
     def to_python_code(self, **kwargs):
@@ -131,9 +154,9 @@ class S4PlaneCrystal(S4Crystal, S4PlaneOpticalElementDecorator):
 
         """
 
-        txt = "\nfrom shadow4.beamline.optical_elements.crystals.s4_plane_crystal import S4PlaneCrystal"
+        txt = "\nfrom shadow4.beamline.optical_elements.crystals.s4_paraboloid_crystal import S4ParaboloidCrystal"
 
-        txt_pre = """\noptical_element = S4PlaneCrystal(name='{name}',
+        txt_pre = """\noptical_element = S4ParaboloidCrystal(name='{name}',
     boundary_shape=None, material='{material}',
     miller_index_h={miller_index_h}, miller_index_k={miller_index_k}, miller_index_l={miller_index_l},
     f_bragg_a={f_bragg_a}, asymmetry_angle={asymmetry_angle},
@@ -142,35 +165,40 @@ class S4PlaneCrystal(S4Crystal, S4PlaneOpticalElementDecorator):
     file_refl='{file_refl}',
     f_ext={f_ext},
     material_constants_library_flag={material_constants_library_flag}, # 0=xraylib,1=dabax,2=preprocessor v1,3=preprocessor v2
+    parabola_parameter={parabola_parameter:f}, pole_to_focus={pole_to_focus:f}, is_cylinder={is_cylinder:d}, cylinder_direction={cylinder_direction:d}, convexity={convexity:d},
     )"""
         txt += txt_pre.format(**self.__inputs)
 
         return txt
 
-class S4PlaneCrystalElement(S4CrystalElement):
+class S4ParaboloidCrystalElement(S4CrystalElement):
     """
-    The Shadow4 plane crystal element.
-    It is made of a S4PlaneCrystal and an ElementCoordinates instance. It also includes the input beam.
+    The Shadow4 paraboloid crystal element.
+    It is made of a S4ParaboloidCrystal and an ElementCoordinates instance. It also includes the input beam.
 
     Constructor.
 
     Parameters
     ----------
-    optical_element : instance of S4PlaneCrystal
+    optical_element : instance of S4ParaboloidCrystal
         The crystal data.
     coordinates : instance of ElementCoordinates
         The position data.
-    input_beam : instance od S4Beam
+    input_beam : instance of S4Beam
         The input beam.
 
     """
     def __init__(self,
-                 optical_element : S4PlaneCrystal = None,
+                 optical_element : S4ParaboloidCrystal = None,
                  coordinates : ElementCoordinates = None,
                  input_beam : S4Beam = None):
-        super().__init__(optical_element=optical_element if optical_element is not None else S4PlaneCrystal(),
+        super().__init__(optical_element=optical_element if optical_element is not None else S4ParaboloidCrystal(),
                          coordinates=coordinates if coordinates is not None else ElementCoordinates(),
                          input_beam=input_beam)
+
+        if not (isinstance(self.get_optical_element().get_surface_shape(), ParabolicCylinder) or
+                isinstance(self.get_optical_element().get_surface_shape(), Paraboloid)):
+            raise ValueError("Wrong Optical Element: only Paraboloid or Parabolic Cylinder shape is accepted")
 
     def to_python_code(self, **kwargs):
         """
@@ -192,13 +220,13 @@ class S4PlaneCrystalElement(S4CrystalElement):
         txt += "\nfrom syned.beamline.element_coordinates import ElementCoordinates"
         txt += "\ncoordinates = ElementCoordinates(p=%g, q=%g, angle_radial=%g, angle_azimuthal=%g, angle_radial_out=%g)" % \
                (coordinates.p(), coordinates.q(), coordinates.angle_radial(), coordinates.angle_azimuthal(), coordinates.angle_radial_out())
-        txt += "\nfrom shadow4.beamline.optical_elements.crystals.s4_plane_crystal import S4PlaneCrystalElement"
-        txt += "\nbeamline_element = S4PlaneCrystalElement(optical_element=optical_element,coordinates=coordinates,input_beam=beam)"
+        txt += "\nfrom shadow4.beamline.optical_elements.crystals.s4_paraboloid_crystal import S4ParaboloidCrystalElement"
+        txt += "\nbeamline_element = S4ParaboloidCrystalElement(optical_element=optical_element,coordinates=coordinates,input_beam=beam)"
         txt += "\n\nbeam, mirr = beamline_element.trace_beam()"
         return txt
 
 if __name__ == "__main__":
-    c = S4PlaneCrystal(
+    c = S4ParaboloidCrystal(
             name="Undefined",
             boundary_shape=None,
             material="Si",
@@ -207,7 +235,7 @@ if __name__ == "__main__":
             miller_index_k=1,
             miller_index_l=1,
             asymmetry_angle=0.0,
-            thickness=0.010, ###########################
+            thickness=0.010,
             f_central=False,
             f_phot_cent=0,
             phot_cent=8000.0,
@@ -218,8 +246,8 @@ if __name__ == "__main__":
     # print(c.to_python_code())
 
 
-    ce = S4PlaneCrystalElement(optical_element=c)
+    ce = S4ParaboloidCrystalElement(optical_element=c)
     print(ce.info())
     print(ce.to_python_code())
 
-    cc = S4PlaneCrystalElement()
+    cc = S4ParaboloidCrystalElement()

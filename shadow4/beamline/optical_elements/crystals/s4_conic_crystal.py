@@ -1,16 +1,14 @@
-import numpy
 from syned.beamline.element_coordinates import ElementCoordinates
 
 from shadow4.beam.s4_beam import S4Beam
 from shadow4.beamline.optical_elements.crystals.s4_crystal import S4CrystalElement, S4Crystal
-from shadow4.beamline.s4_optical_element_decorators import S4PlaneOpticalElementDecorator
+from shadow4.beamline.s4_optical_element_decorators import SurfaceCalculation, S4ConicOpticalElementDecorator
+from syned.beamline.shape import Conic, Convexity, Direction
 
-from syned.beamline.optical_elements.crystals.crystal import DiffractionGeometry
-
-class S4PlaneCrystal(S4Crystal, S4PlaneOpticalElementDecorator):
+class S4ConicCrystal(S4Crystal, S4ConicOpticalElementDecorator):
     """
-    Shadow4 Plane Crystal Class
-    This is a plane perfect crystal in reflection geometry (Bragg), using the diffracted beam.
+    Shadow4 Conic Crystal Class
+    This is a spherically curved perfect crystal in reflection geometry (Bragg), using the diffracted beam.
 
     Constructor.
 
@@ -20,6 +18,8 @@ class S4PlaneCrystal(S4Crystal, S4PlaneOpticalElementDecorator):
         A name for the crystal
     boundary_shape : instance of BoundaryShape, optional
         The information on the crystal boundaries.
+    conic_coefficients : list, optional
+        The list with the 10 conic coefficients.
     material : str, optional
         The crystal material name (a name accepted by crystalpy).
     miller_index_h : int, optional
@@ -50,12 +50,11 @@ class S4PlaneCrystal(S4Crystal, S4PlaneOpticalElementDecorator):
         0: xraylib, 1: dabax, 2: preprocessor file v1, 3: preprocessor file v2.
     file_refl : str, optional
         for material_constants_library_flag=2,3, the name of the file containing the crystal parameters.
-
-
     """
     def __init__(self,
-                 name="Plane crystal",
+                 name="Conic crystal",
                  boundary_shape=None,
+                 conic_coefficients=[0.0] * 10,
                  material=None,
                  # diffraction_geometry=DiffractionGeometry.BRAGG,  # ?? not supposed to be in syned...
                  miller_index_h=1,
@@ -74,11 +73,11 @@ class S4PlaneCrystal(S4Crystal, S4PlaneOpticalElementDecorator):
                                                      # 2=shadow preprocessor file v1
                                                      # 3=shadow preprocessor file v2
                  ):
-
-        S4PlaneOpticalElementDecorator.__init__(self)
+        S4ConicOpticalElementDecorator.__init__(self, conic_coefficients)
         S4Crystal.__init__(self,
                            name=name,
                            boundary_shape=boundary_shape,
+                           surface_shape=self.get_surface_shape_instance(),
                            material=material,
                            # diffraction_geometry=diffraction_geometry,  # ?? not supposed to be in syned...
                            miller_index_h=miller_index_h,
@@ -99,6 +98,7 @@ class S4PlaneCrystal(S4Crystal, S4PlaneOpticalElementDecorator):
         self.__inputs = {
             "name": name,
             "boundary_shape": boundary_shape,
+            "conic_coefficients": repr(conic_coefficients),
             "material": material,
             # "diffraction_geometry": diffraction_geometry,
             "miller_index_h": miller_index_h,
@@ -131,11 +131,12 @@ class S4PlaneCrystal(S4Crystal, S4PlaneOpticalElementDecorator):
 
         """
 
-        txt = "\nfrom shadow4.beamline.optical_elements.crystals.s4_plane_crystal import S4PlaneCrystal"
+        txt = "\nfrom shadow4.beamline.optical_elements.crystals.s4_conic_crystal import S4ConicCrystal"
 
-        txt_pre = """\noptical_element = S4PlaneCrystal(name='{name}',
-    boundary_shape=None, material='{material}',
-    miller_index_h={miller_index_h}, miller_index_k={miller_index_k}, miller_index_l={miller_index_l},
+        txt_pre = """\noptical_element = S4ConicCrystal(name='{name}',
+    boundary_shape=None,
+    conic_coefficients={conic_coefficients:s},
+    material='{material}', miller_index_h={miller_index_h}, miller_index_k={miller_index_k}, miller_index_l={miller_index_l},
     f_bragg_a={f_bragg_a}, asymmetry_angle={asymmetry_angle},
     is_thick={is_thick}, thickness={thickness},
     f_central={f_central}, f_phot_cent={f_phot_cent}, phot_cent={phot_cent},
@@ -147,30 +148,33 @@ class S4PlaneCrystal(S4Crystal, S4PlaneOpticalElementDecorator):
 
         return txt
 
-class S4PlaneCrystalElement(S4CrystalElement):
+class S4ConicCrystalElement(S4CrystalElement):
     """
-    The Shadow4 plane crystal element.
-    It is made of a S4PlaneCrystal and an ElementCoordinates instance. It also includes the input beam.
+    The Shadow4 Conic crystal element.
+    It is made of a S4ConicCrystal and an ElementCoordinates instance. It also includes the input beam.
 
     Constructor.
 
     Parameters
     ----------
-    optical_element : instance of S4PlaneCrystal
+    optical_element : instance of S4ConicCrystal
         The crystal data.
     coordinates : instance of ElementCoordinates
         The position data.
-    input_beam : instance od S4Beam
+    input_beam : instance of S4Beam
         The input beam.
 
     """
     def __init__(self,
-                 optical_element : S4PlaneCrystal = None,
+                 optical_element : S4ConicCrystal = None,
                  coordinates : ElementCoordinates = None,
                  input_beam : S4Beam = None):
-        super().__init__(optical_element=optical_element if optical_element is not None else S4PlaneCrystal(),
+        super().__init__(optical_element=optical_element if optical_element is not None else S4ConicCrystal(),
                          coordinates=coordinates if coordinates is not None else ElementCoordinates(),
                          input_beam=input_beam)
+
+        if not (isinstance(self.get_optical_element().get_surface_shape(), Conic)):
+            raise ValueError("Wrong Optical Element: only Conic shape is accepted")
 
     def to_python_code(self, **kwargs):
         """
@@ -192,13 +196,13 @@ class S4PlaneCrystalElement(S4CrystalElement):
         txt += "\nfrom syned.beamline.element_coordinates import ElementCoordinates"
         txt += "\ncoordinates = ElementCoordinates(p=%g, q=%g, angle_radial=%g, angle_azimuthal=%g, angle_radial_out=%g)" % \
                (coordinates.p(), coordinates.q(), coordinates.angle_radial(), coordinates.angle_azimuthal(), coordinates.angle_radial_out())
-        txt += "\nfrom shadow4.beamline.optical_elements.crystals.s4_plane_crystal import S4PlaneCrystalElement"
-        txt += "\nbeamline_element = S4PlaneCrystalElement(optical_element=optical_element,coordinates=coordinates,input_beam=beam)"
+        txt += "\nfrom shadow4.beamline.optical_elements.crystals.s4_conic_crystal import S4ConicCrystalElement"
+        txt += "\nbeamline_element = S4ConicCrystalElement(optical_element=optical_element,coordinates=coordinates,input_beam=beam)"
         txt += "\n\nbeam, mirr = beamline_element.trace_beam()"
         return txt
 
 if __name__ == "__main__":
-    c = S4PlaneCrystal(
+    c = S4ConicCrystal(
             name="Undefined",
             boundary_shape=None,
             material="Si",
@@ -207,7 +211,7 @@ if __name__ == "__main__":
             miller_index_k=1,
             miller_index_l=1,
             asymmetry_angle=0.0,
-            thickness=0.010, ###########################
+            thickness=0.010,
             f_central=False,
             f_phot_cent=0,
             phot_cent=8000.0,
@@ -218,8 +222,8 @@ if __name__ == "__main__":
     # print(c.to_python_code())
 
 
-    ce = S4PlaneCrystalElement(optical_element=c)
+    ce = S4ConicCrystalElement(optical_element=c)
     print(ce.info())
     print(ce.to_python_code())
 
-    cc = S4PlaneCrystalElement()
+    cc = S4ConicCrystalElement()

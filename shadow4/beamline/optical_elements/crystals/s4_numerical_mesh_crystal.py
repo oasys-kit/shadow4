@@ -6,6 +6,62 @@ from shadow4.beamline.s4_optical_element_decorators import S4NumericalMeshOptica
 from shadow4.beamline.s4_beamline_element_movements import S4BeamlineElementMovements
 
 class S4NumericalMeshCrystal(S4Crystal, S4NumericalMeshOpticalElementDecorator):
+    """
+    Shadow4 Mesh Crystal Class
+    This is a curved perfect crystal in reflection geometry (Bragg), using the diffracted beam.
+    The surface shape is defined as a numerical mesh, either in an hdf5 file or in arrays.
+
+    Constructor.
+
+    Parameters
+    ----------
+    name :  str, optional
+        A name for the crystal
+    boundary_shape : instance of BoundaryShape, optional
+        The information on the crystal boundaries.
+    material : str, optional
+        The crystal material name (a name accepted by crystalpy).
+    miller_index_h : int, optional
+        The Miller index H.
+    miller_index_k : int, optional
+        The Miller index K.
+    miller_index_l : int, optional
+        The Miller index L.
+    f_bragg_a : int, optional
+        Asymmetric crystal 0:No, 1:Yes.
+    asymmetry_angle : float, optional
+        For f_bragg_a=1, the asymmetry angle (angle between crystal planes and surface) in rads.
+    is_thick : int, optional
+        Use thick crystal approximation.
+    thickness : float, optional
+        For is_thick=0, the crystal thickness in m.
+    f_central : int, optional
+        Flag for autosetting the crystal to the corrected Bragg angle.
+    f_phot_cent : int, optional
+        0: setting photon energy in eV, 1:setting photon wavelength in m.
+    phot_cent : float, optional
+        for f_central=1, the value of the photon energy (f_phot_cent=0) or photon wavelength (f_phot_cent=1).
+    f_ext : inf, optional
+        Flag for autosetting the crystal surface parameters.
+        0: internal/calculated parameters, 1:external/user defined parameters. TODO: delete?
+    material_constants_library_flag : int, optional
+        Flag for indicating the origin of the crystal data:
+        0: xraylib, 1: dabax, 2: preprocessor file v1, 3: preprocessor file v2.
+    file_refl : str, optional
+        for material_constants_library_flag=2,3, the name of the file containing the crystal parameters.
+
+    boundary_shape : instance of BoundaryShape, optional
+        The information on the crystal boundaries.
+    xx : numpy array, optional
+        The array with the X (width) coordinates.
+    yy : numpy array, optional
+        The array with the Y (length) coordinates.
+    zz : numpy array, optional
+        The array with the Z(X,Y) coordinates.
+    surface_data_file : str, optional
+        The h5 file name with the mesh following the Oasys convention.
+
+    """
     def __init__(self,
                  name="Numerical Mesh Crystal",
                  boundary_shape=None,
@@ -31,6 +87,7 @@ class S4NumericalMeshCrystal(S4Crystal, S4NumericalMeshOpticalElementDecorator):
                                                      # 3=shadow preprocessor file v1
                  file_refl="",
                  ):
+
         S4NumericalMeshOpticalElementDecorator.__init__(self, xx, yy, zz, surface_data_file)
         S4Crystal.__init__(self,
                            name=name,
@@ -76,6 +133,19 @@ class S4NumericalMeshCrystal(S4Crystal, S4NumericalMeshOpticalElementDecorator):
         }
 
     def to_python_code(self, **kwargs):
+        """
+        Auxiliar method to automatically create python scripts.
+
+        Parameters
+        ----------
+        **kwargs
+
+        Returns
+        -------
+        str
+            Python code.
+
+        """
         txt = self.to_python_code_boundary_shape()
         txt_pre = """
         
@@ -94,12 +164,23 @@ optical_element = S4NumericalMeshCrystal(name='{name:s}',boundary_shape=boundary
         txt += txt_pre.format(**self.__inputs)
         return txt
 
-    def apply_geometrical_model(self, beam):
-        num_mesh = self.get_optical_surface_instance()
-        footprint, normal, _, _, _, _, _ = num_mesh.apply_specular_reflection_on_beam(beam)
-        return footprint, normal
-
 class S4NumericalMeshCrystalElement(S4CrystalElement):
+    """
+    The Shadow4 mesh crystal element.
+    It is made of a S4meshCrystal and an ElementCoordinates instance. It also includes the input beam.
+
+    Constructor.
+
+    Parameters
+    ----------
+    optical_element : instance of S4MeshCrystal
+        The crystal data.
+    coordinates : instance of ElementCoordinates
+        The position data.
+    input_beam : instance of S4Beam
+        The input beam.
+
+    """
     def __init__(self,
                  optical_element: S4NumericalMeshCrystal = None,
                  coordinates: ElementCoordinates = None,
@@ -113,6 +194,19 @@ class S4NumericalMeshCrystalElement(S4CrystalElement):
             raise ValueError("Wrong Optical Element: only Surface Data shape is accepted")
 
     def to_python_code(self, **kwargs):
+        """
+        Auxiliar method to automatically create python scripts.
+
+        Parameters
+        ----------
+        **kwargs
+
+        Returns
+        -------
+        str
+            Python code.
+
+        """
         txt = "\n\n# optical element number XX"
         txt += self.get_optical_element().to_python_code()
         coordinates = self.get_coordinates()

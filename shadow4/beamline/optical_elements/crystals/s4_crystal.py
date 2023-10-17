@@ -78,7 +78,6 @@ class S4Crystal(Crystal):
     file_refl : str, optional
         for material_constants_library_flag=2,3, the name of the file containing the crystal parameters.
 
-
     """
     def __init__(self,
                  name="Undefined",
@@ -106,7 +105,6 @@ class S4Crystal(Crystal):
                                                     # 3=shadow preprocessor file v1
                  file_refl="",
                  ):
-
 
 
         Crystal.__init__(self,
@@ -150,6 +148,15 @@ class S4Crystal(Crystal):
             ] )
 
     def to_python_code_boundary_shape(self):
+        """
+        Auxiliar method to automatically create python scripts.
+
+        Returns
+        -------
+        str
+            Python code.
+
+        """
         txt = "" # "\nfrom shadow4.beamline.optical_elements.mirrors.s4_plane_mirror import S4PlaneMirror"
         bs = self._boundary_shape
         if bs is None:
@@ -177,7 +184,7 @@ class S4CrystalElement(S4BeamlineElement):
         The crystal data.
     coordinates : instance of ElementCoordinates
         The position data.
-    input_beam : instance od S4Beam
+    input_beam : instance of S4Beam
         The input beam.
 
     """
@@ -196,6 +203,14 @@ class S4CrystalElement(S4BeamlineElement):
 
 
     def set_crystalpy_diffraction_setup(self):
+        """
+        Returns the crystalpy DiffractionSetup.
+
+        Returns
+        -------
+        Instance of crystalpy DiffractionSetupAbstract
+
+        """
         oe = self.get_optical_element()
         coor = self.get_coordinates()
 
@@ -247,6 +262,15 @@ class S4CrystalElement(S4BeamlineElement):
         self._crystalpy_diffraction_setup = diffraction_setup
 
     def align_crystal(self, verbose=True):
+        """
+        Sets the adequate incident and reflection angles to match the tuning energy.
+
+        Parameters
+        ----------
+        verbose : boolean, optional
+            Set this keyword to print debugging/verbose information.
+
+        """
         oe = self.get_optical_element()
         coor = self.get_coordinates()
 
@@ -287,6 +311,19 @@ class S4CrystalElement(S4BeamlineElement):
         if verbose: print(coor.info())
 
     def trace_beam(self, **params):
+        """
+        Main beam tracer.
+
+        Parameters
+        ----------
+        **params
+
+        Returns
+        -------
+        tuple
+            (output_beam, footprint), both instances of S4Beam.
+
+        """
         flag_lost_value = params.get("flag_lost_value", -1)
 
         if self._crystalpy_diffraction_setup is None:  # todo: supress if?
@@ -628,6 +665,20 @@ class S4CrystalElement(S4BeamlineElement):
     #     return footprint
 
     def apply_crystal_diffraction_and_reflectivities(self, beam):
+        """
+        Applies the changes in direction and in reflectivity in a beam due to crystal diffraction.
+
+        Parameters
+        ----------
+        beam : instance of S4Beam
+            the beam (already transformed to the local crystal reference system).
+
+        Returns
+        -------
+        tuple
+            (footprint, normal), with footprint an instance of S4beam and the vector normal as numpy arrat (3,:)
+
+        """
         #
         # intercept calculation
         #
