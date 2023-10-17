@@ -8,7 +8,7 @@ from syned.beamline.shape import Ellipsoid, EllipticalCylinder, Convexity, Direc
 class S4EllipsoidCrystal(S4Crystal, S4EllipsoidOpticalElementDecorator):
     """
     Shadow4 Ellipsoid Crystal Class
-    This is a spherically curved perfect crystal in reflection geometry (Bragg), using the diffracted beam.
+    This is an ellipsoidal curved perfect crystal in reflection geometry (Bragg), using the diffracted beam.
 
     Constructor.
 
