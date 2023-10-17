@@ -12,7 +12,7 @@ class S4NumericalMeshMirror(S4Mirror, S4NumericalMeshOpticalElementDecorator):
                  xx=None,
                  yy=None,
                  zz=None,
-                 surface_data_file=None,
+                 surface_data_file="",
                  # inputs related to mirror reflectivity
                  f_reflec=0, # reflectivity of surface: 0=no reflectivity, 1=full polarization
                  f_refl=0,   # 0=prerefl file
@@ -96,5 +96,7 @@ class S4NumericalMeshMirrorElement(S4MirrorElement):
 
 if __name__ == "__main__":
     a = S4NumericalMeshMirror(name="")
+    b = S4NumericalMeshMirrorElement(optical_element=a)
+    print(b.to_python_code())
 
 

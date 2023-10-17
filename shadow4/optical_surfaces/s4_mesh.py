@@ -339,6 +339,9 @@ class S4Mesh(S4OpticalSurface):
               (t1-t0, npoints, 1000 * (t1-t0) / npoints))
         return answer,i_flag
 
+    def calculate_intercept_and_choose_solution(self, x1, v1, reference_distance=10.0, method=0):
+        return self.calculate_intercept(x1, v1)
+
     def apply_specular_reflection_on_beam(self,newbeam):
         # ;
         # ; TRACING...
@@ -511,3 +514,6 @@ if __name__ == "__main__":
     # plot_surface(z,x,y)
 
     # mm.load_file("test_mesh_conic.dat")
+    x2 = numpy.zeros((3,10))
+    x2 = numpy.random.rand(30).reshape((3,10))
+    print("normal: ", mm.get_normal(x2))

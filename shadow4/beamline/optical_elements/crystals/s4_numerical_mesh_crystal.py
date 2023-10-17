@@ -12,7 +12,7 @@ class S4NumericalMeshCrystal(S4Crystal, S4NumericalMeshOpticalElementDecorator):
                  xx=None,
                  yy=None,
                  zz=None,
-                 surface_data_file=None,
+                 surface_data_file="",
                  # inputs related to crystal
                  material=None,
                  miller_index_h=1,
@@ -99,7 +99,7 @@ optical_element = S4NumericalMeshCrystal(name='{name:s}',boundary_shape=boundary
         footprint, normal, _, _, _, _, _ = num_mesh.apply_specular_reflection_on_beam(beam)
         return footprint, normal
 
-class S4NumericalMeshCrystallement(S4CrystalElement):
+class S4NumericalMeshCrystalElement(S4CrystalElement):
     def __init__(self,
                  optical_element: S4NumericalMeshCrystal = None,
                  coordinates: ElementCoordinates = None,
@@ -129,5 +129,70 @@ class S4NumericalMeshCrystallement(S4CrystalElement):
 
 if __name__ == "__main__":
     a = S4NumericalMeshCrystal(name="")
+    b = S4NumericalMeshCrystalElement(optical_element=a)
+    print(b.info())
+    print(b.to_python_code())
+
+    #
+    #
+    #
+    from shadow4.sources.source_geometrical.source_geometrical import SourceGeometrical
+
+    light_source = SourceGeometrical(name='SourceGeometrical', nrays=25000, seed=5676561)
+    light_source.set_spatial_type_gaussian(sigma_h=5.70000011e-07, sigma_v=0.000007)
+    light_source.set_depth_distribution_off()
+    light_source.set_angular_distribution_gaussian(sigdix=0.000088, sigdiz=0.000007)
+    light_source.set_energy_distribution_uniform(value_min=9990.000000, value_max=10010.000000, unit='eV')
+    light_source.set_polarization(polarization_degree=1.000000, phase_diff=0.000000, coherent_beam=0)
+    beam = light_source.get_beam()
+
+    # optical element number XX
+
+    #write file
+    import numpy
+
+    # calculate a Gaussian bump
+    # create an array of 2 cm length
+    npoints = 51
+    length = 2.0e-2
+
+    x = numpy.linspace(-0.5 * length, 0.5 * length, npoints)
+    y = numpy.linspace(-0.5 * length * 2, 0.5 * length * 2, npoints * 2)
+    z = numpy.zeros((x.size, y.size))
+    # write file for h5
+    from oasys.util.oasys_util import write_surface_file
+    write_surface_file(z.T, x, y, 'bump.h5', overwrite=True)
+
+    # run
+    from shadow4.beamline.optical_elements.crystals.s4_plane_crystal import S4PlaneCrystal
+
+    optical_element = S4NumericalMeshCrystal(name='Plane Crystal',
+                                     boundary_shape=None, material='Si',
+                                     miller_index_h=1, miller_index_k=1, miller_index_l=1,
+                                     f_bragg_a=False, asymmetry_angle=0.0,
+                                     is_thick=1, thickness=0.001,
+                                     f_central=1, f_phot_cent=0, phot_cent=10000.0,
+                                     file_refl='/users/srio/Oasys/Si5_55.111',
+                                     f_ext=0,
+                                     material_constants_library_flag=2,
+                                     surface_data_file="bump.h5",
+                                     )
+    from syned.beamline.element_coordinates import ElementCoordinates
+
+    coordinates = ElementCoordinates(p=30, q=10, angle_radial=1.37174, angle_azimuthal=0, angle_radial_out=1.37174)
+    from shadow4.beamline.optical_elements.crystals.s4_plane_crystal import S4PlaneCrystalElement
+
+    beamline_element = S4NumericalMeshCrystalElement(optical_element=optical_element, coordinates=coordinates, input_beam=beam)
+
+    beam, mirr = beamline_element.trace_beam()
+
+    # test plot
+    if True:
+        from srxraylib.plot.gol import plot_scatter
+
+        plot_scatter(beam.get_photon_energy_eV(nolost=1), beam.get_column(23, nolost=1),
+                     title='(Intensity,Photon Energy)', plot_histograms=0)
+        # plot_scatter(1e6 * beam.get_column(1, nolost=1), 1e6 * beam.get_column(3, nolost=1), title='(X,Z) in microns')
+
 
 

@@ -1160,6 +1160,22 @@ if __name__ == "__main__":
     from srxraylib.plot.gol import set_qt
     set_qt()
 
+    if True:
+        ccc = S4Conic.initialize_as_plane()
+        x2 = numpy.zeros((3,10))
+        print("plane: ", ccc.get_normal(x2))
+
+        ccc = S4Conic.initialize_as_sphere_from_curvature_radius(1000.0)
+        x2 = numpy.zeros((3,10))
+        print("R=1000: ", ccc.get_normal(x2))
+
+        ccc = S4Conic.initialize_as_sphere_from_focal_distances(1e15, 1000.0, 1e-3)
+        x2 = numpy.zeros((3,10))
+        print("R from (p,q): ", ccc.get_normal(x2))
+
+        ccc = S4Conic.initialize_as_sphere_from_curvature_radius(-1000.0)
+        x2 = numpy.zeros((3,10))
+        print("R=-1000: ", ccc.get_normal(x2))
     if False:
         p = 13.73 + 13.599
         q = 2.64
@@ -1225,7 +1241,7 @@ if __name__ == "__main__":
         a = S4Conic.initialize_as_sphere_from_curvature_radius(100)
         print(a.info())
 
-    if True:
+    if False:
         ccc = S4Conic.initialize_as_hyperboloid_from_focal_distances(10.0, 3.0, 0.003, cylindrical=0, cylangle=0.0, switch_convexity=0)
         c = ccc.get_coefficients()
         print(c)

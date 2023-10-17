@@ -2,9 +2,11 @@ import numpy
 
 from syned.beamline.element_coordinates import ElementCoordinates
 from syned.beamline.optical_elements.crystals.crystal import Crystal, DiffractionGeometry
+from syned.beamline.shape import Rectangle, Ellipse
 
 from shadow4.beam.s4_beam import S4Beam
 from shadow4.beamline.s4_beamline_element import S4BeamlineElement
+from shadow4.beamline.s4_beamline_element_movements import S4BeamlineElementMovements
 
 from crystalpy.diffraction.DiffractionSetupXraylib import DiffractionSetupXraylib
 from crystalpy.diffraction.DiffractionSetupDabax import DiffractionSetupDabax
@@ -19,6 +21,7 @@ from crystalpy.util.ComplexAmplitudePhoton import ComplexAmplitudePhoton
 from crystalpy.util.ComplexAmplitudePhotonBunch import ComplexAmplitudePhotonBunch
 from crystalpy.diffraction.PerfectCrystalDiffraction import PerfectCrystalDiffraction
 
+from shadow4.optical_surfaces.s4_mesh import S4Mesh
 
 import scipy.constants as codata
 
@@ -146,6 +149,18 @@ class S4Crystal(Crystal):
                     ("file_refl",           "S4: preprocessor file name",                  ""),
             ] )
 
+    def to_python_code_boundary_shape(self):
+        txt = "" # "\nfrom shadow4.beamline.optical_elements.mirrors.s4_plane_mirror import S4PlaneMirror"
+        bs = self._boundary_shape
+        if bs is None:
+            txt += "\nboundary_shape = None"
+        elif isinstance(bs, Rectangle):
+            txt += "\nfrom syned.beamline.shape import Rectangle"
+            txt += "\nboundary_shape = Rectangle(x_left=%g, x_right=%g, y_bottom=%g, y_top=%g)" % bs.get_boundaries()
+        elif isinstance(bs, Ellipse):
+            txt += "\nfrom syned.beamline.shape import Ellipse"
+            txt += "\nboundary_shape = Ellipse(a_axis_min=%g, a_axis_max=%g, b_axis_min=%g, b_axis_max=%g)" % bs.get_boundaries()
+        return txt
 
 class S4CrystalElement(S4BeamlineElement):
     """
@@ -170,9 +185,11 @@ class S4CrystalElement(S4BeamlineElement):
     def __init__(self,
                  optical_element : S4Crystal = None,
                  coordinates : ElementCoordinates = None,
+                 movements: S4BeamlineElementMovements = None,
                  input_beam : S4Beam = None):
         super().__init__(optical_element=optical_element if optical_element is not None else S4Crystal(),
                          coordinates=coordinates if coordinates is not None else ElementCoordinates(),
+                         movements=movements,
                          input_beam=input_beam)
 
         self._crystalpy_diffraction_setup = None
@@ -660,7 +677,14 @@ class S4CrystalElement(S4BeamlineElement):
             )
 
         # create crystalpy PerfectCrystalDiffraction instance
-        surface_normal = Vector(normal[0], normal[1], normal[2]).scalarMultiplication(-1.0)  # normal is inwards!
+        # Warning:
+        # S4Conic, S4Toroid give normal_z < 0 for concave surfaces (and >0 for convex)
+        # S4mesh give always normal_z > 0
+        # We need for crystalpy the upwards normal
+        if isinstance(ccc, S4Mesh):
+            surface_normal = Vector(normal[0], normal[1], normal[2])  # normal is outwards!
+        else: # todo: check with convex surfaces
+            surface_normal = Vector(normal[0], normal[1], normal[2]).scalarMultiplication(-1.0)  # normal is inwards!
 
         # calculate vector H
         # Geometrical convention from M.Sanchez del Rio et al., J.Appl.Cryst.(2015). 48, 477-491.

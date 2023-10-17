@@ -484,4 +484,6 @@ if __name__ == "__main__":
     Z = t.surface_height(X, Y)
     plot_surface(Z, x, y, xtitle="x")
 
-
+    x2 = numpy.zeros((3, 10))
+    x2 = numpy.random.rand(30).reshape((3, 10))
+    print("normal: ", t.get_normal(x2))

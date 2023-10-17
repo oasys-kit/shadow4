@@ -19,22 +19,20 @@ class S4AdditionalNumericalMeshCrystal(S4NumericalMeshCrystal):
                  zz=None if numerical_mesh_crystal is None else numerical_mesh_crystal._curved_surface_shape._zz,
                  surface_data_file="" if numerical_mesh_crystal is None else numerical_mesh_crystal._curved_surface_shape._surface_data_file,
                  # inputs related to crystal
-                 material=None,
-                 miller_index_h=1,
-                 miller_index_k=1,
-                 miller_index_l=1,
-                 f_bragg_a=False,
-                 asymmetry_angle=0.0,
-                 is_thick=0,  # 1=Use thick crystal approximation
-                 thickness=0.010,
-                 f_central=False,
-                 f_phot_cent=0,
-                 phot_cent=8000.0,
-                 f_ext=0,
-                 material_constants_library_flag=0,  # 0=xraylib, 1=dabax
-                 # 2=shadow preprocessor file v1
-                 # 3=shadow preprocessor file v1
-                 file_refl="",
+                 material                       =None if ideal_crystal is None else ideal_crystal._material,
+                 miller_index_h                 =1 if ideal_crystal is None else ideal_crystal._miller_index_h,
+                 miller_index_k                 =1 if ideal_crystal is None else ideal_crystal._miller_index_k,
+                 miller_index_l                 =1 if ideal_crystal is None else ideal_crystal._miller_index_l,
+                 f_bragg_a                      =0 if ideal_crystal is None else ideal_crystal._f_bragg_a,
+                 asymmetry_angle                =0.0 if ideal_crystal is None else ideal_crystal._asymmetry_angle,
+                 is_thick                       =0   if ideal_crystal is None else ideal_crystal._is_thick,
+                 thickness                      =0.010 if ideal_crystal is None else ideal_crystal._thickness,
+                 f_central                      =0 if ideal_crystal is None else ideal_crystal._f_central,
+                 f_phot_cent                    =0 if ideal_crystal is None else ideal_crystal._f_phot_cent,
+                 phot_cent                      =8000.0 if ideal_crystal is None else ideal_crystal._phot_cent,
+                 f_ext                          =0 if ideal_crystal is None else ideal_crystal._f_ext,
+                 material_constants_library_flag=0 if ideal_crystal is None else ideal_crystal._material_constants_library_flag,
+                 file_refl                      ="" if ideal_crystal is None else ideal_crystal._file_refl,
                  )
 
         self.__ideal_crystal         = ideal_crystal
@@ -57,8 +55,8 @@ class S4AdditionalNumericalMeshCrystal(S4NumericalMeshCrystal):
         txt += self.to_python_code_boundary_shape()
         txt_pre = """
 
-from shadow4.beamline.optical_elements.crystal.s4_additional_numerical_mesh_crystal import S4AdditionalNumericalMeshCrystal
-optical_element = S4AdditionalNumericalMeshCrystal(name='{name:s}', ideal_crystal=ideal_crystal, numerical_mesh_crystal=numerical_mesh_mirror)
+from shadow4.beamline.optical_elements.crystals.s4_additional_numerical_mesh_crystal import S4AdditionalNumericalMeshCrystal
+optical_element = S4AdditionalNumericalMeshCrystal(name='{name:s}', ideal_crystal=ideal_crystal, numerical_mesh_crystal=numerical_mesh_crystal)
     """
         txt += txt_pre.format(**self.__inputs)
         return txt
@@ -131,9 +129,10 @@ if __name__ == "__main__":
     # optical element number XX
     from shadow4.beamline.optical_elements.crystals.s4_sphere_crystal import S4SphereCrystal
 
-    optical_element = S4SphereCrystal(name='xxx', boundary_shape=None,
+    optical_element = S4SphereCrystal(name='xxx', material="Si", boundary_shape=None,
                                         is_cylinder=1, cylinder_direction=0,
-                                        convexity=1, radius=1.0)
+                                        convexity=1, radius=1.0,
+                                        )
 
     from syned.beamline.element_coordinates import ElementCoordinates
 
