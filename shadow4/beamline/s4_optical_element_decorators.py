@@ -261,10 +261,13 @@ class S4ParaboloidOpticalElementDecorator(S4CurvedOpticalElementDecorator):
             cylangle = 0.0 if surface_shape.get_cylinder_direction() == Direction.TANGENTIAL else (0.5 * numpy.pi)
         elif isinstance(surface_shape, Paraboloid):
             print(">>>>> Paraboloid optical element", surface_shape)
+
             cylindrical = 0
             cylangle    = 0.0
 
-        return S4Conic.initialize_as_paraboloid_from_focal_distances(p, q, surface_shape.get_grazing_angle(), cylindrical=cylindrical, cylangle=cylangle, switch_convexity=switch_convexity)
+        out = S4Conic.initialize_as_paraboloid_from_focal_distances(p, q, surface_shape.get_grazing_angle(), cylindrical=cylindrical, cylangle=cylangle, switch_convexity=switch_convexity)
+        print(">>>>> Paraboloid ccc", out.ccc)
+        return out
 
 class S4ConicOpticalElementDecorator(S4CurvedOpticalElementDecorator):
     def __init__(self, conic_coefficients=[0.0]*10):

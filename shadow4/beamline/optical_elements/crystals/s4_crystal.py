@@ -22,6 +22,7 @@ from crystalpy.util.ComplexAmplitudePhotonBunch import ComplexAmplitudePhotonBun
 from crystalpy.diffraction.PerfectCrystalDiffraction import PerfectCrystalDiffraction
 
 from shadow4.optical_surfaces.s4_mesh import S4Mesh
+from shadow4.optical_surfaces.s4_toroid import S4Toroid
 
 import scipy.constants as codata
 
@@ -734,6 +735,11 @@ class S4CrystalElement(S4BeamlineElement):
         # We need for crystalpy the upwards normal
         if isinstance(ccc, S4Mesh):
             surface_normal = Vector(normal[0], normal[1], normal[2])  # normal is outwards!
+        elif isinstance(ccc, S4Toroid):
+            if ccc.f_torus == 0 or ccc.f_torus == 2:
+                surface_normal = Vector(normal[0], normal[1], normal[2]).scalarMultiplication(-1.0) # normal is inwards!
+            else:
+                surface_normal = Vector(normal[0], normal[1], normal[2])  # normal is outwards!
         else: # todo: check with convex surfaces
             surface_normal = Vector(normal[0], normal[1], normal[2]).scalarMultiplication(-1.0)  # normal is inwards!
 

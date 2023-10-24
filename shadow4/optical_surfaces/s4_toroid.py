@@ -206,7 +206,7 @@ class S4Toroid(S4OpticalSurface):
 
         return t0, t1, t2, t3
 
-    def calculate_intercept_and_choose_solution(self, x1, v1):
+    def calculate_intercept_and_choose_solution(self, x1, v1, reference_distance=0.0):
 
         t0, t1, t2, t3 = self.calculate_intercept(x1, v1)
         out = self.choose_solution(t0, t1, t2, t3)
