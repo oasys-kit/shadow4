@@ -143,6 +143,7 @@ def example_branch_2(do_plot=True):
                                                                      surface_calculation=SurfaceCalculation.EXTERNAL,
                                                                      min_radius=0.157068,
                                                                      maj_radius=358.124803 - 0.157068,
+                                                                     f_torus=0,
                                                                      boundary_shape=boundary_shape),
                                       coordinates=ElementCoordinates(p = 10.0,
                                                                      q = 6.0,

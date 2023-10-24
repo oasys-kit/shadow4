@@ -209,12 +209,17 @@ class S4ToroidOpticalElementDecorator(S4CurvedOpticalElementDecorator):
     def get_optical_surface_instance(self):
         surface_shape = self.get_surface_shape_instance()
 
-        print(">>>>> Toroidal optical element", surface_shape._min_radius, surface_shape._maj_radius)
+        print(">>>>> Toroidal optical element (syned stored) %g   %g" % (surface_shape.get_maj_radius(), surface_shape.get_min_radius()) )
+        print(">>>>>       setting S4Toroid r_maj=%f, r_min=%g, f_torus=%d" % (
+            surface_shape.get_maj_radius() - surface_shape.get_min_radius(),
+            surface_shape.get_min_radius(),
+            self._f_torus))
 
-        toroid = S4Toroid()
-        toroid.set_toroid_radii(surface_shape.get_maj_radius(), surface_shape.get_min_radius())
-        toroid.set_f_torus(f_torus=self._f_torus)
-        return toroid
+
+        return S4Toroid(
+            r_maj=surface_shape.get_maj_radius() - surface_shape.get_min_radius(),
+            r_min=surface_shape.get_min_radius(),
+            f_torus=self._f_torus)
 
 class S4ParaboloidOpticalElementDecorator(S4CurvedOpticalElementDecorator):
     def __init__(self,
