@@ -114,7 +114,7 @@ class S4EllipsoidMirrorElement(S4MirrorElement):
 
 if __name__ == "__main__":
     import copy
-    a = S4EllipsoidMirror(refraction_index=6j,p_focus=1,q_focus=2)
+    a = S4EllipsoidMirror(refraction_index=6j,p_focus=1,q_focus=2, surface_calculation=1)
     b = copy.copy(a)
     print(a.to_python_code())
     print(b.to_python_code())

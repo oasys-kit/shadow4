@@ -53,10 +53,16 @@ class S4ToroidCrystal(S4Crystal, S4ToroidOpticalElementDecorator):
     maj_radius : float, optional
         The surface major radius in m. Note that this is the radius of the optical surface (it is not the radius
         of the toroid).
+    f_torus : int, optional
+        A flag to indicate the position of the crystal pole within all the possible cases:
+        * lower/outer (concave/concave) (0),
+        * lower/inner (concave/convex) (1),
+        * upper/inner (convex/concave) (2),
+        * upper/outer (convex/convex) (3).
 
     """
     def __init__(self,
-                 name="Sphere crystal",
+                 name="Toroid crystal",
                  boundary_shape=None,
                  material=None,
                  # diffraction_geometry=DiffractionGeometry.BRAGG,  # ?? not supposed to be in syned...
@@ -77,13 +83,11 @@ class S4ToroidCrystal(S4Crystal, S4ToroidOpticalElementDecorator):
                                                      # 3=shadow preprocessor file v2
                  min_radius=0.1,
                  maj_radius=1.0,
-                 is_cylinder=False,
-                 cylinder_direction=Direction.TANGENTIAL,
-                 convexity=Convexity.UPWARD,
+                 f_torus=0,
                  ):
         p_focus, q_focus, grazing_angle = 1.0, 1.0, 1e-3
         S4ToroidOpticalElementDecorator.__init__(self, SurfaceCalculation.EXTERNAL,
-                                                 min_radius, maj_radius, p_focus, q_focus, grazing_angle)
+                                                 min_radius, maj_radius, f_torus, p_focus, q_focus, grazing_angle)
 
         S4Crystal.__init__(self,
                            name=name,
@@ -126,9 +130,7 @@ class S4ToroidCrystal(S4Crystal, S4ToroidOpticalElementDecorator):
             "material_constants_library_flag": material_constants_library_flag,
             "min_radius": min_radius,
             "maj_radius": maj_radius,
-            "is_cylinder": is_cylinder,
-            "cylinder_direction": cylinder_direction,
-            "convexity": convexity,
+            "f_torus": f_torus,
             }
 
     def to_python_code(self, **kwargs):
@@ -157,7 +159,9 @@ class S4ToroidCrystal(S4Crystal, S4ToroidOpticalElementDecorator):
     file_refl='{file_refl}',
     f_ext={f_ext},
     material_constants_library_flag={material_constants_library_flag}, # 0=xraylib,1=dabax,2=preprocessor v1,3=preprocessor v2
-    min_radius={min_radius:f},maj_radius={maj_radius:f},
+    min_radius={min_radius:g}, # min_radius = sagittal = torus_minor_radius
+    maj_radius={maj_radius:g}, # maj_radius = tangential = torus_major_radius + torus_minor_radius
+    f_torus={f_torus},
     )"""
         txt += txt_pre.format(**self.__inputs)
 

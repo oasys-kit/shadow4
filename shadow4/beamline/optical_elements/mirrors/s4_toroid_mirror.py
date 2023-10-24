@@ -11,6 +11,11 @@ class S4ToroidMirror(S4Mirror, S4ToroidOpticalElementDecorator):
                  surface_calculation=SurfaceCalculation.EXTERNAL,
                  min_radius=0.1,
                  maj_radius=1.0,
+                 f_torus=0, # mirror pole location:
+                            #  lower/outer (concave/concave) (0),
+                            # lower/inner (concave/convex) (1),
+                            # upper/inner (convex/concave) (2),
+                            # upper/outer (convex/convex) (3).
                  p_focus=0.0,
                  q_focus=0.0,
                  grazing_angle=0.0,
@@ -28,7 +33,7 @@ class S4ToroidMirror(S4Mirror, S4ToroidOpticalElementDecorator):
                  coating_roughness=0.0, # coating material roughness in A for f_refl=5,6
                  ):
         S4ToroidOpticalElementDecorator.__init__(self, surface_calculation,
-                                                 min_radius, maj_radius, p_focus, q_focus, grazing_angle)
+                                                 min_radius, maj_radius, f_torus, p_focus, q_focus, grazing_angle)
         S4Mirror.__init__(self, name, boundary_shape, self.get_surface_shape_instance(),
                           f_reflec, f_refl, file_refl, refraction_index, coating_material, coating_density, coating_roughness)
 
@@ -38,6 +43,7 @@ class S4ToroidMirror(S4Mirror, S4ToroidOpticalElementDecorator):
             "surface_calculation": surface_calculation,
             "min_radius" : min_radius,
             "maj_radius" : maj_radius,
+            "f_torus": f_torus,
             "p_focus": p_focus,
             "q_focus": q_focus,
             "grazing_angle": grazing_angle,
@@ -57,7 +63,9 @@ class S4ToroidMirror(S4Mirror, S4ToroidOpticalElementDecorator):
 from shadow4.beamline.optical_elements.mirrors.s4_toroid_mirror import S4ToroidMirror
 optical_element = S4ToroidMirror(name='{name:s}',boundary_shape=boundary_shape,
     surface_calculation={surface_calculation:d},
-    min_radius={min_radius:g},maj_radius={maj_radius:g},
+    min_radius={min_radius:g}, # min_radius = sagittal = torus_minor_radius
+    maj_radius={maj_radius:g}, # maj_radius = tangential = torus_major_radius + torus_minor_radius
+    f_torus={f_torus},
     p_focus={p_focus:g},q_focus={q_focus:g},grazing_angle={grazing_angle:g},
     f_reflec={f_reflec:d},f_refl={f_refl:d},file_refl='{file_refl:s}',refraction_index={refraction_index:g},
     coating_material='{coating_material:s}',coating_density={coating_density:g},coating_roughness={coating_roughness:g})

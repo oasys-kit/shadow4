@@ -92,25 +92,27 @@ class S4Toroid(S4OpticalSurface):
         self.r_min = R_SAGITTAL
         #TODO
 
-    def set_toroid_radii(self,r_maj,r_min):
+    def set_toroid_radii(self, r_maj, r_min):
         self.r_maj = r_maj
         self.r_min = r_min
 
-    def set_tangential_and_sagittal_radii(self,rtan,rsag):
+    def set_tangential_and_sagittal_radii(self, rtan, rsag):
         self.r_min = rsag
         self.r_maj = rtan - rsag
 
     def get_toroid_radii(self):
-        return self.r_maj,self.r_min
+        return self.r_maj, self.r_min
 
     def get_tangential_and_sagittal_radii(self):
-        return self.r_maj+self.r_min, self.r_min
+        return self.r_maj + self.r_min, self.r_min
 
     def set_coefficients(self,coeff):
         if numpy.array(coeff).size != 5:
             raise Exception("Invalid coefficients (dimension must be 5)")
         self.coeff = coeff
 
+    def set_f_torus(self, f_torus=0):
+        self.f_torus = f_torus
 
     def vector_reflection(self,v1,normal):
         tmp = v1 * normal
@@ -206,14 +208,13 @@ class S4Toroid(S4OpticalSurface):
             XIN = numpy.vstack((xx, yy, zz))
             VIN = numpy.vstack((zz, zz, numpy.ones_like(xx)))
 
-            HEIGHT, i_res = self.calculate_intercept(XIN, VIN, return_all_solutions=True)
+            HEIGHT, i_res = self.calculate_intercept_and_choose_solution(XIN, VIN, return_all_solutions=True)
 
             height = HEIGHT[solution_index,:]
             height.shape = X.shape
             return height
 
-
-    def calculate_intercept(self, XIN, VIN, keep=0, return_all_solutions=False):
+    def calculate_intercept_OLD(self, XIN, VIN, keep=0, return_all_solutions=False): # todo: delete
 
         P1 = XIN[0,:]
         P2 = XIN[1,:]
@@ -310,6 +311,7 @@ class S4Toroid(S4OpticalSurface):
             coeff = numpy.array([1.0,AA[k],BB[k],CC[k],DD[k]])
             # print("coeff: ",i,coeff.shape,coeff)
             h_output = numpy.roots(coeff)
+            print("h_out: ", k, h_output)
             # print(i,h_output)
 
 
@@ -366,7 +368,156 @@ class S4Toroid(S4OpticalSurface):
             return answer, i_res
 
 
+    def calculate_intercept(self, XIN, VIN):
 
+        P1 = XIN[0,:]
+        P2 = XIN[1,:]
+        P3 = XIN[2,:]
+
+        V1 = VIN[0,:]
+        V2 = VIN[1,:]
+        V3 = VIN[2,:]
+
+
+        # ! C
+        # ! C move the ref. frame to the torus one.
+        # ! C
+        # self.f_torus = 0        # - for fmirr=3; mirror pole location:
+                                  #  lower/outer (concave/concave) (0),
+                                  # lower/inner (concave/convex) (1),
+                                  # upper/inner (convex/concave) (2),
+                                  # upper/outer (convex/convex) (3).
+        #
+        # define the local r_min and r_maj like in shadow3
+        #
+        r_min = self.r_min
+        r_maj = self.r_maj - self.r_min # torus radius = tangential radius - sagittal radius
+                                        # note that self.r_maj (in syned) is the tangential radius
+
+        if self.f_torus == 0:
+            P3 = P3 - r_maj - r_min
+        elif self.f_torus == 1:
+            P3 = P3 - r_maj + r_min
+        elif self.f_torus == 2:
+            P3 = P3 + r_maj - r_min
+        elif self.f_torus == 3:
+            P3 = P3 + r_maj + r_min
+
+
+        #     ! ** Evaluates the quartic coefficients **
+
+        A	=   r_maj**2 - r_min**2
+        B	= -(r_maj**2 + r_min**2)
+
+        AA	= P1 * V1**3 + P2 * V2**3 + P3 * V3**3 + \
+            V1 * V2**2 * P1 + V1**2 * V2 * P2 + \
+            V1 * V3**2 * P1 + V1**2 * V3 * P3 + \
+            V2 * V3**2 * P2 + V2**2 * V3 * P3
+        AA	= 4*AA
+
+        BB	= 3 * P1**2 * V1**2 + 3 * P2**2 * V2**2 +  \
+            3 * P3**2 * V3**2 + \
+            V2**2 * P1**2 + V1**2 * P2**2 + \
+            V3**2 * P1**2 + V1**2 * P3**2 + \
+            V3**2 * P2**2 + V2**2 * P3**2 + \
+            A * V1**2 + B * V2**2 + B * V3**2 + \
+            4 * V1 * V2 * P1 * P2 +  \
+            4 * V1 * V3 * P1 * P3 +  \
+            4 * V2 * V3 * P2 * P3
+        BB	= 2 * BB
+
+        CC	= P1**3 * V1 + P2**3 * V2 + P3**3 * V3 + \
+            P2 * P1**2 * V2 + P1 * P2**2 * V1 + \
+            P3 * P1**2 * V3 + P1 * P3**2 * V1 + \
+            P3 * P2**2 * V3 + P2 * P3**2 * V2 + \
+            A * V1 * P1 + B * V2 * P2 + B * V3 * P3
+        CC	= 4 * CC
+
+
+        # TODO check DD that is the result of adding something like:
+        # DD0 + A**2 = -3.16397160937e+23 + 3.16397160937e+23 = 23018340352.0
+        # In fortran I get:
+        #  -3.1639716093723415E+023  + 3.1639716093725710E+023 =  22951231488.000000
+        DD	= P1**4 + P2**4 + P3**4 + \
+            2 * P1**2 * P2**2 + 2 * P1**2 * P3**2 + \
+            2 * P2**2 * P3**2 + \
+            2 * A * P1**2 + 2 * B * P2**2 + 2 * B * P3**2 + \
+            A**2
+
+
+        AA.shape = -1
+        BB.shape = -1
+        CC.shape = -1
+        DD.shape = -1
+
+
+        t0 = numpy.zeros_like(AA, dtype=complex)
+        t1 = numpy.zeros_like(AA, dtype=complex)
+        t2 = numpy.zeros_like(AA, dtype=complex)
+        t3 = numpy.zeros_like(AA, dtype=complex)
+        for k in range(AA.size):
+            h_output2 = numpy.polynomial.polynomial.polyroots([DD[k], CC[k], BB[k], AA[k], 1.0])
+            t0[k] = h_output2[0]
+            t1[k] = h_output2[1]
+            t2[k] = h_output2[2]
+            t3[k] = h_output2[3]
+            # print(">>>> solutions: ", k, t0[k], t1[k], t2[k], t3[k])
+
+        return t0, t1, t2, t3
+
+    def calculate_intercept_and_choose_solution(self, x1, v1):
+
+        t0, t1, t2, t3 = self.calculate_intercept(x1, v1)
+        out = self.choose_solution(t0, t1, t2, t3)
+        # print("chosen solution:*********** ", out[0])
+        return out
+
+
+    def choose_solution(self, t0, t1, t2, t3):
+        i_res  = numpy.ones( t0.size )
+        answer = numpy.ones( t0.size )
+        # ANSWERS = numpy.zeros((4, t0.size))
+
+        for k in range(t0.size):
+
+            h_output = numpy.array([t0[k], t1[k], t2[k], t3[k]])
+
+            if h_output.imag.prod() != 0:
+                print("all the solutions are complex")
+                i_res[k] = -1
+                answer[k] = 0.0
+            else:
+                Answers = []
+
+                for i in range(4):
+                    if h_output[i].imag == 0:
+                        Answers.append(h_output[i].real)
+
+                #! C
+                #! C Sort the real intercept in ascending order.
+                #! C
+                Answers = numpy.sort(numpy.array(Answers))
+
+                # ! C
+                # ! C Pick the output according to F_TORUS.
+                # ! C
+
+                # TODO check correctness of  indices not shifted
+                if self.f_torus == 0:
+                    answer[k] = Answers[-1]
+                elif self.f_torus == 1:
+                    if len(Answers) > 1:
+                        answer[k] = Answers[-2]
+                    else:
+                        i_res[k] = -1
+                elif self.f_torus == 2:
+                    if len(Answers) > 1:
+                        answer[k] = Answers[1]
+                    else:
+                        i_res[k] = -1
+                elif self.f_torus == 3:
+                    answer[k] = Answers[0]
+        return answer, i_res
 
     def set_cylindrical(self, CIL_ANG):
         raise Exception("Cannot set_cylindrical() in a Toroid")
@@ -375,7 +526,6 @@ class S4Toroid(S4OpticalSurface):
 
     def switch_convexity(self):
         raise Exception("Cannot switch_convexity() in a Toroid")
-
 
 
     #
@@ -423,7 +573,7 @@ class S4Toroid(S4OpticalSurface):
         flag = newbeam.get_column(10)        # numpy.array(a3.getshonecol(10))
         optical_path = newbeam.get_column(13)
 
-        t,iflag = self.calculate_intercept(x1,v1)
+        t, iflag = self.calculate_intercept_and_choose_solution(x1, v1)
 
         # print(">>>>>",x1,t)
         # for i in range(t.size):

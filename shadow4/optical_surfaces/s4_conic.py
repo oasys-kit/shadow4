@@ -390,7 +390,7 @@ class S4Conic(S4OpticalSurface):
         elif method == 2:
             TPAR = TPAR2
 
-        return TPAR,I_FLAG
+        return TPAR, I_FLAG
 
     def calculate_intercept_and_choose_solution(self, x1, v1, reference_distance=10.0, method=0):
         t1, t2 = self.calculate_intercept(x1, v1)
