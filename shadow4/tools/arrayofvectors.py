@@ -74,8 +74,10 @@ def vector_reflection(v1,normal): # copied from s4_conic()
     normal_norm = vector_norm(normal)
     return v1 - 2 * vector_multiply_scalar( normal_norm, vector_dot(v1, normal_norm))
 
-def vector_refraction(vin, normal, n1, n2, do_check=0):
+def vector_refraction(vin, normal, n1, n2, sgn=1, do_check=0):
     # http://www.starkeffects.com/snells-law-vector.shtml
+
+    if sgn is None: sgn = -numpy.sign(vector_dot(vin, normal))
 
     vin_norm = vector_norm(vin)
     normal_norm = vector_norm(normal)
@@ -86,7 +88,7 @@ def vector_refraction(vin, normal, n1, n2, do_check=0):
     # sq2 = 1 - vector_multiply_scalar(vector_dot(n_cross_vin, n_cross_vin), (n1/n2)**2)
     sq2 = 1 - vector_dot(n_cross_vin, n_cross_vin) *  (n1 / n2) ** 2
     # vout = (n1/n2) * vector_cross(normal_norm,n_opp_cross_vin) - vector_multiply_scalar(normal_norm, numpy.sqrt(sq2))
-    vout = vector_multiply_scalar(vector_cross(normal_norm, n_opp_cross_vin), (n1 / n2)) - vector_multiply_scalar(normal_norm, numpy.sqrt(sq2))
+    vout = vector_multiply_scalar(vector_cross(normal_norm, n_opp_cross_vin), (n1 / n2)) - vector_multiply_scalar(normal_norm, sgn * numpy.sqrt(sq2))
 
     if do_check:
         theta1 = numpy.arccos( vector_dot(vin_norm, normal_norm) * (-1))
@@ -180,6 +182,7 @@ if __name__ == "__main__":
     print('v2: ', v2)
 
     # refraction
+    # use sgn to make refraction independent of the direction of the normal
     npoints = 1
     n = numpy.zeros((npoints,3))
     n[:,2] = -1.0
@@ -187,15 +190,30 @@ if __name__ == "__main__":
     v1 = numpy.zeros((npoints, 3))
     v1[:, 0] = numpy.sqrt(2) / 2
     v1[:, 2] = numpy.sqrt(2) / 2
-    v2 = vector_refraction(v1, n, n1=1.0, n2=1.5)
-    print('v1: ', v1)
+    v2 = vector_refraction(v1, n, n1=1.0, n2=1.5, sgn=1)
+    print('\nv1: ', v1)
     print('n: ', n)
     print('v2: ', v2)
+    print('sgn: ', vector_dot(v1, n))
 
     # http://www.starkeffects.com/snells-law-vector.shtml
     assert (numpy.abs(v2[0][0] - 0.471) < 1e-3)
     assert (numpy.abs(v2[0][1] - 0) < 1e-3)
     assert (numpy.abs(v2[0][2] - 0.882) < 1e-3)
+
+    v2 = vector_refraction(v1, n, n1=1.0, n2=1.5, sgn=None)
+    print('\nv1: ', v1)
+    print('n: ', n)
+    print('v2: ', v2)
+    print('sgn: ', vector_dot(v1, n))
+
+
+    n *= -1
+    v2 = vector_refraction(v1, n, n1=1.0, n2=1.5, sgn=None)  # automatic
+    print('\nv1: ', v1)
+    print('n: ', n)
+    print('v2: ', v2)
+    print('sgn: ', vector_dot(v1, n))
 
 
 
