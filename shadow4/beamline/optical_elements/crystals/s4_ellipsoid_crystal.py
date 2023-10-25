@@ -52,8 +52,8 @@ class S4EllipsoidCrystal(S4Crystal, S4EllipsoidOpticalElementDecorator):
         The ellipse/ellipsoid minor axis.
     maj_axis : float, optional
         The ellipse/ellipsoid major axis.
-    p_focus : float, optional
-        The distance from focus 1 (locus of the source) to the crystal pole.
+    pole_to_focus : float, optional
+        The distance from focus 1 (locus of the source) to the crystal pole
     is_cylinder : int, optional
         Flag to indicate that the surface has cylindrical symmetry (it is flat in one direction).
     cylinder_direction : int, optional
@@ -86,14 +86,14 @@ class S4EllipsoidCrystal(S4Crystal, S4EllipsoidOpticalElementDecorator):
                                                      # 3=shadow preprocessor file v2
                  min_axis=0.0,
                  maj_axis=0.0,
-                 p_focus=0.0,
+                 pole_to_focus=0.0,  # for external calculation
                  is_cylinder=False,
                  cylinder_direction=Direction.TANGENTIAL,
                  convexity=Convexity.UPWARD,
                  ):
-        q_focus, grazing_angle = 1.0, 1e-3
+        p_focus, q_focus, grazing_angle = 1.0, 1.0, 1e-3
         S4EllipsoidOpticalElementDecorator.__init__(self, SurfaceCalculation.EXTERNAL, is_cylinder, cylinder_direction, convexity,
-                                                 min_axis, maj_axis, p_focus, q_focus, grazing_angle)
+                                                 min_axis, maj_axis, pole_to_focus, p_focus, q_focus, grazing_angle)
 
         S4Crystal.__init__(self,
                            name=name,
@@ -136,7 +136,7 @@ class S4EllipsoidCrystal(S4Crystal, S4EllipsoidOpticalElementDecorator):
             "material_constants_library_flag": material_constants_library_flag,
             "min_axis": min_axis,
             "maj_axis": maj_axis,
-            "p_focus": p_focus,
+            "pole_to_focus": pole_to_focus,
             "is_cylinder": is_cylinder,
             "cylinder_direction": cylinder_direction,
             "convexity": convexity,
@@ -168,7 +168,7 @@ class S4EllipsoidCrystal(S4Crystal, S4EllipsoidOpticalElementDecorator):
     file_refl='{file_refl}',
     f_ext={f_ext},
     material_constants_library_flag={material_constants_library_flag}, # 0=xraylib,1=dabax,2=preprocessor v1,3=preprocessor v2
-    min_axis={min_axis:f}, maj_axis={maj_axis:f}, p_focus={p_focus:f}, is_cylinder={is_cylinder:d}, cylinder_direction={cylinder_direction:d}, convexity={convexity:d},
+    min_axis={min_axis:f}, maj_axis={maj_axis:f}, pole_to_focus={pole_to_focus:f}, is_cylinder={is_cylinder:d}, cylinder_direction={cylinder_direction:d}, convexity={convexity:d},
     )"""
         txt += txt_pre.format(**self.__inputs)
 

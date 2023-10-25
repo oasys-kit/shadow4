@@ -8,16 +8,16 @@ class S4ParaboloidMirror(S4Mirror, S4ParaboloidOpticalElementDecorator):
     def __init__(self,
                  name="Paraboloid Mirror",
                  boundary_shape=None,
+                 at_infinity=Side.SOURCE, # used by both internal/external
                  surface_calculation=SurfaceCalculation.INTERNAL,
+                 p_focus=0.0,             # for surface_calculation=SurfaceCalculation.INTERNAL
+                 q_focus=0.0,             # for surface_calculation=SurfaceCalculation.INTERNAL
+                 grazing_angle=0.0,       # for surface_calculation=SurfaceCalculation.INTERNAL
+                 parabola_parameter=0.0,  # for surface_calculation=SurfaceCalculation.EXTERNAL
+                 pole_to_focus=0.0,       # for surface_calculation=SurfaceCalculation.EXTERNAL
                  is_cylinder=False,
                  cylinder_direction=Direction.TANGENTIAL,
                  convexity=Convexity.UPWARD,
-                 parabola_parameter=0.0,
-                 at_infinity=Side.SOURCE,
-                 pole_to_focus=0.0, # for external calculation
-                 p_focus=0.0,
-                 q_focus=0.0,
-                 grazing_angle=0.0,
                  # inputs related to mirror reflectivity
                  f_reflec=0,  # reflectivity of surface: 0=no reflectivity, 1=full polarization
                  f_refl=0,  # 0=prerefl file
@@ -64,11 +64,11 @@ class S4ParaboloidMirror(S4Mirror, S4ParaboloidOpticalElementDecorator):
         txt_pre = """
 from shadow4.beamline.optical_elements.mirrors.s4_paraboloid_mirror import S4ParaboloidMirror
 optical_element = S4ParaboloidMirror(name='{name:s}', boundary_shape=boundary_shape,
-    surface_calculation={surface_calculation:d}, is_cylinder={is_cylinder:d}, cylinder_direction={cylinder_direction:d},
-    convexity={convexity:d},
-    parabola_parameter={parabola_parameter:f}, at_infinity={at_infinity:d}, pole_to_focus={pole_to_focus:f},
-    p_focus={p_focus:f}, q_focus={q_focus:f},
-    grazing_angle={grazing_angle:f},
+    at_infinity={at_infinity:d}, 
+    surface_calculation={surface_calculation:d},
+    p_focus={p_focus:f}, q_focus={q_focus:f}, grazing_angle={grazing_angle:f}, # for internal
+    parabola_parameter={parabola_parameter:f}, pole_to_focus={pole_to_focus:f}, # for external
+    is_cylinder={is_cylinder:d}, cylinder_direction={cylinder_direction:d}, convexity={convexity:d},
     f_reflec={f_reflec:d}, f_refl={f_refl:d}, file_refl='{file_refl:s}', refraction_index={refraction_index:g},
     coating_material='{coating_material:s}', coating_density={coating_density:g}, coating_roughness={coating_roughness:g})
 """
@@ -117,5 +117,4 @@ if __name__=="__main__":
 
     el = S4ParaboloidMirrorElement(optical_element=S4ParaboloidMirror(),
                                     coordinates=ElementCoordinates(p=20000, q=1000, angle_radial=88.0, angle_azimuthal=0.0))
-
     print(el.to_python_code())

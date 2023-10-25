@@ -660,7 +660,7 @@ class S4Conic(S4OpticalSurface):
         self.ccc[8] = 2 * (B * YCEN * RNCEN[2 - 1] + C * ZCEN * RNCEN[3 - 1])
         self.ccc[9] = 0.0
 
-    def set_paraboloid_from_focal_distances(self, SSOUR, SIMAG, theta_grazing, infinity_location="",  verbose=True):
+    def set_paraboloid_from_focal_distances(self, SSOUR, SIMAG, theta_grazing, at_infinity=None,  verbose=True):
         # ;C
         # ;C Computes the parabola
         # ;C
@@ -668,11 +668,16 @@ class S4Conic(S4OpticalSurface):
         COSTHE = numpy.cos(theta)
         SINTHE = numpy.sin(theta)
 
-        if infinity_location == "":
+        if at_infinity is None:
             if SSOUR <= SIMAG:
-                location = "q"
+                location = "q"  # q is infinite
             else:
                 location = "p"
+        else:
+            if at_infinity == 0:
+                location = "p"
+            else:
+                location = "q"
 
         if location == "q":
             PARAM = 2 * SSOUR * COSTHE ** 2

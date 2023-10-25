@@ -14,6 +14,7 @@ class S4EllipsoidMirror(S4Mirror, S4EllipsoidOpticalElementDecorator):
                  convexity=Convexity.UPWARD,
                  min_axis=0.0,
                  maj_axis=0.0,
+                 pole_to_focus=0.0,  # for external calculation
                  p_focus=0.0,
                  q_focus=0.0,
                  grazing_angle=0.0,
@@ -33,7 +34,8 @@ class S4EllipsoidMirror(S4Mirror, S4EllipsoidOpticalElementDecorator):
                  coating_roughness=0.0, # coating material roughness in A for f_refl=5,6
                  ):
         S4EllipsoidOpticalElementDecorator.__init__(self, surface_calculation, is_cylinder, cylinder_direction, convexity,
-                                                    min_axis, maj_axis, p_focus, q_focus, grazing_angle)
+                                                    min_axis, maj_axis, pole_to_focus,
+                                                    p_focus, q_focus, grazing_angle)
         S4Mirror.__init__(self, name, boundary_shape, self.get_surface_shape_instance(),
                           f_reflec, f_refl, file_refl, refraction_index, coating_material, coating_density, coating_roughness)
 
@@ -46,6 +48,7 @@ class S4EllipsoidMirror(S4Mirror, S4EllipsoidOpticalElementDecorator):
             "convexity": convexity,
             "min_axis": min_axis,
             "maj_axis": maj_axis,
+            "pole_to_focus": pole_to_focus,
             "p_focus": p_focus,
             "q_focus": q_focus,
             "grazing_angle": grazing_angle,
@@ -64,12 +67,13 @@ class S4EllipsoidMirror(S4Mirror, S4EllipsoidOpticalElementDecorator):
         txt_pre = """
         
 from shadow4.beamline.optical_elements.mirrors.s4_ellipsoid_mirror import S4EllipsoidMirror
-optical_element = S4EllipsoidMirror(name='{name:s}',boundary_shape=boundary_shape,
-    surface_calculation={surface_calculation:d},is_cylinder={is_cylinder:d},cylinder_direction={cylinder_direction:d},
-    convexity={convexity:d},min_axis={min_axis:f},maj_axis={maj_axis:f},p_focus={p_focus:f},q_focus={q_focus:f},
-    grazing_angle={grazing_angle:f},
-    f_reflec={f_reflec:d},f_refl={f_refl:d},file_refl='{file_refl:s}',refraction_index={refraction_index:g},
-    coating_material='{coating_material:s}',coating_density={coating_density:g},coating_roughness={coating_roughness:g})
+optical_element = S4EllipsoidMirror(name='{name:s}', boundary_shape=boundary_shape,
+    surface_calculation={surface_calculation:d},
+    min_axis={min_axis:f}, maj_axis={maj_axis:f}, pole_to_focus={pole_to_focus:f},
+    p_focus={p_focus:f}, q_focus={q_focus:f}, grazing_angle={grazing_angle:f},
+    is_cylinder={is_cylinder:d}, cylinder_direction={cylinder_direction:d}, convexity={convexity:d},
+    f_reflec={f_reflec:d}, f_refl={f_refl:d}, file_refl='{file_refl:s}', refraction_index={refraction_index:g},
+    coating_material='{coating_material:s}', coating_density={coating_density:g}, coating_roughness={coating_roughness:g})
 """
         txt += txt_pre.format(**self.__inputs)
         return txt

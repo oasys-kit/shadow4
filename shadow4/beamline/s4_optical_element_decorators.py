@@ -111,20 +111,21 @@ class S4EllipsoidOpticalElementDecorator(S4CurvedOpticalElementDecorator):
                  convexity=Convexity.UPWARD,
                  min_axis=0.0,
                  maj_axis=0.0,
+                 pole_to_focus=0.0,
                  p_focus=0.0,
                  q_focus=0.0,
                  grazing_angle=0.0,
                  ):
         if surface_calculation == SurfaceCalculation.EXTERNAL:
-            if is_cylinder: curved_surface_shape = EllipticalCylinder.create_elliptical_cylinder_from_axes(min_axis, maj_axis, p_focus, convexity, cylinder_direction)
-            else:           curved_surface_shape = Ellipsoid.create_ellipsoid_from_axes(min_axis, maj_axis, p_focus, convexity)
+            if is_cylinder: curved_surface_shape = EllipticalCylinder.create_elliptical_cylinder_from_axes(min_axis, maj_axis, pole_to_focus, convexity, cylinder_direction)
+            else:           curved_surface_shape = Ellipsoid.create_ellipsoid_from_axes(min_axis, maj_axis, pole_to_focus, convexity)
         else:
             if is_cylinder: curved_surface_shape = EllipticalCylinder.create_elliptical_cylinder_from_p_q(p_focus, q_focus, grazing_angle, convexity, cylinder_direction)
             else:           curved_surface_shape = Ellipsoid.create_ellipsoid_from_p_q(p_focus, q_focus, grazing_angle, convexity)
 
         S4CurvedOpticalElementDecorator.__init__(self, surface_calculation, is_cylinder, curved_surface_shape)
 
-    def get_optical_surface_instance(self):
+    def get_optical_surface_instance(self): # todo: update this one like hyperboloid
         surface_shape = self.get_surface_shape_instance()
 
         switch_convexity = 0 if surface_shape.get_convexity() == Convexity.DOWNWARD else 1
@@ -153,13 +154,14 @@ class S4HyperboloidOpticalElementDecorator(S4CurvedOpticalElementDecorator):
                  convexity=Convexity.UPWARD,
                  min_axis=0.0,
                  maj_axis=0.0,
+                 pole_to_focus=0.0,
                  p_focus=0.0,
                  q_focus=0.0,
                  grazing_angle=0.0,
                  ):
         if surface_calculation == SurfaceCalculation.EXTERNAL:
-            if is_cylinder: curved_surface_shape = HyperbolicCylinder.create_hyperbolic_cylinder_from_axes(min_axis, maj_axis, p_focus, convexity, cylinder_direction)
-            else:           curved_surface_shape = Hyperboloid.create_hyperboloid_from_axes(min_axis, maj_axis, p_focus, convexity)
+            if is_cylinder: curved_surface_shape = HyperbolicCylinder.create_hyperbolic_cylinder_from_axes(min_axis, maj_axis, pole_to_focus, convexity, cylinder_direction)
+            else:           curved_surface_shape = Hyperboloid.create_hyperboloid_from_axes(min_axis, maj_axis, pole_to_focus, convexity)
         else:
             if is_cylinder: curved_surface_shape = HyperbolicCylinder.create_hyperbolic_cylinder_from_p_q(p_focus, q_focus, grazing_angle, convexity, cylinder_direction)
             else:           curved_surface_shape = Hyperboloid.create_hyperboloid_from_p_q(p_focus, q_focus, grazing_angle, convexity)
