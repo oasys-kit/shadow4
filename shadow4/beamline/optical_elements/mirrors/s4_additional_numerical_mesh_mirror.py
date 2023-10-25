@@ -60,12 +60,13 @@ optical_element = S4AdditionalNumericalMeshMirror(name='{name:s}', ideal_mirror=
         txt += txt_pre.format(**self.__inputs)
         return txt
 
-
-    def apply_geometrical_model(self, beam):
+    #
+    # overwrite this method combining ideal shape + error shape
+    #
+    def apply_mirror_reflection(self, beam):
         # numerical_mesh    = self.__numerical_mesh_mirror.get_optical_surface_instance()
         numerical_mesh = self.get_optical_surface_instance()
         ideal = self.__ideal_mirror.get_optical_surface_instance()
-
         # here sum ideal surface to numerical mesh, and obtain a new numerical mesh:
         # numerical_mesh = add_mesh_to_ideal_surface(numerical_mesh, ideal_surface_ccc)
         x, y = numerical_mesh.get_mesh_x_y()
@@ -74,7 +75,6 @@ optical_element = S4AdditionalNumericalMeshMirror(name='{name:s}', ideal_mirror=
         Z = ideal.surface_height(X,Y)
         numerical_mesh.add_to_mesh(Z)
         # ideal_surface_ccc = self.__ideal_mirror.get_optical_surface_instance() # this mean that every S4Mirror must inherit from S4OpticalElementDecorator
-
         footprint, normal, _, _, _, _, _ = numerical_mesh.apply_specular_reflection_on_beam(beam)
 
         return footprint, normal

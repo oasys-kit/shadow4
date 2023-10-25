@@ -75,10 +75,6 @@ optical_element = S4ParaboloidMirror(name='{name:s}', boundary_shape=boundary_sh
         txt += txt_pre.format(**self.__inputs)
         return txt
 
-    def apply_geometrical_model(self, beam):
-        ccc = self.get_optical_surface_instance()
-        footprint, normal = ccc.apply_specular_reflection_on_beam(beam)
-        return footprint, normal
 
 class S4ParaboloidMirrorElement(S4MirrorElement):
     def __init__(self,

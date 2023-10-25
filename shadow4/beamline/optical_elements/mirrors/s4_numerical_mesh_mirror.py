@@ -61,10 +61,6 @@ optical_element = S4NumericalMeshMirror(name='{name:s}',boundary_shape=boundary_
         txt += txt_pre.format(**self.__inputs)
         return txt
 
-    def apply_geometrical_model(self, beam):
-        num_mesh = self.get_optical_surface_instance()
-        footprint, normal, _, _, _, _, _ = num_mesh.apply_specular_reflection_on_beam(beam)
-        return footprint, normal
 
 class S4NumericalMeshMirrorElement(S4MirrorElement):
     def __init__(self,

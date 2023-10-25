@@ -73,11 +73,6 @@ optical_element = S4ToroidMirror(name='{name:s}',boundary_shape=boundary_shape,
         txt += txt_pre.format(**self.__inputs)
         return txt
 
-    def apply_geometrical_model(self, beam):
-        toroid = self.get_optical_surface_instance()
-        footprint, normal = toroid.apply_specular_reflection_on_beam(beam)
-        return footprint, normal
-
 
 class S4ToroidMirrorElement(S4MirrorElement):
     def __init__(self,

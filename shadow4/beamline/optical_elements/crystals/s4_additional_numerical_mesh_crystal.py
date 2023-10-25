@@ -61,25 +61,6 @@ optical_element = S4AdditionalNumericalMeshCrystal(name='{name:s}', ideal_crysta
         txt += txt_pre.format(**self.__inputs)
         return txt
 
-
-    def apply_geometrical_model(self, beam):
-        # numerical_mesh    = self.__numerical_mesh_crystal.get_optical_surface_instance()
-        numerical_mesh = self.get_optical_surface_instance()
-        ideal = self.__ideal_crystal.get_optical_surface_instance()
-
-        # here sum ideal surface to numerical mesh, and obtain a new numerical mesh:
-        # numerical_mesh = add_mesh_to_ideal_surface(numerical_mesh, ideal_surface_ccc)
-        x, y = numerical_mesh.get_mesh_x_y()
-        X = numpy.outer(x, numpy.ones_like(y))
-        Y = numpy.outer(numpy.ones_like(x), y)
-        Z = ideal.surface_height(X,Y)
-        numerical_mesh.add_to_mesh(Z)
-        # ideal_surface_ccc = self.__ideal_crystal.get_optical_surface_instance() # this mean that every S4Crystal must inherit from S4OpticalElementDecorator
-
-        footprint, normal, _, _, _, _, _ = numerical_mesh.apply_specular_reflection_on_beam(beam)
-
-        return footprint, normal
-
 class S4AdditionalNumericalMeshCrystalElement(S4CrystalElement):
     def __init__(self,
                  optical_element: S4AdditionalNumericalMeshCrystal = None,

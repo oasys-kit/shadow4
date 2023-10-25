@@ -10,6 +10,10 @@ from shadow4.beamline.s4_beamline_element import S4BeamlineElement
 from shadow4.beam.s4_beam import S4Beam
 from shadow4.beamline.s4_beamline_element_movements import S4BeamlineElementMovements
 
+from shadow4.optical_surfaces.s4_conic import S4Conic
+from shadow4.optical_surfaces.s4_toroid import S4Toroid
+from shadow4.optical_surfaces.s4_mesh import S4Mesh
+
 class S4Mirror(Mirror):
     """
     S4Mirror
@@ -87,8 +91,24 @@ class S4Mirror(Mirror):
             ] )
 
 
-    def apply_geometrical_model(self, beam):
-        raise Exception("To be implemented in the children class")
+    def apply_mirror_reflection(self, beam):
+        # # todo? It could be replaced by this code, buy it is much less readable
+        # sur = self.get_optical_surface_instance()
+        # out = sur.apply_specular_reflection_on_beam(beam)
+        # return out[0], out[1]
+
+        sur = self.get_optical_surface_instance()
+
+        if isinstance(sur, S4Conic):
+            footprint, normal = sur.apply_specular_reflection_on_beam(beam)
+        elif isinstance(sur, S4Toroid):
+            footprint, normal = sur.apply_specular_reflection_on_beam(beam)
+        elif isinstance(sur, S4Mesh):
+            footprint, normal, _, _, _, _, _ = sur.apply_specular_reflection_on_beam(beam)
+        else:
+            raise Exception("To be implemented in the children class")
+
+        return footprint, normal
 
     def to_python_code_boundary_shape(self):
         txt = "" # "\nfrom shadow4.beamline.optical_elements.mirrors.s4_plane_mirror import S4PlaneMirror"
@@ -151,7 +171,8 @@ class S4MirrorElement(S4BeamlineElement):
 
         v_in = input_beam.get_columns([4,5,6])
 
-        footprint, normal = self.apply_local_reflection(input_beam)
+        # footprint, normal = self.apply_local_reflection(input_beam)
+        footprint, normal = self.get_optical_element().apply_mirror_reflection(input_beam)
 
         if movements is not None:
             if movements.f_move:
@@ -331,9 +352,6 @@ class S4MirrorElement(S4BeamlineElement):
         output_beam.change_to_image_reference_system(theta_grazing1, q)
 
         return output_beam, footprint
-
-    def apply_local_reflection(self, beam):
-        return self.get_optical_element().apply_geometrical_model(beam)
 
     #
     # i/o utilities

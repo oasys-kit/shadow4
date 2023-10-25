@@ -63,7 +63,7 @@ class S4Interface(Interface):
     def to_python_code(self, **kwargs):
         raise Exception("To be implemented in the children class")
 
-    def apply_geometrical_model(self, beam):
+    def apply_geometrical_model(self, beam): # todo: rename this (as done in S4Mirror)
         raise Exception("To be implemented in the children class")
 
     def to_python_code_boundary_shape(self):
