@@ -2159,6 +2159,63 @@ class S4Beam(object):
         for i in range(len(names)): names[i] = "%2d: %s" % (i+1, names[i])
         return names
 
+    @classmethod
+    def column_names_formatted(cls):
+        return [
+            r"$x$ [user unit]", #"x [user unit]"],
+            r"$y$ [user unit]", #"y [user unit]"],
+            r"$z$ [user unit]", #"z [user unit]"],
+            r"$\dot{x}$ [rads]", #"x' [rads]"],
+            r"$\dot{y}$ [rads]", #"y' [rads]"],
+            r"$\dot{z}$ [rads]", #"z' [rads]"],
+            r"$\mathbf{E}_{\sigma x}$", #"Es_x"],
+            r"$\mathbf{E}_{\sigma y}$", #"Es_y"],
+            r"$\mathbf{E}_{\sigma z}$", #"Es_z"],
+            r"ray flag", #"Ray flag"],
+            r"$K = \frac{2 \pi}{\lambda} [A^{-1}]$", #"K magnitude"], ## [r"E [eV]", "Energy"],
+            r"Ray index", #"Ray index"],
+            r"s", #"Opt. Path"],
+            r"$\phi_{\sigma}$", #"phase_s"],
+            r"$\phi_{\pi}$", #"phase_p"],
+            r"$\mathbf{E}_{\pi x}$", #"Ep_x"],
+            r"$\mathbf{E}_{\pi y}$", #"Ep_y"],
+            r"$\mathbf{E}_{\pi z}$", #"Ep_z"],
+            r"$\lambda$ [$\AA$]", #"wavelength"],
+            r"$R= \sqrt{x^2+y^2+z^2}$", #"R [user unit]"],
+            r"$\theta$", #"theta"],
+            r"$\Vert\mathbf{E_{\sigma}}+\mathbf{E_{\pi}}\Vert$", #"Electromagnetic vector magnitude"],
+            r"$\Vert\mathbf{E_{\sigma}}\Vert^2+\Vert\mathbf{E_{\pi}}\Vert^2$", #"intensity (weight column = 23: |E|^2 (total intensity))"],
+            r"$\Vert\mathbf{E_{\sigma}}\Vert^2$", #"intensity (weight column = 24: |E_s|^2 (sigma intensity))"],
+            r"$\Vert\mathbf{E_{\pi}}\Vert^2$", #"intensity (weight column = 25: |E_p|^2 (pi intensity))"],
+            r"E [eV]", #"Energy"], #       [r"$K = \frac{2 \pi}{\lambda} [A^{-1}]$", "K magnitude"]
+            r"$K_x = \frac{2 \pi}{\lambda} \dot{x}$ [$\AA^{-1}$]", #"K_x"],
+            r"$K_y = \frac{2 \pi}{\lambda} \dot{y}$ [$\AA^{-1}$]", #"K_y"],
+            r"$K_z = \frac{2 \pi}{\lambda} \dot{z}$ [$\AA^{-1}$]", #"K_z"],
+            r"$S_0 = \Vert\mathbf{E}_{\sigma}\Vert^2 + \Vert\mathbf{E}_{\pi}\Vert^2 $", #"S0"],
+            r"$S_1 = \Vert\mathbf{E}_{\sigma}\Vert^2 - \Vert\mathbf{E}_{\pi}\Vert^2 $", #"S1"],
+            r"$S_2 = 2 \Vert\mathbf{E}_{\sigma}\Vert \cdot \Vert\mathbf{E}_{\pi}\Vert \cos{(\phi_{\sigma}-\phi_{\pi})}$", #"S2"],
+            r"$S_3 = 2 \Vert\mathbf{E}_{\sigma}\Vert \cdot \Vert\mathbf{E}_{\pi}\Vert \sin{(\phi_{\sigma}-\phi_{\pi})}$", #"S3"],
+            r"Power [eV/s]", #"Power", "Power",
+            r"Angle X^Y [rad]", # "Angle X^Y [rad]"],
+            r"Angle Z^Y [rad]", # "Angle Z^Y [rad]"],
+            r"Angle X^Y [rad]", # "Angle X^Y [rad]"],
+            r"Angle Z^Y [rad]", # "Angle Z^Y [rad]"],
+        ]
+
+    @classmethod
+    def column_names_formatted_with_column_number(cls):
+        """
+        returns a list with the formatted-names of shadow4 beam columns including the column number (the 18 columns in the beam plus the extended columns).
+
+        Returns
+        -------
+        list
+            The column names.
+
+        """
+        names = cls.column_names_formatted()
+        for i in range(len(names)): names[i] = "%2d: %s" % (i+1, names[i])
+        return names
     #
     # useful tools (h5 files)
     #
@@ -2334,6 +2391,8 @@ if __name__ == "__main__":
     pass
     print(S4Beam.column_names_with_column_number())
     print(S4Beam.column_short_names_with_column_number())
+    print(S4Beam.column_names_formatted())
+    print(S4Beam.column_names_formatted_with_column_number())
     print(S4Beam.get_UVW())
 
     B = S4Beam.initialize_as_pencil(N=1)
