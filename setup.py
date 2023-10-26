@@ -75,7 +75,7 @@ INSTALL_REQUIRES = (
     'setuptools',
     'numpy',
     'scipy',
-    'syned>=1.0.29',
+    'syned>=1.0.30',
     'srxraylib',
     'wofryimpl>=1.0.21', # todo: may be remove this dependency after reviewing S4UndulatorLightSource
     'crystalpy>=0.0.20',
@@ -83,7 +83,7 @@ INSTALL_REQUIRES = (
 
 
 setup(name='shadow4',
-      version='0.1.13',
+      version='0.1.14',
       description='shadow implementation in python',
       author='Manuel Sanchez del Rio, Luca Rebuffi',
       author_email='srio@esrf.eu',
