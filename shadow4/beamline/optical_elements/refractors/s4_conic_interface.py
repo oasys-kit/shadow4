@@ -60,7 +60,7 @@ class S4ConicInterface(S4Interface, S4ConicOpticalElementDecorator):
 
         self.inputs = self.__inputs
 
-    def apply_geometrical_model(self, beam):
+    def apply_interface_refraction(self, beam):
 
         ccc = S4Conic.initialize_from_coefficients(self.get_surface_shape().get_conic_coefficients())
 

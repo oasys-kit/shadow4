@@ -118,9 +118,6 @@ optical_element = S4CRL(name='{name:s}',
         txt += txt_pre.format(**self.__inputs)
         return txt
 
-    def apply_geometrical_model(self, beam):
-        pass
-
     def get_lens_interfaces(self):
         single_lens_optical_surfaces = self.get_optical_surface_instance()
         lens_interfaces              = numpy.full((self._n_lens, 2), None)

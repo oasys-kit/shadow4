@@ -67,9 +67,6 @@ class S4Lens(Lens, S4RefractiveLensOpticalElementDecorator):
     def to_python_code(self, **kwargs):
         return "# ** not implemented python code for S4Lens() **"
 
-    def apply_geometrical_model(self, beam):
-        pass
-
     def get_lens_interfaces(self):
         return _get_lens_interfaces(lens_optical_surfaces=self.get_optical_surface_instance(),
                                     boundary_shape=self.get_boundary_shape(),
