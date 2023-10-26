@@ -68,7 +68,7 @@ class S4ConicInterface(S4Interface, S4ConicOpticalElementDecorator):
         mu_object, mu_image = self.get_attenuation_coefficients(
             photon_energy_eV=beam.get_photon_energy_eV())
 
-        print(">>>>> mu_object, mu_image", mu_object, mu_image)
+        # print(">>>>> mu_object, mu_image", mu_object, mu_image)
 
         footprint, normal = ccc.apply_refraction_on_beam(beam, refraction_index_object, refraction_index_image,
                                                          apply_attenuation=1, linear_attenuation_coefficient=mu_object)

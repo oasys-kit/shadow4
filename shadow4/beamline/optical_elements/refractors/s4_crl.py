@@ -196,9 +196,9 @@ class S4CRLElement(S4BeamlineElement):
 
             if lens_index < n_lens-1: input_beam = beam2.duplicate()
 
-            print("\n\n\n>>>>>>> lens: ", lens_index)
-            print(">>>>>>> interface1: ", beamline_element_1.get_optical_element().get_optical_surface_instance().ccc)
-            print(">>>>>>> interface2: ", beamline_element_2.get_optical_element().get_optical_surface_instance().ccc)
+            # print("\n\n\n>>>>>>> lens: ", lens_index)
+            # print(">>>>>>> interface1: ", beamline_element_1.get_optical_element().get_optical_surface_instance().ccc)
+            # print(">>>>>>> interface2: ", beamline_element_2.get_optical_element().get_optical_surface_instance().ccc)
             print(beamline_element_2.info())
 
         return beam2, [footprint1, footprint2]

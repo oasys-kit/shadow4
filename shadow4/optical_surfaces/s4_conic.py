@@ -2,12 +2,7 @@
 import numpy
 
 from shadow4.optical_surfaces.s4_optical_surface import S4OpticalSurface
-
 from shadow4.tools.arrayofvectors import vector_refraction, vector_scattering
-
-from numpy.testing import assert_equal, assert_almost_equal
-
-
 from shadow4.tools.arrayofvectors import vector_cross, vector_dot, vector_multiply_scalar, vector_sum, vector_diff
 from shadow4.tools.arrayofvectors import vector_modulus_square, vector_modulus, vector_norm, vector_rotate_around_axis
 
@@ -46,39 +41,34 @@ class S4Conic(S4OpticalSurface):
     def initialize_as_sphere_from_focal_distances(cls, p, q, theta1, cylindrical=0, cylangle=0.0, switch_convexity=0):
         conic = S4Conic()
         conic.set_sphere_from_focal_distances(p, q, theta1)
-
         return cls._transform_conic(conic, cylindrical, cylangle, switch_convexity)
 
     @classmethod
     def initialize_as_ellipsoid_from_focal_distances(cls, p, q, theta1, cylindrical=0, cylangle=0.0, switch_convexity=0):
         conic = S4Conic()
         conic.set_ellipsoid_from_focal_distances(p, q, theta1)
-
         return cls._transform_conic(conic, cylindrical, cylangle, switch_convexity)
 
     @classmethod
     def initialize_as_paraboloid_from_focal_distances(cls, p, q, theta1, cylindrical=0, cylangle=0.0, switch_convexity=0):
         conic = S4Conic()
         conic.set_paraboloid_from_focal_distances(p, q, theta1)
-
         return cls._transform_conic(conic, cylindrical, cylangle, switch_convexity)
 
     @classmethod
     def initialize_as_hyperboloid_from_focal_distances(cls, p, q, theta1, cylindrical=0, cylangle=0.0, switch_convexity=0):
         conic = S4Conic()
         conic.set_hyperboloid_from_focal_distances(p, q, theta1)
-
         return cls._transform_conic(conic, cylindrical, cylangle, switch_convexity)
 
     @classmethod
     def _transform_conic(cls, conic, cylindrical, cylangle, switch_convexity):
         if cylindrical:      conic.set_cylindrical(cylangle)
         if switch_convexity: conic.switch_convexity()
-
         return conic
 
     def duplicate(self):
-        return S4Conic.initialize_from_coefficients(self.ccc) # already copied in set coefficients
+        return S4Conic.initialize_from_coefficients(self.ccc)
 
     #
     # getters
@@ -127,21 +117,21 @@ class S4Conic(S4OpticalSurface):
         self.ccc[10-1]=  A_10
 
     def set_sphere_from_curvature_radius(self,rmirr):
-        self.ccc[1-1] =  1.0	        # X^2  # = 0 in cylinder case
-        self.ccc[2-1] =  1.0	        # Y^2
-        self.ccc[3-1] =  1.0	        # Z^2
-        self.ccc[4-1] =   .0	        # X*Y   # = 0 in cylinder case
-        self.ccc[5-1] =   .0	        # Y*Z
-        self.ccc[6-1] =   .0	        # X*Z   # = 0 in cylinder case
-        self.ccc[7-1] =   .0	        # X     # = 0 in cylinder case
-        self.ccc[8-1] =   .0	        # Y
-        self.ccc[9-1] = -2 * rmirr	# Z
-        self.ccc[10-1]  =   .0       # G
+        self.ccc[1-1] =  1.0   # X^2  # = 0 in cylinder case
+        self.ccc[2-1] =  1.0   # Y^2
+        self.ccc[3-1] =  1.0   # Z^2
+        self.ccc[4-1] =  0.0   # X*Y   # = 0 in cylinder case
+        self.ccc[5-1] =  0.0   # Y*Z
+        self.ccc[6-1] =  0.0   # X*Z   # = 0 in cylinder case
+        self.ccc[7-1] =  0.0   # X     # = 0 in cylinder case
+        self.ccc[8-1] =  0.0   # Y
+        self.ccc[9-1] = -2 * rmirr  # Z
+        self.ccc[10-1] = 0.0       # G
 
     def set_ellipsoid_from_external_parameters(self, AXMAJ, AXMIN, ELL_THE):
-        YCEN  = AXMAJ*AXMIN
-        YCEN  = YCEN/numpy.sqrt(AXMIN**2+AXMAJ**2*numpy.tan(ELL_THE)**2)
-        ZCEN  = YCEN*numpy.tan(ELL_THE)
+        YCEN  = AXMAJ * AXMIN
+        YCEN  = YCEN / numpy.sqrt(AXMIN**2 + AXMAJ**2 * numpy.tan(ELL_THE)**2)
+        ZCEN  = YCEN * numpy.tan(ELL_THE)
         ZCEN  = - numpy.abs(ZCEN)
         if (numpy.cos(ELL_THE) < 0):
             YCEN = - numpy.abs(YCEN)
@@ -217,7 +207,7 @@ class S4Conic(S4OpticalSurface):
 
         return normal
 
-    def calculate_intercept(self,XIN,VIN):
+    def calculate_intercept(self, XIN, VIN): # todo: return here the complex solutions and make the choice in choose_solution
 
         # # FUNCTION conicintercept,ccc,xIn1,vIn1,iflag
         # #
@@ -300,23 +290,23 @@ class S4Conic(S4OpticalSurface):
         if VIN.shape==(3,):
             VIN.shape = (3,1)
 
-        AA 	=       CCC[1-1]*VIN[1-1,:]**2  \
-                        + CCC[2-1]*VIN[2-1,:]**2  \
-                        + CCC[3-1]*VIN[3-1,:]**2  \
-                        + CCC[4-1]*VIN[1-1,:]*VIN[2-1,:]  \
-                        + CCC[5-1]*VIN[2-1,:]*VIN[3-1,:]  \
-                        + CCC[6-1]*VIN[1-1,:]*VIN[3-1,:]
+        AA 	=             CCC[1-1] * VIN[1-1,:]**2  \
+                        + CCC[2-1] * VIN[2-1,:]**2  \
+                        + CCC[3-1] * VIN[3-1,:]**2  \
+                        + CCC[4-1] * VIN[1-1,:] * VIN[2-1,:]  \
+                        + CCC[5-1] * VIN[2-1,:] * VIN[3-1,:]  \
+                        + CCC[6-1] * VIN[1-1,:] * VIN[3-1,:]
 
 
-        BB 	=       CCC[1-1] *  XIN[1-1,:] * VIN[1-1,:]*2    \
+        BB 	=             CCC[1-1] *  XIN[1-1,:] * VIN[1-1,:]*2    \
                         + CCC[2-1] *  XIN[2-1,:] * VIN[2-1,:]*2    \
                         + CCC[3-1] *  XIN[3-1,:] * VIN[3-1,:]*2    \
                         + CCC[4-1] * (XIN[2-1,:] * VIN[1-1,:]    \
                         + XIN[1-1,:] * VIN[2-1,:])    \
-                        + CCC[5-1]*(XIN[3-1,:]*VIN[2-1,:]    \
-                        + XIN[2-1,:]*VIN[3-1,:])    \
-                        + CCC[6-1]*(XIN[1-1,:]*VIN[3-1,:]    \
-                        + XIN[3-1,:]*VIN[1-1,:])    \
+                        + CCC[5-1] * (XIN[3-1,:] * VIN[2-1,:]    \
+                        + XIN[2-1,:] * VIN[3-1,:])    \
+                        + CCC[6-1] * (XIN[1-1,:]*VIN[3-1,:]    \
+                        + XIN[3-1,:] * VIN[1-1,:])    \
                         + CCC[7-1] * VIN[1-1,:]    \
                         + CCC[8-1] * VIN[2-1,:]    \
                         + CCC[9-1] * VIN[3-1,:]
@@ -326,7 +316,7 @@ class S4Conic(S4OpticalSurface):
                         + CCC[3-1] * XIN[3-1,:]**2    \
                         + CCC[4-1] * XIN[2-1,:] * XIN[1-1,:]    \
                         + CCC[5-1] * XIN[2-1,:] * XIN[3-1,:]    \
-                        + CCC[6-1] * XIN[1-1,:]*XIN[3-1,:]    \
+                        + CCC[6-1] * XIN[1-1,:] * XIN[3-1,:]    \
                         + CCC[7-1] * XIN[1-1,:]    \
                         + CCC[8-1] * XIN[2-1,:]    \
                         + CCC[9-1] * XIN[3-1,:]    \
@@ -337,8 +327,6 @@ class S4Conic(S4OpticalSurface):
         # ;C Solve now the second deg. equation **
         # ;C
 
-
-        TPAR = numpy.zeros_like(AA)
         TPAR1 = numpy.zeros_like(AA)
         TPAR2 = numpy.zeros_like(AA)
         IFLAG = numpy.ones_like(AA)
@@ -356,8 +344,8 @@ class S4Conic(S4OpticalSurface):
                 DETER = BB[i] ** 2 - CC[i] * AA[i] * 4
 
                 if DETER < 0.0:
-
-                    TPAR[i] = 0.0
+                    TPAR1[i] = 0.0
+                    TPAR2[i] = 0.0
                     IFLAG[i] = -1
                 else:
                     TPAR1[i] = -(BB[i] + numpy.sqrt(DETER)) * DENOM
@@ -366,17 +354,15 @@ class S4Conic(S4OpticalSurface):
         if TPAR2.size == 1:
             TPAR2 = numpy.asscalar(TPAR2)
 
-        return TPAR1.real,TPAR2.real
+        return TPAR1.real, TPAR2.real, IFLAG  # todo: change to return the complex solutions?
 
-    def choose_solution(self,TPAR1,TPAR2,reference_distance=10.0, method=0):
+    def choose_solution(self, TPAR1, TPAR2, reference_distance=10.0, method=0):
         # method = 0: new shadow4 way (essentially the same as in shadow3
         #             but replacing TSOURCE (unavailable here) by reference_distance
         # method = 1: use first solution
         # method = 2: use second solution
 
-        #todo remove this nasty thing
-        TPAR = numpy.zeros_like(TPAR1)
-        I_FLAG = numpy.ones_like(TPAR1)
+        TPAR = numpy.zeros(TPAR1.size)
 
 
         if method == 0:
@@ -390,14 +376,12 @@ class S4Conic(S4OpticalSurface):
         elif method == 2:
             TPAR = TPAR2
 
-        return TPAR, I_FLAG
+        return TPAR
 
     def calculate_intercept_and_choose_solution(self, x1, v1, reference_distance=10.0, method=0):
-        t1, t2 = self.calculate_intercept(x1, v1)
-        return self.choose_solution(t1, t2, reference_distance=reference_distance, method=method)
-
-
-
+        t1, t2, iflag = self.calculate_intercept(x1, v1)
+        t = self.choose_solution(t1, t2, reference_distance=reference_distance, method=method)
+        return t, iflag
 
     def z_vs_xy(self,x,y):
 
@@ -815,16 +799,16 @@ class S4Conic(S4OpticalSurface):
 
         ELL_THE = numpy.arctan( ZCEN / YCEN)
 
-        YCEN2  = AXMAJ*AXMIN
-        YCEN2  = YCEN2/numpy.sqrt(AXMIN**2+AXMAJ**2*numpy.tan(ELL_THE)**2)
-        ZCEN2  = YCEN2*numpy.tan(ELL_THE)
+        YCEN2  = AXMAJ * AXMIN
+        YCEN2  = YCEN2 / numpy.sqrt(AXMIN**2 + AXMAJ**2 * numpy.tan(ELL_THE)**2)
+        ZCEN2  = YCEN2 * numpy.tan(ELL_THE)
         ZCEN2  = - numpy.abs(ZCEN2)
         if (numpy.cos(ELL_THE) < 0):
             YCEN2 = - numpy.abs(YCEN2)
         else:
             YCEN2 = numpy.abs(YCEN2)
 
-        print("YCEN2,ZCEN2: ",YCEN2,ZCEN2)
+        print("YCEN2,ZCEN2: ", YCEN2, ZCEN2)
 
         if verbose:
             txt = ""
@@ -860,12 +844,9 @@ class S4Conic(S4OpticalSurface):
         flag = newbeam.get_column(10)  # numpy.array(a3.getshonecol(10))
         optical_path = newbeam.get_column(13)
 
-        t1, t2 = self.calculate_intercept(x1, v1)
+        t1, t2, iflag = self.calculate_intercept(x1, v1)
         reference_distance = -newbeam.get_column(2).mean() + newbeam.get_column(3).mean()
-        t, iflag = self.choose_solution(t1, t2, reference_distance=reference_distance)
-
-        # for i in range(t.size):
-        #     print(">>>> solutions: ",t1[i],t2[i],t[i])
+        t = self.choose_solution(t1, t2, reference_distance=reference_distance)
 
         x2 = x1 + v1 * t
         for i in range(flag.size):
@@ -910,7 +891,7 @@ class S4Conic(S4OpticalSurface):
             tmp3[jj, :] = tmp3[jj, :] * tmp2
 
         v2 = v1 - 2 * tmp3
-        v2mod = numpy.sqrt(v2[0, :] ** 2 + v2[1, :] ** 2 + v2[2, :] ** 2)
+        v2mod = numpy.sqrt(v2[0, :]**2 + v2[1, :]**2 + v2[2, :]**2)
         v2 /= v2mod
 
         return v2
@@ -937,9 +918,9 @@ class S4Conic(S4OpticalSurface):
         k_in_mod = newbeam.get_column(11)
         optical_path = newbeam.get_column(13)
 
-        t1, t2 = self.calculate_intercept(x1, v1)
+        t1, t2, iflag = self.calculate_intercept(x1, v1)
         reference_distance = -newbeam.get_column(2).mean() + newbeam.get_column(3).mean()
-        t, iflag = self.choose_solution(t1, t2, reference_distance=reference_distance)
+        t = self.choose_solution(t1, t2, reference_distance=reference_distance)
 
         # for i in range(t.size):
         #     print(">>>> solutions: ",t1[i],t2[i],t[i])
@@ -956,15 +937,17 @@ class S4Conic(S4OpticalSurface):
 
         # if surface is convex normal_z > 0;  if concave normal_z < 0
         # we always want normal_z > 0:
-        if normal[2,:].mean() < 0:
-            normal *= (-1.0)
-            print("Warning: o.e. NORMAL INVERTED")
+        # if normal[2,:].mean() < 0:
+        #     normal *= (-1.0)
+        #     print("Warning: o.e. NORMAL INVERTED")
 
         # ;
         # ; refraction
         # ;
 
-        v2t = vector_refraction(v1.T, normal.T, refraction_index_object, refraction_index_image)  # TODO...
+        # note that sgn=None tells vector_refraction to compute the right sign of the sqrt.
+        # This is equivalent to change the direction of the normal in the case that it is an inwards normal.
+        v2t = vector_refraction(v1.T, normal.T, refraction_index_object, refraction_index_image, sgn=None)
         v2 = v2t.T
 
         # ;
@@ -984,7 +967,7 @@ class S4Conic(S4OpticalSurface):
         if apply_attenuation:
             att1 = numpy.sqrt(numpy.exp(-numpy.abs(t) * linear_attenuation_coefficient))
             print(">>> mu (object space): ", linear_attenuation_coefficient)
-            print(">>> attenuation of amplitides (object space): ", att1)
+            print(">>> attenuation of amplitudes (object space): ", att1)
             newbeam.rays[:, 7 - 1 ] *= att1
             newbeam.rays[:, 8 - 1 ] *= att1
             newbeam.rays[:, 9 - 1 ] *= att1
@@ -1069,12 +1052,9 @@ class S4Conic(S4OpticalSurface):
         optical_path = newbeam.get_column(13)
         nrays = flag.size
 
-        t1, t2 = self.calculate_intercept(x1, v1)
+        t1, t2, iflag = self.calculate_intercept(x1, v1)
         reference_distance = -newbeam.get_column(2).mean() + newbeam.get_column(3).mean()
-        t, iflag = self.choose_solution(t1, t2, reference_distance=reference_distance)
-
-        # for i in range(t.size):
-        #     print(">>>> solutions: ",t1[i],t2[i],t[i])
+        t = self.choose_solution(t1, t2, reference_distance=reference_distance)
 
         x2 = x1 + v1 * t
         for i in range(flag.size):
