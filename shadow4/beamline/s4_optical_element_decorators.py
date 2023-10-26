@@ -99,8 +99,9 @@ class S4SphereOpticalElementDecorator(S4CurvedOpticalElementDecorator):
             cylangle    = 0.0
 
         print(">>>>> S4SphereOpticalElement.get_optical_surface_instance(): R, cyl, cyl_angle, optical element, ", radius, cylindrical, cylangle, surface_shape)
-
-        return S4Conic.initialize_as_sphere_from_curvature_radius(radius, cylindrical=cylindrical, cylangle=cylangle, switch_convexity=switch_convexity)
+        out = S4Conic.initialize_as_sphere_from_curvature_radius(radius, cylindrical=cylindrical, cylangle=cylangle, switch_convexity=switch_convexity)
+        print(">>>>> Sphere ccc", out.ccc)
+        return out
 
 class S4EllipsoidOpticalElementDecorator(S4CurvedOpticalElementDecorator):
 
@@ -139,12 +140,14 @@ class S4EllipsoidOpticalElementDecorator(S4CurvedOpticalElementDecorator):
             cylindrical = 0
             cylangle    = 0.0
 
-        return S4Conic.initialize_as_ellipsoid_from_focal_distances(surface_shape.get_p_focus(),
+        out = S4Conic.initialize_as_ellipsoid_from_focal_distances(surface_shape.get_p_focus(),
                                                                     surface_shape.get_q_focus(),
                                                                     surface_shape.get_grazing_angle(),
                                                                     cylindrical=cylindrical,
                                                                     cylangle=cylangle,
                                                                     switch_convexity=switch_convexity)
+        print(">>>>> Ellipsoid ccc", out.ccc)
+        return out
 
 class S4HyperboloidOpticalElementDecorator(S4CurvedOpticalElementDecorator):
     def __init__(self,
@@ -182,12 +185,14 @@ class S4HyperboloidOpticalElementDecorator(S4CurvedOpticalElementDecorator):
             cylindrical = 0
             cylangle    = 0.0
 
-        return S4Conic.initialize_as_hyperboloid_from_focal_distances(surface_shape.get_p_focus(),
+        out = S4Conic.initialize_as_hyperboloid_from_focal_distances(surface_shape.get_p_focus(),
                                                                       surface_shape.get_q_focus(),
                                                                       surface_shape.get_grazing_angle(),
                                                                       cylindrical=cylindrical,
                                                                       cylangle=cylangle,
                                                                       switch_convexity=switch_convexity)
+        print(">>>>> Hyperboloid ccc", out.ccc)
+        return out
 
 class S4ToroidOpticalElementDecorator(S4CurvedOpticalElementDecorator):
     def __init__(self,
@@ -280,8 +285,10 @@ class S4ConicOpticalElementDecorator(S4CurvedOpticalElementDecorator):
 
     def get_optical_surface_instance(self):
         surface_shape = self.get_surface_shape_instance()
+        out = S4Conic.initialize_from_coefficients(surface_shape.get_conic_coefficients())
         print(">>>>> Conic optical element")
-        return S4Conic.initialize_from_coefficients(surface_shape.get_conic_coefficients())
+        print(">>>>> Conic ccc", out.ccc)
+        return out
 
 
 class S4NumericalMeshOpticalElementDecorator(S4CurvedOpticalElementDecorator):

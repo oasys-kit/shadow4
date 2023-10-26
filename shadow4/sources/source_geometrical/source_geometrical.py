@@ -614,7 +614,7 @@ class SourceGeometrical(S4LightSourceBase):
                    (self.__wxsou, self.__wzsou)
         elif self.__fsour == 3:  # Gaussian
             txt += "\nlight_source.set_spatial_type_gaussian(sigma_h=%s,sigma_v=%f)" % \
-                   (self.__sigmax, self.__sigdiz)
+                   (self.__sigmax, self.__sigmaz)
 
         # depth
         if self.__fsource_depth == 0:  # off

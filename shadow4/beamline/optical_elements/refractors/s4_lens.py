@@ -266,3 +266,5 @@ if __name__ == "__main__":
         plot_scatter(1e6 * beam.get_column(4, nolost=1), 1e6 * beam.get_column(6, nolost=1), title="(X',Z') in microns")
 
     print(lens.info())
+
+    print(e.to_python_code())
