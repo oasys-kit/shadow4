@@ -502,7 +502,7 @@ class S4Beam(object):
         if rmin == rmax:
             rmin = rmin * 0.95
             rmax = rmax * 1.05
-        if rmin == 0.0:
+        if rmin == 0.0 and rmax == 0:
             rmin = -1.0
             rmax = 1.0
         return [rmin, rmax]
@@ -811,7 +811,6 @@ class S4Beam(object):
         else:
             if xrange==None: xrange = self.get_good_range(col_h,nolost=nolost)
             if yrange==None: yrange = self.get_good_range(col_v,nolost=nolost)
-
             if ref == 0:
                 weights = col1*0+1
             else:
