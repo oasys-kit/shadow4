@@ -276,6 +276,7 @@ class S4Beam(object):
             36   Angle-Z with Y: |arcsin(Z')|
             37   Angle-X with Y: |arcsin(X') - mean(arcsin(X'))|
             38   Angle-Z with Y: |arcsin(Z') - mean(arcsin(Z'))|
+            39   Phase difference in rad: Phase (s-polarization) - Phase (p-polarization)
 
             -11: column 26
 
@@ -338,9 +339,9 @@ class S4Beam(object):
             if column == 36:
                 out = numpy.abs(numpy.arcsin(ray[:,5]))
             if column == 37:
-                f = self.getshonecol(10)
-                w = self.getshonecol(23)
-                xp = self.getshonecol(4)
+                f =  ray[:, 10 - 1]
+                w =  numpy.sum(numpy.array([ ray[:,i]*ray[:,i] for i in [6,7,8,15,16,17] ]),axis=0)
+                xp = ray[:, 4 - 1]
                 if nolost == 1:
                     findices  = numpy.where(f > 0.0)
                     if len(findices[0])==0:
@@ -351,9 +352,9 @@ class S4Beam(object):
                     col_mean = numpy.average(xp, weights=w)
                 out = numpy.abs(numpy.arcsin(xp - col_mean))
             if column == 38:
-                f = self.getshonecol(10)
-                w = self.getshonecol(23)
-                zp = self.getshonecol(6)
+                f  = ray[:, 10 - 1]
+                w  = numpy.sum(numpy.array([ ray[:,i]*ray[:,i] for i in [6,7,8,15,16,17] ]),axis=0)
+                zp = ray[:, 6 - 1]
                 if nolost == 1:
                     findices  = numpy.where(f > 0.0)
                     if len(findices[0])==0:
@@ -364,6 +365,8 @@ class S4Beam(object):
                     col_mean = numpy.average(zp, weights=w)
 
                 out = numpy.abs(numpy.arcsin(zp - col_mean))
+            if column == 39:
+                out = ray[:, 14 - 1] - ray[:, 15 - 1]
 
         if nolost == 0:
             return out.copy()
@@ -2007,8 +2010,8 @@ class S4Beam(object):
             "Wavenumber",
             "Ray Index",
             "Optical path length",
-            "Phase (s-polarization)",
-            "Phase (p-polarization)",
+            "\u03C6\u209B Phase (s-polarization)",
+            "\u03C6\u209A Phase (p-polarization)",
             "X component of the electromagnetic vector (p-polariz)",
             "Y component of the electromagnetic vector (p-polariz)",
             "Z component of the electromagnetic vector (p-polariz)",
@@ -2025,13 +2028,14 @@ class S4Beam(object):
             "Kz = 2\u03C0 / \u03BB * Z'",
             "S0-stokes = |E\u209B|\u00B2 + |E\u209A|\u00B2",
             "S1-stokes = |E\u209B|\u00B2 - |E\u209A|\u00B2",
-            "S2-stokes = 2 |E\u209B| |E\u209A| cos(phase\u209B-phase\u209A)",
-            "S3-stokes = 2 |E\u209B| |E\u209A| sin(phase\u209B-phase\u209A)",
+            "S2-stokes = 2 |E\u209B| |E\u209A| cos(\u03C6\u209B-\u03C6\u209A)",
+            "S3-stokes = 2 |E\u209B| |E\u209A| sin(\u03C6\u209B-\u03C6\u209A)",
             "Power = Intensity(col 23) * Energy (col 26)",
             "Angle-X with Y = |arcsin(X')|",
             "Angle-Z with Y = |arcsin(Z')|",
             "Angle-X with Y = |arcsin(X') - mean(arcsin(X'))|",
             "Angle-Z with Y = |arcsin(Z') - mean(arcsin(Z'))|",
+            "Phase difference \u03C6\u209B-\u03C6\u209A",
         ]
 
     @classmethod
@@ -2084,6 +2088,7 @@ class S4Beam(object):
             "[rad]",
             "[rad]",
             "[rad]",
+            "[rad]",
         ]
 
 
@@ -2126,6 +2131,7 @@ class S4Beam(object):
                 "Angle Z^Y",
                 "Angle X^Y",
                 "Angle Z^Y",
+                "\u03C6\u209B-\u03C6\u209A", # phase_s - phase_p
         ]
 
     @classmethod
@@ -2199,6 +2205,7 @@ class S4Beam(object):
             r"Angle Z^Y [rad]", # "Angle Z^Y [rad]"],
             r"Angle X^Y [rad]", # "Angle X^Y [rad]"],
             r"Angle Z^Y [rad]", # "Angle Z^Y [rad]"],
+            r"Phase difference \phi_{s}-\phi_{p}",
         ]
 
     @classmethod
