@@ -96,6 +96,8 @@ class S4BendingMagnetLightSource(S4LightSource):
 
         rays = numpy.zeros((NRAYS,18))
 
+        anglev_sign = numpy.zeros(NRAYS)
+
         #RAD_MIN= numpy.abs(self.get_magnetic_structure().radius())
         #RAD_MAX= numpy.abs(self.get_magnetic_structure().radius())
 
@@ -103,9 +105,9 @@ class S4BendingMagnetLightSource(S4LightSource):
         r_aladdin = self.get_magnetic_structure().radius()
 
         if r_aladdin < 0:
-            POL_ANGLE = -90.0 * numpy.pi / 2
+            POL_ANGLE = -numpy.pi / 2
         else:
-            POL_ANGLE = 90.0 * numpy.pi / 2
+            POL_ANGLE = numpy.pi / 2
 
         HDIV1 = 0.5 * self.get_magnetic_structure().horizontal_divergence()
         HDIV2 = HDIV1
@@ -410,6 +412,8 @@ class S4BendingMagnetLightSource(S4LightSource):
                 I_CHANGE = -1
             ANGLEV += E_BEAM3
 
+            anglev_sign[itik] = numpy.sign(ANGLEV)
+
             # ------ NOT LONGER DONE ------
             # ! C
             # ! C Test if the ray is within the specified limits
@@ -498,23 +502,6 @@ class S4BendingMagnetLightSource(S4LightSource):
         rays[:,6:9] =  A_VEC
         rays[:,15:18] = AP_VEC
 
-        #
-        # ! C
-        # ! C Now the phases of A_VEC and AP_VEC.
-        # ! C
-
-        #
-        POL_ANGLE = 0.5 * numpy.pi # TO BE CHECKED
-
-        if F_COHER == 1:
-            PHASEX = 0.0
-        else:
-            PHASEX = numpy.random.random(NRAYS) * 2 * numpy.pi
-
-        # PHASEZ = PHASEX + POL_ANGLE * numpy.sign(ANGLEV)
-
-        rays[:,13] = 0.0 # PHASEX
-        rays[:,14] = 0.0 # PHASEZ
 
         # set flag (col 10)
         rays[:,9] = 1.0
@@ -535,14 +522,33 @@ class S4BendingMagnetLightSource(S4LightSource):
         # col 13 (optical path)
         rays[:,12] = 0.0
 
-        POL_ANGLE = 0.5 * numpy.pi
+
+        #
+        # ! C
+        # ! C Now the phases of A_VEC and AP_VEC.
+        # ! C
+
+        #
+        # POL_ANGLE = 0.5 * numpy.pi # TO BE CHECKED
+        #
+        # if F_COHER == 1:
+        #     PHASEX = 0.0
+        # else:
+        #     PHASEX = numpy.random.random(NRAYS) * 2 * numpy.pi
+        #
+        # # PHASEZ = PHASEX + POL_ANGLE * numpy.sign(ANGLEV)
+        #
+        # rays[:,13] = 0.0 # PHASEX
+        # rays[:,14] = 0.0 # PHASEZ
+
+        # POL_ANGLE = 0.5 * numpy.pi
 
         if F_COHER == 1:
             PHASEX = 0.0
         else:
             PHASEX = numpy.random.random(NRAYS) * 2 * numpy.pi
 
-        PHASEZ = PHASEX + POL_ANGLE * numpy.sign(ANGLEV)
+        PHASEZ = PHASEX + POL_ANGLE * anglev_sign
 
         rays[:,13] = PHASEX
         rays[:,14] = PHASEZ
