@@ -4,10 +4,9 @@ from srxraylib.util.inverse_method_sampler import Sampler1D, Sampler2D
 from srxraylib.sources.srfunc import sync_ene, sync_ang
 
 import scipy.constants as codata
-from scipy import interpolate
 from scipy.interpolate import interp1d
+from scipy.interpolate import griddata, CloughTocher2DInterpolator
 
-from syned.storage_ring.light_source import LightSource
 from syned.storage_ring.electron_beam import ElectronBeam
 
 from shadow4.sources.bending_magnet.s4_bending_magnet import S4BendingMagnet
@@ -31,7 +30,8 @@ class S4BendingMagnetLightSource(S4LightSource):
                          )
 
     def get_beam(self, F_COHER=0,
-                       EPSI_DX=0.0, EPSI_DZ=0.0,
+                       EPSI_DX=0.0,
+                       EPSI_DZ=0.0,
                        psi_interval_in_units_one_over_gamma=None,
                        psi_interval_number_of_points=1001,
                        verbose=False):
@@ -119,7 +119,7 @@ class S4BendingMagnetLightSource(S4LightSource):
             c = numpy.array([-0.3600382, 0.11188709])  # see file fit_psi_interval.py
             x = numpy.log10(self.get_magnetic_structure()._EMIN / critical_energy)
             y_fit = c[1] + c[0] * x
-            psi_interval_in_units_one_over_gamma = 10 ** y_fit  # this is the semi interval
+            psi_interval_in_units_one_over_gamma = 10**y_fit  # this is the semi interval
             psi_interval_in_units_one_over_gamma *= 4  # doubled interval
             if psi_interval_in_units_one_over_gamma < 2:
                 psi_interval_in_units_one_over_gamma = 2
@@ -146,13 +146,13 @@ class S4BendingMagnetLightSource(S4LightSource):
                       ))
 
 
-            angular_distribution_s = sync_ang(1,#Flux at a given photon energy
+            angular_distribution_s = sync_ang(1, #Flux at a given photon energy
                                             angle_array_mrad,
-                                            polarization=1,#1 Parallel (l2=1, l3=0, in Sokolov&Ternov notation)
+                                            polarization=1, #1 Parallel (l2=1, l3=0, in Sokolov&Ternov notation)
                                             e_gev=self.get_electron_beam().energy(),
                                             i_a=self.get_electron_beam().current(),
                                             hdiv_mrad=(HDIV1+HDIV2)*1e3,
-                                            r_m=self.get_magnetic_structure().radius(),#not needed anyway
+                                            r_m=self.get_magnetic_structure().radius(), #not needed anyway
                                             energy=self.get_magnetic_structure()._EMIN,
                                             ec_ev=critical_energy)
 
@@ -160,13 +160,13 @@ class S4BendingMagnetLightSource(S4LightSource):
             if verbose:
                 print(">>> calculate_rays: sync_ang (p)")
 
-            angular_distribution_p = sync_ang(1,#Flux at a given photon energy
+            angular_distribution_p = sync_ang(1, #Flux at a given photon energy
                                             angle_array_mrad,
-                                            polarization=2,#1 Parallel (l2=1, l3=0, in Sokolov&Ternov notation)
+                                            polarization=2, #1 Parallel (l2=1, l3=0, in Sokolov&Ternov notation)
                                             e_gev=self.get_electron_beam().energy(),
                                             i_a=self.get_electron_beam().current(),
                                             hdiv_mrad=(HDIV1+HDIV2)*1e3,
-                                            r_m=self.get_magnetic_structure().radius(),#not needed anyway
+                                            r_m=self.get_magnetic_structure().radius(), #not needed anyway
                                             energy=self.get_magnetic_structure()._EMIN,
                                             ec_ev=critical_energy)
 
@@ -200,7 +200,7 @@ class S4BendingMagnetLightSource(S4LightSource):
             if verbose:
                 print(">>> sync_ene: calculating energy distribution")
 
-            fm_s = sync_ene(4,photon_energy_array,
+            fm_s = sync_ene(4, photon_energy_array,
                           ec_ev=self.get_magnetic_structure().get_critical_energy(self.get_electron_beam().energy()),
                           e_gev=self.get_electron_beam().energy(),
                           i_a=self.get_electron_beam().current(),
@@ -210,7 +210,7 @@ class S4BendingMagnetLightSource(S4LightSource):
                           psi_npoints=angle_array_mrad.size,
                           polarization=1)
 
-            fm_p = sync_ene(4,photon_energy_array,
+            fm_p = sync_ene(4, photon_energy_array,
                           ec_ev=self.get_magnetic_structure().get_critical_energy(self.get_electron_beam().energy()),
                           e_gev=self.get_electron_beam().energy(),
                           i_a=self.get_electron_beam().current(),
@@ -220,35 +220,47 @@ class S4BendingMagnetLightSource(S4LightSource):
                           psi_npoints=angle_array_mrad.size,
                           polarization=2)
 
+
             fm = fm_s + fm_p
 
             if verbose:
+                print(angle_array_mrad.shape, photon_energy_array.shape, fm_s.shape, fm_p.shape)
                 print(">>> DONE sync_ene: calculating energy distribution",photon_energy_array.shape,fm.shape)
                 from srxraylib.plot.gol import plot,plot_image
-                plot(photon_energy_array,fm[fm.shape[0]//2,:],xtitle="Energy / eV",ytitle="Flux at zero elevation")
-                plot(angle_array_mrad, fm[:,0], xtitle="Angle / mrad", ytitle="Flux at Emin="%(photon_energy_array[0]))
-                print(">>>>>>>",fm.shape,angle_array_mrad.shape,photon_energy_array.shape)
-                plot_image(fm,angle_array_mrad,photon_energy_array,aspect='auto',show=0,title="flux",xtitle="Psi / mrad",ytitle="Energy / eV")
-                plot_image(fm_s/fm,angle_array_mrad,photon_energy_array,aspect='auto',title="polarization",xtitle="Psi / mrad",ytitle="Energy / eV")
+                plot(photon_energy_array,fm[fm.shape[0]//2,:],
+                     xtitle="Energy / eV", ytitle="Flux at zero elevation")
+                plot(
+                     angle_array_mrad, fm[:, 0],
+                     angle_array_mrad, fm_s[:, 0],
+                     angle_array_mrad, fm_p[:, 0],
+                     xtitle="Angle / mrad", ytitle="Flux at Emin=%f eV"%(photon_energy_array[0]))
+                plot_image(fm,angle_array_mrad,photon_energy_array, aspect='auto', show=0, title="flux (total)",
+                           xtitle="Psi / mrad", ytitle="Energy / eV")
+                plot_image(fm_s, angle_array_mrad, photon_energy_array, aspect='auto', show=0, title="flux (sigma)",
+                           xtitle="Psi / mrad", ytitle="Energy / eV")
+                plot_image(fm_p, angle_array_mrad, photon_energy_array, aspect='auto', show=0, title="flux (pi)",
+                           xtitle="Psi / mrad", ytitle="Energy / eV")
+                plot_image(fm*0+1-fm_s/fm,angle_array_mrad,photon_energy_array,aspect='auto',title="polarization-p",xtitle="Psi / mrad",ytitle="Energy / eV")
 
             fm1 = numpy.zeros_like(fm)
             for i in range(fm.shape[0]):
-                fm1[i,:] = fm[i,:] / (photon_energy_array*0.001)  # in photons/ev
+                fm1[i,:] = fm[i,:] / (photon_energy_array * 0.001)  # in photons/ev
 
-            # plot_image(fm,angle_array_mrad,photon_energy_array,aspect='auto',show=0)
-            # plot_image(fm_s/fm,angle_array_mrad,photon_energy_array,aspect='auto',title="polarization")
-
-
-            sampler2 = Sampler2D(fm1,angle_array_mrad*1e-3,photon_energy_array)
-            sampled_angle,sampled_photon_energy = sampler2.get_n_sampled_points(NRAYS)
+            sampler2 = Sampler2D(fm1, angle_array_mrad * 1e-3, photon_energy_array)
+            sampled_angle, sampled_photon_energy = sampler2.get_n_sampled_points(NRAYS)
 
 
             Angle_array_mrad = numpy.outer(angle_array_mrad,numpy.ones_like(photon_energy_array))
             Photon_energy_array = numpy.outer(numpy.ones_like(angle_array_mrad),photon_energy_array)
-            Pi = numpy.array([Angle_array_mrad.flatten()*1e-3, Photon_energy_array.flatten()]).transpose()
+            Pi = numpy.array([Angle_array_mrad.flatten() * 1e-3, Photon_energy_array.flatten()]).transpose()
 
-            P = numpy.array([sampled_angle, sampled_photon_energy]).transpose()
-            sampled_polarization = interpolate.griddata(Pi, (fm_s/fm).flatten(), P, method = "cubic")
+            # both interpolators seem to give similar results and similar running time
+            if True:
+                P = numpy.array([sampled_angle, sampled_photon_energy]).transpose()
+                sampled_polarization = griddata(Pi, (fm_s/fm).flatten(), P, method = "cubic", rescale=True)
+            else:
+                interpolator = CloughTocher2DInterpolator(Pi, (fm_s/fm).flatten(), rescale=True)
+                sampled_polarization = interpolator(sampled_angle, sampled_photon_energy)
 
         for itik in range(NRAYS):
             # ! Synchrontron depth
@@ -280,7 +292,7 @@ class S4BendingMagnetLightSource(S4LightSource):
                 else:
                     rhoX = 0.0
                 mean = [0, 0]
-                cov = [[rSigmaX**2, rhoX*rSigmaX*rSigmaXp], [rhoX*rSigmaX*rSigmaXp, rSigmaXp**2]]  # diagonal covariance
+                cov = [[rSigmaX**2, rhoX * rSigmaX*rSigmaXp], [rhoX * rSigmaX * rSigmaXp, rSigmaXp**2]]  # diagonal covariance
                 sampled_x, sampled_xp = numpy.random.multivariate_normal(mean, cov, 1).T
                 # plot_scatter(sampled_x,sampled_xp,title="X")
                 XXX = sampled_x
@@ -295,13 +307,12 @@ class S4BendingMagnetLightSource(S4LightSource):
                 else:
                     rhoZ = 0.0
                 mean = [0, 0]
-                cov = [[rSigmaZ**2, rhoZ*rSigmaZ*rSigmaZp], [rhoZ*rSigmaZ*rSigmaZp, rSigmaZp**2]]  # diagonal covariance
+                cov = [[rSigmaZ**2, rhoZ * rSigmaZ * rSigmaZp], [rhoZ * rSigmaZ * rSigmaZp, rSigmaZp**2]]  # diagonal covariance
                 sampled_z, sampled_zp = numpy.random.multivariate_normal(mean, cov, 1).T
                 # plot_scatter(sampled_z,sampled_zp,title="Z")
                 ZZZ = sampled_z
                 E_BEAM3 = sampled_zp
 
-                # print(">>>>>>>>>",sampled_x,sampled_z)
             else:
                 sigma_x, sigma_xp, sigma_z, sigma_zp = (0.0, 0.0, 0.0, 0.0)
                 rhoX = 0.0
@@ -591,7 +602,7 @@ class S4BendingMagnetLightSource(S4LightSource):
             script += "\n\n#Error retrieving magnetic structure code"
 
         script += "\n\n\n#light source\nfrom shadow4.sources.bending_magnet.s4_bending_magnet_light_source import S4BendingMagnetLightSource"
-        script += "\nlight_source = S4BendingMagnetLightSource(name='%s',electron_beam=electron_beam,magnetic_structure=source,nrays=%d,seed=%s)" % \
+        script += "\nlight_source = S4BendingMagnetLightSource(name='%s', electron_beam=electron_beam, magnetic_structure=source, nrays=%d, seed=%s)" % \
                                                           (self.get_name(),self.get_nrays(),self.get_seed())
         #
         # script += "\n\n\n#beamline\nfrom shadow4.beamline.s4_beamline import S4Beamline"

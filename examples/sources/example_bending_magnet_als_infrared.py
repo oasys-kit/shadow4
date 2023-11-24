@@ -48,3 +48,16 @@ if __name__ == "__main__":
     plot_scatter(rays[:,1], rays[:,2]*1e6,xtitle="Y m",ytitle="Z um")
     plot_scatter(rays[:,3]*1e6, rays[:,5]*1e6,xtitle="X' urad",ytitle="Z' urad")
 
+    from srxraylib.plot.gol import plot
+    tktI = beam.histo1(6, ref=23)
+    tktS = beam.histo1(6, ref=24)
+    tktP = beam.histo1(6, ref=25)
+    plot(
+        tktI["bin_path"], tktI["histogram_path"],
+        tktS["bin_path"], tktS["histogram_path"],
+        tktP["bin_path"], tktP["histogram_path"],
+         )
+
+    tktP3 = beam.histo1(6, ref=33)
+    plot(
+        tktP3["bin_path"], tktP3["histogram_path"],)

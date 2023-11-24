@@ -13,6 +13,8 @@ import time
 import numpy
 
 
+# TODO: interp2d is deprecated in SciPy 1.10 and will be removed in SciPy 1.13.0.
+
 class S4Mesh(S4OpticalSurface):
     def __init__(self, surface=None, mesh_x=None, mesh_y=None, mesh_z=None, kind='cubic'):
         self.__x0 = [0.0,0.0,0.0]
