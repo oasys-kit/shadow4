@@ -49,6 +49,46 @@ class S4PlaneGrating(S4Grating, S4PlaneOpticalElementDecorator):
                            f_ruling=f_ruling,
                            )
 
+        self.__inputs = {
+            "name": name,
+            # "surface_shape": surface_shape,
+            "boundary_shape": boundary_shape,
+            "ruling": ruling,
+            "ruling_coeff_linear": ruling_coeff_linear,
+            "ruling_coeff_quadratic": ruling_coeff_quadratic,
+            "ruling_coeff_cubic": ruling_coeff_cubic,
+            "ruling_coeff_quartic": ruling_coeff_quartic,
+            "order": order,
+            "f_ruling": f_ruling,
+        }
+
+    def to_python_code(self, **kwargs):
+        """
+        Auxiliar method to automatically create python scripts.
+
+        Parameters
+        ----------
+        **kwargs
+
+        Returns
+        -------
+        str
+            Python code.
+
+        """
+
+        txt = "\nfrom shadow4.beamline.optical_elements.gratings.s4_plane_grating import S4PlaneGrating"
+
+        txt_pre = """\noptical_element = S4PlaneGrating(name='{name}',
+    boundary_shape=None, f_ruling={f_ruling},
+    ruling={ruling}, ruling_coeff_linear={ruling_coeff_linear}, 
+    ruling_coeff_quadratic={ruling_coeff_quadratic}, ruling_coeff_cubic={ruling_coeff_cubic},
+    ruling_coeff_quartic={ruling_coeff_quartic},
+    )"""
+        txt += txt_pre.format(**self.__inputs)
+
+        return txt
+
     # def get_optical_surface_instance(self):
     #     return S4Conic.initialize_as_plane()
 
@@ -60,6 +100,30 @@ class S4PlaneGratingElement(S4GratingElement):
         super().__init__(optical_element=optical_element if optical_element is not None else S4PlaneGrating(),
                          coordinates=coordinates if coordinates is not None else ElementCoordinates(),
                          input_beam=input_beam)
+    def to_python_code(self, **kwargs):
+        """
+        Auxiliar method to automatically create python scripts.
+
+        Parameters
+        ----------
+        **kwargs
+
+        Returns
+        -------
+        str
+            Python code.
+
+        """
+        txt = "\n\n# optical element number XX"
+        txt += self.get_optical_element().to_python_code()
+        coordinates = self.get_coordinates()
+        txt += "\nfrom syned.beamline.element_coordinates import ElementCoordinates"
+        txt += "\ncoordinates = ElementCoordinates(p=%g, q=%g, angle_radial=%g, angle_azimuthal=%g, angle_radial_out=%g)" % \
+               (coordinates.p(), coordinates.q(), coordinates.angle_radial(), coordinates.angle_azimuthal(), coordinates.angle_radial_out())
+        txt += "\nfrom shadow4.beamline.optical_elements.gratings.s4_plane_grating import S4PlaneGratingElement"
+        txt += "\nbeamline_element = S4PlaneGratingElement(optical_element=optical_element,coordinates=coordinates,input_beam=beam)"
+        txt += "\n\nbeam, footprint = beamline_element.trace_beam()"
+        return txt
 
 if __name__ == "__main__":
 
@@ -125,4 +189,7 @@ if __name__ == "__main__":
 
     beam_out = ge.trace_beam()
     plotxy(beam_out[0], 1, 3, title="Image 0", nbins=201)
+
+
+    s4 = S4PlaneGrating()
 
