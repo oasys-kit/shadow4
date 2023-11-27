@@ -644,7 +644,9 @@ class S4WigglerLightSource(S4LightSource):
                 if fm[i] == 0.0:
                     fm_pol[i] = 0
                 else:
-                    fm_pol[i] = fm_s[i] / fm[i]
+                    # folowing the bug fixed for BM, this should also be changed.
+                    # fm_pol[i] = fm_s[i] / fm[i]
+                    fm_pol[i] = numpy.sqrt(fm_s[i]) / (numpy.sqrt(fm_s[i]) + numpy.sqrt(fm_p[i]))
 
             fm.shape = -1
             fm_s.shape = -1

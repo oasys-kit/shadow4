@@ -200,6 +200,8 @@ class S4BendingMagnetLightSource(S4LightSource):
             if verbose:
                 print(">>> sync_ene: calculating energy distribution")
 
+            # todo: use sync_f_sigma_and_pi like in the wiggler source to accelerate this
+            #  (although most time is spent in the interpolation)
             fm_s = sync_ene(4, photon_energy_array,
                           ec_ev=self.get_magnetic_structure().get_critical_energy(self.get_electron_beam().energy()),
                           e_gev=self.get_electron_beam().energy(),
@@ -223,7 +225,7 @@ class S4BendingMagnetLightSource(S4LightSource):
 
             fm = fm_s + fm_p
 
-            # fixed the same problem >30 years later
+            # fixed the same problem >30 years later:
             # !C
             # !C Fix May 9, 1990.    SHADOW defined the degree of polarization as Ax/(Ax+Az),
             # !C instead of Ax^2/(Ax^2+Az^2).  So here we need to take the square root of the
@@ -232,7 +234,7 @@ class S4BendingMagnetLightSource(S4LightSource):
             # !C Old:     DEG_POL(I)   = F_PAR(I)/F_TOT(I)
             polarization_degree = numpy.sqrt(fm_s) / (numpy.sqrt(fm_s) + numpy.sqrt(fm_p))
 
-            # todo: remove (stored for external plots)
+            # todo: remove? (stored for external plots)
             self.angle_array_mrad = angle_array_mrad
             self.fm = fm
             self.fm_s = fm_s
