@@ -1,4 +1,5 @@
 
+
 # electron beam
 from shadow4.sources.s4_electron_beam import S4ElectronBeam
 electron_beam = S4ElectronBeam(energy_in_GeV=6.04,energy_spread=0.001,current=0.2)
@@ -11,7 +12,7 @@ source = S4BendingMagnet(
                  magnetic_field=0.8, # from syned BM
                  length=0.02518408918746048, # from syned BM = abs(BM divergence * magnetic_field)
                  emin=8000.0,     # Photon energy scan from energy (in eV)
-                 emax=8000.1,     # Photon energy scan to energy (in eV)
+                 emax=8000.0001,     # Photon energy scan to energy (in eV)
                  ng_e=100,     # Photon energy scan number of points
                  ng_j=100,     # Number of points in electron trajectory (per period) for internal calculation only
                  flag_emittance=1, # when sampling rays: Use emittance (0=No, 1=Yes)
@@ -59,3 +60,13 @@ plot(
 tktP3 = beam.histo1(6, ref=33)
 plot(
     tktP3["bin_path"], tktP3["histogram_path"], )
+
+import numpy
+plot(
+    light_source.angle_array_mrad,   light_source.fm[:, 0]/ numpy.max(light_source.fm[:, 0]),
+    light_source.angle_array_mrad, light_source.fm_s[:, 0]/ numpy.max(light_source.fm[:, 0]),
+    light_source.angle_array_mrad, light_source.fm_p[:, 0]/ numpy.max(light_source.fm[:, 0]),
+    tktI["bin_path"] * 1e3, tktI["histogram_path"] / numpy.max(tktI["histogram_path"]),
+    tktS["bin_path"] * 1e3, tktS["histogram_path"] / numpy.max(tktI["histogram_path"]),
+    tktP["bin_path"] * 1e3, tktP["histogram_path"] / numpy.max(tktI["histogram_path"]),
+    xtitle="Angle / mrad", ytitle="Flux at Emin=%f eV" % (8000))

@@ -186,7 +186,7 @@ class S4BendingMagnetLightSource(S4LightSource):
                 print(">>> calculate_rays: DONE get_n_sampled_points (angle)  %d points"%(sampled_angle.size))
 
             pol_deg_interpolator = interp1d(angle_array_mrad*1e-3,
-                    angular_distribution_s/(angular_distribution_s+angular_distribution_p))
+                    numpy.sqrt(angular_distribution_s)/(numpy.sqrt(angular_distribution_s)+numpy.sqrt(angular_distribution_p)))
             sampled_polarization = pol_deg_interpolator(sampled_angle)
 
             sampled_photon_energy = numpy.zeros_like(sampled_angle) + self.get_magnetic_structure()._EMIN
@@ -223,6 +223,21 @@ class S4BendingMagnetLightSource(S4LightSource):
 
             fm = fm_s + fm_p
 
+            # fixed the same problem >30 years later
+            # !C
+            # !C Fix May 9, 1990.    SHADOW defined the degree of polarization as Ax/(Ax+Az),
+            # !C instead of Ax^2/(Ax^2+Az^2).  So here we need to take the square root of the
+            # !C powers (F_PAR, F_PER).
+            # !C
+            # !C Old:     DEG_POL(I)   = F_PAR(I)/F_TOT(I)
+            polarization_degree = numpy.sqrt(fm_s) / (numpy.sqrt(fm_s) + numpy.sqrt(fm_p))
+
+            # todo: remove (stored for external plots)
+            self.angle_array_mrad = angle_array_mrad
+            self.fm = fm
+            self.fm_s = fm_s
+            self.fm_p = fm_p
+
             if verbose:
                 print(angle_array_mrad.shape, photon_energy_array.shape, fm_s.shape, fm_p.shape)
                 print(">>> DONE sync_ene: calculating energy distribution",photon_energy_array.shape,fm.shape)
@@ -234,6 +249,7 @@ class S4BendingMagnetLightSource(S4LightSource):
                      angle_array_mrad, fm_s[:, 0],
                      angle_array_mrad, fm_p[:, 0],
                      xtitle="Angle / mrad", ytitle="Flux at Emin=%f eV"%(photon_energy_array[0]))
+
                 plot_image(fm,angle_array_mrad,photon_energy_array, aspect='auto', show=0, title="flux (total)",
                            xtitle="Psi / mrad", ytitle="Energy / eV")
                 plot_image(fm_s, angle_array_mrad, photon_energy_array, aspect='auto', show=0, title="flux (sigma)",
@@ -257,9 +273,9 @@ class S4BendingMagnetLightSource(S4LightSource):
             # both interpolators seem to give similar results and similar running time
             if True:
                 P = numpy.array([sampled_angle, sampled_photon_energy]).transpose()
-                sampled_polarization = griddata(Pi, (fm_s/fm).flatten(), P, method = "cubic", rescale=True)
+                sampled_polarization = griddata(Pi, polarization_degree.flatten(), P, method="cubic", rescale=True)
             else:
-                interpolator = CloughTocher2DInterpolator(Pi, (fm_s/fm).flatten(), rescale=True)
+                interpolator = CloughTocher2DInterpolator(Pi, polarization_degree.flatten(), rescale=True)
                 sampled_polarization = interpolator(sampled_angle, sampled_photon_energy)
 
         for itik in range(NRAYS):
@@ -504,10 +520,12 @@ class S4BendingMagnetLightSource(S4LightSource):
         AX = POL_DEG/DENOM
         for i in range(3):
             A_VEC[:,i] *= AX
+            # A_VEC[:, i] *= numpy.sqrt(sampled_polarization)
 
         AZ = (1.0-POL_DEG)/DENOM
         for i in range(3):
             AP_VEC[:,i] *= AZ
+            # AP_VEC[:, i] *= (1-numpy.sqrt(sampled_polarization))
 
 
         rays[:,6:9] =  A_VEC
