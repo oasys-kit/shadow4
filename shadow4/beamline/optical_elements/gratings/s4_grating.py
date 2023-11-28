@@ -2,7 +2,7 @@ import numpy
 import scipy.constants as codata
 
 from syned.beamline.optical_elements.gratings.grating import GratingVLS
-from syned.beamline.shape import Plane, Sphere
+from syned.beamline.shape import Plane, Sphere, Conic, Toroid, NumericalMesh
 from syned.beamline.element_coordinates import ElementCoordinates
 
 from shadow4.beam.s4_beam import S4Beam
@@ -198,6 +198,24 @@ class S4GratingElement(S4BeamlineElement):
                 order=oe._order,
                 f_ruling=oe._f_ruling)
         elif isinstance(ssi, Sphere):
+            beam_mirr, normal = ccc.apply_grating_diffraction_on_beam(
+                beam,
+                ruling=ruling,
+                order=oe._order,
+                f_ruling=oe._f_ruling)
+        elif isinstance(ssi, Conic):
+            beam_mirr, normal = ccc.apply_grating_diffraction_on_beam(
+                beam,
+                ruling=ruling,
+                order=oe._order,
+                f_ruling=oe._f_ruling)
+        elif isinstance(ssi, Toroid):
+            beam_mirr, normal = ccc.apply_grating_diffraction_on_beam(
+                beam,
+                ruling=ruling,
+                order=oe._order,
+                f_ruling=oe._f_ruling)
+        elif isinstance(ssi, NumericalMesh):
             beam_mirr, normal = ccc.apply_grating_diffraction_on_beam(
                 beam,
                 ruling=ruling,

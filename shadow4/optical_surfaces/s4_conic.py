@@ -831,7 +831,7 @@ class S4Conic(S4OpticalSurface):
     # mirror routines
     #
 
-
+    # todo: move the apply_* methods to the parent class
     def apply_specular_reflection_on_beam(self, beam):
         newbeam = beam.duplicate() # DONE!!!!! warning, input newbeam is changed... TODO: change this behaviour making a copy?
 

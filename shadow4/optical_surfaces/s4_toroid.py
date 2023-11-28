@@ -1,5 +1,8 @@
 import numpy
 from shadow4.optical_surfaces.s4_optical_surface import S4OpticalSurface
+from shadow4.tools.arrayofvectors import vector_refraction, vector_scattering
+from shadow4.tools.arrayofvectors import vector_cross, vector_dot, vector_multiply_scalar, vector_sum, vector_diff
+from shadow4.tools.arrayofvectors import vector_modulus_square, vector_modulus, vector_norm, vector_rotate_around_axis
 
 class S4Toroid(S4OpticalSurface):
     def __init__(self,
@@ -278,6 +281,7 @@ class S4Toroid(S4OpticalSurface):
 
         return txt
 
+    # todo: move the apply_* methods to the parent class
     def apply_specular_reflection_on_beam(self,newbeam):
         # ;
         # ; TRACING...
@@ -327,6 +331,109 @@ class S4Toroid(S4OpticalSurface):
 
         return newbeam, normal
 
+    #
+    # grating routines
+    #
+    def apply_grating_diffraction_on_beam(self, beam, ruling=[0.0], order=0, f_ruling=0):
+
+        newbeam = beam.duplicate()
+
+        x1 = newbeam.get_columns([1, 2, 3])  # numpy.array(a3.getshcol([1,2,3]))
+        v1 = newbeam.get_columns([4, 5, 6])  # numpy.array(a3.getshcol([4,5,6]))
+        flag = newbeam.get_column(10)  # numpy.array(a3.getshonecol(10))
+        kin = newbeam.get_column(11) * 1e2 # in m^-1
+        optical_path = newbeam.get_column(13)
+        nrays = flag.size
+
+        # t1, t2, iflag = self.calculate_intercept(x1, v1)
+        reference_distance = -newbeam.get_column(2).mean() + newbeam.get_column(3).mean()
+        # t = self.choose_solution(t1, t2, reference_distance=reference_distance)
+        t, iflag = self.calculate_intercept_and_choose_solution(x1, v1, reference_distance=reference_distance)
+
+        x2 = x1 + v1 * t
+        for i in range(flag.size):
+            if iflag[i] < 0: flag[i] = -100
+
+        # ;
+        # ; Calculates the normal at each intercept [see shadow's normal.F]
+        # ;
+
+        normal = self.get_normal(x2)
+
+        # ;
+        # ; reflection
+        # ;
+        # v2 =  v1.T - 2 * vector_multiply_scalar(normal.T, vector_dot(v1.T, normal.T))
+        # V_OUT = v2.copy()
+        # v2 = v2.T
+
+        # ;
+        # ; grating scattering
+        # ;
+        if True:
+            DIST = x2[1]
+            RDENS = 0.0
+            for n in range(len(ruling)):
+                RDENS += ruling[n] * DIST**n
+
+            PHASE = optical_path + 2 * numpy.pi * order * DIST * RDENS / kin
+            G_MOD = 2 * numpy.pi * RDENS * order
+
+
+            # capilatized vectors are [:,3] as required for vector_* operations
+            VNOR = normal.T
+            VNOR = vector_multiply_scalar(VNOR, -1.0) # outward normal
+
+
+            # print(">>>> VNOR: (%20.18g,%20.18g,%20.18f) mod: %20.18f" % (VNOR[-1, 0], VNOR[-1, 1], VNOR[-1, 2],
+            #                                          (VNOR[-1, 0]**2 + VNOR[-1, 1]**2 + VNOR[-1, 2]**2)))
+
+            # versors
+            X_VRS = numpy.zeros((nrays,3))
+            X_VRS[:,0] = 1
+            Y_VRS = numpy.zeros((nrays, 3))
+            Y_VRS[:,1] = 1
+
+            if f_ruling == 0:
+                G_FAC = vector_dot(VNOR, Y_VRS)
+                G_FAC = numpy.sqrt(1 - G_FAC**2)
+            elif f_ruling == 1:
+                G_FAC = 1.0
+            elif f_ruling == 5:
+                G_FAC = vector_dot(VNOR, Y_VRS)
+                G_FAC = numpy.sqrt(1 - G_FAC**2)
+
+            G_MODR = G_MOD * G_FAC
+
+
+            K_IN = vector_multiply_scalar(v1.T, kin)
+            K_IN_NOR = vector_multiply_scalar(VNOR, vector_dot(K_IN, VNOR) )
+            K_IN_PAR = vector_diff(K_IN, K_IN_NOR)
+
+
+            VTAN = vector_cross(VNOR, X_VRS)
+            GSCATTER = vector_multiply_scalar(VTAN, G_MODR)
+
+
+            K_OUT_PAR = vector_sum(K_IN_PAR, GSCATTER)
+            K_OUT_NOR = vector_multiply_scalar(VNOR,  numpy.sqrt(kin**2 - vector_modulus_square(K_OUT_PAR)))
+            K_OUT = vector_sum(K_OUT_PAR, K_OUT_NOR)
+            V_OUT = vector_norm(K_OUT)
+
+        # ;
+        # ; writes the mirr.XX file
+        # ;
+
+        newbeam.set_column(1, x2[0])
+        newbeam.set_column(2, x2[1])
+        newbeam.set_column(3, x2[2])
+        newbeam.set_column(4, V_OUT.T[0])
+        newbeam.set_column(5, V_OUT.T[1])
+        newbeam.set_column(6, V_OUT.T[2])
+        newbeam.set_column(10, flag)
+        newbeam.set_column(13, optical_path + t)
+
+        return newbeam, normal
 
 if __name__ == "__main__":
 

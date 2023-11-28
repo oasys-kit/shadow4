@@ -95,7 +95,7 @@ class S4SphereGrating(S4Grating, S4SphereOpticalElementDecorator):
         txt = "\nfrom shadow4.beamline.optical_elements.gratings.s4_sphere_grating import S4SphereGrating"
 
         txt_pre = """\noptical_element = S4SphereGrating(name='{name}',
-    boundary_shape=None, f_ruling={f_ruling},
+    boundary_shape=None, f_ruling={f_ruling}, order={order},
     ruling={ruling}, ruling_coeff_linear={ruling_coeff_linear}, 
     ruling_coeff_quadratic={ruling_coeff_quadratic}, ruling_coeff_cubic={ruling_coeff_cubic},
     ruling_coeff_quartic={ruling_coeff_quartic},
