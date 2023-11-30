@@ -11,10 +11,6 @@ class S4NumericalMeshGrating(S4Grating, S4NumericalMeshOpticalElementDecorator):
     def __init__(self,
                  name="NumericalMesh Grating",
                  boundary_shape=None,
-                 xx=None,
-                 yy=None,
-                 zz=None,
-                 surface_data_file="",
                  ruling=800e3,
                  ruling_coeff_linear=0.0,
                  ruling_coeff_quadratic=0.0,
@@ -22,14 +18,13 @@ class S4NumericalMeshGrating(S4Grating, S4NumericalMeshOpticalElementDecorator):
                  ruling_coeff_quartic=0.0,
                  coating=None,
                  coating_thickness=None,
-                 f_central=False,
-                 f_phot_cent=0,
-                 phot_cent=8000.0,
-                 f_reflec=0,
-                 material_constants_library_flag=0,  # 0=xraylib, 1=dabax, 2=shadow preprocessor
-                 file_refl="",
                  order=0,
                  f_ruling=0,
+                 #
+                 xx=None,
+                 yy=None,
+                 zz=None,
+                 surface_data_file="",
                  ):
 
         S4NumericalMeshOpticalElementDecorator.__init__(self, xx, yy, zz, surface_data_file)
@@ -45,24 +40,13 @@ class S4NumericalMeshGrating(S4Grating, S4NumericalMeshOpticalElementDecorator):
                            ruling_coeff_quartic=ruling_coeff_quartic,
                            coating=coating,
                            coating_thickness=coating_thickness,
-                           f_central=f_central,
-                           f_phot_cent=f_phot_cent,
-                           phot_cent=phot_cent,
-                           f_reflec=f_reflec,
-                           material_constants_library_flag=material_constants_library_flag,
-                           file_refl=file_refl,
                            order=order,
                            f_ruling=f_ruling,
                            )
 
         self.__inputs = {
             "name": name,
-            # "surface_shape": surface_shape,
             "boundary_shape": boundary_shape,
-            "xx": xx,
-            "yy": yy,
-            "zz": zz,
-            "surface_data_file": surface_data_file,
             "ruling": ruling,
             "ruling_coeff_linear": ruling_coeff_linear,
             "ruling_coeff_quadratic": ruling_coeff_quadratic,
@@ -70,23 +54,13 @@ class S4NumericalMeshGrating(S4Grating, S4NumericalMeshOpticalElementDecorator):
             "ruling_coeff_quartic": ruling_coeff_quartic,
             "order": order,
             "f_ruling": f_ruling,
+            "xx": xx,
+            "yy": yy,
+            "zz": zz,
+            "surface_data_file": surface_data_file,
         }
 
     def to_python_code(self, **kwargs):
-        """
-        Auxiliar method to automatically create python scripts.
-
-        Parameters
-        ----------
-        **kwargs
-
-        Returns
-        -------
-        str
-            Python code.
-
-        """
-
         txt = "\nfrom shadow4.beamline.optical_elements.gratings.s4_numerical_mesh_grating import S4NumericalMeshGrating"
 
         txt_pre = """\noptical_element = S4NumericalMeshGrating(name='{name}',
@@ -111,19 +85,6 @@ class S4NumericalMeshGratingElement(S4GratingElement):
                          input_beam=input_beam)
 
     def to_python_code(self, **kwargs):
-        """
-        Auxiliar method to automatically create python scripts.
-
-        Parameters
-        ----------
-        **kwargs
-
-        Returns
-        -------
-        str
-            Python code.
-
-        """
         txt = "\n\n# optical element number XX"
         txt += self.get_optical_element().to_python_code()
         coordinates = self.get_coordinates()
@@ -134,9 +95,6 @@ class S4NumericalMeshGratingElement(S4GratingElement):
         txt += "\nbeamline_element = S4NumericalMeshGratingElement(optical_element=optical_element,coordinates=coordinates,input_beam=beam)"
         txt += "\n\nbeam, footprint = beamline_element.trace_beam()"
         return txt
-
-    # def apply_grating_diffraction(self, beam):
-    #     return self.get_optical_element().apply_grating_diffraction(beam)
 
 if __name__ == "__main__":
 
@@ -178,11 +136,6 @@ if __name__ == "__main__":
         ruling_coeff_quartic = 0,
         coating = None,
         coating_thickness = None,
-        f_central=False,
-        f_phot_cent=0,
-        phot_cent=8000.0,
-        material_constants_library_flag=0,  # 0=xraylib, 1=dabax, 2=shadow preprocessor
-        file_refl="",
         order=1,
         surface_data_file="/users/srio/Oasys/bump.h5",
         #

@@ -67,7 +67,7 @@ class S4CurvedOpticalElementDecorator(S4OpticalElementDecorator):
 
 class S4SphereOpticalElementDecorator(S4CurvedOpticalElementDecorator):
     def __init__(self,
-                 surface_calculation=SurfaceCalculation.INTERNAL,
+                 surface_calculation=SurfaceCalculation.INTERNAL, # external=1, internal=0
                  is_cylinder=False,
                  cylinder_direction=Direction.TANGENTIAL,
                  convexity=Convexity.UPWARD,

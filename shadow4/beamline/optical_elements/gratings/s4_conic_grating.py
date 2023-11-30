@@ -5,6 +5,7 @@ from syned.beamline.shape import Convexity, Direction
 from shadow4.beam.s4_beam import S4Beam
 from shadow4.beamline.s4_optical_element_decorators import SurfaceCalculation, S4ConicOpticalElementDecorator
 from shadow4.beamline.optical_elements.gratings.s4_grating import S4GratingElement, S4Grating, ElementCoordinates
+from shadow4.beamline.s4_beamline_element_movements import S4BeamlineElementMovements
 
 
 class S4ConicGrating(S4Grating, S4ConicOpticalElementDecorator):
@@ -18,17 +19,13 @@ class S4ConicGrating(S4Grating, S4ConicOpticalElementDecorator):
                  ruling_coeff_quartic=0.0,
                  coating=None,
                  coating_thickness=None,
-                 f_central=False,
-                 f_phot_cent=0,
-                 phot_cent=8000.0,
-                 f_reflec=0,
-                 material_constants_library_flag=0,  # 0=xraylib, 1=dabax, 2=shadow preprocessor
-                 file_refl="",
                  order=0,
                  f_ruling=0,
                  #
-                 conic_coefficients=[0.0] * 10,
+                 conic_coefficients=None,
                  ):
+
+        if conic_coefficients is None: conic_coefficients = [0,0,0,0,0,0,0,0,-1,0]
 
         S4ConicOpticalElementDecorator.__init__(self, conic_coefficients)
 
@@ -43,19 +40,12 @@ class S4ConicGrating(S4Grating, S4ConicOpticalElementDecorator):
                            ruling_coeff_quartic=ruling_coeff_quartic,
                            coating=coating,
                            coating_thickness=coating_thickness,
-                           f_central=f_central,
-                           f_phot_cent=f_phot_cent,
-                           phot_cent=phot_cent,
-                           f_reflec=f_reflec,
-                           material_constants_library_flag=material_constants_library_flag,
-                           file_refl=file_refl,
                            order=order,
                            f_ruling=f_ruling,
                            )
 
         self.__inputs = {
             "name": name,
-            # "surface_shape": surface_shape,
             "boundary_shape": boundary_shape,
             "ruling": ruling,
             "ruling_coeff_linear": ruling_coeff_linear,
@@ -68,20 +58,6 @@ class S4ConicGrating(S4Grating, S4ConicOpticalElementDecorator):
         }
 
     def to_python_code(self, **kwargs):
-        """
-        Auxiliar method to automatically create python scripts.
-
-        Parameters
-        ----------
-        **kwargs
-
-        Returns
-        -------
-        str
-            Python code.
-
-        """
-
         txt = "\nfrom shadow4.beamline.optical_elements.gratings.s4_conic_grating import S4ConicGrating"
 
         txt_pre = """\noptical_element = S4ConicGrating(name='{name}',
@@ -99,38 +75,27 @@ class S4ConicGratingElement(S4GratingElement):
     def __init__(self,
                  optical_element : S4ConicGrating = None,
                  coordinates : ElementCoordinates = None,
+                 movements: S4BeamlineElementMovements = None,
                  input_beam : S4Beam = None):
         super().__init__(optical_element=optical_element if optical_element is not None else S4ConicGrating(),
                          coordinates=coordinates if coordinates is not None else ElementCoordinates(),
+                         movements=movements,
                          input_beam=input_beam)
 
     def to_python_code(self, **kwargs):
-        """
-        Auxiliar method to automatically create python scripts.
-
-        Parameters
-        ----------
-        **kwargs
-
-        Returns
-        -------
-        str
-            Python code.
-
-        """
         txt = "\n\n# optical element number XX"
         txt += self.get_optical_element().to_python_code()
         coordinates = self.get_coordinates()
         txt += "\nfrom syned.beamline.element_coordinates import ElementCoordinates"
         txt += "\ncoordinates = ElementCoordinates(p=%g, q=%g, angle_radial=%g, angle_azimuthal=%g, angle_radial_out=%g)" % \
                (coordinates.p(), coordinates.q(), coordinates.angle_radial(), coordinates.angle_azimuthal(), coordinates.angle_radial_out())
+
+        txt += self.to_python_code_movements()
+
         txt += "\nfrom shadow4.beamline.optical_elements.gratings.s4_conic_grating import S4ConicGratingElement"
-        txt += "\nbeamline_element = S4ConicGratingElement(optical_element=optical_element,coordinates=coordinates,input_beam=beam)"
+        txt += "\nbeamline_element = S4ConicGratingElement(optical_element=optical_element, coordinates=coordinates, movements=movements, input_beam=beam)"
         txt += "\n\nbeam, footprint = beamline_element.trace_beam()"
         return txt
-
-    # def apply_grating_diffraction(self, beam):
-    #     return self.get_optical_element().apply_grating_diffraction(beam)
 
 if __name__ == "__main__":
 
@@ -172,13 +137,8 @@ if __name__ == "__main__":
         ruling_coeff_quartic = 0,
         coating = None,
         coating_thickness = None,
-        f_central=False,
-        f_phot_cent=0,
-        phot_cent=8000.0,
-        material_constants_library_flag=0,  # 0=xraylib, 1=dabax, 2=shadow preprocessor
-        file_refl="",
         order=1,
-        conic_coefficients=[0,0,0,0,0,0,0,0,0,-1,0],
+        conic_coefficients=[0,0,0,0,0,0,0,0,-1,0],
         #
         )
 

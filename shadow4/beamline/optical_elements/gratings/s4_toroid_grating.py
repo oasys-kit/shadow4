@@ -4,6 +4,8 @@ from syned.beamline.shape import Convexity, Direction
 
 from shadow4.beam.s4_beam import S4Beam
 from shadow4.beamline.s4_optical_element_decorators import SurfaceCalculation, S4ToroidOpticalElementDecorator
+from shadow4.beamline.s4_beamline_element_movements import S4BeamlineElementMovements
+
 from shadow4.beamline.optical_elements.gratings.s4_grating import S4GratingElement, S4Grating, ElementCoordinates
 
 
@@ -18,24 +20,17 @@ class S4ToroidGrating(S4Grating, S4ToroidOpticalElementDecorator):
                  ruling_coeff_quartic=0.0,
                  coating=None,
                  coating_thickness=None,
-                 f_central=False,
-                 f_phot_cent=0,
-                 phot_cent=8000.0,
-                 f_reflec=0,
-                 material_constants_library_flag=0,  # 0=xraylib, 1=dabax, 2=shadow preprocessor
-                 file_refl="",
                  order=0,
                  f_ruling=0,
                  #
-                 surface_calculation=SurfaceCalculation.EXTERNAL,
-                 p_focus=0.0,
-                 q_focus=0.0,
-                 grazing_angle=0.0,
                  min_radius=0.1,
                  maj_radius=1.0,
                  f_torus=0,
                  ):
-
+        surface_calculation = SurfaceCalculation.EXTERNAL
+        p_focus = 0.0
+        q_focus = 0.0
+        grazing_angle = 0.0
         S4ToroidOpticalElementDecorator.__init__(self, surface_calculation,
                                                  min_radius, maj_radius, f_torus, p_focus, q_focus, grazing_angle)
 
@@ -50,19 +45,12 @@ class S4ToroidGrating(S4Grating, S4ToroidOpticalElementDecorator):
                            ruling_coeff_quartic=ruling_coeff_quartic,
                            coating=coating,
                            coating_thickness=coating_thickness,
-                           f_central=f_central,
-                           f_phot_cent=f_phot_cent,
-                           phot_cent=phot_cent,
-                           f_reflec=f_reflec,
-                           material_constants_library_flag=material_constants_library_flag,
-                           file_refl=file_refl,
                            order=order,
                            f_ruling=f_ruling,
                            )
 
         self.__inputs = {
             "name": name,
-            # "surface_shape": surface_shape,
             "boundary_shape": boundary_shape,
             "f_ruling": f_ruling,
             "ruling": ruling,
@@ -77,20 +65,6 @@ class S4ToroidGrating(S4Grating, S4ToroidOpticalElementDecorator):
         }
 
     def to_python_code(self, **kwargs):
-        """
-        Auxiliar method to automatically create python scripts.
-
-        Parameters
-        ----------
-        **kwargs
-
-        Returns
-        -------
-        str
-            Python code.
-
-        """
-
         txt = "\nfrom shadow4.beamline.optical_elements.gratings.s4_toroid_grating import S4ToroidGrating"
 
         txt_pre = """\noptical_element = S4ToroidGrating(name='{name}',
@@ -110,38 +84,27 @@ class S4ToroidGratingElement(S4GratingElement):
     def __init__(self,
                  optical_element : S4ToroidGrating = None,
                  coordinates : ElementCoordinates = None,
+                 movements: S4BeamlineElementMovements = None,
                  input_beam : S4Beam = None):
         super().__init__(optical_element=optical_element if optical_element is not None else S4ToroidGrating(),
                          coordinates=coordinates if coordinates is not None else ElementCoordinates(),
+                         movements=movements,
                          input_beam=input_beam)
 
     def to_python_code(self, **kwargs):
-        """
-        Auxiliar method to automatically create python scripts.
-
-        Parameters
-        ----------
-        **kwargs
-
-        Returns
-        -------
-        str
-            Python code.
-
-        """
         txt = "\n\n# optical element number XX"
         txt += self.get_optical_element().to_python_code()
         coordinates = self.get_coordinates()
         txt += "\nfrom syned.beamline.element_coordinates import ElementCoordinates"
         txt += "\ncoordinates = ElementCoordinates(p=%g, q=%g, angle_radial=%g, angle_azimuthal=%g, angle_radial_out=%g)" % \
                (coordinates.p(), coordinates.q(), coordinates.angle_radial(), coordinates.angle_azimuthal(), coordinates.angle_radial_out())
+
+        txt += self.to_python_code_movements()
+
         txt += "\nfrom shadow4.beamline.optical_elements.gratings.s4_toroid_grating import S4ToroidGratingElement"
-        txt += "\nbeamline_element = S4ToroidGratingElement(optical_element=optical_element,coordinates=coordinates,input_beam=beam)"
+        txt += "\nbeamline_element = S4ToroidGratingElement(optical_element=optical_element, coordinates=coordinates, movements=movements, input_beam=beam)"
         txt += "\n\nbeam, footprint = beamline_element.trace_beam()"
         return txt
-
-    # def apply_grating_diffraction(self, beam):
-    #     return self.get_optical_element().apply_grating_diffraction(beam)
 
 if __name__ == "__main__":
 
@@ -183,20 +146,9 @@ if __name__ == "__main__":
         ruling_coeff_quartic = 0,
         coating = None,
         coating_thickness = None,
-        f_central=False,
-        f_phot_cent=0,
-        phot_cent=8000.0,
-        material_constants_library_flag=0,  # 0=xraylib, 1=dabax, 2=shadow preprocessor
-        file_refl="",
-        order=1,
-        #
-        surface_calculation=SurfaceCalculation.EXTERNAL,
         maj_radius=635757.0e-3,
         min_radius=635757.0e-3/10,
         f_torus=0,
-        p_focus=0.0,
-        q_focus=0.0,
-        grazing_angle=0.0,
         )
 
     coordinates_syned = ElementCoordinates(p = 30.0,

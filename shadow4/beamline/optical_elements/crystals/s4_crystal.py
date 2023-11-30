@@ -346,6 +346,17 @@ class S4CrystalElement(S4BeamlineElement):
         input_beam.rotate(theta_grazing1, axis=1)
         input_beam.translation([0.0, -p * numpy.cos(theta_grazing1), p * numpy.sin(theta_grazing1)])
 
+        # mirror movement:
+        movements = self.get_movements()
+        if movements is not None:
+            if movements.f_move:
+                input_beam.rot_for(OFFX=movements.offset_x,
+                                   OFFY=movements.offset_y,
+                                   OFFZ=movements.offset_z,
+                                   X_ROT=movements.rotation_x,
+                                   Y_ROT=movements.rotation_y,
+                                   Z_ROT=movements.rotation_z)
+
         #
         # reflect beam in the crystal surface and apply crystal reflectivity
         #
@@ -483,6 +494,16 @@ class S4CrystalElement(S4BeamlineElement):
         #         footprint.set_column(6, outgoing_complex_amplitude_photon.unitDirectionVector().components()[2])
 
         footprint, normal = self.apply_crystal_diffraction_and_reflectivities(input_beam)  # warning, beam is also changed!!
+
+
+        if movements is not None:
+            if movements.f_move:
+                footprint.rot_back(OFFX=movements.offset_x,
+                                   OFFY=movements.offset_y,
+                                   OFFZ=movements.offset_z,
+                                   X_ROT=movements.rotation_x,
+                                   Y_ROT=movements.rotation_y,
+                                   Z_ROT=movements.rotation_z)
 
         #
         # apply mirror boundaries

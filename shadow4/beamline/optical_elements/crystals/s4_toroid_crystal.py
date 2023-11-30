@@ -3,6 +3,8 @@ from syned.beamline.element_coordinates import ElementCoordinates
 from shadow4.beam.s4_beam import S4Beam
 from shadow4.beamline.optical_elements.crystals.s4_crystal import S4CrystalElement, S4Crystal
 from shadow4.beamline.s4_optical_element_decorators import SurfaceCalculation, S4ToroidOpticalElementDecorator
+from shadow4.beamline.s4_beamline_element_movements import S4BeamlineElementMovements
+
 from syned.beamline.shape import Toroid, Convexity, Direction
 
 class S4ToroidCrystal(S4Crystal, S4ToroidOpticalElementDecorator):
@@ -187,9 +189,11 @@ class S4ToroidCrystalElement(S4CrystalElement):
     def __init__(self,
                  optical_element : S4ToroidCrystal = None,
                  coordinates : ElementCoordinates = None,
+                 movements: S4BeamlineElementMovements = None,
                  input_beam : S4Beam = None):
         super().__init__(optical_element=optical_element if optical_element is not None else S4ToroidCrystal(),
                          coordinates=coordinates if coordinates is not None else ElementCoordinates(),
+                         movements=movements,
                          input_beam=input_beam)
 
         if not (isinstance(self.get_optical_element().get_surface_shape(), Toroid)):
@@ -215,8 +219,11 @@ class S4ToroidCrystalElement(S4CrystalElement):
         txt += "\nfrom syned.beamline.element_coordinates import ElementCoordinates"
         txt += "\ncoordinates = ElementCoordinates(p=%g, q=%g, angle_radial=%g, angle_azimuthal=%g, angle_radial_out=%g)" % \
                (coordinates.p(), coordinates.q(), coordinates.angle_radial(), coordinates.angle_azimuthal(), coordinates.angle_radial_out())
+
+        txt += self.to_python_code_movements()
+
         txt += "\nfrom shadow4.beamline.optical_elements.crystals.s4_toroid_crystal import S4ToroidCrystalElement"
-        txt += "\nbeamline_element = S4ToroidCrystalElement(optical_element=optical_element,coordinates=coordinates,input_beam=beam)"
+        txt += "\nbeamline_element = S4ToroidCrystalElement(optical_element=optical_element, coordinates=coordinates, movements=movements, input_beam=beam)"
         txt += "\n\nbeam, mirr = beamline_element.trace_beam()"
         return txt
 

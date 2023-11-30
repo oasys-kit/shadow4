@@ -17,15 +17,6 @@ class S4AdditionalNumericalMeshGrating(S4NumericalMeshGrating):
             oe = ideal_grating
         else:
             oe = None
-        # ssi = oe.get_surface_shape_instance()
-        # ccc = oe.get_optical_surface_instance()
-        #
-        # if oe._f_ruling == 5:
-        #     ruling = [oe._ruling,
-        #                 oe._ruling_coeff_linear,
-        #                 oe._ruling_coeff_quadratic,
-        #                 oe._ruling_coeff_cubic,
-        #                 oe._ruling_coeff_quartic]
 
         S4NumericalMeshGrating.__init__(self, name=name,
                  boundary_shape=None if ideal_grating is None else ideal_grating.get_boundary_shape(),
@@ -41,28 +32,6 @@ class S4AdditionalNumericalMeshGrating(S4NumericalMeshGrating):
                  ruling_coeff_quartic=0.0 if   oe is None else oe._ruling_coeff_quartic,
                  order=0 if oe is None else oe._order,
                  f_ruling=0 if ideal_grating is None else ideal_grating._f_ruling,
-                 # coating=None,              # todo: not used, remove
-                 # coating_thickness=None,              # todo: not used, remove
-                 # f_central=False,              # todo: not used, remove
-                 # f_phot_cent=0,              # todo: not used, remove
-                 # phot_cent=8000.0,              # todo: not used, remove
-                 # f_reflec=0,              # todo: not used, remove
-                 # material_constants_library_flag=0,  # 0=xraylib, 1=dabax, 2=shadow preprocessor # todo: not used, remove
-                 # file_refl="", # todo: not used, remove
-                 # material                       =None if   ideal_grating is None else ideal_grating._material,
-                 # miller_index_h                 =1 if      ideal_grating is None else ideal_grating._miller_index_h,
-                 # miller_index_k                 =1 if      ideal_grating is None else ideal_grating._miller_index_k,
-                 # miller_index_l                 =1 if      ideal_grating is None else ideal_grating._miller_index_l,
-                 # f_bragg_a                      =0 if      ideal_grating is None else ideal_grating._f_bragg_a,
-                 # asymmetry_angle                =0.0 if    ideal_grating is None else ideal_grating._asymmetry_angle,
-                 # is_thick                       =0   if    ideal_grating is None else ideal_grating._is_thick,
-                 # thickness                      =0.010 if  ideal_grating is None else ideal_grating._thickness,
-                 # f_central                      =0 if      ideal_grating is None else ideal_grating._f_central,
-                 # f_phot_cent                    =0 if      ideal_grating is None else ideal_grating._f_phot_cent,
-                 # phot_cent                      =8000.0 if ideal_grating is None else ideal_grating._phot_cent,
-                 # f_ext                          =0 if      ideal_grating is None else ideal_grating._f_ext,
-                 # material_constants_library_flag=0 if      ideal_grating is None else ideal_grating._material_constants_library_flag,
-                 # file_refl                      ="" if     ideal_grating is None else ideal_grating._file_refl,
                  )
 
         self.__ideal_grating         = ideal_grating
@@ -75,8 +44,6 @@ class S4AdditionalNumericalMeshGrating(S4NumericalMeshGrating):
         }
 
     def to_python_code(self, **kwargs):
-
-
         txt = self.__ideal_crystal.to_python_code()
         txt += "ideal_crystal = optical_element"
         txt += self.__numerical_mesh_crystal.to_python_code()
@@ -99,7 +66,7 @@ class S4AdditionalNumericalMeshGratingElement(S4GratingElement):
                  input_beam: S4Beam = None):
         super().__init__(optical_element=optical_element if optical_element is not None else S4AdditionalNumericalMeshGrating(),
                          coordinates=coordinates if coordinates is not None else ElementCoordinates(),
-                         # movements=movements,
+                         movements=movements,
                          input_beam=input_beam)
         if not isinstance(self.get_optical_element().get_surface_shape(), NumericalMesh):
             raise ValueError("Wrong Optical Element: only Surface Data shape is accepted")
