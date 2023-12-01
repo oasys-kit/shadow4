@@ -75,7 +75,7 @@ class S4ParaboloidCrystal(S4Crystal, S4ParaboloidOpticalElementDecorator):
                  pole_to_focus=0.0,  # for external calculation
                  is_cylinder=False,
                  cylinder_direction=Direction.TANGENTIAL,
-                 convexity=Convexity.UPWARD,
+                 convexity=Convexity.DOWNWARD,
                  material=None,
                  # diffraction_geometry=DiffractionGeometry.BRAGG,  # ?? not supposed to be in syned...
                  miller_index_h=1,

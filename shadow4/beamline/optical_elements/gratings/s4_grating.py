@@ -2,7 +2,7 @@ import numpy
 import scipy.constants as codata
 
 from syned.beamline.optical_elements.gratings.grating import GratingVLS
-from syned.beamline.shape import Plane, Sphere, Conic, Toroid, NumericalMesh
+from syned.beamline.shape import Plane, Sphere, Conic, Toroid, Paraboloid, Hyperboloid, Ellipsoid, NumericalMesh
 from syned.beamline.element_coordinates import ElementCoordinates
 
 from shadow4.beam.s4_beam import S4Beam
@@ -192,24 +192,26 @@ class S4GratingElement(S4BeamlineElement):
         else:
             ruling = [oe._ruling]
 
-        if isinstance(ssi, Plane):
+        # todo: remove if's the interface is the same for Conic, Toroid and NumericalMesh
+        if isinstance(ssi, Plane) or isinstance(ssi, Sphere) or isinstance(ssi, Paraboloid) \
+                or isinstance(ssi, Ellipsoid) or isinstance(ssi, Hyperboloid) or isinstance(ssi, Conic):
             beam_mirr, normal = ccc.apply_grating_diffraction_on_beam(
                 beam,
                 ruling=ruling,
                 order=oe._order,
                 f_ruling=oe._f_ruling)
-        elif isinstance(ssi, Sphere):
-            beam_mirr, normal = ccc.apply_grating_diffraction_on_beam(
-                beam,
-                ruling=ruling,
-                order=oe._order,
-                f_ruling=oe._f_ruling)
-        elif isinstance(ssi, Conic):
-            beam_mirr, normal = ccc.apply_grating_diffraction_on_beam(
-                beam,
-                ruling=ruling,
-                order=oe._order,
-                f_ruling=oe._f_ruling)
+        # elif isinstance(ssi, Sphere):
+        #     beam_mirr, normal = ccc.apply_grating_diffraction_on_beam(
+        #         beam,
+        #         ruling=ruling,
+        #         order=oe._order,
+        #         f_ruling=oe._f_ruling)
+        # elif isinstance(ssi, Conic):
+        #     beam_mirr, normal = ccc.apply_grating_diffraction_on_beam(
+        #         beam,
+        #         ruling=ruling,
+        #         order=oe._order,
+        #         f_ruling=oe._f_ruling)
         elif isinstance(ssi, Toroid):
             beam_mirr, normal = ccc.apply_grating_diffraction_on_beam(
                 beam,

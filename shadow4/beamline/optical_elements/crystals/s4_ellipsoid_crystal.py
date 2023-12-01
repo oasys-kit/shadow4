@@ -91,7 +91,7 @@ class S4EllipsoidCrystal(S4Crystal, S4EllipsoidOpticalElementDecorator):
                  pole_to_focus=0.0,  # for external calculation
                  is_cylinder=False,
                  cylinder_direction=Direction.TANGENTIAL,
-                 convexity=Convexity.UPWARD,
+                 convexity=Convexity.DOWNWARD,
                  ):
         p_focus, q_focus, grazing_angle = 1.0, 1.0, 1e-3
         S4EllipsoidOpticalElementDecorator.__init__(self, SurfaceCalculation.EXTERNAL, is_cylinder, cylinder_direction, convexity,
