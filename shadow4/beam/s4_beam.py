@@ -8,8 +8,8 @@ import os
 
 from syned.beamline.shape import Rectangle, Ellipse, TwoEllipses, Circle
 
-# IMPORTANT: Column 11 (index 10) is wavenumber (cm^-1) as internally in Shadow.
-#            Photon energy in eV is now column 26 (index 25).
+# VERY IMPORTANT: Column 11 (index 10) is wavenumber (cm^-1) as internally in Shadow.
+#                 Photon energy in eV is now column 26 (index 25).
 
 class S4Beam(object):
     """
@@ -28,9 +28,7 @@ class S4Beam(object):
     shadow4.S4Beam.column_names :
         columns contents.
 
-
     """
-
     def __init__(self, N=1000, array=None):
         if array is not None:
             N, ncol = array.shape
@@ -99,7 +97,6 @@ class S4Beam(object):
     #
     # getters
     #
-
     def get_rays(self, nolost=0):
         """
         Returns a numpy array (N,18) with the rays.
@@ -133,6 +130,31 @@ class S4Beam(object):
             else:
                 return self.rays[f[0],:].copy()
 
+    @property
+    def rays_good(self):
+        """
+        Returns a numpy array with the good rays.
+
+        Returns
+        -------
+        numpy array (ngoodrays,18)
+            The good rays.
+
+        """
+        return self.get_rays(nolost=1)
+
+    @property
+    def rays_bad(self):
+        """
+        Returns a numpy array with the bad rays.
+
+        Returns
+        -------
+        numpy array (nbadrays,18)
+            The bad rays.
+
+        """
+        return self.get_rays(nolost=2)
 
     def get_number_of_rays(self, nolost=0):
         """
@@ -163,6 +185,45 @@ class S4Beam(object):
             return numpy.array(numpy.where(w < 0)).size
 
         return self.rays.shape[0]
+
+    @property
+    def N(self):
+        """
+        Returns the total number of rays.
+
+        Returns
+        -------
+        int
+            The total number of rays.
+
+        """
+        return self.get_number_of_rays(nolost=0)
+
+    @property
+    def Ngood(self):
+        """
+        Returns the number of good rays.
+
+        Returns
+        -------
+        int
+            The number of good rays.
+
+        """
+        return self.get_number_of_rays(nolost=1)
+
+    @property
+    def Nbad(self):
+        """
+        Returns the number of bad rays.
+
+        Returns
+        -------
+        int
+            The number of bad rays.
+
+        """
+        return self.get_number_of_rays(nolost=2)
 
     def get_photon_energy_eV(self, nolost=0):
         """
@@ -277,6 +338,8 @@ class S4Beam(object):
             37   Angle-X with Y: |arcsin(X') - mean(arcsin(X'))|
             38   Angle-Z with Y: |arcsin(Z') - mean(arcsin(Z'))|
             39   Phase difference in rad: Phase (s-polarization) - Phase (p-polarization)
+            40   Complex amplitude of the electric vector (s-polarization)
+            41   Complex amplitude of the electric vector (p-polarization)
 
             -11: column 26
 
@@ -289,7 +352,6 @@ class S4Beam(object):
             the required array (a copy).
 
         """
-
         if column == -11: column = 26
 
         if column <= 18:
@@ -367,6 +429,12 @@ class S4Beam(object):
                 out = numpy.abs(numpy.arcsin(zp - col_mean))
             if column == 39:
                 out = ray[:, 14 - 1] - ray[:, 15 - 1]
+            if column == 40:
+                out =  numpy.sum(numpy.array([ ray[:,i]*ray[:,i] for i in [6,7,8] ]),axis=0)
+                out *= numpy.exp(1j * ray[:, 14 - 1])
+            if column == 41:
+                out =  numpy.sum(numpy.array([ ray[:,i]*ray[:,i] for i in [15,16,17] ]),axis=0)
+                out *= numpy.exp(1j * ray[:, 15 - 1])
 
         if nolost == 0:
             return out.copy()
@@ -416,8 +484,6 @@ class S4Beam(object):
             ret.append(self.get_column(c,nolost=nolost))
         return numpy.array(tuple(ret))
 
-
-
     def get_standard_deviation(self,col, nolost=1, ref=0):
         """
         Returns the standard deviation of one variable in the beam.
@@ -440,7 +506,6 @@ class S4Beam(object):
             the st dev.
 
         """
-
         x = self.get_column(col,nolost=nolost)
         if ref == 0:
             return x.std()
@@ -488,7 +553,6 @@ class S4Beam(object):
             [rmin,rmax] the selected range
 
         """
-
         col = self.get_column(icol, nolost=nolost)
         if col.size == 0:
             return [-1, 1]
@@ -559,12 +623,10 @@ class S4Beam(object):
                  'intensity', 'fwhm', 'nrays', 'good_rays'.
 
         """
-
         # initialize return value
         ticket = {'error': 1}
 
         # coli = col - 1
-
         if ref == None: ref = 0
         if ref == "No": ref = 0
         if ref == "NO": ref = 0
@@ -621,8 +683,7 @@ class S4Beam(object):
 
             # Evaluation of histogram error.
             # See Pag 17 in Salvat, Fernandez-Varea and Sempau
-            # Penelope, A Code System for Monte Carlo Simulation of
-            # Electron and Photon Transport, AEN NEA  (2003)
+            # Penelope, A Code System for Monte Carlo Simulation of Electron and Photon Transport, AEN NEA  (2003)
             #
             # See James, Rep. Prog. Phys., Vol 43 (1980) pp 1145-1189 (special attention to pag. 1184)
             h_sigma = numpy.sqrt(h2 - h * h / float(len(w)))
@@ -650,7 +711,6 @@ class S4Beam(object):
                 f.close()
                 print('histo1: file written to disk: %s' % (write))
 
-            #
             # output
             ticket['error'] = 0
             ticket['histogram'] = h
@@ -718,7 +778,7 @@ class S4Beam(object):
                 # CALCULATE HALF-ENERGY-WIDTH
                 cdf = numpy.cumsum(ticket["histogram"])
                 cdf /= cdf.max()
-                # hew is two times  the x value that has cdf=0.5 (Eq. 9 in ﻿https://arxiv.org/pdf/1505.07474v2.pdf)
+                # hew is two times  the x value that has cdf=0.5 (Eq. 9 in https://arxiv.org/pdf/1505.07474v2.pdf)
                 hew = 2 * float(bin_center[numpy.argwhere(cdf > 0.5)][0])
                 ticket["hew"] = hew
 
@@ -859,7 +919,6 @@ class S4Beam(object):
                 else:
                     ticket["fwhm_v"] = None
 
-
             if calculate_widths == 2:
                 # CALCULATE FW at 25% HEIGHT
                 h = ticket['histogram_h']
@@ -900,7 +959,6 @@ class S4Beam(object):
     #
     # setters
     #
-
     def set_column(self, column, value):
         """
         Sets a given array in a given column number.
@@ -943,7 +1001,6 @@ class S4Beam(object):
         """
         self.rays[:,10] =  2*numpy.pi/(wavelength * 1e2)
 
-
     #
     # info
     #
@@ -981,7 +1038,6 @@ class S4Beam(object):
     #
     # propagation / movements
     #
-
     def retrace(self, dist, resetY=False):
         """
         Propagates a beam at a given distance (in vacuum).
@@ -996,7 +1052,6 @@ class S4Beam(object):
             beam intersections with a plane perpendicular to the optical axis)
 
         """
-
         a0 = self.rays
         try:
             tof = (-a0[:,1] + dist)/a0[:,4]
@@ -1006,16 +1061,12 @@ class S4Beam(object):
 
             if resetY:
                 self.rays[:,1] = 0.0
-
             #
             # TODO: modify optical path
             #
             self.rays[:,12] += tof
-
         except AttributeError:
             print ('shadow4.S4Beam.retrace: No rays')
-
-
 
     def translation(self, qdist1):
         """
@@ -1027,14 +1078,12 @@ class S4Beam(object):
             The distances to translate the X,Y and Z components.
 
         """
-
         if numpy.array(qdist1).size != 3:
             raise Exception("Input must be a vector [x,y,z]")
 
         self.rays[:,0] += qdist1[0]
         self.rays[:,1] += qdist1[1]
         self.rays[:,2] += qdist1[2]
-
         #
         # TODO: update optical path and may be phases of electric vectors
         #
@@ -1056,8 +1105,6 @@ class S4Beam(object):
             set False if theta is given in degrees.
 
         """
-
-
         if rad:
             theta1 = theta
         else:
@@ -1110,7 +1157,6 @@ class S4Beam(object):
             set False if theta is given in degrees.
 
         """
-
         if rad:
             theta1 = theta
         else:
@@ -1133,19 +1179,8 @@ class S4Beam(object):
         VNIMAG_y = numpy.zeros(nrays) + numpy.sin(T_REFLECTION)
         VNIMAG_z = numpy.zeros(nrays) + numpy.cos(T_REFLECTION)
 
-       # ABOVE = T_IMAGE - P_MIR(1) * C_STAR(1) - P_MIR(2) * C_STAR(2) - P_MIR(3) * C_STAR(3)
-       # BELOW = C_STAR(1) * V_OUT(1) + C_STAR(2) * V_OUT(2) + C_STAR(3) * V_OUT(3)
-
         ABOVE = T_IMAGE - a1[:,0] * VNIMAG_x - a1[:,1] * VNIMAG_y - a1[:,2] * VNIMAG_z
         BELOW = VNIMAG_x * a1[:,3] + VNIMAG_y * a1[:,4] + VNIMAG_z * a1[:,5]
-
-
-        # IF (BELOW.NE.0.0D0) THEN
-        #    DIST	=   ABOVE/BELOW
-        # ELSE
-        #    RAY(10,J)  = - 3.0D6
-        #    GO TO 100
-        # END IF
 
         DIST = ABOVE / BELOW
 
@@ -1154,14 +1189,12 @@ class S4Beam(object):
             a1[failure, 9] = -3.0e-6
 
         # ! ** Computes now the intersections onto TRUE image plane.
-
         a1[:, 0]  +=   DIST * a1[:, 3]
         a1[:, 1]  +=   DIST * a1[:, 4]
         a1[:, 2]  +=   DIST * a1[:, 5]
 
         #!  ** Rotate now the results in the STAR (or TRUE image) reference plane.
         #!  ** Computes the projection of P_MIR onto the image plane versors.
-        #
         RIMCEN_x = VNIMAG_x * T_IMAGE
         RIMCEN_y = VNIMAG_y * T_IMAGE
         RIMCEN_z = VNIMAG_z * T_IMAGE
@@ -1182,8 +1215,6 @@ class S4Beam(object):
 
         if apply_attenuation:
             att1 = numpy.sqrt(numpy.exp(-numpy.abs(DIST) * linear_attenuation_coefficient))
-            print(">>> mu (image space): ", linear_attenuation_coefficient)
-            print(">>> attenuation amplitudes (image space): ", att1)
             self.rays[:, 7 - 1 ] *= att1
             self.rays[:, 8 - 1 ] *= att1
             self.rays[:, 9 - 1 ] *= att1
@@ -1213,7 +1244,6 @@ class S4Beam(object):
             the 9 matrix elements.
 
         """
-
         COSX =  numpy.cos(X_ROT)
         SINX = -numpy.sin(X_ROT)
         COSY =  numpy.cos(Y_ROT)
@@ -1241,7 +1271,6 @@ class S4Beam(object):
         """
         Applies the roto-translation of the optical movement movements to the beam.
 
-
         Parameters
         ----------
         OFFX : float
@@ -1262,9 +1291,7 @@ class S4Beam(object):
         Z_ROT : float
             rotation angle in rad around the Z axis.
 
-
         """
-
         # ! C+++
         # ! C	SUBROUTINE	ROT_FOR
         # ! C
@@ -1275,7 +1302,6 @@ class S4Beam(object):
         # ! C			    [ O ] 	RAY	: the beam, as seen by a MOVED mirror.
         # ! C
         # ! C---
-
         P_IN_1 = self.rays[:, 1-1].copy()
         P_IN_2 = self.rays[:, 2-1].copy()
         P_IN_3 = self.rays[:, 3-1].copy()
@@ -1286,71 +1312,32 @@ class S4Beam(object):
         A_IN_2 = self.rays[:, 8-1].copy()
         A_IN_3 = self.rays[:, 9-1].copy()
 
-        # the P compunent is not implemented in shadow3. Buggy there?
+        # the P component is not implemented in shadow3. Buggy there?
         AP_IN_1 = self.rays[:, 16-1].copy()
         AP_IN_2 = self.rays[:, 17-1].copy()
         AP_IN_3 = self.rays[:, 18-1].copy()
 
         U_MIR_1, U_MIR_2, U_MIR_3, V_MIR_1, V_MIR_2, V_MIR_3, W_MIR_1, W_MIR_2, W_MIR_3 = \
             self.get_UVW(X_ROT=X_ROT, Y_ROT=Y_ROT, Z_ROT=Z_ROT)
-        # print(U_MIR_1, U_MIR_2, U_MIR_3, V_MIR_1, V_MIR_2, V_MIR_3, W_MIR_1, W_MIR_2, W_MIR_3)
-        #      	P_OUT(1)=    (P_IN(1) - OFFX)*U_MIR(1) + &
-        #      		     (P_IN(2) - OFFY)*U_MIR(2) + &
-        #      		     (P_IN(3) - OFFZ)*U_MIR(3)
+
         P_OUT_1 = (P_IN_1 - OFFX) * U_MIR_1 + (P_IN_2 - OFFY) * U_MIR_2 + (P_IN_3 - OFFZ) * U_MIR_3
 
-        #
-        #      	P_OUT(2)=    (P_IN(1) - OFFX)*V_MIR(1) + &
-        #      		     (P_IN(2) - OFFY)*V_MIR(2) + &
-        #      		     (P_IN(3) - OFFZ)*V_MIR(3)
         P_OUT_2 = (P_IN_1 - OFFX) * V_MIR_1 + (P_IN_2 - OFFY) * V_MIR_2 + (P_IN_3 - OFFZ) * V_MIR_3
 
-        #
-        #      	P_OUT(3)=    (P_IN(1) - OFFX)*W_MIR(1) + &
-        #      		     (P_IN(2) - OFFY)*W_MIR(2) + &
-        #      		     (P_IN(3) - OFFZ)*W_MIR(3)
         P_OUT_3 = (P_IN_1 - OFFX) * W_MIR_1 + (P_IN_2 - OFFY) * W_MIR_2 + (P_IN_3 - OFFZ) * W_MIR_3
 
-
-        #
-        #      	V_OUT(1)=    V_IN(1)*U_MIR(1) + &
-        #      		     V_IN(2)*U_MIR(2) + &
-        #      		     V_IN(3)*U_MIR(3)
         V_OUT_1 = V_IN_1 * U_MIR_1 + V_IN_2 * U_MIR_2 + V_IN_3 * U_MIR_3
 
-
-        #
-        #      	V_OUT(2)=    V_IN(1)*V_MIR(1) + &
-        #      		     V_IN(2)*V_MIR(2) + &
-        #      		     V_IN(3)*V_MIR(3)
         V_OUT_2 = V_IN_1 * V_MIR_1 + V_IN_2 * V_MIR_2 + V_IN_3 * V_MIR_3
 
-        #
-        #      	V_OUT(3)=    V_IN(1)*W_MIR(1) + &
-        #      		     V_IN(2)*W_MIR(2) + &
-        #      		     V_IN(3)*W_MIR(3)
         V_OUT_3 = V_IN_1 * W_MIR_1 + V_IN_2 * W_MIR_2 + V_IN_3 * W_MIR_3
-
-        #
-        #      	A_OUT(1)=    A_IN(1)*U_MIR(1) + &
-        #      		     A_IN(2)*U_MIR(2) + &
-        #      		     A_IN(3)*U_MIR(3)
 
         A_OUT_1 = A_IN_1 * U_MIR_1 + A_IN_2 * U_MIR_2 + A_IN_3 * U_MIR_3
         AP_OUT_1 = AP_IN_1 * U_MIR_1 + AP_IN_2 * U_MIR_2 + AP_IN_3 * U_MIR_3
 
-
-        #
-        #      	A_OUT(2)=    A_IN(1)*V_MIR(1) + &
-        #      		     A_IN(2)*V_MIR(2) + &
-        #      		     A_IN(3)*V_MIR(3)
         A_OUT_2 = A_IN_1 * V_MIR_1 + A_IN_2 * V_MIR_2 + A_IN_3 * V_MIR_3
         AP_OUT_2 = AP_IN_1 * V_MIR_1 + AP_IN_2 * V_MIR_2 + AP_IN_3 * V_MIR_3
 
-        #
-        #      	A_OUT(3)=    A_IN(1)*W_MIR(1) + &
-        #      		     A_IN(2)*W_MIR(2) + &
-        #      		     A_IN(3)*W_MIR(3)
         A_OUT_3 = A_IN_1 * W_MIR_1 + A_IN_2 * W_MIR_2 + A_IN_3 * W_MIR_3
         AP_OUT_3 = AP_IN_1 * W_MIR_1 + AP_IN_2 * W_MIR_2 + AP_IN_3 * W_MIR_3
 
@@ -1395,7 +1382,6 @@ class S4Beam(object):
 
 
         """
-
         # ! C+++
         # ! C	SUBROUTINE	ROT_BACK
         # ! C
@@ -1406,7 +1392,6 @@ class S4Beam(object):
         # ! C               [ O ] 	RAY	: the beam, as seen back in the mirror refernece frame.
         # ! C
         # ! C---
-
         P_IN_1  = self.rays[:, 1-1 ].copy()
         P_IN_2  = self.rays[:, 2-1 ].copy()
         P_IN_3  = self.rays[:, 3-1 ].copy()
@@ -1424,60 +1409,24 @@ class S4Beam(object):
         U_MIR_1, U_MIR_2, U_MIR_3, V_MIR_1, V_MIR_2, V_MIR_3, W_MIR_1, W_MIR_2, W_MIR_3 = \
             self.get_UVW(X_ROT=X_ROT, Y_ROT=Y_ROT, Z_ROT=Z_ROT)
 
-        #      	P_OUT(1)=    P_IN(1)*U_MIR(1) + &
-        #      		     P_IN(2)*V_MIR(1) + &
-        #      		     P_IN(3)*W_MIR(1) + OFFX
         P_OUT_1 = P_IN_1 * U_MIR_1 + P_IN_2 * V_MIR_1 + P_IN_3 * W_MIR_1 + OFFX
 
-        #
-        #      	P_OUT(2)=    P_IN(1)*U_MIR(2) + &
-        #      		     P_IN(2)*V_MIR(2) + &
-        #      		     P_IN(3)*W_MIR(2) + OFFY
         P_OUT_2 = P_IN_1 * U_MIR_2 + P_IN_2 * V_MIR_2 + P_IN_3 * W_MIR_2 + OFFY
 
-
-        #
-        #      	P_OUT(3)=    P_IN(1)*U_MIR(3) + &
-        #      		     P_IN(2)*V_MIR(3) + &
-        #      		     P_IN(3)*W_MIR(3) + OFFZ
         P_OUT_3 = P_IN_1 * U_MIR_3 + P_IN_2 * V_MIR_3 + P_IN_3 * W_MIR_3 + OFFZ
 
-        #
-        #      	V_OUT(1)=    V_IN(1)*U_MIR(1) + &
-        #      		     V_IN(2)*V_MIR(1) + &
-        #      		     V_IN(3)*W_MIR(1)
         V_OUT_1 = V_IN_1 * U_MIR_1 + V_IN_2 * V_MIR_1 + V_IN_3 * W_MIR_1
 
-        #
-        #      	V_OUT(2)=    V_IN(1)*U_MIR(2) + &
-        #      		     V_IN(2)*V_MIR(2) + &
-        #      		     V_IN(3)*W_MIR(2)
         V_OUT_2 = V_IN_1 * U_MIR_2 + V_IN_2 * V_MIR_2 + V_IN_3 * W_MIR_2
 
-        #
-        #      	V_OUT(3)=    V_IN(1)*U_MIR(3) + &
-        #      		     V_IN(2)*V_MIR(3) + &
-        #      		     V_IN(3)*W_MIR(3)
         V_OUT_3 = V_IN_1 * U_MIR_3 + V_IN_2 * V_MIR_3 + V_IN_3 * W_MIR_3
 
-        #
-        #      	A_OUT(1)=    A_IN(1)*U_MIR(1) + &
-        #      		     A_IN(2)*V_MIR(1) + &
-        #      		     A_IN(3)*W_MIR(1)
         A_OUT_1 = A_IN_1 * U_MIR_1 + A_IN_2 * V_MIR_1 + A_IN_3 * W_MIR_1
         AP_OUT_1 = AP_IN_1 * U_MIR_1 + AP_IN_2 * V_MIR_1 + AP_IN_3 * W_MIR_1
 
-        #
-        #      	A_OUT(2)=    A_IN(1)*U_MIR(2) + &
-        #      		     A_IN(2)*V_MIR(2) + &
-        #      		     A_IN(3)*W_MIR(2)
         A_OUT_2 = A_IN_1 * U_MIR_2 + A_IN_2 * V_MIR_2 + A_IN_3 * W_MIR_2
         AP_OUT_2 = AP_IN_1 * U_MIR_2 + AP_IN_2 * V_MIR_2 + AP_IN_3 * W_MIR_2
 
-        #
-        #      	A_OUT(3)=    A_IN(1)*U_MIR(3) + &
-        #      		     A_IN(2)*V_MIR(3) + &
-        #      		     A_IN(3)*W_MIR(3)
         A_OUT_3 = A_IN_1 * U_MIR_3 + A_IN_2 * V_MIR_3 + A_IN_3 * W_MIR_3
         AP_OUT_3 = AP_IN_1 * U_MIR_3 + AP_IN_2 * V_MIR_3 + AP_IN_3 * W_MIR_3
 
@@ -1529,7 +1478,6 @@ class S4Beam(object):
             the value to be assigned to the flagged bad rays.
 
         """
-
         x = self.get_column(x_col)
         y = self.get_column(y_col)
         flag = self.get_column(10)        # numpy.array(a3.getshonecol(10))
@@ -1582,7 +1530,6 @@ class S4Beam(object):
             the value to be assigned to the flagged bad rays.
 
         """
-
         x =   self.get_column(x_col)
         y = self.get_column(y_col)
         flag = self.get_column(10)
@@ -1603,7 +1550,6 @@ class S4Beam(object):
         else:
             window = numpy.ones_like(flag)
             if len(indices_out) > 0: window[indices_out] = 0
-
 
         flag[window < 1] = flag_lost_value
         self.rays[:, 9] = flag
@@ -1654,7 +1600,6 @@ class S4Beam(object):
             the value to be asigned to the flagged bad rays.
 
         """
-
         x =   self.get_column(x_col)
         y = self.get_column(y_col)
         flag = self.get_column(10)
@@ -1706,12 +1651,10 @@ class S4Beam(object):
 
         --
         """
-        # print(">>>>> apply_boundaries_syned: ", syned_boundary_object, Rectangle)
         if isinstance(syned_boundary_object, type(None)):
             return
         elif isinstance(syned_boundary_object, Rectangle):
             x_left, x_right, y_bottom, y_top = syned_boundary_object.get_boundaries()
-            # print(">>>>>>>>>>>>>>>>>>>>dimensions ",x_left, x_right, y_bottom, y_top)
             self.crop_rectangle(1, x_left, x_right, 2, y_bottom, y_top, flag_lost_value=flag_lost_value)
         elif isinstance(syned_boundary_object, Ellipse):
             a_axis_min, a_axis_max, b_axis_min, b_axis_max = syned_boundary_object.get_boundaries()
@@ -1769,7 +1712,6 @@ class S4Beam(object):
             the value to be assigned to the flagged bad rays.
 
         """
-
         if fhit_c == 0:
             return
 
@@ -1783,7 +1725,6 @@ class S4Beam(object):
             y_min = -rlen2
             y_max =  rlen1
             self.crop_rectangle(1, x_min, x_max, 2, y_min, y_max, negative=False, flag_lost_value=flag_lost_value)
-
         elif fshape == 2: # ellipse
             self.crop_ellipse(1, -rwidx2/2, rwidx2/2, 2, -rlen2/2, rlen2/2, negative=False, flag_lost_value=flag_lost_value)
         elif fshape == 3:  # hole in ellipse
@@ -1802,7 +1743,6 @@ class S4Beam(object):
         """
         if numpy.iscomplexobj(Rs):
             print(">>> Warning: using complex reflectivities. Use apply_complex_reflectivity_s() instead")
-
         self.rays[:, 6] *= Rs
         self.rays[:, 7] *= Rs
         self.rays[:, 8] *= Rs
@@ -1817,7 +1757,6 @@ class S4Beam(object):
             The reflectivity value (real number, if complex, use apply_complex_reflectivity_p()).
 
         """
-
         if numpy.iscomplexobj(Rp):
             print(">>> Warning: using complex reflectivities. Use apply_complex_reflectivity_p() instead")
 
@@ -1842,7 +1781,6 @@ class S4Beam(object):
         self.apply_reflectivity_p(Rp)
 
     # complex reflectivities...
-
     def apply_complex_reflectivity_s(self, Rs):
         """
         Apply sigma-reflectivity to the beam.
@@ -1912,7 +1850,6 @@ class S4Beam(object):
             phase angle in rad.
 
         """
-
         self.rays[:, 14] += phase
 
     def add_phases(self, phase_s, phase_p):
@@ -1930,12 +1867,11 @@ class S4Beam(object):
         """
         self.add_phase_s(phase_s)
         self.add_phase_p(phase_p)
+
     #
     #  interfaces like in shadow3
     #
-
-    def generate_source(self, source_object):
-        #todo: remove?
+    def generate_source(self, source_object): #todo: remove?
         """
         Put rays that sample a given source_object. This option mimics the obsolete "source" in shadow3.
         It should not be used, only for compatibility purposes.
@@ -1958,8 +1894,7 @@ class S4Beam(object):
         except:
             raise Exception("shadow4 source class must implement get_rays method")
 
-    def trace_oe(self, oe_object, n, overwrite=True):
-        #todo remove?
+    def trace_oe(self, oe_object, n, overwrite=True): #todo: remove?
         """
         Modify rays to trace an optical element. This option mimics the obsolete "trace" in shadow3.
         It should not be used, only for compatibility purposes.
@@ -1995,7 +1930,6 @@ class S4Beam(object):
             The column names.
 
         """
-
         return [
             "X spatial coordinate",
             "Y spatial coordinate",
@@ -2036,6 +1970,8 @@ class S4Beam(object):
             "Angle-X with Y = |arcsin(X') - mean(arcsin(X'))|",
             "Angle-Z with Y = |arcsin(Z') - mean(arcsin(Z'))|",
             "Phase difference \u03C6\u209B-\u03C6\u209A",
+            "Complex electric field (s-polariz)",
+            "Complex electric field (p-polariz)",
         ]
 
     @classmethod
@@ -2089,6 +2025,8 @@ class S4Beam(object):
             "[rad]",
             "[rad]",
             "[rad]",
+            "",
+            "",
         ]
 
 
@@ -2132,6 +2070,8 @@ class S4Beam(object):
                 "Angle X^Y",
                 "Angle Z^Y",
                 "\u03C6\u209B-\u03C6\u209A", # phase_s - phase_p
+                "complex E\u209B",
+                "complex E\u209A",
         ]
 
     @classmethod
@@ -2206,6 +2146,8 @@ class S4Beam(object):
             r"Angle X^Y [rad]", # "Angle X^Y [rad]"],
             r"Angle Z^Y [rad]", # "Angle Z^Y [rad]"],
             r"Phase difference \phi_{s}-\phi_{p}",
+            r"complex $\mathbf{E}_{s}$",  # "Es_complex"],
+            r"complex $\mathbf{E}_{p}$",  # "Es_complex"],
         ]
 
     @classmethod
@@ -2222,10 +2164,10 @@ class S4Beam(object):
         names = cls.column_names_formatted()
         for i in range(len(names)): names[i] = "%2d: %s" % (i+1, names[i])
         return names
+
     #
     # useful tools (h5 files)
     #
-
     def write_h5(self, filename, overwrite=True, simulation_name="run001", beam_name="begin"):
         """
         writes a beam in an h5 file.
@@ -2245,7 +2187,6 @@ class S4Beam(object):
             a beam name.
 
         """
-
         if overwrite:
             try:
                 os.remove(filename)
@@ -2285,11 +2226,9 @@ class S4Beam(object):
 
         for i in range(18):
             column_name = column_names[i]
-
             # Y data
             ds = f2.create_dataset(column_name, data=rays[:,i].copy())
             ds.attrs['long_name'] = "column %s"%(i+1)  # suggested X axis plot label
-
         f.close()
         print("File written/updated: %s"%filename)
 
@@ -2315,10 +2254,7 @@ class S4Beam(object):
             The beam
 
         """
-
-
         f = h5py.File(filename, 'r')
-
         column_names = cls.column_short_names_with_column_number()
 
         try:
@@ -2334,14 +2270,12 @@ class S4Beam(object):
             raise Exception("Cannot find data in %s:/%s/%s" % (filename, simulation_name, beam_name))
 
         f.close()
-
         return S4Beam.initialize_from_array(rays)
 
 
     #
     # useful tools (compare beams)
     #
-
     def identical(self, beam2):
         """
         Compares two beams
@@ -2394,7 +2328,6 @@ class S4Beam(object):
 
 
 if __name__ == "__main__":
-    pass
     print(S4Beam.column_names_with_column_number())
     print(S4Beam.column_short_names_with_column_number())
     print(S4Beam.column_names_formatted())
@@ -2404,7 +2337,10 @@ if __name__ == "__main__":
     B = S4Beam.initialize_as_pencil(N=1)
     print(B.info())
 
+    print("number of rays : ", B.N, B.get_number_of_rays())
+    print("number of good rays : ", B.Ngood, B.get_number_of_rays(nolost=1))
+    print("number of bad rays : ", B.Nbad, B.get_number_of_rays(nolost=2))
     B = S4Beam.initialize_as_pencil(N=100)
-    print("all : ", (B.get_rays(nolost=0)).shape)
-    print("good: ", (B.get_rays(nolost=1)).shape)
-    print("bad : ", (B.get_rays(nolost=2)).shape)
+    print("all : ", (B.get_rays(nolost=0)).shape, B.rays.shape)
+    print("good: ", (B.get_rays(nolost=1)).shape, B.rays_good.shape)
+    print("bad : ", (B.get_rays(nolost=2)).shape, B.rays_bad.shape)
