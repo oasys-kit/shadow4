@@ -273,7 +273,7 @@ if __name__ == "__main__":
     # syned_electron_beam = ElectronBeam(energy_in_GeV=6.04,
     #              energy_spread = 0.0,
     #              current = 0.2,
-    #              number_of_bunches = 400,
+    #              number_of_bunches = 0,
     #              moment_xx=(400e-6)**2,
     #              moment_xxp=0.0,
     #              moment_xpxp=(10e-6)**2,

@@ -10,12 +10,32 @@ from srxraylib.util.inverse_method_sampler import Sampler1D
 from shadow4.sources.s4_light_source_base import S4LightSourceBase
 
 class SourceGeometrical(S4LightSourceBase):
+    """
+    Implements a geometrical source in shadow4.
+
+    Parameters
+    ----------
+    name : str, optional
+        The source name.
+    spatial_type : str, optional
+        A keyword of "Point", "Rectangle", "Ellipse", "Gaussian".
+    angular_distribution : str, optional
+        A keyword of "Flat", "Uniform", "Gaussian", "Cone", "Collimated".
+    energy_distribution : str, optional
+        A keyword of "Single line", "Several lines", "Uniform", "Relative intensities", "Gaussian", "User defined".
+    depth_distribution : str, optional
+        A keyword of "Flat", "Uniform", "Gaussian", "Cone", "Collimated".
+    nrays : int, optional
+        The number of rays.
+    seed : int, optional
+        The Monte Carlo seed.
+    """
     def __init__(self,
                     name="Undefined",
                     spatial_type="Point",
-                    angular_distribution = "Flat",
-                    energy_distribution = "Single line",
-                    depth_distribution = "Off",
+                    angular_distribution="Flat",
+                    energy_distribution="Single line",
+                    depth_distribution="Off",
                     nrays=5000,
                     seed=1234567,
                  ):
@@ -26,17 +46,34 @@ class SourceGeometrical(S4LightSourceBase):
         self.set_depth_distribution_by_name(depth_distribution)
         self.set_polarization(polarization_degree=1.0, phase_diff=0.0, coherent_beam=0)
 
-
     #
     # spatial type
     #
     @classmethod
     def spatial_type_list(cls):
+        """
+        Returns the list of options for spatial depth.
+
+        Returns
+        -------
+        list
+            ["Point", "Rectangle", "Ellipse", "Gaussian"]
+        """
+        # the same as in shadow3
         # fsour	= 0 - spatial source type/shape in X-Z plane.  Options are:
         # 			  point (0), rectangle (1), ellipse (2), gaussian (3).
-        return ["Point","Rectangle","Ellipse","Gaussian"]
+        return ["Point", "Rectangle", "Ellipse", "Gaussian"]
 
-    def set_spatial_type_by_name(self,name):
+    def set_spatial_type_by_name(self, name):
+        """
+        Sets the spatial type by keword or name.
+
+        Parameters
+        ----------
+        name : str
+            The keyword (an element of spatial_type_list() ).
+
+        """
         if name == "Point":
             self.set_spatial_type_point()
         elif name == "Rectangle":
@@ -49,28 +86,55 @@ class SourceGeometrical(S4LightSourceBase):
             raise Exception("Wrong spatial type: %s"%name)
 
     def set_spatial_type_point(self):
+        """
+        Sets the spatial type as Point.
+        """
         self.spatial_type = "Point"
         self.__fsour = 0
 
-    def set_spatial_type_rectangle(self,width=2.0,height=1.0):
-        # wxsou	=  0.0000000000000000E+00 - for fsour=1,2; source width (X).
-        # wzsou	=  0.0000000000000000E+00 - for fsour=1,2; source height (Z).
+    def set_spatial_type_rectangle(self, width=2.0, height=1.0):
+        """
+        Sets the spatial type as a Rectangle.
+
+        Parameters
+        ----------
+        width : float, optional
+            The source width (along X) in m.
+        height : float, optional
+            The source height (along Z) in m.
+        """
         self.spatial_type = "Rectangle"
         self.__wxsou = width
         self.__wzsou = height
         self.__fsour = 1
 
-    def set_spatial_type_ellipse(self,width=2.0,height=1.0):
-        # wxsou	=  0.0000000000000000E+00 - for fsour=1,2; source width (X).
-        # wzsou	=  0.0000000000000000E+00 - for fsour=1,2; source height (Z).
+    def set_spatial_type_ellipse(self, width=2.0, height=1.0):
+        """
+        Sets the spatial type as a Ellipse.
+
+        Parameters
+        ----------
+        width : float, optional
+            The source width (axis along X) in m.
+        height : float, optional
+            The source height (axis along Z) in m.
+        """
         self.spatial_type = "Ellipse"
         self.__wxsou = width
         self.__wzsou = height
         self.__fsour = 2
 
-    def set_spatial_type_gaussian(self,sigma_h=2.0,sigma_v=1.0):
-        # sigmax	=  0.0000000000000000E+00 - for fsour=3; sigma in X
-        # sigmaz	=  0.0000000000000000E+00 - for fsour=3; sigma in Z
+    def set_spatial_type_gaussian(self, sigma_h=2.0, sigma_v=1.0):
+        """
+        Sets the spatial type as a Gaussian.
+
+        Parameters
+        ----------
+        sigma_h : float, optional
+            The source sigma along X in m.
+        sigma_v : float, optional
+            The source sigma along Z in m.
+        """
         self.spatial_type = "Gaussian"
         self.__sigmax = sigma_h
         self.__sigmaz = sigma_v
@@ -81,27 +145,25 @@ class SourceGeometrical(S4LightSourceBase):
     #
     @classmethod
     def angular_distribution_list(cls):
-         # fdistr	= 2 - defines source angle distribution types:
-         # 		  Available options are: flat(1),uniform(2),
-         # 		  gaussian(3), synchrotron(4), cone(5), exact
-         # 		  synchrotron(6).
-        return ["Flat","Uniform","Gaussian","Cone","Collimated"]
+        """
+        Returns the list of keywords or options for anglular distributions.
 
-        # cone_max	=  0.0000000000000000E+00 - for fdistr=5; maximum half
-        # 					    divergence.
-        # cone_min	=  0.0000000000000000E+00 - for fdistr=5; minimum half
-        # 					    divergence.
-        #
-        # sigdix	=  0.0000000000000000E+00 - for fdistr=3; sigma (radians)for horizontal
-        # 				    divergence (gaussian angle distribution).
-        # sigdiz	=  0.0000000000000000E+00 - for fdistr=3; sigma (radians) for vertical
-        # 				    divergence (gaussian angle distribution).
-        # hdiv1	=  0.0000000000000000E+00 - horizontal divergence in +X (radians).
-        # hdiv2	=  0.0000000000000000E+00 - horizontal divergence in -X (radians).
-        # vdiv1	=  6.0000000000000002E-05 - vertical divergence in +Z (radians).
-        # vdiv2	=  6.0000000000000002E-05 - vertical divergence in -Z (radians).
+        Returns
+        -------
+        list
+            ["Flat", "Uniform", "Gaussian", "Cone", "Collimated"]
+        """
+        return ["Flat", "Uniform", "Gaussian", "Cone", "Collimated"]
 
-    def set_angular_distribution_by_name(self,name):
+    def set_angular_distribution_by_name(self, name):
+        """
+        Sets the anglular distribution by keyword or name.
+
+        Parameters
+        ----------
+        name : str
+            The keyword (an element of angular_distribution_list() ).
+        """
         if name == "Flat":
             self.set_angular_distribution_flat()
         elif name == "Uniform":
@@ -117,6 +179,9 @@ class SourceGeometrical(S4LightSourceBase):
 
 
     def set_angular_distribution_collimated(self,):
+        """
+        Sets the angular distribution as collimated.
+        """
         self.angular_distribution = "Flat"
         self.__hdiv1 = 0.0
         self.__hdiv2 = 0.0
@@ -125,7 +190,26 @@ class SourceGeometrical(S4LightSourceBase):
         self.__fdist = 1
 
     # WARNING: in shadow4 limits are signed!!!!
-    def set_angular_distribution_flat(self,hdiv1=-5e-6,hdiv2=5e-6,vdiv1=-0.5e-6,vdiv2=0.5e-6):
+    def set_angular_distribution_flat(self, hdiv1=-5e-6, hdiv2=5e-6, vdiv1=-0.5e-6, vdiv2=0.5e-6):
+        """
+        Sets the angular distribution as flat.
+
+        Notes
+        -----
+
+        The values of the limits are signed (contrary to shadow3).
+
+        Parameters
+        ----------
+        hdiv1 : float, optional
+            The minimum of the divergence along X (horizontal) in rad.
+        hdiv2 : float, optional
+            The maximum of the divergence along X (horizontal) in rad.
+        vdiv1 : float, optional
+            The minimum of the divergence along Z (vertical) in rad.
+        vdiv2 : float, optional
+            The maximum of the divergence along Z (vertical) in rad.
+        """
         self.angular_distribution = "Flat"
         self.__hdiv1 = hdiv1
         self.__hdiv2 = hdiv2
@@ -133,8 +217,27 @@ class SourceGeometrical(S4LightSourceBase):
         self.__vdiv2 = vdiv2
         self.__fdist = 1
 
-    # WARNING: in shadow4 limits are signed!!!!
-    def set_angular_distribution_uniform(self,hdiv1=-5e-6,hdiv2=5e-6,vdiv1=-0.5e-6,vdiv2=0.5e-6):
+    # WARNING: in shadow4 limits are signed!!!! Not here!!!
+    def set_angular_distribution_uniform(self, hdiv1=-5e-6, hdiv2=5e-6, vdiv1=-0.5e-6, vdiv2=0.5e-6):
+        """
+        Sets the angular distribution as Uniform.
+
+        Notes
+        -----
+
+        The values of the limits are signed (contrary to shadow3).
+
+        Parameters
+        ----------
+        hdiv1 : float, optional
+            The minimum of the divergence along X (horizontal) in rad.
+        hdiv2 : float, optional
+            The maximum of the divergence along X (horizontal) in rad.
+        vdiv1 : float, optional
+            The minimum of the divergence along Z (vertical) in rad.
+        vdiv2 : float, optional
+            The maximum of the divergence along Z (vertical) in rad.
+        """
         self.angular_distribution = "Uniform"
         self.__hdiv1 = hdiv1
         self.__hdiv2 = hdiv2
@@ -142,13 +245,33 @@ class SourceGeometrical(S4LightSourceBase):
         self.__vdiv2 = vdiv2
         self.__fdist = 2
 
-    def set_angular_distribution_gaussian(self,sigdix=1e-6,sigdiz=1e-6):
+    def set_angular_distribution_gaussian(self, sigdix=1e-6, sigdiz=1e-6):
+        """
+        Sets the angular distribution as Gaussian.
+
+        Parameters
+        ----------
+        sigdix : float, optional
+            The sigma vale along X (horizontal).
+        sigdiz : float, optional
+            The sigma vale along Z (vertical).
+        """
         self.angular_distribution = "Gaussian"
         self.__sigdix = sigdix
         self.__sigdiz = sigdiz
         self.__fdist = 3
 
-    def set_angular_distribution_cone(self,cone_max=10e-6,cone_min=0.0):
+    def set_angular_distribution_cone(self, cone_max=10e-6, cone_min=0.0):
+        """
+        Sets the angular distribution as Cone.
+
+        Parameters
+        ----------
+        cone_max : float, optional
+            The maximum aperture of the cone in rad.
+        cone_min : float, optional
+            The minimum aperture of the cone in rad.
+        """
         self.angular_distribution = "Cone"
         self.__cone_max = cone_max
         self.__cone_min = cone_min
@@ -159,25 +282,47 @@ class SourceGeometrical(S4LightSourceBase):
                          phase_diff=0.000000,   # in rad, 0=linear, pi/2=elliptical/right
                          coherent_beam=0,       # 0=No (random phase s: col 14)  1=Yes (zero s: col 14)
                          ):
+        """
+        Sets the polarization.
+
+        Parameters
+        ----------
+        polarization_degree : float, optional
+            The polarization degree .
+        phase_diff : float, optional
+            The phase difference in rad (0=linear polarization, pi/2=elliptical-right).
+        coherent_beam : int, optional
+            A flag to indicate that the phase for the s-component is set to zero (coherent_beam=1) or is random for incoherent.
+        """
         self.__pol_deg = polarization_degree
         self.__pol_angle = phase_diff
         self.__f_foher = coherent_beam
+
     #
     # energy distribution
     #
-
-
-    #
-    # f_color = 1 - photon energy distribution type.  Options are:
-    #   single energy (1),
-    #   multiple discrete energies, up to 10 energies (2),
-    #   uniform energy distribution (3),
-    #
     @classmethod
     def energy_distribution_list(cls):
-        return ["Single line","Several lines","Uniform","Relative intensities","Gaussian","User defined"]
+        """
+        Returns a list with the options of possible distributions of the photon energy.
 
-    def set_energy_distribution_by_name(self,name):
+        Returns
+        -------
+        list
+            ["Single line", "Several lines", "Uniform", "Relative intensities", "Gaussian", "User defined"]
+
+        """
+        return ["Single line", "Several lines", "Uniform", "Relative intensities", "Gaussian", "User defined"]
+
+    def set_energy_distribution_by_name(self, name):
+        """
+        Sets the photon energy option by keyword or name.
+
+        Parameters
+        ----------
+        name : str
+            The keyword ( an element of energy_distribution_list() ).
+        """
         if name == "Single line":
             self.set_energy_distribution_singleline()
         elif name == "Several lines":
@@ -193,7 +338,143 @@ class SourceGeometrical(S4LightSourceBase):
         else:
             raise Exception("Wrong angular distribution: %s"%name)
 
+    def set_energy_distribution_singleline(self, value=1000, unit='eV'):
+        """
+        Sets the energy distribution as a single line.
+
+        Parameters
+        ----------
+        value : float, optional
+            The energy or wavelength value.
+        unit : str, optional
+            set to 'eV' for photon energy in eV or 'A' for wavelength in Angstroms.
+        """
+        self.energy_distribution = "Single line"
+        self._set_energy_distribution_unit(unit)
+        #Note: ph1, ph2, etc. in shadow3 become ph (array)
+        self.__ph = [value]
+        self.__f_color = 1
+
+
+    def set_energy_distribution_severallines(self, values=[1000.0,2000.0], unit='eV'):
+        """
+        Sets the energy distribution as a several or multiple line.
+
+        Parameters
+        ----------
+        value : list, optional
+            The energy or wavelength values.
+        unit : str, optional
+            set to 'eV' for photon energy in eV or 'A' for wavelength in Angstroms.
+        """
+        self.energy_distribution = "Several lines"
+        self._set_energy_distribution_unit(unit)
+        #WARNING: ph1, ph2, etc. become ph (array)
+        self.__ph = values
+        self.__f_color = 2
+
+    def set_energy_distribution_uniform(self, value_min=1000.0, value_max=2000.0, unit='eV'):
+        """
+        Sets the energy distribution as Uniform.
+
+        Parameters
+        ----------
+        value_min : float
+            The minimum valye of photon energy or wavelength.
+        value_max : float
+            The minimum valye of photon energy or wavelength.
+        unit : str, optional
+            set to 'eV' for photon energy in eV or 'A' for wavelength in Angstroms.
+        """
+        self.energy_distribution = "Uniform"
+        self._set_energy_distribution_unit(unit)
+        #WARNING: ph1, ph2, etc. become ph (array)
+        self.__ph = [value_min,value_max]
+        self.__f_color = 3
+
+    def set_energy_distribution_relativeintensities(self, values=[1000.0,2000.0], weights=[1.0,2.0], unit='eV'):
+        """
+        Sets the energy distribution as a several or multiple line with different intensities.
+
+        Parameters
+        ----------
+        value : list, optional
+            The energy or wavelength values.
+        weights : list, optional
+            The intensity weights.
+        unit : str, optional
+            set to 'eV' for photon energy in eV or 'A' for wavelength in Angstroms.
+        """
+        self.energy_distribution = "Relative intensities"
+        self._set_energy_distribution_unit(unit)
+        #Note: ph1, ph2, etc. become ph (array)
+        self.__ph = values
+        self.__rl = weights
+        self.__f_color = 4 # not in source.nml
+
+    # WARNING: limits suppressed
+    def set_energy_distribution_gaussian(self, center=1000.0, sigma=10.0, unit='eV'):
+        """
+        Sets the energy distribution as Gaussian.
+
+        Parameters
+        ----------
+        center : float
+            The Gaussian center.
+        sigma : float
+            The Gaussian sigma.
+        unit : str, optional
+            set to 'eV' for photon energy in eV or 'A' for wavelength in Angstroms.
+        """
+        self.energy_distribution = "Gaussian"
+        self._set_energy_distribution_unit(unit)
+        #WARNING: ph1, ph2, etc. become ph (array)
+        self.__ph = [center,sigma]
+        self.__f_color = 5  # new
+
+    def set_energy_distribution_userdefined(self, spectrum_abscissas, spectrum_ordinates, unit='eV'):
+        """
+        Sets the energy distribution as a user-defined array.
+
+        Parameters
+        ----------
+        spectrum_abscissas : numpy.array
+            The array with the abscissas of the spectrum.
+        spectrum_ordinates : numpy.array
+            The array with the ordinates of the spectrum.
+        unit : str, optional
+            set to 'eV' for photon energy in eV or 'A' for wavelength in Angstroms.
+        """
+        self.energy_distribution = "User defined"
+        self._set_energy_distribution_unit(unit)
+        self.__ph_spectrum_abscissas = spectrum_abscissas
+        self.__ph_spectrum_ordinates = spectrum_ordinates
+        self.__f_color = 6  # new
+
+    #
+    # source depth
+    #
+    @classmethod
+    def depth_distribution_list(cls):
+        """
+        Returns the list of options for spatial depth.
+
+        Returns
+        -------
+        list
+            ["Off", "Uniform", "Gaussian"]
+        """
+        return ["Off", "Uniform", "Gaussian"]
+
     def set_depth_distribution_by_name(self, name, value=0.0):
+        """
+        Sets the source depth distribution by name.
+
+        Parameters
+        name : str
+            The keyword (an element of depth_distribution_list() ).
+        value
+        """
         if name == "Off":
             self.set_depth_distribution(depth=0, source_depth_y=value)
         elif name == "Uniform":
@@ -207,6 +488,16 @@ class SourceGeometrical(S4LightSourceBase):
                                depth=0,             #0=off, 1=uniform, 2=Gaussian
                                source_depth_y=0.0,  #width if depth=1, sigma if depth=2
                                ):
+        """
+        Set the depth distribution type and parameters.
+
+        Parameters
+        ----------
+        depth : int, optional
+            a flag for the type of depth distribution: 0=off, 1=uniform, 2=Gaussian
+        source_depth_y : float, optional
+            width of the depth: width for uniform (depth=1) or sigma for Gaussian (depth=2).
+        """
 
         self.__fsource_depth = depth
         self.__wysou = source_depth_y
@@ -221,117 +512,73 @@ class SourceGeometrical(S4LightSourceBase):
             raise Exception("Not implemented depth type (index=%d)" % self.__fsour)
 
     def set_depth_distribution_off(self):
+        """
+        Sets no depth.
+        """
         self.set_depth_distribution(0)
 
     def set_depth_distribution_uniform(self, value):
+        """
+        Sets depth distribution as Unifom.
+
+        Parameters
+        ----------
+        value : float, optional
+            The depth width in m.
+        """
         self.set_depth_distribution(1, value)
 
     def set_depth_distribution_gaussian(self, value):
+        """
+        Sets the depth distribution as Gaussian.
+
+        Parameters
+        ----------
+        value : float
+            The sigma of the Gaussian distribution.
+        """
         self.set_depth_distribution(2, value)
-
-    def _set_energy_distribution_unit(self,name='eV'):
-        if name == 'eV':
-            self.__f_phot = 0
-        elif name == 'A':
-            self.__f_phot = 1
-        else:
-            raise Exception("Bar name for energy units, valid names are: eV, A")
-
-    def set_energy_distribution_singleline(self,value=1000,unit='eV'):
-        # f_phot	=             0 - defines whether the photon energy will be
-        # 			  specified in eV (0) or Angstroms (1).
-        self.energy_distribution = "Single line"
-        self._set_energy_distribution_unit(unit)
-        #WARNING: ph1, ph2, etc. become ph (array)
-        self.__ph = [value]
-        self.__f_color = 1
-
-
-    def set_energy_distribution_severallines(self,values=[1000.0,2000.0],unit='eV'):
-        self.energy_distribution = "Several lines"
-        self._set_energy_distribution_unit(unit)
-        #WARNING: ph1, ph2, etc. become ph (array)
-        self.__ph = values
-        self.__f_color = 2
-
-    def set_energy_distribution_uniform(self,value_min=1000.0,value_max=2000.0,unit='eV'):
-        self.energy_distribution = "Uniform"
-        self._set_energy_distribution_unit(unit)
-        #WARNING: ph1, ph2, etc. become ph (array)
-        self.__ph = [value_min,value_max]
-        self.__f_color = 3
-
-    def set_energy_distribution_relativeintensities(self,values=[1000.0,2000.0],weights=[1.0,2.0],unit='eV'):
-        self.energy_distribution = "Relative intensities"
-        self._set_energy_distribution_unit(unit)
-        #WARNING: ph1, ph2, etc. become ph (array)
-        self.__ph = values
-        self.__rl = weights
-        self.__f_color = 4 # not in source.nml
-
-    # WARNING: limits suppressed
-    def set_energy_distribution_gaussian(self,center=1000.0,sigma=10.0,unit='eV'):
-        self.energy_distribution = "Gaussian"
-        self._set_energy_distribution_unit(unit)
-        #WARNING: ph1, ph2, etc. become ph (array)
-        self.__ph = [center,sigma]
-        self.__f_color = 5  # new
-
-    def set_energy_distribution_userdefined(self,spectrum_abscissas,spectrum_ordinates,unit='eV'):
-        self.energy_distribution = "User defined"
-        self._set_energy_distribution_unit(unit)
-        self.__ph_spectrum_abscissas = spectrum_abscissas
-        self.__ph_spectrum_ordinates = spectrum_ordinates
-        self.__f_color = 6  # new
-
-    # conversors: wavenumber is in cm^(-1), wavenumber in m, energy in eV
-    @classmethod
-    def _energy_to_wavelength(cls, photon_energy):
-        wavelength = codata.h * codata.c / codata.e / photon_energy
-        return wavelength
-
-    @classmethod
-    def _wavelength_to_wavenumber(cls, wavelength):
-        return 2 * numpy.pi / (wavelength * 1e2)
-
-    @classmethod
-    def _energy_to_wavenumber(cls, photon_energy):
-        return cls._wavelength_to_wavenumber(cls._energy_to_wavelength(photon_energy))
-
-    # the other way around
-    @classmethod
-    def _wavenumber_to_wavelength(cls, wavenumber):
-        return 2 * numpy.pi / (wavenumber * 1e2)
-
-    @classmethod
-    def _wavelength_to_energy(cls, wavelength):
-        return codata.h * codata.c / codata.e / wavelength
-
-    @classmethod
-    def _wavenumber_to_energy(cls,wavenumber):
-        return cls._wavelength_to_energy(cls._wavenumber_to_wavelength(wavenumber))
-
-
 
     #
     # sampler
     #
-    @classmethod
-    def _sample_rays_default(cls,N=5000):
-        rays = numpy.zeros((N,18))
-        rays[:,4] = 1.0  # vy
-        rays[:,6] = 1.0  # Ex
-        rays[:,9] = 1.0  # flag
-        rays[:,10] = 2 * numpy.pi / (1e-10 * 100) # wavenumber
-        rays[:,11] = numpy.arange(N) + 1          # index
-        return rays
-
     def calculate_beam(self):
+        """
+        Returns a beam sampled using the internal parameters stored.
+
+        Returns
+        -------
+        instance of S4Beam
+            The sampled beam.
+        """
         rays = self.calculate_rays()
         return S4Beam.initialize_from_array(rays)
 
-    def calculate_rays(self):
+    def get_beam(self):
+        """
+        Returns a beam sampled using the internal parameters stored.
 
+        Returns
+        -------
+        instance of S4Beam
+            The sampled beam.
+        """
+        return self.calculate_beam()
+
+    def calculate_rays(self, verbose=1):
+        """
+        Returns a numpy array (nrays,18) with the sampled rays.
+
+        Parameters
+        ----------
+        verbose : int
+            Set to 1 for voerbose output.
+
+        Returns
+        -------
+        numpy array
+            The sampled beam in a numpy array (nrays,18).
+        """
         if self.get_seed() != 0:
             numpy.random.seed(self.get_seed())
 
@@ -339,7 +586,7 @@ class SourceGeometrical(S4LightSourceBase):
 
         rays = self._sample_rays_default(N)
 
-        print(">> Spatial type: %s"%(self.spatial_type))
+        if verbose: print(">> Spatial type: %s"%(self.spatial_type))
 
         #
         # spatial type
@@ -368,7 +615,7 @@ class SourceGeometrical(S4LightSourceBase):
         #
         # depth distribution
         #
-        print(">> Depth distribution: %s"%(self.depth_distribution))
+        if verbose: print(">> Depth distribution: %s"%(self.depth_distribution))
 
         if self.depth_distribution == "Off":
             pass
@@ -383,7 +630,7 @@ class SourceGeometrical(S4LightSourceBase):
         #
         # angular distribution
         #
-        print(">> Angular distribution: %s"%(self.angular_distribution))
+        if verbose: print(">> Angular distribution: %s"%(self.angular_distribution))
 
         if self.angular_distribution == "Flat":
             rays[:,3],rays[:,5] = Flat2D.sample(N,
@@ -418,7 +665,7 @@ class SourceGeometrical(S4LightSourceBase):
         # energy distribution
         # ["Single line","Several lines","Uniform","Relative intensities","Gaussian","User defined"]
         #
-        print(">> Energy distribution: ",self.energy_distribution)
+        if verbose: print(">> Energy distribution: ",self.energy_distribution)
 
         if self.energy_distribution == "Single line":
             if self.__f_phot == 0:
@@ -436,18 +683,14 @@ class SourceGeometrical(S4LightSourceBase):
         elif self.energy_distribution == "Relative intensities":
             values = numpy.array(self.__ph)
             relative_intensities = numpy.array(self.__rl)
-            # ! C
             # ! C Normalize so that each energy has a probability and so that the sum
             # ! C of the probabilities of all the energies is 1.
-            # ! C
             relative_intensities /= relative_intensities.sum()
-            # ! C
             # ! C Arrange the probabilities so that they comprise the (0,1) interval,
             # ! C e.g. (energy1,0.3), (energy2, 0.1), (energy3, 0.6) is translated to
             # ! C 0.0, 0.3, 0.4, 1.0. Then a random number falling in an interval
             # ! C assigned to a certain energy results in the ray being assigned that
             # ! C photon energy.
-            # ! C
 
             TMP_B = 0
             for i in range(relative_intensities.size):
@@ -483,8 +726,6 @@ class SourceGeometrical(S4LightSourceBase):
         elif self.energy_distribution == "User defined":
             sampler = Sampler1D(self.__ph_spectrum_ordinates,self.__ph_spectrum_abscissas)
             sampled_values = sampler.get_n_sampled_points(N)
-            # sampled_values, hy, hx = sampler.get_n_sampled_points_and_histogram(N)
-            # plot(hx,hy)
 
             if self.__f_phot == 0:
                 rays[:,10] = self._energy_to_wavenumber(sampled_values)
@@ -496,43 +737,26 @@ class SourceGeometrical(S4LightSourceBase):
         #
         # polarization
         #
-        # ! C
-        # ! C  ---------------------------------------------------------------------
-        # ! C                 POLARIZATION
-        # ! C
         # ! C   Generates the polarization of the ray. This is defined on the
         # ! C   source plane, so that A_VEC is along the X-axis and AP_VEC is along Z-axis.
         # ! C   Then care must be taken so that A will be perpendicular to the ray
         # ! C   direction.
-        # ! C
-        # ! C
-        # A_VEC(1) = 1.0D0
-        # A_VEC(2) = 0.0D0
-        # A_VEC(3) = 0.0D0
 
         DIREC = rays[:, 3:6].copy()
         A_VEC = numpy.zeros_like(DIREC)
         A_VEC[:, 0] = 1.0
 
-        # ! C
         # ! C   Rotate A_VEC so that it will be perpendicular to DIREC and with the
         # ! C   right components on the plane.
-        # ! C
-        # CALL CROSS (A_VEC,DIREC,A_TEMP)
         A_TEMP = self._cross(A_VEC, DIREC)
-        # CALL CROSS (DIREC,A_TEMP,A_VEC)
         A_VEC = self._cross(DIREC, A_TEMP)
-        # CALL NORM (A_VEC,A_VEC)
         A_VEC = self._norm(A_VEC)
-        # CALL CROSS (A_VEC,DIREC,AP_VEC)
         AP_VEC = self._cross(A_VEC, DIREC)
-        # CALL NORM (AP_VEC,AP_VEC)
         AP_VEC = self._norm(AP_VEC)
 
         #
         # obtain polarization for each ray (interpolation)
         #
-
         DENOM = numpy.sqrt(1.0 - 2.0 * self.__pol_deg + 2.0 * self.__pol_deg ** 2)
         AX = self.__pol_deg / DENOM
         for i in range(3):
@@ -542,16 +766,10 @@ class SourceGeometrical(S4LightSourceBase):
         for i in range(3):
             AP_VEC[:, i] *= AZ
 
-
         rays[:, 6:9] = A_VEC
         rays[:, 15:18] = AP_VEC
-        #
-        # ! C
+
         # ! C Now the phases of A_VEC and AP_VEC.
-        # ! C
-
-        #
-
         if self.__f_foher == 1:
             PHASEX = 0.0
         else:
@@ -565,35 +783,19 @@ class SourceGeometrical(S4LightSourceBase):
         # set flag (col 10)
         rays[:, 9] = 1.0
 
-        print("<><>",dir(self))
+        if verbose: print("<><>",dir(self))
         return rays
 
-    def _cross(self,u,v):
-        # w = u X v
-        # u = array (npoints,vector_index)
-
-        w = numpy.zeros_like(u)
-        w[:,0] = u[:,1] * v[:,2] - u[:,2] * v[:,1]
-        w[:,1] = u[:,2] * v[:,0] - u[:,0] * v[:,2]
-        w[:,2] = u[:,0] * v[:,1] - u[:,1] * v[:,0]
-
-        return w
-
-    def _norm(self,u):
-        # w = u / |u|
-        # u = array (npoints,vector_index)
-        u_norm = numpy.zeros_like(u)
-        uu = numpy.sqrt( u[:,0]**2 + u[:,1]**2 + u[:,2]**2)
-        for i in range(3):
-            u_norm[:,i] = uu
-        return u / u_norm
-
-    def get_beam(self):
-        rays =  self.calculate_rays()
-        return S4Beam.initialize_from_array(rays)
 
     def to_python_code(self):
+        """
+        returns the python code for calculating the geometrical source.
 
+        Returns
+        -------
+        str
+            The python code.
+        """
         txt = ""
 
         txt += "\n#\n#\n#"
@@ -674,7 +876,7 @@ class SourceGeometrical(S4LightSourceBase):
                 (self.__ph[0], self.__ph[1], unit)
         elif self.__f_color == 6:  # "User defined":
             # a = numpy.loadtxt(self.user_defined_file)
-            txt += "\nlight_source.set_energy_distribution_userdefined() #### TODO: COMPLETE" 
+            txt += "\nlight_source.set_energy_distribution_userdefined() #### TODO: COMPLETE"
 
         #polarization/coherence
         txt += "\nlight_source.set_polarization(polarization_degree=%f, phase_diff=%f, coherent_beam=%s)" % \
@@ -683,6 +885,76 @@ class SourceGeometrical(S4LightSourceBase):
         txt += "\nbeam = light_source.get_beam()"
 
         return txt
+
+    #
+    # internal methods
+    #
+    def _set_energy_distribution_unit(self, name='eV'):
+        if name == 'eV':
+            self.__f_phot = 0
+        elif name == 'A':
+            self.__f_phot = 1
+        else:
+            raise Exception("Bad name for energy units, valid names are: eV, A")
+
+    # conversors: wavenumber is in cm^(-1), wavenumber in m, energy in eV
+    @classmethod
+    def _energy_to_wavelength(cls, photon_energy):
+        wavelength = codata.h * codata.c / codata.e / photon_energy
+        return wavelength
+
+    @classmethod
+    def _wavelength_to_wavenumber(cls, wavelength):
+        return 2 * numpy.pi / (wavelength * 1e2)
+
+    @classmethod
+    def _energy_to_wavenumber(cls, photon_energy):
+        return cls._wavelength_to_wavenumber(cls._energy_to_wavelength(photon_energy))
+
+    # the other way around
+    @classmethod
+    def _wavenumber_to_wavelength(cls, wavenumber):
+        return 2 * numpy.pi / (wavenumber * 1e2)
+
+    @classmethod
+    def _wavelength_to_energy(cls, wavelength):
+        return codata.h * codata.c / codata.e / wavelength
+
+    @classmethod
+    def _wavenumber_to_energy(cls, wavenumber):
+        return cls._wavelength_to_energy(cls._wavenumber_to_wavelength(wavenumber))
+
+    @classmethod
+    def _sample_rays_default(cls, N=5000):
+        rays = numpy.zeros((N, 18))
+        rays[:,4] = 1.0  # vy
+        rays[:,6] = 1.0  # Ex
+        rays[:,9] = 1.0  # flag
+        rays[:,10] = 2 * numpy.pi / (1e-10 * 100) # wavenumber
+        rays[:,11] = numpy.arange(N) + 1          # index
+        return rays
+
+
+    # todo: move/reuse
+    def _cross(self,u,v):
+        # w = u X v
+        # u = array (npoints, vector_index)
+        w = numpy.zeros_like(u)
+        w[:,0] = u[:,1] * v[:,2] - u[:,2] * v[:,1]
+        w[:,1] = u[:,2] * v[:,0] - u[:,0] * v[:,2]
+        w[:,2] = u[:,0] * v[:,1] - u[:,1] * v[:,0]
+        return w
+
+    def _norm(self,u):
+        # w = u / |u|
+        # u = array (npoints,vector_index)
+        u_norm = numpy.zeros_like(u)
+        uu = numpy.sqrt( u[:,0]**2 + u[:,1]**2 + u[:,2]**2)
+        for i in range(3):
+            u_norm[:,i] = uu
+        return u / u_norm
+
 if __name__ == "__main__":
     a = SourceGeometrical(depth_distribution="Gaussian")
     print(a.to_python_code())
+    print(a.info())

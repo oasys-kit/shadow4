@@ -1,44 +1,99 @@
-
+"""
+Samplers for typical mathematical probability distributions (1D and 2D).
+"""
 import numpy
 from syned.syned_object import SynedObject
 
-
 class DistributionGeneric(SynedObject):
+    """
+    Base class for a mathematical distribution.
+
+    Note:
+        It inherits from SynedObject to use the syned mechanism of displaying parameters.
+
+    """
     def __init__(self):
         SynedObject.__init__(self)
 
     def get_dimension(self):
-        raise Exception("To be implemented in the subclasses")
+        """
+        Returns the dimension. To be defined in the derived class.
+
+        Raises
+        ------
+            NotImplementedError
+        """
+        raise NotImplementedError("To be implemented in a derived class.")
 
     def get_sampled_points(self):
-        raise Exception("To be implemented in the subclasses")
+        """
+        Returns the number of sampling points. To be defined in the derived class.
+
+        Raises
+        ------
+            NotImplementedError
+        """
+        raise NotImplementedError("To be implemented in the subclasses")
 
 #
 # main distribution subclasses:
 #      Distribution1D
 #      Distribution2D
+#
 class Distribution2D(DistributionGeneric):
+    """
+    Defines a generic 2D mathematical distribution class.
+    """
     def __init__(self):
         DistributionGeneric.__init__(self)
 
     def get_dimension(self):
+        """
+        Returns the dimension of the distribution.
+
+        Returns
+        -------
+        int
+            returns 2.
+        """
         return 2
 
 
 class Distribution1D(DistributionGeneric):
+    """
+    Defines a generic 1D mathematical distribution class.
+    """
     def __init__(self):
         pass
         
     def get_dimension(self):
+        """
+        Returns the dimension of the distribution.
+
+        Returns
+        -------
+        int
+            returns 1.
+        """
         return 1
 
 
 #
 # Subclasses for Distribution2D used for spatial type sampling
 #  ["Point","Rectangle","Ellipse","Gaussian"]
-
+#
 class Point2D(Distribution2D):
-    def __init__(self, h_center=0.0,v_center=0.0):
+    def __init__(self, h_center=0.0, v_center=0.0):
+        """
+        Defines a point distribution in 2D.
+
+        Parameters
+        ----------
+        h_center : float, optional
+            The position of the point (abscissa).
+        v_center : float, optional
+            The position of the point (ordinate).
+        """
         self._h_center = h_center
         self._v_center = v_center
 
@@ -49,11 +104,42 @@ class Point2D(Distribution2D):
             ] )
 
     def get_sampled_points(self,N):
-        return numpy.zeros(N)+self._h_center,numpy.zeros(N)+self._v_center
+        """
+        Returns the sampled points.
+
+        Notes:
+        -----
+        The multiple resulting points are always identical, as it is a point.
+
+        Parameters
+        ----------
+        N : int
+            The number of points to be samples.
+
+        Returns
+        -------
+        tuple
+            (H,V) The arrays for the H and V.
+        """
+        return numpy.zeros(N) + self._h_center, numpy.zeros(N) + self._v_center
 
 
 class Rectangle2D(Distribution2D):
-    def __init__(self, h_min,h_max,v_min,v_max):
+    def __init__(self, h_min, h_max, v_min, v_max):
+        """
+        Defines a rectangular 2D mathematical distribution.
+
+        Parameters
+        ----------
+        h_min : float
+            The minimum coordinate of the rectangle in the horizontal direction
+        h_max : float
+            The maximum coordinate of the rectangle in the horizontal direction
+        v_min : float
+            The minimum coordinate of the rectangle in the vertical direction
+        v_max : float
+            The maximum coordinate of the rectangle in the vertical direction
+        """
         self._h_min = h_min
         self._h_max = h_max
         self._v_min = v_min
@@ -66,14 +152,45 @@ class Rectangle2D(Distribution2D):
                     ("v_max"         , "v (length) maximum (signed)  ", "" ),
             ] )
 
-        # return ["Point","Rectangle","Ellipse","Gaussian"]
-        # return ["Flat","Uniform","Gaussian","Cone"]
+    def get_sampled_points(self, N):
+        """
+        Returns the sampled points.
 
-    def get_sampled_points(self,N):
-        return Uniform1D.sample(N,self._h_min,self._h_max),Uniform1D.sample(N,self._v_min,self._v_max)
+        Parameters
+        ----------
+        N : int
+            The number of points to be samples.
+
+        Returns
+        -------
+        tuple
+            (H,V) The arrays for the H and V.
+        """
+        return Uniform1D.sample(N, self._h_min, self._h_max), Uniform1D.sample(N, self._v_min, self._v_max)
 
     @classmethod
-    def sample(cls,N,h_min,h_max,v_min,v_max):
+    def sample(cls, N, h_min, h_max, v_min, v_max):
+        """
+        returns sampled points for a 1D rectangular distribution.
+
+        Parameters
+        ----------
+        N : int
+            The number of points to be samples.
+        h_min : float
+            The minimum coordinate of the rectangle in the horizontal direction
+        h_max : float
+            The maximum coordinate of the rectangle in the horizontal direction
+        v_min : float
+            The minimum coordinate of the rectangle in the vertical direction
+        v_max : float
+            The maximum coordinate of the rectangle in the vertical direction
+
+        Returns
+        -------
+        tuple
+            (H,V) The arrays for the H and V.
+        """
         return Rectangle2D(h_min,h_max,v_min,v_max).get_sampled_points(N)
 
 

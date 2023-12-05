@@ -1,12 +1,38 @@
-
+"""
+Defines the shadow4 electron beam.
+"""
 from syned.storage_ring.electron_beam import ElectronBeam
 
 class S4ElectronBeam(ElectronBeam):
+    """
+    Defines an electron beam at a given point of the storage ring.
+
+    Parameters
+    ----------
+    energy_in_GeV : float, optional
+        The electron energy in GeV.
+    energy_spread : float, optional
+        The electron energy spread (in a fraction of the energy_in_GeV).
+    current : float, optional
+        The electron beam current intensity in A.
+    moment_xx : float, optional
+        The <x^2> moment.
+    moment_xxp : float, optional
+        The <x x'> moment.
+    moment_xpxp : float, optional
+        The <x'^2> moment.
+    moment_yy : float, optional
+        The <y^2> moment.
+    moment_yyp : float, optional
+        The <y y'> moment.
+    moment_ypyp : float, optional
+        The <y'^2> moment.
+    """
     def __init__(self,
                  energy_in_GeV     = 1.0,
-                 energy_spread     = 0.0,
+                 energy_spread     = 0.0,  # not used, but defined for the future.
                  current           = 0.1,
-                 number_of_bunches = 400,
+                 number_of_bunches = 0,    # todo: delete
                  moment_xx         = 0.0,
                  moment_xxp        = 0.0,
                  moment_xpxp       = 0.0,
@@ -28,12 +54,19 @@ class S4ElectronBeam(ElectronBeam):
             )
 
     def to_python_code(self):
+        """
+        Returns the python code to create the electron beam.
 
+        Returns
+        -------
+        str
+            The python code.
+
+        """
         script = "\n# electron beam"
         script += "\nfrom shadow4.sources.s4_electron_beam import S4ElectronBeam"
         script += "\nelectron_beam = S4ElectronBeam(energy_in_GeV=%g,energy_spread=%g,current=%g)" % \
                   (self.energy(), self._energy_spread, self.current())
-
 
         moment_xx, moment_xxp, moment_xpxp = self.get_moments_horizontal()
         moment_yy, moment_yyp, moment_ypyp = self.get_moments_vertical()

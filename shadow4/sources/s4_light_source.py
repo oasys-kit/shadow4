@@ -1,7 +1,27 @@
+"""
+Defines the shadow4 synchrotron LightSource (the base class of beanding magnet, wiggler and undulator lightsources).
+
+It contains an electron beam and a magnetic structure and some parameters like nrays and seed.
+"""
 from syned.storage_ring.light_source import LightSource
 
 class S4LightSource(LightSource):
+    """
+    Constructor
 
+    Parameters
+    ----------
+    name : str
+        A name.
+    electron_beam : instance of S4ElectronBeam
+        The electron beam.
+    magnetic_structure : instance of a class derived from SYNED MagneticStructre.
+        The magnetic structure (bending magnet, wiggler or undulator).
+    nrays : int
+        The number of rays.
+    seed : int
+        The seed.
+    """
     def __init__(self,
                  name="Undefined",
                  electron_beam=None,
@@ -15,18 +35,66 @@ class S4LightSource(LightSource):
         self.__seed = seed
 
     def set_nrays(self, nrays):
+        """
+        Defines the number of rays to be used.
+
+        Parameters
+        ----------
+        nrays : int
+            The number of rays.
+
+        """
         self.__nrays = nrays
 
     def get_nrays(self):
+        """
+        Returns the stored number of rays.
+
+        Returns
+        -------
+        int
+            The number of rays.
+
+        """
         return self.__nrays
 
     def set_seed(self, seed):
+        """
+        Defines the Monte Carlo seed.
+
+        Parameters
+        ----------
+        seed : int
+            The seed.
+
+        """
         self.__seed = seed
 
     def get_seed(self):
+        """
+        Returns the stored seed.
+
+        Returns
+        -------
+        int
+            The seed.
+        """
         return self.__seed
 
     def to_python_code(self, **kwargs):
+        """
+        returns the puthon code to create the light source. To be fully defined in the derived classes.
+
+        Parameters
+        ----------
+        **kwargs
+            Passed arguments
+
+        Returns
+        -------
+        str
+            The python code.
+        """
         script = ''
         try:
             script += self.get_electron_beam().to_python_code()
@@ -45,9 +113,25 @@ class S4LightSource(LightSource):
         return script
 
     def get_beam(self, **params):
+        """
+        To be implemented in a derived class.
+
+        Raises
+        ------
+        NotImplementedError()
+
+        """
         raise NotImplementedError()
 
     def calculate_spectrum(self, **params):
+        """
+        To be implemented in a derived class.
+
+        Raises
+        ------
+        NotImplementedError()
+
+        """
         raise NotImplementedError()
 
 if __name__ == "__main__":

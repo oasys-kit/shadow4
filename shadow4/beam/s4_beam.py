@@ -1,3 +1,11 @@
+"""
+Defines the shadow4 beam and associated methods and utilities.
+
+VERY IMPORTANT: Column 11 (index 10) is wavenumber (cm^-1) as internally in Shadow.
+
+                Photon energy in eV is now column 26 (index 25).
+
+"""
 import numpy
 import scipy.constants as codata
 from numpy.testing import assert_almost_equal
@@ -7,9 +15,6 @@ import time
 import os
 
 from syned.beamline.shape import Rectangle, Ellipse, TwoEllipses, Circle
-
-# VERY IMPORTANT: Column 11 (index 10) is wavenumber (cm^-1) as internally in Shadow.
-#                 Photon energy in eV is now column 26 (index 25).
 
 class S4Beam(object):
     """
