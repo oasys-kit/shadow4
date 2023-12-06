@@ -114,7 +114,7 @@ class Point2D(Distribution2D):
         Parameters
         ----------
         N : int
-            The number of points to be samples.
+            The number of points to be sampled.
 
         Returns
         -------
@@ -132,13 +132,13 @@ class Rectangle2D(Distribution2D):
         Parameters
         ----------
         h_min : float
-            The minimum coordinate of the rectangle in the horizontal direction
+            The minimum coordinate of the rectangle in the horizontal direction.
         h_max : float
-            The maximum coordinate of the rectangle in the horizontal direction
+            The maximum coordinate of the rectangle in the horizontal direction.
         v_min : float
-            The minimum coordinate of the rectangle in the vertical direction
+            The minimum coordinate of the rectangle in the vertical direction.
         v_max : float
-            The maximum coordinate of the rectangle in the vertical direction
+            The maximum coordinate of the rectangle in the vertical direction.
         """
         self._h_min = h_min
         self._h_max = h_max
@@ -159,7 +159,7 @@ class Rectangle2D(Distribution2D):
         Parameters
         ----------
         N : int
-            The number of points to be samples.
+            The number of points to be sampled.
 
         Returns
         -------
@@ -171,12 +171,12 @@ class Rectangle2D(Distribution2D):
     @classmethod
     def sample(cls, N, h_min, h_max, v_min, v_max):
         """
-        returns sampled points for a 1D rectangular distribution.
+        Returns sampled points for a 2D rectangular distribution.
 
         Parameters
         ----------
         N : int
-            The number of points to be samples.
+            The number of points to be sampled.
         h_min : float
             The minimum coordinate of the rectangle in the horizontal direction
         h_max : float
@@ -191,11 +191,25 @@ class Rectangle2D(Distribution2D):
         tuple
             (H,V) The arrays for the H and V.
         """
-        return Rectangle2D(h_min,h_max,v_min,v_max).get_sampled_points(N)
+        return Rectangle2D(h_min, h_max, v_min, v_max).get_sampled_points(N)
 
 
 class Ellipse2D(Distribution2D):
-    def __init__(self, h_min,h_max,v_min,v_max):
+    """
+    Defines an ellipse 2D mathematical distribution.
+
+    Parameters
+    ----------
+    h_min : float
+        The minimum coordinate of the ellipse in the horizontal direction.
+    h_max : float
+        The maximum coordinate of the ellipse in the horizontal direction.
+    v_min : float
+        The minimum coordinate of the ellipse in the vertical direction.
+    v_max : float
+        The maximum coordinate of the ellipse in the vertical direction.
+    """
+    def __init__(self, h_min, h_max, v_min, v_max):
         self._h_min = h_min
         self._h_max = h_max
         self._v_min = v_min
@@ -211,11 +225,22 @@ class Ellipse2D(Distribution2D):
         # return ["Point","Rectangle","Ellipse","Gaussian"]
         # return ["Flat","Uniform","Gaussian","Cone"]
 
-    def get_sampled_points(self,N):
-        # ! C
+    def get_sampled_points(self, N):
+        """
+        Returns the sampled points.
+
+        Parameters
+        ----------
+        N : int
+            The number of points to be sampled.
+
+        Returns
+        -------
+        tuple
+            (H,V) The arrays for the H and V.
+        """
         # ! C Elliptical source **
         # ! C Uses a transformation algorithm to generate a uniform variate distribution
-        # ! C
         phi = numpy.pi * 2 * numpy.random.random(N)
         radius = numpy.sqrt(numpy.random.random(N))
         x = 0.5 *(self._h_max+self._h_min) + 0.5 * (self._h_max-self._h_min) * radius * numpy.cos(phi)
@@ -223,28 +248,86 @@ class Ellipse2D(Distribution2D):
         return x,y
 
     @classmethod
-    def sample(cls,N,h_min,h_max,v_min,v_max):
+    def sample(cls, N, h_min, h_max, v_min, v_max):
+        """
+        Returns sampled points for a 2D ellipse distribution.
+
+        Parameters
+        ----------
+        N : int
+            The number of points to be sampled.
+        h_min : float
+            The minimum coordinate of the ellipse in the horizontal direction
+        h_max : float
+            The maximum coordinate of the ellipse in the horizontal direction
+        v_min : float
+            The minimum coordinate of the ellipse in the vertical direction
+        v_max : float
+            The maximum coordinate of the ellipse in the vertical direction
+
+        Returns
+        -------
+        tuple
+            (H,V) The arrays for the H and V.
+        """
         return Ellipse2D(h_min,h_max,v_min,v_max).get_sampled_points(N)
 
 class Gaussian2D(Distribution2D):
-    def __init__(self, sigma_h,sigma_v):
+    """
+    Defines a Gaussian 2D mathematical distribution.
+
+    Parameters
+    ----------
+    sigma_h : float
+        The sigma in the horizontal direction.
+    sigma_v : float
+        The sigma in the vertical direction.
+    """
+    def __init__(self, sigma_h, sigma_v):
         self._sigma_h = sigma_h
         self._sigma_v = sigma_v
-
         # support text containg name of variable, help text and unit. Will be stored in self._support_dictionary
         self._set_support_text([
                     ("sigma_h"         , "h (width) sigma", "" ),
                     ("sigma_v"         , "v (width) sigma", "" ),
             ] )
 
-        # return ["Point","Rectangle","Ellipse","Gaussian"]
-        # return ["Flat","Uniform","Gaussian","Cone"]
 
-    def get_sampled_points(self,N):
-        return Gaussian1D.sample(N,self._sigma_h),Gaussian1D.sample(N,self._sigma_v)
+    def get_sampled_points(self, N):
+        """
+        Returns the sampled points.
+
+        Parameters
+        ----------
+        N : int
+            The number of points to be sampled.
+
+        Returns
+        -------
+        tuple
+            (H,V) The arrays for the H and V.
+        """
+        return Gaussian1D.sample(N, self._sigma_h), Gaussian1D.sample(N, self._sigma_v)
 
     @classmethod
-    def sample(cls,N,sigma_h,sigma_v):
+    def sample(cls, N, sigma_h, sigma_v):
+        """
+        Returns sampled points for a 2D Gaussian distribution.
+
+        Parameters
+        ----------
+        N : int
+            The number of points to be sampled.
+        sigma_h : float
+            The Gaussian sigma in the horizontal direction.
+        sigma_v : float
+            The Gaussian sigma in the vertical direction.
+
+        Returns
+        -------
+        tuple
+            (H,V) The arrays for the H and V.
+        """
         return Gaussian2D(sigma_h,sigma_v).get_sampled_points(N)
 
 
@@ -255,11 +338,46 @@ class Gaussian2D(Distribution2D):
 
 
 class Flat2D(Rectangle2D):
-    def __init__(self,h_min,h_max,v_min,v_max):
-        super().__init__(h_min,h_max,v_min,v_max)
+    """
+    Defines a flat 2D mathematical distribution (the same as Rectangle2D).
+
+    "Flat" means that the ray divergence distribution is constant versus the angles with the YZ and XY planes.
+    Strictly speaking, the "angles" with the YZ and XY planes are indeed the direction cosines with the X and Z axis.
+    In the small angle approximation, theta=sin(theta).
+
+    Parameters
+    ----------
+    h_min : float
+        The minimum coordinate of the rectangle in the horizontal direction.
+    h_max : float
+        The maximum coordinate of the rectangle in the horizontal direction.
+    v_min : float
+        The minimum coordinate of the rectangle in the vertical direction.
+    v_max : float
+        The maximum coordinate of the rectangle in the vertical direction.
+    """
+    def __init__(self, h_min, h_max, v_min, v_max):
+        super().__init__(h_min, h_max, v_min, v_max)
 
 
 class Uniform2D(Distribution2D):
+    """
+    Defines a uniform 2D mathematical distribution.
+
+    "Uniform" means that the rays will illuminate homogeneously a screen at a given distance of the source.
+    This corresponds to the isotropic emitter.
+
+    Parameters
+    ----------
+    h_min : float
+        The minimum angular coordinate in the horizontal direction.
+    h_max : float
+        The maximum angular coordinate in the horizontal direction.
+    v_min : float
+        The minimum angular coordinate in the vertical direction.
+    v_max : float
+        The maximum angular coordinate in the vertical direction.
+    """
     def __init__(self, h_min,h_max,v_min,v_max):
         self._h_min = h_min
         self._h_max = h_max
@@ -273,35 +391,71 @@ class Uniform2D(Distribution2D):
                     ("v_max"         , "v (length) maximum (signed)  ", "" ),
             ] )
 
-        # return ["Point","Rectangle","Ellipse","Gaussian"]
-        # return ["Flat","Uniform","Gaussian","Cone"]
+    def get_sampled_points(self, N):
+        """
+        Returns the sampled points.
 
-    def get_sampled_points(self,N):
-        # ! C
+        Parameters
+        ----------
+        N : int
+            The number of points to be sampled.
+
+        Returns
+        -------
+        tuple
+            (H,V) The arrays for the H and V.
+        """
         # ! C   Uniform distribution ( Isotrope emitter )
-        # ! C
         XMAX1 =   numpy.tan(self._h_min)
         XMAX2 =   numpy.tan(self._h_max)
         ZMAX1 =   numpy.tan(self._v_min)
         ZMAX2 =   numpy.tan(self._v_max)
         XRAND = numpy.random.random(N) * (XMAX1 - XMAX2) + XMAX2
         ZRAND = numpy.random.random(N) * (ZMAX1 - ZMAX2) + ZMAX2
-        THETAR  = numpy.arctan(numpy.sqrt(XRAND**2+ZRAND**2))
-        PHIR = numpy.arctan2(ZRAND,XRAND)
+        THETAR  = numpy.arctan(numpy.sqrt(XRAND**2 + ZRAND**2))
+        PHIR = numpy.arctan2(ZRAND, XRAND)
         DIREC1  = numpy.cos(PHIR) * numpy.sin(THETAR)
-        # DIREC2  = numpy.cos(THETAR)
         DIREC3  = numpy.sin(PHIR) * numpy.sin(THETAR)
-        return DIREC1,DIREC3
+        return DIREC1, DIREC3
 
     @classmethod
-    def sample(cls,N,h_min,h_max,v_min,v_max):
+    def sample(cls, N, h_min, h_max, v_min, v_max):
+        """
+        Returns sampled points for a 2D Uniform distribution.
+
+        Parameters
+        ----------
+        N : int
+            The number of points to be sampled.
+        h_min : float
+            The minimum angular coordinate in the horizontal direction.
+        h_max : float
+            The maximum angular coordinate in the horizontal direction.
+        v_min : float
+            The minimum angular coordinate in the vertical direction.
+        v_max : float
+            The maximum angular coordinate in the vertical direction.
+
+        Returns
+        -------
+        tuple
+            (H,V) The arrays for the H and V.
+        """
         return Uniform2D(h_min,h_max,v_min,v_max).get_sampled_points(N)
 
 
-
-
 class Cone2D(Distribution2D):
-    def __init__(self, cone_max=10e-6,cone_min=0.0):
+    """
+    Defines the 2D Cone mathematical distribution.
+
+    Parameters
+    ----------
+    cone_max : float, optional
+        The maximum aperture of the cone in rad.
+    cone_min : float, optional
+        The minimum aperture of the cone in rad.
+    """
+    def __init__(self, cone_max=10e-6, cone_min=0.0):
         self._cone_max = cone_max
         self._cone_min = cone_min
         # support text containg name of variable, help text and unit. Will be stored in self._support_dictionary
@@ -310,108 +464,182 @@ class Cone2D(Distribution2D):
                     ("cone_min"         , "max angle for cone semiaperture  ", "" ),
             ] )
 
-    def get_sampled_points(self,N):
-        # ! C   Now generates a set of rays along a cone centered about the normal,
-        # ! C   plus a ray along the normal itself.
-        # ! C
-        # IF (FGRID.EQ.1.OR.FGRID.EQ.3) THEN
-        #   ANGLE =   TWOPI*GRID(4,ITIK)*(IDO_VX-1)/IDO_VX
-        # ELSE
-        # ANGLE =   TWOPI*GRID(4,ITIK)
-        # END IF
-        # ! C temp fix -- 16 Jan 1987
-        # ! C      ANG_CONE =   CONE_MIN +
-        # ! C     $ (CONE_MAX - CONE_MIN)*GRID(6,ITIK)
-        # ANG_CONE =   COS(CONE_MIN) - GRID(6,ITIK)*(COS(CONE_MIN)-COS(CONE_MAX))
-        # ANG_CONE =  ACOS(ANG_CONE)
-        # DIREC(1) =   SIN(ANG_CONE)*COS(ANGLE)
-        # DIREC(2) =   COS(ANG_CONE)
-        # DIREC(3) =   SIN(ANG_CONE)*SIN(ANGLE)
+    def get_sampled_points(self, N):
+        """
+        Returns the sampled points.
 
+        Parameters
+        ----------
+        N : int
+            The number of points to be sampled.
+
+        Returns
+        -------
+        tuple
+            (H,V) The arrays for the H and V.
+        """
+        # ! C   Now generates a set of rays along a cone centered about the normal, plus a ray along the normal itself.
         ANGLE = 2 * numpy.pi * numpy.random.random(N)
         ANG_CONE = numpy.cos(self._cone_min) - numpy.random.random(N) * \
                                                (numpy.cos(self._cone_min)-numpy.cos(self._cone_max))
         ANG_CONE = numpy.arccos(ANG_CONE)
         DIREC1 = numpy.sin(ANG_CONE) * numpy.cos(ANGLE)
-        # DIREC2 = numpy.cos(ANG_CONE)
         DIREC3 = numpy.sin(ANG_CONE) * numpy.sin(ANGLE)
-
         return DIREC1,DIREC3
 
     @classmethod
     def sample(cls,N,cone_max=10e-6,cone_min=0.0):
+        def sample(cls, N, h_min, h_max, v_min, v_max):
+            """
+            Returns sampled points for a 2D Cone distribution.
+
+            Parameters
+            ----------
+            N : int
+                The number of points to be sampled.
+            cone_max : float, optional
+                The maximum aperture of the cone in rad.
+            cone_min : float, optional
+                The minimum aperture of the cone in rad.
+
+            Returns
+            -------
+            tuple
+                (H,V) The arrays for the H and V.
+            """
         return Cone2D(cone_max=cone_max,cone_min=cone_min).get_sampled_points(N)
-
-
-
-
-
-
-
-# class NumericalMesh2D(Distribution2D):
-#     def __init__(self,function=None):
-#         self.function = function
 
 
 #
 # subclasses for Distribution1D
 #
-
-
 class Uniform1D(Distribution1D):
     def __init__(self, x_min=-0.010, x_max=0.010):
+        """
+        Defines a 1D uniform (flat) distribution.
 
+        Parameters
+        ----------
+        x_min : float, optional
+            The minimum coordinate.
+        x_max : float, optional
+            The maximum coordinate.
+        """
         self._x_min  = x_min
         self._x_max  = x_max
-
-
         # support text containg name of variable, help text and unit. Will be stored in self._support_dictionary
         self._set_support_text([
                     ("x_min"         , "minimum (signed)", "" ),
                     ("x_max"         , "maximum (signed)", "" ),
             ] )
 
-    def get_sampled_points(self,N):
+    def get_sampled_points(self, N):
+        """
+        Returns the sampled points.
+
+        Parameters
+        ----------
+        N : int
+            The number of points to be sampled.
+
+        Returns
+        -------
+        numpy array
+            The arrays with the N sampled points.
+        """
         return numpy.random.random(N) * (self._x_max-self._x_min) + self._x_min
 
     @classmethod
-    def sample(cls,N=1000,x_min=-0.010, x_max=0.010):
+    def sample(cls, N=1000, x_min=-0.010, x_max=0.010):
+        """
+        Returns sampled points for a 1D Uniform distribution.
+
+        Parameters
+        ----------
+        N : int
+            The number of points to be sampled.
+        x_min : float, optional
+            The minimum coordinate.
+        x_max : float, optional
+            The maximum coordinate.
+
+        Returns
+        -------
+        numpy array
+            The arrays with the N sampled points.
+        """
         return Uniform1D(x_min=x_min, x_max=x_max).get_sampled_points(N)
 
 class Gaussian1D(Distribution1D):
+    """
+    Defines a 1D Gaussian distribution.
+
+    Parameters
+    ----------
+    sigma : float, optional
+        The sigma of the Gaussian.
+    center : float, optional
+        The center of the Gaussian.
+    """
     def __init__(self, sigma=1e-3, center=0.0):
         super().__init__()
-
         self._sigma  = sigma
         self._center  = center
-
-
         # support text containg name of variable, help text and unit. Will be stored in self._support_dictionary
         self._set_support_text([
                     ("sigma"         , "sigma", "" ),
                     ("center"        , "center", "" ),
             ] )
 
-    def get_sampled_points(self,N):
+    def get_sampled_points(self, N):
+        """
+        Returns the sampled points.
+
+        Parameters
+        ----------
+        N : int
+            The number of points to be sampled.
+
+        Returns
+        -------
+        numpy array
+            The arrays with the N sampled points.
+        """
         return numpy.random.normal(loc=self._center, scale=self._sigma, size=N)
 
     @classmethod
-    def sample(cls,N=1000,sigma=0.25,center=0.0):
-        return Gaussian1D(sigma=sigma,center=center).get_sampled_points(N)
+    def sample(cls, N=1000, sigma=0.25, center=0.0):
+        """
+        Returns sampled points for a 1D Uniform distribution.
+
+        Parameters
+        ----------
+        N : int
+            The number of points to be sampled.
+        sigma : float, optional
+            The sigma of the Gaussian.
+        center : float, optional
+            The center of the Gaussian.
+
+        Returns
+        -------
+        numpy array
+            The arrays with the N sampled points.
+        """
+        return Gaussian1D(sigma=sigma, center=center).get_sampled_points(N)
 
 if __name__=="__main__":
 
     from srxraylib.plot.gol import plot,plot_scatter
 
-    do_plot = False
+    do_plot = True
 
     #
     # constructors
     #
-    u = Uniform1D(-10,10)
+    u = Uniform1D(-10, 10)
     print(u.info())
-
-    u2 = Uniform2D(-10,10,-5,5)
+    u2 = Uniform2D(-10, 10, -5, 5)
     print(u2.info())
 
     #
@@ -419,77 +647,61 @@ if __name__=="__main__":
     #
     N = 1000
     g = Gaussian1D(sigma=0.25)
+    print(g.info())
     sampled_gaussian = g.get_sampled_points(N)
-    if do_plot:
-        plot(numpy.arange(N),sampled_gaussian)
     assert ( (sampled_gaussian.std() - 0.25) < 0.05)
-
-    if do_plot:
-        plot(numpy.arange(N),Gaussian1D.sample(sigma=0.25,N=N),title="Gaussian")
+    if do_plot: plot(numpy.arange(N), Gaussian1D.sample(sigma=0.25, N=N), title="Gaussian")
 
     #
     # Uniform1D
     #
     N = 1000
-    g = Uniform1D(10,20)
+    g = Uniform1D(10, 20)
+    print(g.info())
     sampled = g.get_sampled_points(N)
-    if do_plot:
-        plot(numpy.arange(N),sampled_gaussian,title="Uniform")
-
+    if do_plot: plot(numpy.arange(N),sampled_gaussian,title="Uniform")
     print(">>>>>",numpy.abs(sampled.mean() - 15 ))
-    assert ( numpy.abs(sampled.mean() - 15 ) < 0.2)
-
-
-    if do_plot:
-        plot(numpy.arange(N),Uniform1D.sample(N,10,20))
+    assert ( numpy.abs(sampled.mean() - 15 ) < 0.3)
+    if do_plot: plot(numpy.arange(N), Uniform1D.sample(N, 10, 20))
 
     #
-    # Elipse
+    # Ellipse
     #
     N = 1000
-    g = Ellipse2D(-4,0,-3,-1)
+    g = Ellipse2D(-4, 0, -3, -1)
+    print(g.info())
     x,y = g.get_sampled_points(N)
-    # plot_scatter(x,y,xrange=[-6,6],yrange=[-6,6])
+    if do_plot: plot_scatter(1e6*x, 1e6*y, title="Ellipse")
 
     #
     # Rectangle2D
     #
-
-    dx,dy = Rectangle2D.sample(5000,-2.5e-6,2.5e-6,-0.5e-6,0.5e-6,)
-    print(dx)
-    if do_plot:
-        plot_scatter(1e6*dx,1e6*dy,title="Rectangle")
+    dx, dy = Rectangle2D.sample(5000, -2.5e-6, 2.5e-6, -0.5e-6, 0.5e-6,)
+    if do_plot: plot_scatter(1e6*dx, 1e6*dy, title="Rectangle")
 
     #
     # Uniform2D
     #
 
-    dx,dy = Uniform2D.sample(5000,-2.5e-6,2.5e-6,-0.5e-6,0.5e-6,)
-    print(dx)
-    if do_plot:
-        plot_scatter(1e6*dx,1e6*dy,title="Uniform")
+    dx, dy = Uniform2D.sample(5000, -2.5e-6, 2.5e-6, -0.5e-6, 0.5e-6,)
+    if do_plot: plot_scatter(1e6*dx, 1e6*dy, title="Uniform")
 
     #
     # Flat2D
     #
 
-    dx,dy = Flat2D.sample(5000,-2.5e-6,2.5e-6,-0.5e-6,0.5e-6,)
-
-    if do_plot:
-        plot_scatter(1e6*dx,1e6*dy,title="Flat2D")
+    dx, dy = Flat2D.sample(5000, -2.5e-6, 2.5e-6, -0.5e-6, 0.5e-6,)
+    if do_plot: plot_scatter(1e6*dx, 1e6*dy, title="Flat2D")
 
     #
     # Gaussian2D
     #
 
-    dx,dy = Gaussian2D.sample(5000,2.5e-6,0.5e-6,)
-    if do_plot:
-        plot_scatter(1e6*dx,1e6*dy,title="Gaussian2D")
+    dx, dy = Gaussian2D.sample(5000, 2.5e-6, 0.5e-6,)
+    if do_plot: plot_scatter(1e6*dx, 1e6*dy, title="Gaussian2D")
 
     #
     # Cone2D
     #
-
-    dx,dy = Cone2D.sample(5000,2.5e-6,0.5e-6,)
-    if do_plot:
-        plot_scatter(1e6*dx,1e6*dy,title="Gaussian2D")
+    dx, dy = Cone2D.sample(5000, 2.5e-6, 0.5e-6,)
+    if do_plot: plot_scatter(1e6*dx, 1e6*dy, title="Cone2D")

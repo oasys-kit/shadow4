@@ -1,10 +1,41 @@
-
+"""
+Grid source defined in cartesian coordinates.
+"""
 import numpy
 from shadow4.beam.s4_beam import S4Beam
 from shadow4.sources.s4_light_source_base import S4LightSourceBase
 
 class SourceGridCartesian(S4LightSourceBase):
+    """
+    Defines a grid source, so points starting in a cube-like volume in real space and directions gridded in X,Z
 
+    Parameters
+    ----------
+    real_space_width : list, optional
+        the widths of the real_space volume (parallellepipedal) [Dx,Dy,Dz].
+    direction_space_width : list, optional
+        The "angular" aperture [Dx',Dz'].
+    real_space_points : list, optional
+        Number of points [Nx,Ny,Nz].
+    direction_space_points : list, optional
+        Number of points [Nx',Nz']
+    real_space_center : list, optional
+        Center coordinates in real space [Cx,Cy,Cz].
+    direction_space_center : list, optional
+        Center coordinates in divergence space [Cx',Cz']. Note that (Cx')^2+(Cz')^2 < 1.
+    name : str, optional
+        A name.
+    nrays : int, optional
+        Number of rays generated using SourceGaussian.get_beam()
+    seed : int, optional
+        Seed for the Monte Carlo generator.
+    wavelength : float, optional
+        The photon wavelength in m.
+    polarization_degree : float
+        The polarization degree (cos_s / (cos_s + cos_p).
+    polarization_phase_deg : float, optional
+        The polarization phase in degrees (0=linear).
+    """
     def __init__(self,
                  real_space_width=[1e-3,1e-3,1e-3],
                  direction_space_width=[0,0],
@@ -19,18 +50,6 @@ class SourceGridCartesian(S4LightSourceBase):
                  polarization_degree=1.0,
                  polarization_phase_deg=0.0,
                  ):
-        """
-        This defines a grid source, so points starting in a cube-like volume in real space
-        and directions gridded in X,Z
-
-        :param real_space_width: the widths of the real_space volume (parallellepipedal) [Dx,Dy,Dz]
-        :param direction_space_width: The "angular" aperture [Dx',Dz']
-        :param real_space_points: Number of points [Nx,Ny,Nz]
-        :param direction_space_points: Number of points [Nx',Nz']
-        :param real_space_center: Center in real space [Cx,Cy,Cz]
-        :param direction_space_center:  Center in diraction space [Cx',Cz'] (note that (Cx')^2+(Cz')^2 < 1)
-        :return:
-        """
         super().__init__(name=name, nrays=nrays, seed=seed)
         self._real_space_width = real_space_width
         self._direction_space_width = direction_space_width
@@ -50,12 +69,21 @@ class SourceGridCartesian(S4LightSourceBase):
                  direction_space_points=[100,100],
                  direction_space_center=[0.0,0.0] ):
         """
-        Initializes a point source
+        Initializes a point source (zero size).
 
-        :param direction_space_width: Default: [1e-6,1e-6],
-        :param direction_space_points: Default: [100,100],
-        :param direction_space_center: Default: [0.0,0.0] ):
-        :return:
+        Parameters
+        ----------
+        direction_space_width : list, optional
+            Interval for the direction space [Xwidth, Zwidth].
+        direction_space_points : list, optional
+            Number of points for the direction space [Nx, Nz].
+        direction_space_center : list, optional
+            Center for the direction space [Xcenter, Zcenter].
+
+        Returns
+        -------
+        instance of SourceGridCartesian.
+
         """
         return SourceGridCartesian(real_space_width=[0,0,0],
                  direction_space_width=direction_space_width,
@@ -70,11 +98,19 @@ class SourceGridCartesian(S4LightSourceBase):
                  real_space_points=[100,1,100],
                  real_space_center=[0.0,0.0,0.0] ):
         """
+        Initializes a collimated source (zero divergence).
+        Parameters
+        ----------
+        real_space_width : list, optional
+            real_space_width [Xwidth, Ywidth, Zwidth].
+        real_space_points : list, optional
+            real_space_points [Nx, Ny, Nz].
+        real_space_center : list, optional
+            real_space_points [Xcenter, Ycenter, Zcenter].
 
-        :param real_space_width: Default: [1e-6,0,1e-6]
-        :param real_space_points: Default: [100,1,100]
-        :param real_space_center: Default: [0.0,0.0,0.0]
-        :return:
+        Returns
+        -------
+
         """
         return SourceGridCartesian(real_space_width=real_space_width,
                  direction_space_width=[0.0,0.0],
@@ -89,16 +125,24 @@ class SourceGridCartesian(S4LightSourceBase):
 
     def get_number_of_points(self):
         """
-        Returns the total number of points
-        :return:
+        Returns the total number of points or rays.
+
+        Returns
+        -------
+        int
         """
         return self._real_space_points[0] * self._real_space_points[1] * self._real_space_points[2]* \
             self._direction_space_points[0] * self._direction_space_points[1]
 
     def get_arrays_real_space(self):
         """
-        Returns three arrays with the spatial coordinates 1D arrays
-        :return: x,y,z
+        Returns three arrays with the sampled spatial coordinates.
+
+        Returns
+        -------
+        tuple
+            (x, y, z).
+
         """
         if self._real_space_points[0] <= 1:
             x = numpy.array([self._real_space_center[0]])
@@ -125,8 +169,13 @@ class SourceGridCartesian(S4LightSourceBase):
 
     def get_arrays_direction_space(self):
         """
-        Returns two arrays with the direction angles (in fact components of the direction vector)
-        :return: xp,zp
+        Returns two arrays with the sampled angles (in fact, the components of the direction vector).
+
+        Returns
+        -------
+        tuple
+            (x', z')
+
         """
         if self._direction_space_points[0] <= 1:
             x = numpy.array([self._direction_space_center[0]])
@@ -136,7 +185,6 @@ class SourceGridCartesian(S4LightSourceBase):
             xmax1 = numpy.tan(hdiv1)
             xmax2 = numpy.tan(hdiv2)
 
-            # x = numpy.linspace(hdiv1,hdiv2,self._direction_space_points[0]) + self._direction_space_center[0]
             x = numpy.linspace(0,1,self._direction_space_points[0])
             x = x * (xmax1 - xmax2) + xmax2 + self._direction_space_center[0]
 
@@ -148,7 +196,6 @@ class SourceGridCartesian(S4LightSourceBase):
             ymax1 = numpy.tan(vdiv1)
             ymax2 = numpy.tan(vdiv2)
 
-            #y = numpy.linspace(vdiv1,vdiv2,self._direction_space_points[1]) + self._direction_space_center[1]
             y = numpy.linspace(0,1,self._direction_space_points[1])
             y = y * (ymax1 - ymax2) + ymax2 + self._direction_space_center[1]
 
@@ -157,8 +204,12 @@ class SourceGridCartesian(S4LightSourceBase):
 
     def get_mesh_divergences(self):
         """
-        Returns two mesh arrays (Nx,Nz) with the Xp and Zp velues
-        :return: Xp,Zp
+        Returns two mesh arrays (Nx, Nz) with the Xp and Zp values.
+
+        Returns
+        -------
+        tuple
+            (X',Z')
         """
         xp,zp = self.get_arrays_direction_space()
 
@@ -174,8 +225,13 @@ class SourceGridCartesian(S4LightSourceBase):
 
     def get_mesh_real_space(self):
         """
-        Returns two mesh arrays with the spatial cross section coordinates X,Z
-        :return: X,Z
+        Returns two mesh arrays with the spatial cross section coordinates X,Z.
+
+        Returns
+        -------
+        tuple
+            (x,z)
+
         """
         x,y,z =  self.get_arrays_real_space()
         return numpy.array(numpy.outer(x,numpy.ones_like(z))), \
@@ -184,9 +240,12 @@ class SourceGridCartesian(S4LightSourceBase):
 
     def get_volume_divergences(self):
         """
-        Returns an array (3,npoints) with xp,yp,zp (first index 0,1,2, respectively) with the
-        direction vectors
-        :return: xpypzp array
+        Returns an array (3,npoints) with xp,yp,zp (first index 0,1,2, respectively) with the direction vectors.
+
+        Returns
+        -------
+        numpy array
+
         """
         XP,ZP = self.get_mesh_divergences()
         YP = numpy.sqrt(numpy.ones_like(XP) -XP**2 -ZP**2 )
@@ -195,9 +254,11 @@ class SourceGridCartesian(S4LightSourceBase):
 
     def get_volume_real_space(self):
         """
-        Returns an array (3,npoints) with x,y,z (first index 0,1,2, respectively) with the
-        spatial coordinates
-        :return: xyz
+        Returns an array (3,npoints) with x,y,z (first index 0,1,2, respectively) with the spatial coordinates.
+
+        Returns
+        -------
+        numpy array
         """
         x,y,z = self.get_arrays_real_space()
         x.flatten()
@@ -214,9 +275,13 @@ class SourceGridCartesian(S4LightSourceBase):
 
     def get_volume(self):
         """
-        Returns an array (6,npoints) with x,y,z,xp,yp,zp (first index 0,1,2,3,4,5 respectively) with the
-        spatial and direction coordinates
-        :return: xyzxpypzp array
+        Returns an array (6, npoints) with x,y,z,xp,yp,zp (first index 0,1,2,3,4,5 respectively) with the
+        spatial and direction coordinates.
+
+        Returns
+        -------
+        numpy array
+
         """
         v1 = self.get_volume_real_space()
         v2 = self.get_volume_divergences()
@@ -245,7 +310,10 @@ class SourceGridCartesian(S4LightSourceBase):
     def info(self):
         """
         Returns an array of strings with info.
-        :return:
+
+        Returns
+        -------
+        str
         """
         txt = ""
 
@@ -271,7 +339,14 @@ class SourceGridCartesian(S4LightSourceBase):
 
 
     def get_beam(self):
+        """
+        Returns an instance of S4Beam with the sampled rays.
 
+        Returns
+        -------
+        instance of S4Beam
+
+        """
         # obtain polarization
         DENOM = numpy.sqrt(1.0 - 2.0 * self._polarization_degree + 2.0 * self._polarization_degree ** 2)
         AX = self._polarization_degree / DENOM
@@ -295,6 +370,13 @@ class SourceGridCartesian(S4LightSourceBase):
         return S4Beam.initialize_from_array(rays)
 
     def to_python_code(self):
+        """
+        Returns the python code to recreate the grid source.
+
+        Returns
+        -------
+        str
+        """
 
         txt = ""
         txt += "\n#\n#\n#"
@@ -316,9 +398,7 @@ class SourceGridCartesian(S4LightSourceBase):
 
 
 if __name__ == "__main__":
-    from srxraylib.plot.gol import plot_scatter, set_qt
-    from shadow4tests.compatibility.beam3 import Beam3
-    set_qt()
+    from srxraylib.plot.gol import plot_scatter
 
     a = SourceGridCartesian.initialize_point_source(
                 direction_space_width  = [2e-3,2e-3],
@@ -332,11 +412,9 @@ if __name__ == "__main__":
     print("z:",z)
 
     xp,zp = a.get_arrays_direction_space()
-    # print("xp:",xp)
-    # print("zp:",zp)
 
     XP,ZP = a.get_mesh_divergences()
-    print("XP ZP.shape",XP.shape,ZP.shape)
+    print("XP ZP.shape",XP.shape, ZP.shape)
 
     VP = a.get_volume_divergences()
     print("VP",VP.shape,VP.size)
@@ -351,12 +429,6 @@ if __name__ == "__main__":
     beam = a.get_beam()
     plot_scatter(beam.get_column(4), beam.get_column(6), plot_histograms=0, title="Point source. Cols 4,6")
 
-    # beam_shadow3 = Beam3.initialize_from_shadow4_beam( beam )
-    # beam_shadow3.write("begin.dat")
-    # import Shadow
-    # Shadow.ShadowTools.plotxy(beam_shadow3,4,6)
-
-
     #
     #
     #
@@ -366,9 +438,5 @@ if __name__ == "__main__":
     beam = a.get_beam()
     plot_scatter(beam.get_column(1), beam.get_column(3), plot_histograms=0, title="Collimated source. Cols 1,3")
 
-    # beam_shadow3 = Beam3.initialize_from_shadow4_beam( beam )
-    # import Shadow
-    # Shadow.ShadowTools.plotxy(beam_shadow3,1,3)
-    # beam_shadow3.write("begin.dat")
 
     print(a.to_python_code())
