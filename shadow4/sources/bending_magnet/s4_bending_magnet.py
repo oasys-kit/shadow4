@@ -5,12 +5,14 @@ from syned.storage_ring.magnetic_structures.bending_magnet import BendingMagnet
 
 class S4BendingMagnet(BendingMagnet):
     def __init__(self,
-                 radius=1.0, magnetic_field=1.0, length=1.0, # syned BM
-                 emin=10000.0,               # Photon energy scan from energy (in eV)
-                 emax=11000.0,               # Photon energy scan to energy (in eV)
-                 ng_e=11,                    # Photon energy scan number of points
-                 ng_j=20,                    # Number of points in electron trajectory (per period) for internal calculation only
-                 flag_emittance=0,           # when sampling rays: Use emittance (0=No, 1=Yes)
+                 radius=1.0,         # syned BM
+                 magnetic_field=1.0, # syned BM
+                 length=1.0,         # syned BM
+                 emin=10000.0,       # Photon energy scan from energy (in eV)
+                 emax=11000.0,       # Photon energy scan to energy (in eV)
+                 ng_e=11,            # Photon energy scan number of points
+                 ng_j=20,            # Number of points in electron trajectory (per period) for internal calculation only
+                 flag_emittance=0,   # when sampling rays: Use emittance (0=No, 1=Yes)
                  ):
 
         super().__init__(radius=radius, magnetic_field=magnetic_field, length=length)
@@ -19,32 +21,17 @@ class S4BendingMagnet(BendingMagnet):
         self._EMIN            = emin   # Photon energy scan from energy (in eV)
         self._EMAX            = emax   # Photon energy scan to energy (in eV)
         self._NG_E            = ng_e   # Photon energy scan number of points
-
         self._NG_J            = ng_j       # Number of points in electron trajectory (per period)
-
         self._FLAG_EMITTANCE  =  flag_emittance # Yes  # Use emittance (0=No, 1=Yes) #todo kw in calculate rays
 
-    def info(self, debug=False):
-
-        txt = ""
-
-        txt += "-----------------------------------------------------\n"
-        txt += "Grids: \n"
-        if self._NG_E == 1:
-            txt += "        photon energy %f eV\n"%(self._EMIN)
-        else:
-            txt += "        photon energy from %10.3f eV to %10.3f eV\n"%(self._EMIN,self._EMAX)
-        txt += "        number of energy points: %d\n"%(self._NG_E)
-        txt += "        number of points for the trajectory: %d\n"%(self._NG_J)
-
-
-        txt += "-----------------------------------------------------\n"
-
-
-        return super(S4BendingMagnet, self).info() + "\n" + txt
-
-        return txt
-
+        # support text containg name of variable, help text and unit. Will be stored in self._support_dictionary
+        self._add_support_text([
+                    ("EMIN", "minimum photon energy", "eV" ),
+                    ("EMAX", "maximum photon energy", "eV"),
+                    ("NG_E", " number of energy points", ""),
+                    ("NG_J", "number of points of the electron trajectory", ""),
+                    ("FLAG_EMITTANCE", "Use emittance (0=No, 1=Yes)", "" ),
+            ] )
 
     def set_energy_monochromatic(self,emin):
         """

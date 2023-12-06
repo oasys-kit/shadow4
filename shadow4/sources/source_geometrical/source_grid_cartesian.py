@@ -61,6 +61,22 @@ class SourceGridCartesian(S4LightSourceBase):
         self._polarization_degree = polarization_degree
         self._polarization_phase_deg = polarization_phase_deg
 
+        # support text containg name of variable, help text and unit. Will be stored in self._support_dictionary
+        self._set_support_text([
+            ("real_space_width", "the widths of the real_space volume (parallellepipedal) [Dx,Dy,Dz].", ""),
+            ("direction_space_width", "The angular aperture [Dx',Dz'].", ""),
+            ("real_space_points", "Number of points [Nx,Ny,Nz].", ""),
+            ("direction_space_points", "Number of points [Nx',Nz']", ""),
+            ("real_space_center", "Center coordinates in real space [Cx,Cy,Cz].", ""),
+            ("direction_space_center",
+             "Center coordinates in divergence space [Cx',Cz']. Note that (Cx')^2+(Cz')^2 < 1.", ""),
+            ("name", "the name", ""),
+            ("nrays", "Number of rays generated using SourceGaussian.get_beam()", ""),
+            ("seed", "Seed for the Monte Carlo generator.", ""),
+            ("wavelength", "The photon wavelength in m.", ""),
+            ("polarization_degree", "The polarization degree (cos_s / (cos_s + cos_p).", ""),
+            ("polarization_phase_deg", "The polarization phase in degrees (0=linear).", ""),
+        ] )
 
 
     @classmethod
@@ -304,10 +320,10 @@ class SourceGridCartesian(S4LightSourceBase):
         return numpy.vstack((V1x,V1y,V1z,V2x,V2y,V2z))
 
 
-    #
-    # info
-    #
-    def info(self):
+
+    # get_info
+
+    def get_info(self):
         """
         Returns an array of strings with info.
 
@@ -404,7 +420,7 @@ if __name__ == "__main__":
                 direction_space_width  = [2e-3,2e-3],
                 direction_space_points = [20,  20],
                 direction_space_center = [0.0, 0.0] )
-    print(a.info())
+    print(a.get_info())
 
     x,y,z = a.get_arrays_real_space()
     print("x:",x)
@@ -434,7 +450,9 @@ if __name__ == "__main__":
     #
 
     a = SourceGridCartesian.initialize_collimated_source(real_space_width=[10.,0.0,10.0],real_space_points=[100,1,100])
-    print(a.info())
+    print(a.info()) # syned
+    print(a.get_info()) # local
+
     beam = a.get_beam()
     plot_scatter(beam.get_column(1), beam.get_column(3), plot_histograms=0, title="Collimated source. Cols 1,3")
 

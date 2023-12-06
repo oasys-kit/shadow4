@@ -303,7 +303,7 @@ class SourceGaussian(S4LightSourceBase):
     #
     # info
     #
-    def info(self):
+    def get_info(self):
         """
         Returns an array of strings with info.
 
@@ -369,6 +369,8 @@ if __name__ == "__main__":
                  direction_space_center=[0.0,0.0]
                                  )
     print(src.info())
+
+    print(src.get_info())
 
 
     beam = S4Beam()

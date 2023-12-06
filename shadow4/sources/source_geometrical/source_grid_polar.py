@@ -253,7 +253,7 @@ class SourceGridPolar(S4LightSourceBase):
     #
     # info
     #
-    def info(self):
+    def get_info(self):
         """
         Returns an array of strings with info.
 
@@ -352,7 +352,7 @@ if __name__ == "__main__":
                     direction_space_width  = [2e-3,2e-3],
                     direction_space_points = [20,  5],
                     direction_space_center = [0.0, 0.0] )
-        print(a.info())
+        print(a.get_info())
 
         beam = a.get_beam()
         plot_scatter(beam.get_column(4) * 1e6, beam.get_column(6) * 1e6, title="Polar grid in direction space")
@@ -365,7 +365,7 @@ if __name__ == "__main__":
             real_space_points=[10, 4],
             real_space_center=[0.0, 0.0, 0.0]
         )
-        print(a.info())
+        print(a.get_info())
 
 
         beam = a.get_beam()
@@ -381,7 +381,7 @@ if __name__ == "__main__":
             direction_space_points=[5, 5],
             direction_space_center=[0.0, 0.0])
 
-        print(a.info())
+        print(a.get_info())
 
 
         beam = a.get_beam()
@@ -403,7 +403,7 @@ if __name__ == "__main__":
             direction_space_points=[3, 359],
             direction_space_center=[0.0, 0.0])
 
-        print(a.info())
+        print(a.get_info())
 
 
         beam = a.get_beam()
