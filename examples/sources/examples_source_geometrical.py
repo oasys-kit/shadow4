@@ -56,7 +56,7 @@ if __name__ == "__main__":
     # Conical divergence
     gs = SourceGeometrical(nrays=5000)
     print(">>>>",rays[:,3].shape)
-    gs.set_angular_distribution_conical(2e-5,1e-5)
+    gs.set_angular_distribution_cone(2e-5, 1e-5)
 
     rays = gs.calculate_rays()
     if do_plot:

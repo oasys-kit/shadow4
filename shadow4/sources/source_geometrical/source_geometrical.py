@@ -1,3 +1,6 @@
+"""
+Geometrical sources
+"""
 import numpy
 import scipy.constants as codata
 
@@ -8,6 +11,8 @@ from shadow4.sources.source_geometrical.probability_distributions import Flat2D,
 
 from srxraylib.util.inverse_method_sampler import Sampler1D
 from shadow4.sources.s4_light_source_base import S4LightSourceBase
+
+from shadow4.tools.arrayofvectors import vector_cross, vector_norm
 
 class SourceGeometrical(S4LightSourceBase):
     """
@@ -748,11 +753,11 @@ class SourceGeometrical(S4LightSourceBase):
 
         # ! C   Rotate A_VEC so that it will be perpendicular to DIREC and with the
         # ! C   right components on the plane.
-        A_TEMP = self._cross(A_VEC, DIREC)
-        A_VEC = self._cross(DIREC, A_TEMP)
-        A_VEC = self._norm(A_VEC)
-        AP_VEC = self._cross(A_VEC, DIREC)
-        AP_VEC = self._norm(AP_VEC)
+        A_TEMP = vector_cross(A_VEC, DIREC)
+        A_VEC = vector_cross(DIREC, A_TEMP)
+        A_VEC = vector_norm(A_VEC)
+        AP_VEC = vector_cross(A_VEC, DIREC)
+        AP_VEC = vector_norm(AP_VEC)
 
         #
         # obtain polarization for each ray (interpolation)
@@ -933,26 +938,6 @@ class SourceGeometrical(S4LightSourceBase):
         rays[:,10] = 2 * numpy.pi / (1e-10 * 100) # wavenumber
         rays[:,11] = numpy.arange(N) + 1          # index
         return rays
-
-
-    # todo: move/reuse
-    def _cross(self,u,v):
-        # w = u X v
-        # u = array (npoints, vector_index)
-        w = numpy.zeros_like(u)
-        w[:,0] = u[:,1] * v[:,2] - u[:,2] * v[:,1]
-        w[:,1] = u[:,2] * v[:,0] - u[:,0] * v[:,2]
-        w[:,2] = u[:,0] * v[:,1] - u[:,1] * v[:,0]
-        return w
-
-    def _norm(self,u):
-        # w = u / |u|
-        # u = array (npoints,vector_index)
-        u_norm = numpy.zeros_like(u)
-        uu = numpy.sqrt( u[:,0]**2 + u[:,1]**2 + u[:,2]**2)
-        for i in range(3):
-            u_norm[:,i] = uu
-        return u / u_norm
 
 if __name__ == "__main__":
     a = SourceGeometrical(depth_distribution="Gaussian")
