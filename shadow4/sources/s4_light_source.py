@@ -31,8 +31,15 @@ class S4LightSource(LightSource):
                  ):
         super().__init__(name=name, electron_beam=electron_beam, magnetic_structure=magnetic_structure)
 
-        self.__nrays = nrays
-        self.__seed = seed
+        self._nrays = nrays
+        self._seed = seed
+
+        # support text containg name of variable, help text and unit. Will be stored in self._support_dictionary
+        self._add_support_text([
+            ("name","Name",""),
+            ("nrays","Number of rays to be generated",""),
+            ("seed","Seed for the Monte Carlo generator",""),
+            ] )
 
     def set_nrays(self, nrays):
         """
@@ -44,7 +51,7 @@ class S4LightSource(LightSource):
             The number of rays.
 
         """
-        self.__nrays = nrays
+        self._nrays = nrays
 
     def get_nrays(self):
         """
@@ -56,7 +63,7 @@ class S4LightSource(LightSource):
             The number of rays.
 
         """
-        return self.__nrays
+        return self._nrays
 
     def set_seed(self, seed):
         """
@@ -68,7 +75,7 @@ class S4LightSource(LightSource):
             The seed.
 
         """
-        self.__seed = seed
+        self._seed = seed
 
     def get_seed(self):
         """
@@ -79,7 +86,7 @@ class S4LightSource(LightSource):
         int
             The seed.
         """
-        return self.__seed
+        return self._seed
 
     def to_python_code(self, **kwargs):
         """
