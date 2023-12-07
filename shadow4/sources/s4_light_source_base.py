@@ -1,5 +1,5 @@
 """
-Defines the a BaseLightSource to support non-synchrotron sources.
+Defines the a Base LightSource to support non-synchrotron sources.
 """
 from syned.storage_ring.empty_light_source import EmptyLightSource
 
@@ -100,6 +100,16 @@ class S4LightSourceBase(EmptyLightSource):
 
         """
         raise NotImplementedError()
+
+    def get_info(self):
+        """
+        Returns specific information.
+
+        Returns
+        -------
+        str
+        """
+        return "\n\nSpecific information not available (get_info() method not overloaded).\n\n"
 
 if __name__ == "__main__":
     a = S4LightSourceBase()

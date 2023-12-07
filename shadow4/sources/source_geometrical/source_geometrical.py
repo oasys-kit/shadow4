@@ -29,7 +29,7 @@ class SourceGeometrical(S4LightSourceBase):
     energy_distribution : str, optional
         A keyword of "Single line", "Several lines", "Uniform", "Relative intensities", "Gaussian", "User defined".
     depth_distribution : str, optional
-        A keyword of "Flat", "Uniform", "Gaussian", "Cone", "Collimated".
+        A keyword of "Off", "Flat", "Uniform", "Gaussian", "Cone", "Collimated".
     nrays : int, optional
         The number of rays.
     seed : int, optional
@@ -45,11 +45,72 @@ class SourceGeometrical(S4LightSourceBase):
                     seed=1234567,
                  ):
         super().__init__(name=name, nrays=nrays, seed=seed)
+
+
+        # for safety, initialize variables.
+        self._cone_max              = None
+        self._cone_min              = None
+        self._f_color               = None
+        self._f_foher               = None
+        self._fdist                 = None
+        self._fsour                 = None
+        self._fsource_depth         = None
+        self._hdiv1                 = None
+        self._hdiv2                 = None
+        self._ph                    = None
+        self._ph_spectrum_abscissas = None
+        self._ph_spectrum_ordinates = None
+        self._pol_angle             = None
+        self._pol_deg               = None
+        self._rl                    = None
+        self._sigdix                = None
+        self._sigdiz                = None
+        self._sigmax                = None
+        self._sigmaz                = None
+        self._vdiv1                 = None
+        self._vdiv2                 = None
+        self._wxsou                 = None
+        self._wysou                 = None
+        self._wzsou                 = None
+
+
         self.set_spatial_type_by_name(spatial_type)  # see SourceGeometrical.spatial_type_list()
         self.set_angular_distribution_by_name(angular_distribution) # see SourceGeometrical.angular_distribution_list()
         self.set_energy_distribution_by_name(energy_distribution) # see SourceGeometrical.energy_distribution_list()
         self.set_depth_distribution_by_name(depth_distribution)
         self.set_polarization(polarization_degree=1.0, phase_diff=0.0, coherent_beam=0)
+
+        # support text containg name of variable, help text and unit. Will be stored in self._support_dictionary
+        self._add_support_text([
+            ("spatial_type",         'options: "Point", "Rectangle", "Ellipse", "Gaussian"',""),
+            ("angular_distribution", 'options: "Flat", "Uniform", "Gaussian", "Cone", "Collimated"',""),
+            ("energy_distribution",  'options: "Single line", "Several lines", "Uniform", "Relative intensities", "Gaussian", "User defined"',""),
+            ("depth_distribution",   'options: "Off", "Flat", "Uniform", "Gaussian", "Cone", "Collimated"',""),
+            ("cone_max","for depth_distribution='Cone' maximum half-divergence",""),
+            ("cone_min","for depth_distribution='Cone' minimum half-divergence",""),
+            ("f_color ","1='Single line', 2='Several lines', 3='Uniform', 4='Relative intensities', 5='Gaussian', 6='User defined'",""),
+            ("f_foher ","incoherent=0, coherent=1",""),
+            ("fdist",   "1='Flat', 2='Uniform', 3='Gaussian', 4='Cone', 5='Collimated'",""),
+            ("fsour","0='Point', 1='Rectangle', 2='Ellipse', 3='Gaussian'",""),
+            ("fsource_depth","0='Off', 1='Uniform', 2='Gaussian'",""),
+            ("hdiv1","horizontal divergence minimum","rad"),
+            ("hdiv2","horizontal divergence maximum","rad"),
+            ("ph","Photon energy or energy limits","eV"),
+            ("ph_spectrum_abscissas","",""),
+            ("ph_spectrum_ordinates","",""),
+            ("pol_angle","phase difference","rad"),
+            ("pol_deg","Polarization degree",""),
+            ("rl","Weights of multiple lines in photon energy",""),
+            ("sigdix","sigma for H Gaussian angle","rad"),
+            ("sigdiz","sigma for V Gaussian angle","rad"),
+            ("sigmax","sigma for H size","m"),
+            ("sigmaz","sigma for V size","m"),
+            ("vdiv1","vertical divergence min","rad"),
+            ("vdiv2","vertical divergence max","rad"),
+            ("wxsou","source width (X)","m"),
+            ("wysou","source depth (Y)","m"),
+            ("wzsou","source height (Z)","m"),
+            ] )
 
     #
     # spatial type
@@ -94,8 +155,8 @@ class SourceGeometrical(S4LightSourceBase):
         """
         Sets the spatial type as Point.
         """
-        self.spatial_type = "Point"
-        self.__fsour = 0
+        self._spatial_type = "Point"
+        self._fsour = 0
 
     def set_spatial_type_rectangle(self, width=2.0, height=1.0):
         """
@@ -108,10 +169,10 @@ class SourceGeometrical(S4LightSourceBase):
         height : float, optional
             The source height (along Z) in m.
         """
-        self.spatial_type = "Rectangle"
-        self.__wxsou = width
-        self.__wzsou = height
-        self.__fsour = 1
+        self._spatial_type = "Rectangle"
+        self._wxsou = width
+        self._wzsou = height
+        self._fsour = 1
 
     def set_spatial_type_ellipse(self, width=2.0, height=1.0):
         """
@@ -124,10 +185,10 @@ class SourceGeometrical(S4LightSourceBase):
         height : float, optional
             The source height (axis along Z) in m.
         """
-        self.spatial_type = "Ellipse"
-        self.__wxsou = width
-        self.__wzsou = height
-        self.__fsour = 2
+        self._spatial_type = "Ellipse"
+        self._wxsou = width
+        self._wzsou = height
+        self._fsour = 2
 
     def set_spatial_type_gaussian(self, sigma_h=2.0, sigma_v=1.0):
         """
@@ -140,10 +201,10 @@ class SourceGeometrical(S4LightSourceBase):
         sigma_v : float, optional
             The source sigma along Z in m.
         """
-        self.spatial_type = "Gaussian"
-        self.__sigmax = sigma_h
-        self.__sigmaz = sigma_v
-        self.__fsour = 3
+        self._spatial_type = "Gaussian"
+        self._sigmax = sigma_h
+        self._sigmaz = sigma_v
+        self._fsour = 3
 
     #
     # angular distribution
@@ -187,12 +248,12 @@ class SourceGeometrical(S4LightSourceBase):
         """
         Sets the angular distribution as collimated.
         """
-        self.angular_distribution = "Flat"
-        self.__hdiv1 = 0.0
-        self.__hdiv2 = 0.0
-        self.__vdiv1 = 0.0
-        self.__vdiv2 = 0.0
-        self.__fdist = 1
+        self._angular_distribution = "Flat"
+        self._hdiv1 = 0.0
+        self._hdiv2 = 0.0
+        self._vdiv1 = 0.0
+        self._vdiv2 = 0.0
+        self._fdist = 1
 
     # WARNING: in shadow4 limits are signed!!!!
     def set_angular_distribution_flat(self, hdiv1=-5e-6, hdiv2=5e-6, vdiv1=-0.5e-6, vdiv2=0.5e-6):
@@ -215,12 +276,12 @@ class SourceGeometrical(S4LightSourceBase):
         vdiv2 : float, optional
             The maximum of the divergence along Z (vertical) in rad.
         """
-        self.angular_distribution = "Flat"
-        self.__hdiv1 = hdiv1
-        self.__hdiv2 = hdiv2
-        self.__vdiv1 = vdiv1
-        self.__vdiv2 = vdiv2
-        self.__fdist = 1
+        self._angular_distribution = "Flat"
+        self._hdiv1 = hdiv1
+        self._hdiv2 = hdiv2
+        self._vdiv1 = vdiv1
+        self._vdiv2 = vdiv2
+        self._fdist = 1
 
     # WARNING: in shadow4 limits are signed!!!! Not here!!!
     def set_angular_distribution_uniform(self, hdiv1=-5e-6, hdiv2=5e-6, vdiv1=-0.5e-6, vdiv2=0.5e-6):
@@ -243,12 +304,12 @@ class SourceGeometrical(S4LightSourceBase):
         vdiv2 : float, optional
             The maximum of the divergence along Z (vertical) in rad.
         """
-        self.angular_distribution = "Uniform"
-        self.__hdiv1 = hdiv1
-        self.__hdiv2 = hdiv2
-        self.__vdiv1 = vdiv1
-        self.__vdiv2 = vdiv2
-        self.__fdist = 2
+        self._angular_distribution = "Uniform"
+        self._hdiv1 = hdiv1
+        self._hdiv2 = hdiv2
+        self._vdiv1 = vdiv1
+        self._vdiv2 = vdiv2
+        self._fdist = 2
 
     def set_angular_distribution_gaussian(self, sigdix=1e-6, sigdiz=1e-6):
         """
@@ -261,10 +322,10 @@ class SourceGeometrical(S4LightSourceBase):
         sigdiz : float, optional
             The sigma vale along Z (vertical).
         """
-        self.angular_distribution = "Gaussian"
-        self.__sigdix = sigdix
-        self.__sigdiz = sigdiz
-        self.__fdist = 3
+        self._angular_distribution = "Gaussian"
+        self._sigdix = sigdix
+        self._sigdiz = sigdiz
+        self._fdist = 3
 
     def set_angular_distribution_cone(self, cone_max=10e-6, cone_min=0.0):
         """
@@ -277,10 +338,10 @@ class SourceGeometrical(S4LightSourceBase):
         cone_min : float, optional
             The minimum aperture of the cone in rad.
         """
-        self.angular_distribution = "Cone"
-        self.__cone_max = cone_max
-        self.__cone_min = cone_min
-        self.__fdist = 4
+        self._angular_distribution = "Cone"
+        self._cone_max = cone_max
+        self._cone_min = cone_min
+        self._fdist = 4
 
     def set_polarization(self,
                          polarization_degree=1, # cos_s / (cos_s + sin_s)
@@ -299,9 +360,9 @@ class SourceGeometrical(S4LightSourceBase):
         coherent_beam : int, optional
             A flag to indicate that the phase for the s-component is set to zero (coherent_beam=1) or is random for incoherent.
         """
-        self.__pol_deg = polarization_degree
-        self.__pol_angle = phase_diff
-        self.__f_foher = coherent_beam
+        self._pol_deg = polarization_degree
+        self._pol_angle = phase_diff
+        self._f_foher = coherent_beam
 
     #
     # energy distribution
@@ -354,11 +415,11 @@ class SourceGeometrical(S4LightSourceBase):
         unit : str, optional
             set to 'eV' for photon energy in eV or 'A' for wavelength in Angstroms.
         """
-        self.energy_distribution = "Single line"
+        self._energy_distribution = "Single line"
         self._set_energy_distribution_unit(unit)
         #Note: ph1, ph2, etc. in shadow3 become ph (array)
-        self.__ph = [value]
-        self.__f_color = 1
+        self._ph = numpy.array([value])
+        self._f_color = 1
 
 
     def set_energy_distribution_severallines(self, values=[1000.0,2000.0], unit='eV'):
@@ -372,11 +433,11 @@ class SourceGeometrical(S4LightSourceBase):
         unit : str, optional
             set to 'eV' for photon energy in eV or 'A' for wavelength in Angstroms.
         """
-        self.energy_distribution = "Several lines"
+        self._energy_distribution = "Several lines"
         self._set_energy_distribution_unit(unit)
         #WARNING: ph1, ph2, etc. become ph (array)
-        self.__ph = values
-        self.__f_color = 2
+        self._ph = numpy.array(values)
+        self._f_color = 2
 
     def set_energy_distribution_uniform(self, value_min=1000.0, value_max=2000.0, unit='eV'):
         """
@@ -391,11 +452,11 @@ class SourceGeometrical(S4LightSourceBase):
         unit : str, optional
             set to 'eV' for photon energy in eV or 'A' for wavelength in Angstroms.
         """
-        self.energy_distribution = "Uniform"
+        self._energy_distribution = "Uniform"
         self._set_energy_distribution_unit(unit)
         #WARNING: ph1, ph2, etc. become ph (array)
-        self.__ph = [value_min,value_max]
-        self.__f_color = 3
+        self._ph = numpy.array([value_min, value_max])
+        self._f_color = 3
 
     def set_energy_distribution_relativeintensities(self, values=[1000.0,2000.0], weights=[1.0,2.0], unit='eV'):
         """
@@ -410,12 +471,12 @@ class SourceGeometrical(S4LightSourceBase):
         unit : str, optional
             set to 'eV' for photon energy in eV or 'A' for wavelength in Angstroms.
         """
-        self.energy_distribution = "Relative intensities"
+        self._energy_distribution = "Relative intensities"
         self._set_energy_distribution_unit(unit)
         #Note: ph1, ph2, etc. become ph (array)
-        self.__ph = values
-        self.__rl = weights
-        self.__f_color = 4 # not in source.nml
+        self._ph = numpy.array(values)
+        self._rl = numpy.array(weights)
+        self._f_color = 4 # not in source.nml
 
     # WARNING: limits suppressed
     def set_energy_distribution_gaussian(self, center=1000.0, sigma=10.0, unit='eV'):
@@ -431,11 +492,11 @@ class SourceGeometrical(S4LightSourceBase):
         unit : str, optional
             set to 'eV' for photon energy in eV or 'A' for wavelength in Angstroms.
         """
-        self.energy_distribution = "Gaussian"
+        self._energy_distribution = "Gaussian"
         self._set_energy_distribution_unit(unit)
         #WARNING: ph1, ph2, etc. become ph (array)
-        self.__ph = [center,sigma]
-        self.__f_color = 5  # new
+        self._ph = numpy.array([center,sigma])
+        self._f_color = 5  # new
 
     def set_energy_distribution_userdefined(self, spectrum_abscissas, spectrum_ordinates, unit='eV'):
         """
@@ -450,11 +511,11 @@ class SourceGeometrical(S4LightSourceBase):
         unit : str, optional
             set to 'eV' for photon energy in eV or 'A' for wavelength in Angstroms.
         """
-        self.energy_distribution = "User defined"
+        self._energy_distribution = "User defined"
         self._set_energy_distribution_unit(unit)
-        self.__ph_spectrum_abscissas = spectrum_abscissas
-        self.__ph_spectrum_ordinates = spectrum_ordinates
-        self.__f_color = 6  # new
+        self._ph_spectrum_abscissas = spectrum_abscissas
+        self._ph_spectrum_ordinates = spectrum_ordinates
+        self._f_color = 6  # new
 
     #
     # source depth
@@ -504,17 +565,17 @@ class SourceGeometrical(S4LightSourceBase):
             width of the depth: width for uniform (depth=1) or sigma for Gaussian (depth=2).
         """
 
-        self.__fsource_depth = depth
-        self.__wysou = source_depth_y
+        self._fsource_depth = depth
+        self._wysou = source_depth_y
 
-        if self.__fsource_depth == 0:
-            self.depth_distribution = "Off"
-        elif self.__fsource_depth == 1:
-            self.depth_distribution = "Uniform"
-        elif self.__fsource_depth == 2:
-            self.depth_distribution = "Gaussian"
+        if self._fsource_depth == 0:
+            self._depth_distribution = "Off"
+        elif self._fsource_depth == 1:
+            self._depth_distribution = "Uniform"
+        elif self._fsource_depth == 2:
+            self._depth_distribution = "Gaussian"
         else:
-            raise Exception("Not implemented depth type (index=%d)" % self.__fsour)
+            raise Exception("Not implemented depth type (index=%d)" % self._fsour)
 
     def set_depth_distribution_off(self):
         """
@@ -570,7 +631,7 @@ class SourceGeometrical(S4LightSourceBase):
         """
         return self.calculate_beam()
 
-    def calculate_rays(self, verbose=1):
+    def calculate_rays(self, verbose=0):
         """
         Returns a numpy array (nrays,18) with the sampled rays.
 
@@ -591,43 +652,43 @@ class SourceGeometrical(S4LightSourceBase):
 
         rays = self._sample_rays_default(N)
 
-        if verbose: print(">> Spatial type: %s"%(self.spatial_type))
+        if verbose: print(">> Spatial type: %s"%(self._spatial_type))
 
         #
         # spatial type
         #
-        if self.spatial_type == "Point":
+        if self._spatial_type == "Point":
             pass
-        elif self.spatial_type == "Rectangle":
+        elif self._spatial_type == "Rectangle":
             rays[:,0],rays[:,2] = Rectangle2D.sample(N,
-                                    -0.5*self.__wxsou,
-                                    +0.5*self.__wxsou,
-                                    -0.5*self.__wzsou,
-                                    +0.5*self.__wzsou)
-        elif self.spatial_type == "Ellipse":
+                                    -0.5*self._wxsou,
+                                    +0.5*self._wxsou,
+                                    -0.5*self._wzsou,
+                                    +0.5*self._wzsou)
+        elif self._spatial_type == "Ellipse":
             rays[:,0],rays[:,2] = Ellipse2D.sample(N,
-                                    -0.5*self.__wxsou,
-                                    +0.5*self.__wxsou,
-                                    -0.5*self.__wzsou,
-                                    +0.5*self.__wzsou)
-        elif self.spatial_type == "Gaussian":
+                                    -0.5*self._wxsou,
+                                    +0.5*self._wxsou,
+                                    -0.5*self._wzsou,
+                                    +0.5*self._wzsou)
+        elif self._spatial_type == "Gaussian":
             rays[:,0],rays[:,2] = Gaussian2D.sample(N,
-                                    self.__sigmax,
-                                    self.__sigmaz)
+                                    self._sigmax,
+                                    self._sigmaz)
         else:
             raise Exception("Bad value of spatial_type")
 
         #
         # depth distribution
         #
-        if verbose: print(">> Depth distribution: %s"%(self.depth_distribution))
+        if verbose: print(">> Depth distribution: %s"%(self._depth_distribution))
 
-        if self.depth_distribution == "Off":
+        if self._depth_distribution == "Off":
             pass
-        elif self.depth_distribution == "Uniform":
-            rays[:,1] = (numpy.random.rand(N) - 0.5) * self.__wysou
-        elif self.depth_distribution == "Gaussian":
-            rays[:,1] = numpy.random.normal(loc=0.0, scale=self.__wysou, size=N)
+        elif self._depth_distribution == "Uniform":
+            rays[:,1] = (numpy.random.rand(N) - 0.5) * self._wysou
+        elif self._depth_distribution == "Gaussian":
+            rays[:,1] = numpy.random.normal(loc=0.0, scale=self._wysou, size=N)
         else:
             raise Exception("Bad value of depth_distribution")
 
@@ -635,31 +696,31 @@ class SourceGeometrical(S4LightSourceBase):
         #
         # angular distribution
         #
-        if verbose: print(">> Angular distribution: %s"%(self.angular_distribution))
+        if verbose: print(">> Angular distribution: %s"%(self._angular_distribution))
 
-        if self.angular_distribution == "Flat":
+        if self._angular_distribution == "Flat":
             rays[:,3],rays[:,5] = Flat2D.sample(N,
-                                    self.__hdiv1,
-                                    self.__hdiv2,
-                                    self.__vdiv1,
-                                    self.__vdiv2)
+                                    self._hdiv1,
+                                    self._hdiv2,
+                                    self._vdiv1,
+                                    self._vdiv2)
             rays[:,4] = numpy.sqrt(-rays[:,3]**2 - rays[:,5]**2 + 1.0)
-        elif self.angular_distribution == "Uniform":
+        elif self._angular_distribution == "Uniform":
             rays[:,3],rays[:,5] = Uniform2D.sample(N,
-                                    self.__hdiv1,
-                                    self.__hdiv2,
-                                    self.__vdiv1,
-                                    self.__vdiv2)
+                                    self._hdiv1,
+                                    self._hdiv2,
+                                    self._vdiv1,
+                                    self._vdiv2)
             rays[:,4] = numpy.sqrt(-rays[:,3]**2 - rays[:,5]**2 + 1.0)
-        elif self.angular_distribution == "Gaussian":
+        elif self._angular_distribution == "Gaussian":
             rays[:,3],rays[:,5] = Gaussian2D.sample(N,
-                                    self.__sigdix,
-                                    self.__sigdiz)
+                                    self._sigdix,
+                                    self._sigdiz)
             rays[:,4] = numpy.sqrt(-rays[:,3]**2 - rays[:,5]**2 + 1.0)
-        elif self.angular_distribution == "Cone":
+        elif self._angular_distribution == "Cone":
             rays[:,3],rays[:,5] = Cone2D.sample(N,
-                                    self.__cone_max,
-                                    self.__cone_min)
+                                    self._cone_max,
+                                    self._cone_min)
             rays[:,4] = numpy.sqrt(-rays[:,3]**2 - rays[:,5]**2 + 1.0)
         else:
             raise Exception("Bad value of angular_distribution")
@@ -670,24 +731,24 @@ class SourceGeometrical(S4LightSourceBase):
         # energy distribution
         # ["Single line","Several lines","Uniform","Relative intensities","Gaussian","User defined"]
         #
-        if verbose: print(">> Energy distribution: ",self.energy_distribution)
+        if verbose: print(">> Energy distribution: ",self._energy_distribution)
 
-        if self.energy_distribution == "Single line":
-            if self.__f_phot == 0:
-                rays[:,10] = self._energy_to_wavenumber(self.__ph[0])
+        if self._energy_distribution == "Single line":
+            if self._f_phot == 0:
+                rays[:,10] = self._energy_to_wavenumber(self._ph[0])
             else:
-                rays[:,10] = self._wavelength_to_wavenumber(self.__ph[0] * 1e-10)
-        elif self.energy_distribution == "Several lines":
-            values = numpy.array(self.__ph)
+                rays[:,10] = self._wavelength_to_wavenumber(self._ph[0] * 1e-10)
+        elif self._energy_distribution == "Several lines":
+            values = numpy.array(self._ph)
             n_test =   (numpy.random.random(N) * values.size).astype(int)
             sampled_values = values[n_test]
-            if self.__f_phot == 0:
+            if self._f_phot == 0:
                 rays[:,10] = self._energy_to_wavenumber(sampled_values)
             else:
                 rays[:,10] = self._wavelength_to_wavenumber(sampled_values * 1e-10)
-        elif self.energy_distribution == "Relative intensities":
-            values = numpy.array(self.__ph)
-            relative_intensities = numpy.array(self.__rl)
+        elif self._energy_distribution == "Relative intensities":
+            values = numpy.array(self._ph)
+            relative_intensities = numpy.array(self._rl)
             # ! C Normalize so that each energy has a probability and so that the sum
             # ! C of the probabilities of all the energies is 1.
             relative_intensities /= relative_intensities.sum()
@@ -712,27 +773,27 @@ class SourceGeometrical(S4LightSourceBase):
                     if (DPS_RAN3 > relative_intensities[j-1] and DPS_RAN3 <= relative_intensities[j]):
                         sampled_values[i] = values[j]
 
-            if self.__f_phot == 0:
+            if self._f_phot == 0:
                 rays[:,10] = self._energy_to_wavenumber(sampled_values)
             else:
                 rays[:,10] = self._wavelength_to_wavenumber(sampled_values * 1e-10)
-        elif self.energy_distribution == "Uniform":
-            sampled_values = self.__ph[0] + (self.__ph[1]-self.__ph[0]) * numpy.random.rand(N)
-            if self.__f_phot == 0:
+        elif self._energy_distribution == "Uniform":
+            sampled_values = self._ph[0] + (self._ph[1]-self._ph[0]) * numpy.random.rand(N)
+            if self._f_phot == 0:
                 rays[:,10] = self._energy_to_wavenumber(sampled_values)
             else:
                 rays[:,10] = self._wavelength_to_wavenumber(sampled_values * 1e-10)
-        elif self.energy_distribution == "Gaussian":
-            sampled_values = numpy.random.normal(loc=self.__ph[0], scale=self.__ph[1], size=N)
-            if self.__f_phot == 0:
+        elif self._energy_distribution == "Gaussian":
+            sampled_values = numpy.random.normal(loc=self._ph[0], scale=self._ph[1], size=N)
+            if self._f_phot == 0:
                 rays[:,10] = self._energy_to_wavenumber(sampled_values)
             else:
                 rays[:,10] = self._wavelength_to_wavenumber(sampled_values * 1e-10)
-        elif self.energy_distribution == "User defined":
-            sampler = Sampler1D(self.__ph_spectrum_ordinates,self.__ph_spectrum_abscissas)
+        elif self._energy_distribution == "User defined":
+            sampler = Sampler1D(self._ph_spectrum_ordinates,self._ph_spectrum_abscissas)
             sampled_values = sampler.get_n_sampled_points(N)
 
-            if self.__f_phot == 0:
+            if self._f_phot == 0:
                 rays[:,10] = self._energy_to_wavenumber(sampled_values)
             else:
                 rays[:,10] = self._wavelength_to_wavenumber(sampled_values * 1e-10)
@@ -762,12 +823,12 @@ class SourceGeometrical(S4LightSourceBase):
         #
         # obtain polarization for each ray (interpolation)
         #
-        DENOM = numpy.sqrt(1.0 - 2.0 * self.__pol_deg + 2.0 * self.__pol_deg ** 2)
-        AX = self.__pol_deg / DENOM
+        DENOM = numpy.sqrt(1.0 - 2.0 * self._pol_deg + 2.0 * self._pol_deg ** 2)
+        AX = self._pol_deg / DENOM
         for i in range(3):
             A_VEC[:, i] *= AX
 
-        AZ = (1.0 - self.__pol_deg) / DENOM
+        AZ = (1.0 - self._pol_deg) / DENOM
         for i in range(3):
             AP_VEC[:, i] *= AZ
 
@@ -775,12 +836,12 @@ class SourceGeometrical(S4LightSourceBase):
         rays[:, 15:18] = AP_VEC
 
         # ! C Now the phases of A_VEC and AP_VEC.
-        if self.__f_foher == 1:
+        if self._f_foher == 1:
             PHASEX = 0.0
         else:
             PHASEX = numpy.random.random(N) * 2 * numpy.pi
 
-        PHASEZ = PHASEX + self.__pol_angle
+        PHASEZ = PHASEX + self._pol_angle
 
         rays[:, 13] = PHASEX
         rays[:, 14] = PHASEZ
@@ -811,81 +872,81 @@ class SourceGeometrical(S4LightSourceBase):
                (self.get_name(), self.get_nrays(), self.get_seed())
 
         # spatial type
-        if self.__fsour == 0:  # point
+        if self._fsour == 0:  # point
             txt += "\nlight_source.set_spatial_type_point()"
-        elif self.__fsour == 1:  # rectangle
+        elif self._fsour == 1:  # rectangle
             txt += "\nlight_source.set_spatial_type_rectangle(width=%f,height=%f)" % \
-                   (self.__wxsou, self.__wzsou)
-        elif self.__fsour == 2:  # ellipse
+                   (self._wxsou, self._wzsou)
+        elif self._fsour == 2:  # ellipse
             txt += "\nlight_source.set_spatial_type_ellipse(width=%f,height=%f)" % \
-                   (self.__wxsou, self.__wzsou)
-        elif self.__fsour == 3:  # Gaussian
+                   (self._wxsou, self._wzsou)
+        elif self._fsour == 3:  # Gaussian
             txt += "\nlight_source.set_spatial_type_gaussian(sigma_h=%s,sigma_v=%f)" % \
-                   (self.__sigmax, self.__sigmaz)
+                   (self._sigmax, self._sigmaz)
 
         # depth
-        if self.__fsource_depth == 0:  # off
+        if self._fsource_depth == 0:  # off
             txt += "\nlight_source.set_depth_distribution_off()"
-        elif self.__fsource_depth == 1:  # uniform
-            txt += "\nlight_source.set_depth_distribution_uniform(%f)" % (self.__wysou)
-        elif self.__fsource_depth == 2:  # gaussian
-            txt += "\nlight_source.set_depth_distribution_gaussian(%f)" % (self.__wysou)
+        elif self._fsource_depth == 1:  # uniform
+            txt += "\nlight_source.set_depth_distribution_uniform(%f)" % (self._wysou)
+        elif self._fsource_depth == 2:  # gaussian
+            txt += "\nlight_source.set_depth_distribution_gaussian(%f)" % (self._wysou)
 
         # divergence
-        if self.__fdist == 1:  # flat
+        if self._fdist == 1:  # flat
             txt += "\nlight_source.set_angular_distribution_flat(hdiv1=%f,hdiv2=%f,vdiv1=%f,vdiv2=%f)" % \
-                   (self.__hdiv1, self.__hdiv2, self.__vdiv1, self.__vdiv2)
-        elif self.__fdist == 2:  # Uniform
+                   (self._hdiv1, self._hdiv2, self._vdiv1, self._vdiv2)
+        elif self._fdist == 2:  # Uniform
             txt += "\nlight_source.set_angular_distribution_uniform(hdiv1=%f,hdiv2=%f,vdiv1=%f,vdiv2=%f)" % \
-                   (self.__hdiv1, self.__hdiv2, self.__vdiv1, self.__vdiv2)
+                   (self._hdiv1, self._hdiv2, self._vdiv1, self._vdiv2)
 
-        elif self.__fdist == 3:  # Gaussian
+        elif self._fdist == 3:  # Gaussian
             txt += "\nlight_source.set_angular_distribution_gaussian(sigdix=%f,sigdiz=%f)" % \
-                   (self.__sigdix, self.__sigdiz)
-        elif self.__fdist == 4:  # cone
+                   (self._sigdix, self._sigdiz)
+        elif self._fdist == 4:  # cone
             txt += "\nlight_source.set_angular_distribution_cone(cone_max=%f,cone_min=%f)" % \
-                   (self.__cone_max, self.__cone_min)
-        elif self.__fdist == 5:  # Zero (collimated) - New in shadow4
+                   (self._cone_max, self._cone_min)
+        elif self._fdist == 5:  # Zero (collimated) - New in shadow4
             txt += "\nlight_source.set_angular_distribution_collimated()"
 
 
         # energy
-        unit = ['eV', 'A'][self.__f_phot]
+        unit = ['eV', 'A'][self._f_phot]
 
-        if self.__f_color == 1:  # "Single line":
+        if self._f_color == 1:  # "Single line":
             txt += "\nlight_source.set_energy_distribution_singleline(%f, unit='%s')" % \
-                   (self.__ph[0], unit)
-        elif self.__f_color == 2:  # "Several lines":
-            nlines = (numpy.array(self.__ph)).size
+                   (self._ph[0], unit)
+        elif self._f_color == 2:  # "Several lines":
+            nlines = (numpy.array(self._ph)).size
             ff = "["
             for i in range(nlines):
-                ff += "%f," % self.__ph[i]
+                ff += "%f," % self._ph[i]
             ff += "]"
             txt += "\nlight_source.set_energy_distribution_severallines(values=%s, unit='%s')" % (ff, unit)
-        elif self.__f_color == 3:  # "Uniform":
+        elif self._f_color == 3:  # "Uniform":
             txt += "\nlight_source.set_energy_distribution_uniform(value_min=%f, value_max=%f, unit='%s')" % \
-                   (self.__ph[0], self.__ph[1], unit)
-        elif self.__f_color == 4:  # "Relative intensities":
-            nlines = (numpy.array(self.__ph)).size
+                   (self._ph[0], self._ph[1], unit)
+        elif self._f_color == 4:  # "Relative intensities":
+            nlines = (numpy.array(self._ph)).size
             ff = "["
             ww = "["
             for i in range(nlines):
-                ff += "%f," % self.__ph[i]
-                ww += "%f," % self.__rl[i]
+                ff += "%f," % self._ph[i]
+                ww += "%f," % self._rl[i]
             ff += "]"
             ww += "]"
             txt += "\nlight_source.set_energy_distribution_relativeintensities(values=%s, weights=%s, unit='%s')" % \
                    (ff, ww, unit)
-        elif self.__f_color == 5:  # "Gaussian":
+        elif self._f_color == 5:  # "Gaussian":
             txt += "\nlight_source.set_energy_distribution_gaussian(center=%f, sigma=%f, unit='%s')" % \
-                (self.__ph[0], self.__ph[1], unit)
-        elif self.__f_color == 6:  # "User defined":
+                (self._ph[0], self._ph[1], unit)
+        elif self._f_color == 6:  # "User defined":
             # a = numpy.loadtxt(self.user_defined_file)
             txt += "\nlight_source.set_energy_distribution_userdefined() #### TODO: COMPLETE"
 
         #polarization/coherence
         txt += "\nlight_source.set_polarization(polarization_degree=%f, phase_diff=%f, coherent_beam=%s)" % \
-               (self.__pol_deg, self.__pol_angle, self.__f_foher)
+               (self._pol_deg, self._pol_angle, self._f_foher)
 
         txt += "\nbeam = light_source.get_beam()"
 
@@ -896,9 +957,9 @@ class SourceGeometrical(S4LightSourceBase):
     #
     def _set_energy_distribution_unit(self, name='eV'):
         if name == 'eV':
-            self.__f_phot = 0
+            self._f_phot = 0
         elif name == 'A':
-            self.__f_phot = 1
+            self._f_phot = 1
         else:
             raise Exception("Bad name for energy units, valid names are: eV, A")
 

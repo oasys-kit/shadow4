@@ -134,7 +134,19 @@ class S4LightSource(LightSource):
         """
         raise NotImplementedError()
 
+    def get_info(self):
+        """
+        Returns specific information.
+
+        Returns
+        -------
+        str
+        """
+        return "\n\nSpecific information not available (get_info() method not overloaded).\n\n"
+
 if __name__ == "__main__":
     a = S4LightSource()
     print(a.info())
     print(a.to_python_code())
+    print(a.get_info())
+    print(a.info())
