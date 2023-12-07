@@ -36,7 +36,6 @@ class SourceGeometrical(S4LightSourceBase):
         The Monte Carlo seed.
     """
     def __init__(self,
-    def __init__(self,
                     name="Undefined",
                     spatial_type="Point",
                     angular_distribution="Flat",

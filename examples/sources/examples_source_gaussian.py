@@ -12,24 +12,24 @@ def example_point_source():
                  nrays=10000,)
     print(a.info())
 
-    x,y,z = a.get_arrays_real_space()
+    x,y,z = a._get_arrays_real_space()
     print("x.shape:",x.shape)
     print("y.shape:",y.shape)
     print("z.shape:",z.shape)
 
-    xp,zp = a.get_arrays_direction_space()
+    xp,zp = a._get_arrays_direction_space()
     print("xp.shape:",xp.shape)
     print("zp.shape:",zp.shape)
 
 
-    VP = a.get_volume_divergences()
+    VP = a._get_volume_divergences()
     print("VP",VP.shape,VP.size)
 
 
-    Vx = a.get_volume_real_space()
+    Vx = a._get_volume_real_space()
     print("Vx: ",Vx.shape)
 
-    V = a.get_volume()
+    V = a._get_volume()
     print("V: ",V.shape)
 
 
@@ -81,8 +81,6 @@ def example_double_gaussian():
 if __name__ == "__main__":
     from srxraylib.plot.gol import set_qt
     set_qt()
-
-
     example_point_source()
     example_collimated_source()
     example_double_gaussian()
