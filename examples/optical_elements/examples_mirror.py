@@ -26,7 +26,7 @@ def example_branch_1(do_plot=True):
     #
     # source
     #
-    source = SourceGaussian.initialize_from_keywords(nrays=100000,
+    source = SourceGaussian(nrays=100000,
                  sigmaX=0.0,
                  sigmaY=0.0,
                  sigmaZ=0.0,
@@ -116,7 +116,7 @@ def example_branch_1(do_plot=True):
         plotxy(mirr2, 2, 1, title="Footprint 2", nbins=101, nolost=1)
 
 def example_branch_2(do_plot=True):
-    source = SourceGaussian.initialize_from_keywords(nrays=100000,
+    source = SourceGaussian(nrays=100000,
                  sigmaX=0.0,
                  sigmaY=0.0,
                  sigmaZ=0.0,
@@ -172,7 +172,7 @@ def example_branch_3(surface_shape_file, do_plot=True):
     # source
     #
     # beam0 = Beam.initialize_as_pencil(N=500)
-    source = SourceGaussian.initialize_from_keywords(nrays=100000,
+    source = SourceGaussian(nrays=100000,
                  sigmaX=0.0,
                  sigmaY=0.0,
                  sigmaZ=0.0,
@@ -229,7 +229,7 @@ def example_branch_4(do_plot=True, f_refl=0):
     # source
     #
     # beam0 = Beam.initialize_as_pencil(N=500)
-    source = SourceGaussian.initialize_from_keywords(nrays=100000,
+    source = SourceGaussian(nrays=100000,
                  sigmaX=0.0,
                  sigmaY=0.0,
                  sigmaZ=0.0,
@@ -326,7 +326,7 @@ def example_branch_5(surface_type, do_plot=True):
     #
     # source
     #
-    source = SourceGaussian.initialize_from_keywords(nrays=100000,
+    source = SourceGaussian(nrays=100000,
                  sigmaX=0.0,
                  sigmaY=0.0,
                  sigmaZ=0.0,

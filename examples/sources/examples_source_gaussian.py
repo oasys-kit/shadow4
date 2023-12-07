@@ -58,7 +58,7 @@ def example_collimated_source():
 def example_double_gaussian():
     #
     #
-    a = SourceGaussian.initialize_from_keywords(
+    a = SourceGaussian(
                                                 sigmaX=2.0e-6,
                                                 sigmaY=1.0e-3,
                                                 sigmaZ=1.0e-6,

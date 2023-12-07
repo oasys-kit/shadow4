@@ -18,20 +18,20 @@ class SourceGaussian(S4LightSourceBase):
 
     Parameters
     ----------
-    sigmaX : float
+    sigmaX : float, optional
         The sigma in X direction (width).
-    sigmaY : float
+    sigmaY : float, optional
         The sigma in Y direction (depth).
-    sigmaZ : float
+    sigmaZ : float, optional
         The sigma in Z direction (height).
-    sigmaXprime : float
+    sigmaXprime : float, optional
         The divergence in X direction in rad.
-    sigmaZprime : float
+    sigmaZprime : float, optional
         The divergence in Z direction in rad.
-    real_space_center : list
+    real_space_center : list, tuple or numpy array, optional
         The 3 coordinates of the center in real space.
-    direction_space_center : list
-        The 2 coordinates of the center in dicergence space (X,Z).
+    direction_space_center : list, tuple or numpy array, optional
+        The 2 coordinates of the center in divergence space (X,Z).
     name : str, optional
         A name.
     nrays : int, optional
@@ -40,44 +40,62 @@ class SourceGaussian(S4LightSourceBase):
         Seed for the Monte Carlo generator.
     """
     def __init__(self,
-                 sigmaX,
-                 sigmaY,
-                 sigmaZ,
-                 sigmaXprime,
-                 sigmaZprime,
-                 real_space_center,
-                 direction_space_center,
                  name="Undefined",
                  nrays=5000,
                  seed=123456,
-                 ):
-        super().__init__(name=name, nrays=nrays, seed=seed)
-        # self._number_of_rays = number_of_rays
-        self._sigmaX = sigmaX
-        self._sigmaY = sigmaY
-        self._sigmaZ = sigmaZ
-        self._sigmaXprime = sigmaXprime
-        self._sigmaZprime = sigmaZprime
-        self._real_space_center = real_space_center
-        self._direction_space_center = direction_space_center
-        # self._seed = seed
-
-        if seed != 0:
-            numpy.random.seed(seed)
-
-
-    @classmethod
-    def initialize_from_keywords(cls,
                  sigmaX=1.0e-6,
                  sigmaY=1.0e-6,
                  sigmaZ=0.0,
                  sigmaXprime=1e-6,
                  sigmaZprime=1e-6,
-                 real_space_center=[0.0,0.0,0.0],
-                 direction_space_center=[0.0,0.0],
-                 nrays=10000,
-                 seed=12345,
+                 real_space_center=None,
+                 direction_space_center=None,
                  ):
+        if real_space_center is None:
+            real_space_center = [0.0, 0.0, 0.0]
+
+        if direction_space_center is None:
+            direction_space_center = [0.0, 0.0]
+
+        super().__init__(name=name, nrays=nrays, seed=seed)
+        self._sigmaX = sigmaX
+        self._sigmaY = sigmaY
+        self._sigmaZ = sigmaZ
+        self._sigmaXprime = sigmaXprime
+        self._sigmaZprime = sigmaZprime
+        self._real_space_center      = numpy.array(real_space_center)       # must be defined as numpy array to allow syned file i/o
+        self._direction_space_center = numpy.array(direction_space_center)  # must be defined as numpy array to allow syned file i/o
+
+        if seed != 0:
+            numpy.random.seed(seed)
+
+        # support text containg name of variable, help text and unit. Will be stored in self._support_dictionary
+        self._add_support_text([
+            ("sigmaX","The sigma in X direction (width)",""),
+            ("sigmaY","The sigma in Y direction (depth)",""),
+            ("sigmaZ","The sigma in Z direction (height)",""),
+            ("sigmaXprime","The divergence in X direction in rad",""),
+            ("sigmaZprime","The divergence in Z direction in rad",""),
+            ("real_space_center","The 3 coordinates of the center in real space",""),
+            ("direction_space_center","The 2 coordinates of the center in divergence space (X,Z)",""),
+            ("name","A name",""),
+            ("nrays"," Number of rays generated using SourceGaussian.get_beam(",""),
+            ("seed","Seed for the Monte Carlo generator",""),
+            ] )
+
+    @classmethod
+    def initialize_from_keywords(cls,
+                                name="Undefined",
+                                nrays=10000,
+                                seed=12345,
+                                sigmaX=1.0e-6,
+                                sigmaY=1.0e-6,
+                                sigmaZ=0.0,
+                                sigmaXprime=1e-6,
+                                sigmaZprime=1e-6,
+                                real_space_center=None,
+                                direction_space_center=None,
+                                ):
         """
         Creates a Gaussian source in 3D.
 
@@ -96,7 +114,7 @@ class SourceGaussian(S4LightSourceBase):
         real_space_center : list, optional
             The 3 coordinates of the center in real space.
         direction_space_center : list, optional
-            The 2 coordinates of the center in dicergence space (X,Z).
+            The 2 coordinates of the center in divergence space (X,Z).
         name : str, optional
             A name.
         nrays : int, optional
@@ -109,25 +127,28 @@ class SourceGaussian(S4LightSourceBase):
         instance of SourceGaussian.
         """
         return SourceGaussian(
-                 sigmaX,
-                 sigmaY,
-                 sigmaZ,
-                 sigmaXprime,
-                 sigmaZprime,
-                 real_space_center,
-                 direction_space_center,
-                 nrays=nrays,
-                 seed=seed)
+                                name                   = name,
+                                nrays                  = nrays,
+                                seed                   = seed,
+                                sigmaX                 = sigmaX,
+                                sigmaY                 = sigmaY,
+                                sigmaZ                 = sigmaZ,
+                                sigmaXprime            = sigmaXprime,
+                                sigmaZprime            = sigmaZprime,
+                                real_space_center      = None,
+                                direction_space_center = None,
+                                )
 
     @classmethod
     def initialize_point_source(cls,
-                 sigmaXprime=1e-6,
-                 sigmaZprime=1e-6,
-                 real_space_center=[0.0,0.0,0.0],
-                 direction_space_center=[0.0,0.0],
-                 nrays=10000,
-                 seed=12345,
-                 ):
+                                name="Undefined",
+                                nrays=10000,
+                                seed=12345,
+                                sigmaXprime=1e-6,
+                                sigmaZprime=1e-6,
+                                real_space_center=None,
+                                direction_space_center=None,
+                                ):
         """
         Creates a Gaussian source with zero dimension in real space.
 
@@ -136,7 +157,7 @@ class SourceGaussian(S4LightSourceBase):
         real_space_center : list, optional
             The 3 coordinates of the center in real space.
         direction_space_center : list, optional
-            The 2 coordinates of the center in dicergence space (X,Z).
+            The 2 coordinates of the center in divergence space (X,Z).
         name : str, optional
             A name.
         nrays : int, optional
@@ -149,26 +170,29 @@ class SourceGaussian(S4LightSourceBase):
         instance of SourceGaussian.
         """
         return SourceGaussian(
-                 0.0,
-                 0.0,
-                 0.0,
-                 sigmaXprime,
-                 sigmaZprime,
-                 real_space_center,
-                 direction_space_center,
-                 nrays=nrays,
-                 seed=seed)
+                 name                   = name,
+                 nrays                  = nrays,
+                 seed                   = seed,
+                 sigmaX                 = 0.0,
+                 sigmaY                 = 0.0,
+                 sigmaZ                 = 0.0,
+                 sigmaXprime            = sigmaXprime,
+                 sigmaZprime            = sigmaZprime,
+                 real_space_center      = real_space_center,
+                 direction_space_center = direction_space_center,
+        )
 
 
     @classmethod
     def initialize_collimated_source(cls,
+                 name="Undefined",
+                 nrays=10000,
+                 seed=12345,
                  sigmaX=1.0,
                  sigmaY=0.0,
                  sigmaZ=1.0,
-                 real_space_center=[0.0,0.0,0.0],
-                 direction_space_center=[0.0,0.0],
-                 nrays = 10000,
-                 seed=12345,
+                 real_space_center=None,
+                 direction_space_center=None,
                  ):
         """
         Creates a Gaussian source with zero dimension in divergence space space.
@@ -193,15 +217,17 @@ class SourceGaussian(S4LightSourceBase):
         instance of SourceGaussian.
         """
         return SourceGaussian(
-                 sigmaX,
-                 sigmaY,
-                 sigmaZ,
-                 0.0,
-                 0.0,
-                 real_space_center,
-                 direction_space_center,
-                 nrays=nrays,
-                 seed=seed)
+                                name                   = name,
+                                nrays                  = nrays,
+                                seed                   = seed,
+                                sigmaX                 = sigmaX,
+                                sigmaY                 = sigmaY,
+                                sigmaZ                 = sigmaZ,
+                                sigmaXprime            = 0.0,
+                                sigmaZprime            = 0.0,
+                                real_space_center      = real_space_center,
+                                direction_space_center = direction_space_center,
+                                )
 
     #
     # getters
@@ -365,7 +391,7 @@ if __name__ == "__main__":
                  sigmaZ=1.0e-6,
                  sigmaXprime=0.0002,
                  sigmaZprime=0.0002,
-                 real_space_center=[0.0,0.0,0.0],
+                 real_space_center=numpy.array([0.0,0.0,0.0]),
                  direction_space_center=[0.0,0.0]
                                  )
     print(src.info())

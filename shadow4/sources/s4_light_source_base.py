@@ -19,8 +19,15 @@ class S4LightSourceBase(EmptyLightSource):
     """
     def __init__(self, name="Undefined", nrays=5000, seed=1234567):
         super().__init__(name=name)
-        self.__nrays = nrays
-        self.__seed = seed
+        self._nrays = nrays
+        self._seed = seed
+
+        # support text containg name of variable, help text and unit. Will be stored in self._support_dictionary
+        self._set_support_text([
+            ("name","Name",""),
+            ("nrays","Number of rays to be generated",""),
+            ("seed","Seed for the Monte Carlo generator",""),
+            ] )
 
     def set_nrays(self, nrays):
         """
@@ -32,7 +39,7 @@ class S4LightSourceBase(EmptyLightSource):
             The number of rays.
 
         """
-        self.__nrays = nrays
+        self._nrays = nrays
 
     def get_nrays(self):
         """
@@ -44,7 +51,7 @@ class S4LightSourceBase(EmptyLightSource):
             The number of rays.
 
         """
-        return self.__nrays
+        return self._nrays
 
     def set_seed(self, seed):
         """
@@ -56,7 +63,7 @@ class S4LightSourceBase(EmptyLightSource):
             The seed.
 
         """
-        self.__seed = seed
+        self._seed = seed
 
     def get_seed(self):
         """
@@ -67,7 +74,7 @@ class S4LightSourceBase(EmptyLightSource):
         int
             The seed.
         """
-        return self.__seed
+        return self._seed
 
     def to_python_code(self, **kwargs):
         """

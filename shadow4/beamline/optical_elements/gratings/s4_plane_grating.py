@@ -100,7 +100,7 @@ if __name__ == "__main__":
     #
     # source
     #
-    src = SourceGaussian.initialize_from_keywords(
+    src = SourceGaussian(
                  nrays=10000,
                  sigmaX=1.0e-6,
                  sigmaY=0.0,
