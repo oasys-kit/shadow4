@@ -1,17 +1,10 @@
-__authors__ = ["M Sanchez del Rio - ESRF ISDD Advanced Analysis and Modelling"]
-__license__ = "MIT"
-__date__ = "30-08-2018"
-
 """
-
-Wiggler code: computes wiggler radiation distributions and samples rays according to them.
-
-Fully replaces and upgrades the shadow3 wiggler model.
-
-The radiation is calculating using sr-xraylib
-
+Wiggler light source.
 """
-
+#
+# Wiggler code: computes wiggler radiation distributions and samples rays according to them.
+#
+# The radiation is calculating using sr-xraylib
 import numpy
 
 from srxraylib.util.inverse_method_sampler import Sampler1D
@@ -26,74 +19,26 @@ from shadow4.sources.s4_light_source import S4LightSource
 from shadow4.sources.wiggler.s4_wiggler import S4Wiggler
 from shadow4.beam.s4_beam import S4Beam
 
-# This is similar to sync_f in srxraylib but faster
-def sync_f_sigma_and_pi(rAngle, rEnergy):
-    r""" angular dependency of synchrotron radiation emission
-
-      NAME:
-            sync_f_sigma_and_pi
-
-      PURPOSE:
-            Calculates the function used for calculating the angular
-         dependence of synchrotron radiation.
-
-      CATEGORY:
-            Mathematics.
-
-      CALLING SEQUENCE:
-            Result = sync_f_sigma_and_pi(rAngle,rEnergy)
-
-      INPUTS:
-            rAngle:  (array) the reduced angle, i.e., angle[rads]*Gamma. It can be a
-             scalar or a vector.
-            rEnergy:  (scalar) a value for the reduced photon energy, i.e.,
-             energy/critical_energy.
-
-      KEYWORD PARAMETERS:
-
-
-      OUTPUTS:
-            returns the value  of the sync_f for sigma and pi polarizations
-             The result is an array of the same dimension as rAngle.
-
-      PROCEDURE:
-            The number of emitted photons versus vertical angle Psi is
-         proportional to sync_f, which value is given by the formulas
-         in the references.
-
-
-         References:
-             G K Green, "Spectra and optics of synchrotron radiation"
-                 BNL 50522 report (1976)
-             A A Sokolov and I M Ternov, Synchrotron Radiation,
-                 Akademik-Verlag, Berlin, 1968
-
-      OUTPUTS:
-            returns the value  of the sync_f function
-
-      PROCEDURE:
-            Uses BeselK() function
-
-      MODIFICATION HISTORY:
-            Written by:     M. Sanchez del Rio, srio@esrf.fr, 2002-05-23
-         2002-07-12 srio@esrf.fr adds circular polarization term for
-             wavelength integrated spectrum (S&T formula 5.25)
-         2012-02-08 srio@esrf.eu: python version
-         2019-10-31 srio@lbl.gov  speed-up changes for shadow4
-
-    """
-
-    #
-    # ; For 11 in Pag 6 in Green 1975
-    #
-    ji = numpy.sqrt((1.0 + rAngle**2)**3) * rEnergy / 2.0
-    efe_sigma = scipy.special.kv(2.0 / 3.0, ji) * (1.0 + rAngle**2)
-    efe_pi = rAngle * scipy.special.kv(1.0 / 3.0, ji) / numpy.sqrt(1.0 + rAngle ** 2) * (1.0 + rAngle ** 2)
-    return efe_sigma**2,efe_pi**2
-
+from shadow4.tools.sync_f_sigma_and_pi import sync_f_sigma_and_pi
+import time
 
 class S4WigglerLightSource(S4LightSource):
+    """
+    Defines a wiggler light source and implements the mechanism of sampling rays.
 
+    Parameters
+    ----------
+    name : str, optional
+        The name of the light source.
+    electron_beam : instance of ElectronBeam
+        The electron beam parameters.
+    magnetic_structure : instance of S4BendingMagnet
+        The shadow4 bending magnet magnetic structure.
+    nrays : int, optional
+        The number of rays.
+    seed : int, optional
+        The Monte Carlo seed.
+    """
     def __init__(self,
                  name="Undefined",
                  electron_beam=None,
@@ -114,6 +59,14 @@ class S4WigglerLightSource(S4LightSource):
 
 
     def get_trajectory(self):
+        """
+        Returns the electron trajectory.
+
+        Returns
+        -------
+        tuple
+            (trajectory, parameters) with trajectory a numpy array (8, npoints) and parameters a str.
+        """
         return self.__result_trajectory, self.__result_parameters
 
 
@@ -190,16 +143,10 @@ class S4WigglerLightSource(S4LightSource):
                        psi_interval_in_units_one_over_gamma=None,
                        psi_interval_number_of_points=1001,
                        verbose=True):
-        """
-        compute the rays in SHADOW matrix (shape (npoints,18) )
-        :param F_COHER: set this flag for coherent beam
-        :param user_unit_to_m: default 1.0 (m)
-        :return: rays, a numpy.array((npoits,18))
-        """
-
-
-
-
+        # compute the rays in SHADOW matrix (shape (npoints,18) )
+        # :param F_COHER: set this flag for coherent beam
+        # :param user_unit_to_m: default 1.0 (m)
+        # :return: rays, a numpy.array((npoits,18))
         if self.__result_cdf is None:
             self.__calculate_radiation()
 
@@ -845,6 +792,13 @@ class S4WigglerLightSource(S4LightSource):
     #
     ############################################################################
     def get_beam(self):
+        """
+        Creates the beam as emitted by the wiggler.
+
+        Returns
+        -------
+        instance od S4beam
+        """
 
         user_unit_to_m = 1.0
         F_COHER = 0
@@ -864,6 +818,14 @@ class S4WigglerLightSource(S4LightSource):
             verbose=verbose))
 
     def calculate_spectrum(self, output_file=""):
+        """
+                Calculates the spectrum.
+
+        Parameters
+        ----------
+        output_file : str, optional
+            Name of the file to write the spectrom (use "" for not writing file).
+        """
         traj, pars = self.get_trajectory()
         wig = self.get_magnetic_structure()
         e_min, e_max, ne = wig.get_energy_box()
@@ -880,7 +842,14 @@ class S4WigglerLightSource(S4LightSource):
         else:
             raise Exception("Cannot compute spectrum")
 
-    def info(self,debug=False):
+    def get_info(self):
+        """
+        Returns the specific information for the wiggler light source.
+
+        Returns
+        -------
+        str
+        """
         electron_beam = self.get_electron_beam()
         magnetic_structure = self.get_magnetic_structure()
 
@@ -903,6 +872,14 @@ class S4WigglerLightSource(S4LightSource):
         return (txt + "\n\n" + txt2)
 
     def to_python_code(self, **kwargs):
+        """
+        returns the python code for calculating the wiggler source.
+
+        Returns
+        -------
+        str
+            The python code.
+        """
         script = ''
         try:
             script += self.get_electron_beam().to_python_code()
@@ -1028,3 +1005,6 @@ if __name__ == "__main__":
 
     rays = beam.get_rays()
     plot_scatter(1e6 * rays[:, 0], 1e6 * rays[:, 2], title='(X,Z) in microns')
+
+    t, p = light_source.get_trajectory()
+    print(t.shape, p)

@@ -1,12 +1,55 @@
+"""
+Wiggler magnetic structure.
+"""
 import numpy
 from syned.storage_ring.magnetic_structures.wiggler import Wiggler
 import scipy.constants as codata
 
 class S4Wiggler(Wiggler):
+    """
+    Defines a shadow4 wiggler magnetic structure.
+
+    Parameters
+    ----------
+    magnetic_field_periodic : int, optional
+        Flag: 0=use external magnetic field, 1=periodic magnetic field.
+    file_with_magnetic_field : str, optional
+        for magnetic_field_periodic=0, the file name with the magnetic field (two columns, Y in m and B in T).
+    K_vertical : float, optional
+        for magnetic_field_periodic=1, the K value.
+    period_length : float, optional
+        for magnetic_field_periodic=1, the period in m.
+    number_of_periods : float, optional
+        for magnetic_field_periodic=1, the number of periods.
+    emin : float, optional
+        minimum photon energy in eV.
+    emax : float, optional
+        maximum photon energy in eV.
+    ng_e : int, optional
+        Number of points in energy.
+    ng_j : int, optional
+        Number of points in calculating the electron trajectory.
+    flag_emittance : int, optional
+        Flag: 0=Zero emittance (filament beam), 1=Use emittance.
+    shift_x_flag : int, optional
+        Flag to deplace the X of the electron trajectory trajectory.
+    shift_x_value : float, optional
+        A displacement in X to center or deplace the electron trajectory trajectory.
+    shift_betax_flag : float, optional
+        Flag to deplace the X' of the electron trajectory trajectory.
+    shift_betax_value : float, optional
+        A displacement in X' to center or deplace the electron trajectory trajectory.
+    epsi_dx : float, optional
+        distance from waist X.
+    epsi_dz : float, optional
+        distance from waist Z.
+    """
     def __init__(self,
                  magnetic_field_periodic=1, # 0=external, 1=periodic
                  file_with_magnetic_field="", # useful if magnetic_field_periodic=0
-                 K_vertical=10.0, period_length=0.1, number_of_periods=10, # syned Wiggler pars: useful if magnetic_field_periodic=1
+                 K_vertical=10.0,      # syned Wiggler pars: useful if magnetic_field_periodic=1
+                 period_length=0.1,    # syned Wiggler pars: useful if magnetic_field_periodic=1
+                 number_of_periods=10, # syned Wiggler pars: useful if magnetic_field_periodic=1
                  emin=1000.0,               # Photon energy scan from energy (in eV)
                  emax=2000.0,               # Photon energy scan to energy (in eV)
                  ng_e=11,                    # Photon energy scan number of points
@@ -19,7 +62,6 @@ class S4Wiggler(Wiggler):
                  epsi_dx=0.0, # distance from waist X
                  epsi_dz=0.0, # distance from waist Z
                  ):
-
         self._magnetic_field_periodic = magnetic_field_periodic
         self._file_with_magnetic_field = file_with_magnetic_field
 
@@ -43,7 +85,29 @@ class S4Wiggler(Wiggler):
         self._EPSI_DX           = epsi_dx
         self._EPSI_DZ           = epsi_dz
 
-    def info(self,debug=False):
+        # support text containg name of variable, help text and unit. Will be stored in self._support_dictionary
+        self._add_support_text([
+                    ("EMIN", "minimum photon energy", "eV" ),
+                    ("EMAX", "maximum photon energy", "eV"),
+                    ("NG_E", "number of energy points", ""),
+                    ("NG_J", "number of points of the electron trajectory", ""),
+                    ("FLAG_EMITTANCE", "Use emittance (0=No, 1=Yes)", "" ),
+                    ("shift_x_flag", "Flag to center e trajectory X (0=No, 1=Yes)", ""),
+                    ("shift_x_value", "shift value for X of the e trajectory", "m"),
+                    ("shift_betax_flag", "Flag to center e trajectory X' (0=No, 1=Yes)", ""),
+                    ("shift_betax_value", "shift value for X' of the e trajectory", "m"),
+                    ("EPSI_DX", "distance from waist X", "m"),
+                    ("EPSI_DZ", "distance from waist Z", "m"),
+            ] )
+
+    def get_info(self):
+        """
+        Returns the specific information of the wiggler magnetic structure. .
+
+        Returns
+        -------
+        str
+        """
 
         txt = ""
         # txt += "-----------------------------------------------------\n"
@@ -81,13 +145,24 @@ class S4Wiggler(Wiggler):
         return txt
 
     def get_flag_emittance(self):
+        """
+        Returns the flag for considering electron beam emittance.
+
+        Returns
+        -------
+        int
+            0=No, 1=Yes.
+        """
         return self._FLAG_EMITTANCE
 
     def set_energy_monochromatic(self,emin):
         """
-        Sets a single energy line for the source (monochromatic)
-        :param emin: the energy in eV
-        :return:
+        Sets a single energy line for the source (monochromatic).
+
+        Parameters
+        ----------
+        emin : float
+            photon energy in eV.
         """
         self._EMIN = emin
         self._EMAX = emin
@@ -96,13 +171,17 @@ class S4Wiggler(Wiggler):
 
     def set_energy_box(self,emin,emax,npoints=None):
         """
-        Sets a box for photon energy distribution for the source
-        :param emin:  Photon energy scan from energy (in eV)
-        :param emax:  Photon energy scan to energy (in eV)
-        :param npoints:  Photon energy scan number of points (optinal, if not set no changes)
-        :return:
-        """
+        Sets a box for photon energy distribution for the source.
 
+        Parameters
+        ----------
+        emin : float
+            minimum photon energy in eV.
+        emax : float
+            maximum photon energy in eV.
+        npoints : int, optional
+            Number of points in energy.
+        """
         self._EMIN = emin
         self._EMAX = emax
         if npoints != None:
@@ -111,8 +190,12 @@ class S4Wiggler(Wiggler):
 
     def get_energy_box(self):
         """
-        Gets the limits of photon energy distribution for the source
-        :return: emin,emax,number_of_points
+        Returns the limits of photon energy distribution for the source and the number of points.
+
+        Returns
+        -------
+        tuple
+            (emin, emax, npoints)
         """
         return self._EMIN,self._EMAX,self._NG_E
 
@@ -128,6 +211,20 @@ class S4Wiggler(Wiggler):
                                         position_value=0.0,
                                         velocity_value=0.0,
                                         ):
+        """
+        Defines the shifts in position and velocity of the electron trajectory.
+
+        Parameters
+        ----------
+        position_label : str, optional
+            keyworrd values are 'no_shift', 'half_excursion', 'minimum', 'maximum', 'value_at_zero', 'user_value'.
+        velocity_label : str, optional
+            keyworrd values are  'no_shift', 'half_excursion', 'minimum', 'maximum', 'value_at_zero', 'user_value'.
+        position_value : float, optional
+            For position_label equal to user_value, the numeric value to consider.
+        velocity_value : float, optional
+            For velocity_label equal to user_value, the numeric value to consider.
+        """
         self._shift_x_value = 0.0
         self._shift_betax_value = 0.0
 
@@ -164,6 +261,14 @@ class S4Wiggler(Wiggler):
             raise Exception("Invalid value for keyword velocity_label")
 
     def to_python_code(self):
+        """
+        returns the python code for defining the wiggler magnetic structure.
+
+        Returns
+        -------
+        str
+            The python code.
+        """
         script_template = """
         
 #magnetic structure
@@ -179,7 +284,7 @@ source = S4Wiggler(
     ng_e              = {ng_e},  # Photon energy scan number of points
     ng_j              = {ng_j} , # Number of points in electron trajectory (per period) for internal calculation only
     epsi_dx           = {epsi_dx},  # distance to waist in X [m]
-    epsi_dz           = {epsi_dZ} , # distance to waist in Z [m]
+    epsi_dz           = {epsi_dz} , # distance to waist in Z [m]
     flag_emittance    = {flag_emittance}, # Use emittance (0=No, 1=Yes)
     shift_x_flag      = {shift_x_flag}, # 0="No shift", 1="Half excursion", 2="Minimum", 3="Maximum", 4="Value at zero", 5="User value"
     shift_x_value     = {shift_x_value}, # used only if shift_x_flag=5
@@ -250,6 +355,8 @@ if __name__ == "__main__":
                  flag_emittance=0,           # when sampling rays: Use emittance (0=No, 1=Yes)
                  shift_x_flag=0, shift_x_value=0.0, shift_betax_flag=0, shift_betax_value=0.0,) # ele)
     print(sw.info())
+    print(sw.get_info())
+    print(sw.to_python_code())
 
     sw = S4Wiggler(magnetic_field_periodic=0, # 0=external, 1=periodic
                  file_with_magnetic_field="magnetic_field.dat", # useful if magnetic_field_periodic=0
@@ -261,7 +368,7 @@ if __name__ == "__main__":
                  flag_emittance=0,           # when sampling rays: Use emittance (0=No, 1=Yes)
                  shift_x_flag=0, shift_x_value=0.0, shift_betax_flag=0, shift_betax_value=0.0,) # ele)
     print(sw.info())
-
+    print(sw.get_info())
     print(sw.to_python_code())
 
     # #

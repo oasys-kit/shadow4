@@ -1,3 +1,6 @@
+"""
+Bending magnet light source.
+"""
 import numpy
 
 from srxraylib.util.inverse_method_sampler import Sampler1D, Sampler2D
@@ -727,6 +730,17 @@ class S4BendingMagnetLightSource(S4LightSource):
         print("            coor+diverg: ",    (t6-t5), 100 * (t6-t5) / t)
         print("            Post: ",           (t7-t6), 100 * (t7-t6) / t)
         return rays
+
+
+    def calculate_spectrum(self):
+        """
+        Calculates the spectrum.
+
+        Returns
+        -------
+        numpy array
+        """
+        raise NotImplementedError("To be implemented...")
 
     def to_python_code(self, **kwargs):
         """

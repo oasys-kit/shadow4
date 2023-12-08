@@ -1,5 +1,5 @@
 """
-Geometrical sources
+Geometrical sources.
 """
 import numpy
 import scipy.constants as codata

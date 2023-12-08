@@ -1,5 +1,7 @@
+"""
+Bending magnet magnetic structure.
+"""
 import numpy
-
 from syned.storage_ring.magnetic_structures.bending_magnet import BendingMagnet
 
 class S4BendingMagnet(BendingMagnet):
@@ -204,7 +206,7 @@ class S4BendingMagnet(BendingMagnet):
 
     def to_python_code(self):
         """
-        returns the python code for defining the beanding magnet magnetic structure.
+        returns the python code for defining the bending magnet magnetic structure.
 
         Returns
         -------
