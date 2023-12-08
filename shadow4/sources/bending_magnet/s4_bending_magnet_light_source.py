@@ -16,77 +16,8 @@ from shadow4.sources.s4_light_source import S4LightSource
 
 from shadow4.tools.arrayofvectors import vector_cross, vector_norm
 
+from shadow4.tools.sync_f_sigma_and_pi import sync_f_sigma_and_pi
 import time
-
-# This is similar to sync_f in srxraylib but faster
-import scipy
-def sync_f_sigma_and_pi(rAngle, rEnergy):
-    r""" angular dependency of synchrotron radiation emission
-
-      NAME:
-            sync_f_sigma_and_pi
-
-      PURPOSE:
-            Calculates the function used for calculating the angular
-         dependence of synchrotron radiation.
-
-      CATEGORY:
-            Mathematics.
-
-      CALLING SEQUENCE:
-            Result = sync_f_sigma_and_pi(rAngle,rEnergy)
-
-      INPUTS:
-            rAngle:  (array) the reduced angle, i.e., angle[rads]*Gamma. It can be a
-             scalar or a vector.
-            rEnergy:  (scalar) a value for the reduced photon energy, i.e.,
-             energy/critical_energy.
-
-      KEYWORD PARAMETERS:
-
-
-      OUTPUTS:
-            returns the value  of the sync_f for sigma and pi polarizations
-             The result is an array of the same dimension as rAngle.
-
-      PROCEDURE:
-            The number of emitted photons versus vertical angle Psi is
-         proportional to sync_f, which value is given by the formulas
-         in the references.
-
-
-         References:
-             G K Green, "Spectra and optics of synchrotron radiation"
-                 BNL 50522 report (1976)
-             A A Sokolov and I M Ternov, Synchrotron Radiation,
-                 Akademik-Verlag, Berlin, 1968
-
-      OUTPUTS:
-            returns the value  of the sync_f function
-
-      PROCEDURE:
-            Uses BeselK() function
-
-      MODIFICATION HISTORY:
-            Written by:     M. Sanchez del Rio, srio@esrf.fr, 2002-05-23
-         2002-07-12 srio@esrf.fr adds circular polarization term for
-             wavelength integrated spectrum (S&T formula 5.25)
-         2012-02-08 srio@esrf.eu: python version
-         2019-10-31 srio@lbl.gov  speed-up changes for shadow4
-
-    """
-
-    #
-    # ; For 11 in Pag 6 in Green 1975
-    #
-    ji = numpy.sqrt((1.0 + rAngle**2)**3) * rEnergy / 2.0
-    efe_sigma = scipy.special.kv(2.0 / 3.0, ji) * (1.0 + rAngle**2)
-    efe_pi = rAngle * scipy.special.kv(1.0 / 3.0, ji) / numpy.sqrt(1.0 + rAngle ** 2) * (1.0 + rAngle ** 2)
-    return efe_sigma**2,efe_pi**2
-
-
-
-
 
 class S4BendingMagnetLightSource(S4LightSource):
     """
@@ -244,7 +175,7 @@ class S4BendingMagnetLightSource(S4LightSource):
         # The polychromatic case is much slower, and a penalising factor is the cubic spline interpolation
         # to get the polarization.
         t1 = time.time()
-        method = "new" # new is using sync_f_sigma_and_pi; old is using sync_anf and sync_ene.
+        method = "new" # new is using sync_f_sigma_and_pi; old is using sync_anf and sync_ene. todo: remove old method.
         if verbose: print(">>> calculate_rays: method for calculating sampling distribution: ", method)
 
         if self.get_magnetic_structure().is_monochromatic():
@@ -295,11 +226,6 @@ class S4BendingMagnetLightSource(S4LightSource):
 
                 angle_mrad = angle_array_mrad
                 codata_mee = 1e-6 * codata.m_e * codata.c ** 2 / codata.e
-                # e_gev = self.get_electron_beam().energy()
-                # energy = self.get_magnetic_structure()._EMIN
-                # ec_ev = critical_energy
-                # i_a = self.get_electron_beam().current()
-                # hdiv_mrad = (HDIV1 + HDIV2) * 1e3
 
                 eene = energy / ec_ev
                 gamma = e_gev * 1e3 / codata_mee
@@ -317,11 +243,10 @@ class S4BendingMagnetLightSource(S4LightSource):
 
             t3 = time.time()
             sampler_angle = Sampler1D(angular_distribution_s + angular_distribution_p, angle_array_mrad * 1e-3)
-            if verbose:
-                print(">>> calculate_rays: get_n_sampled_points (angle)")
+
+            if verbose: print(">>> calculate_rays: get_n_sampled_points (angle)")
             sampled_angle = sampler_angle.get_n_sampled_points(NRAYS)
-            if verbose:
-                print(">>> calculate_rays: DONE get_n_sampled_points (angle)  %d points"%(sampled_angle.size))
+            if verbose: print(">>> calculate_rays: DONE get_n_sampled_points (angle)  %d points"%(sampled_angle.size))
 
             pol_deg_interpolator = interp1d(angle_array_mrad * 1e-3,
                     numpy.sqrt(angular_distribution_s) / (numpy.sqrt(angular_distribution_s) + numpy.sqrt(angular_distribution_p)))
@@ -335,11 +260,9 @@ class S4BendingMagnetLightSource(S4LightSource):
                                                  self.get_magnetic_structure()._EMAX,
                                                  self.get_magnetic_structure()._NG_E)
 
-            if verbose:
-                print(">>> sync_ene: calculating energy distribution")
-
             t2 = time.time()
             if method == "old":
+                if verbose: print(">>> sync_ene: calculating energy distribution")
                 fm_s = sync_ene(4, photon_energy_array,
                               ec_ev=self.get_magnetic_structure().get_critical_energy(self.get_electron_beam().energy()),
                               e_gev=self.get_electron_beam().energy(),
@@ -361,8 +284,6 @@ class S4BendingMagnetLightSource(S4LightSource):
                                 psi_npoints=angle_array_mrad.size,
                                 polarization=2)
             else:
-
-                ##################################################
                 # energy array
                 energy_ev = numpy.array(photon_energy_array)
                 ec_ev = self.get_magnetic_structure().get_critical_energy(
@@ -387,9 +308,7 @@ class S4BendingMagnetLightSource(S4LightSource):
                 fm_s = a5_s * eene2**2 * a8 * i_a * hdiv_mrad * e_gev**2
                 fm_p = a5_p * eene2**2 * a8 * i_a * hdiv_mrad * e_gev**2
 
-            # t3 = time.time()
             fm = fm_s + fm_p
-
             # fixed the same problem >30 years later:
             # !C Fix May 9, 1990.    SHADOW defined the degree of polarization as Ax/(Ax+Az),
             # !C instead of Ax^2/(Ax^2+Az^2).  So here we need to take the square root of the
@@ -434,33 +353,44 @@ class S4BendingMagnetLightSource(S4LightSource):
             Angle_array_mrad = numpy.outer(angle_array_mrad,numpy.ones_like(photon_energy_array))
             Photon_energy_array = numpy.outer(numpy.ones_like(angle_array_mrad),photon_energy_array)
             Pi = numpy.array([Angle_array_mrad.flatten() * 1e-3, Photon_energy_array.flatten()]).transpose()
-
-            # both interpolators seem to give similar results and similar running time.
+            # both interpolators seem to give similar results and similar running time. griidata seems deprecated
             # The running time of the interpolator is ~55% of the total for 5k rays. todo: accelerate here
             t3 = time.time()
-            if True:
+            if False:
                 P = numpy.array([sampled_angle, sampled_photon_energy]).transpose()
                 sampled_polarization = griddata(Pi, polarization_degree.flatten(), P, method="cubic", rescale=True)
             else:
                 interpolator = CloughTocher2DInterpolator(Pi, polarization_degree.flatten(), rescale=True)
                 sampled_polarization = interpolator(sampled_angle, sampled_photon_energy)
 
-
         t4 = time.time()
 
         # The loop time is 38% of the total for 5k rays, and 81% for 50k rays.
-        for itik in range(NRAYS):
-            # ! Synchrontron depth
-            ANGLE  =  numpy.random.random() * (HDIV1 + HDIV2) - HDIV2
-            EPSI_PATH =  numpy.abs(r_aladdin) * ANGLE
 
-            if self.get_magnetic_structure()._FLAG_EMITTANCE:
-                sigma_x, sigma_xp, sigma_z, sigma_zp = self.get_electron_beam().get_sigmas_all()
+        # sample points in the electron phase space
+        E_BEAM1_array = numpy.zeros(NRAYS)
+        E_BEAM3_array = numpy.zeros(NRAYS)
+        E_BEAMXXX_array = numpy.zeros(NRAYS)
+        E_BEAMZZZ_array = numpy.zeros(NRAYS)
+
+        ANGLE_array = numpy.random.random(NRAYS) * (HDIV1 + HDIV2) - HDIV2
+
+        if self.get_magnetic_structure()._FLAG_EMITTANCE:
+            sigma_x, sigma_xp, sigma_z, sigma_zp = self.get_electron_beam().get_sigmas_all()
+
+            # emittance loop
+
+            # unchanged values of the covariance matrix
+            meanX = [0, 0]
+            meanZ = [0, 0]
+            rSigmaXp = sigma_xp
+            rSigmaZp = sigma_zp
+            for itik in range(NRAYS):
+                EPSI_PATH = numpy.abs(r_aladdin) * ANGLE_array[itik]
 
                 # ! C Compute the actual distance (EPSI_W*) from the orbital focus
-                # EPSI_WX = EPSI_DX + EPSI_PATH
-                # EPSI_WZ = EPSI_DZ + EPSI_PATH
                 epsi_wX = EPSI_DX + EPSI_PATH
+                epsi_wZ = EPSI_DZ + EPSI_PATH
 
                 # ! calculation of the electrom beam moments at the current position
                 # ! (sX,sZ) = (epsi_wx,epsi_ez):
@@ -468,54 +398,205 @@ class S4BendingMagnetLightSource(S4LightSource):
                 # ! <x x'> = sX sigmaXp^2
                 # ! <x'2> = sigmaXp^2                 (same for Z)
                 rSigmaX = numpy.sqrt( (epsi_wX**2) * (sigma_xp**2) + sigma_x**2 )
-                rSigmaXp = sigma_xp
+
+                rSigmaZ = numpy.sqrt( (epsi_wZ**2) * (sigma_zp**2) + sigma_z**2 )
+
 
                 if rSigmaX * rSigmaXp != 0.0:
                     rhoX = epsi_wX * sigma_xp**2 / (rSigmaX * rSigmaXp)
                 else:
                     rhoX = 0.0
 
-                mean = [0, 0]
-                cov = [[rSigmaX**2, rhoX * rSigmaX*rSigmaXp], [rhoX * rSigmaX * rSigmaXp, rSigmaXp**2]]  # diagonal covariance
-                sampled_x, sampled_xp = numpy.random.multivariate_normal(mean, cov, 1).T
-                # plot_scatter(sampled_x,sampled_xp,title="X")
-                XXX = sampled_x
-                E_BEAM1 = sampled_xp
-
-                epsi_wZ = EPSI_DZ + EPSI_PATH # sigma_z * sigma_zp
-                rSigmaZ = numpy.sqrt( (epsi_wZ**2) * (sigma_zp**2) + sigma_z**2 )
-                rSigmaZp = sigma_zp
                 if rSigmaZ * rSigmaZp != 0.0:
                     rhoZ = epsi_wZ * sigma_zp**2 / (rSigmaZ * rSigmaZp)
                 else:
                     rhoZ = 0.0
-                mean = [0, 0]
-                cov = [[rSigmaZ**2, rhoZ * rSigmaZ * rSigmaZp], [rhoZ * rSigmaZ * rSigmaZp, rSigmaZp**2]]  # diagonal covariance
-                sampled_z, sampled_zp = numpy.random.multivariate_normal(mean, cov, 1).T
-                # plot_scatter(sampled_z,sampled_zp,title="Z")
+
+                covX = [[rSigmaX**2, rhoX * rSigmaX * rSigmaXp], [rhoX * rSigmaX * rSigmaXp, rSigmaXp**2]]  # diagonal covariance
+                covZ = [[rSigmaZ**2, rhoZ * rSigmaZ * rSigmaZp], [rhoZ * rSigmaZ * rSigmaZp, rSigmaZp**2]]  # diagonal covariance
+
+                # sampling using a multivariare (2) normal distribution
+                # multivariate_normal is very slow.
+                # See https://github.com/numpy/numpy/issues/14193 and shadow4-tests/shadow4tests/devel/check_multivariate_normal.py
+                # for acceleration recipee. For 5k rays this emittance loop passed from 31% to 8% of the total time.
+                # sampled_x, sampled_xp = numpy.random.multivariate_normal(meanX, covX, 1).T
+                # sampled_z, sampled_zp = numpy.random.multivariate_normal(meanZ, covZ, 1).T
+                sampled_x, sampled_xp = (meanX + numpy.linalg.cholesky(covX) @ numpy.random.standard_normal(len(meanX))).T
+                sampled_z, sampled_zp = (meanZ + numpy.linalg.cholesky(covZ) @ numpy.random.standard_normal(len(meanZ))).T
+
+                XXX = sampled_x
+                E_BEAM1 = sampled_xp
+
                 ZZZ = sampled_z
                 E_BEAM3 = sampled_zp
 
-            else:
-                sigma_x, sigma_xp, sigma_z, sigma_zp = (0.0, 0.0, 0.0, 0.0)
-                rhoX = 0.0
-                XXX = 0.0
-                E_BEAM1 = 0.0
-                ZZZ = 0.0
-                E_BEAM3 = 0.0
+                E_BEAM1_array[itik] = E_BEAM1
+                E_BEAM3_array[itik] = E_BEAM3
+                E_BEAMXXX_array[itik] = XXX
+                E_BEAMZZZ_array[itik] = ZZZ
 
+
+            if verbose:
+                from srxraylib.plot.gol import plot_scatter
+                plot_scatter(E_BEAMXXX_array,E_BEAM1_array,title="sampled electron X Xp")
+                plot_scatter(E_BEAMZZZ_array,E_BEAM3_array,title="sampled electron Z Zp")
+
+        t5 = time.time()
+
+        # spatial coordinates
+        do_loop = 0 # todo: clean the part with the loop
+        if do_loop:
+            for itik in range(NRAYS):
+                # # ! Synchrontron depth
+                # ANGLE  =  numpy.random.random() * (HDIV1 + HDIV2) - HDIV2
+                # EPSI_PATH =  numpy.abs(r_aladdin) * ANGLE
+                #
+                # if self.get_magnetic_structure()._FLAG_EMITTANCE:
+                #     sigma_x, sigma_xp, sigma_z, sigma_zp = self.get_electron_beam().get_sigmas_all()
+                #
+                #     # ! C Compute the actual distance (EPSI_W*) from the orbital focus
+                #     # EPSI_WX = EPSI_DX + EPSI_PATH
+                #     # EPSI_WZ = EPSI_DZ + EPSI_PATH
+                #     epsi_wX = EPSI_DX + EPSI_PATH
+                #
+                #     # ! calculation of the electrom beam moments at the current position
+                #     # ! (sX,sZ) = (epsi_wx,epsi_ez):
+                #     # ! <x2> = sX^2 + sigmaX^2
+                #     # ! <x x'> = sX sigmaXp^2
+                #     # ! <x'2> = sigmaXp^2                 (same for Z)
+                #     rSigmaX = numpy.sqrt( (epsi_wX**2) * (sigma_xp**2) + sigma_x**2 )
+                #     rSigmaXp = sigma_xp
+                #
+                #     if rSigmaX * rSigmaXp != 0.0:
+                #         rhoX = epsi_wX * sigma_xp**2 / (rSigmaX * rSigmaXp)
+                #     else:
+                #         rhoX = 0.0
+                #
+                #     mean = [0, 0]
+                #     cov = [[rSigmaX**2, rhoX * rSigmaX*rSigmaXp], [rhoX * rSigmaX * rSigmaXp, rSigmaXp**2]]  # diagonal covariance
+                #     sampled_x, sampled_xp = numpy.random.multivariate_normal(mean, cov, 1).T
+                #     # plot_scatter(sampled_x,sampled_xp,title="X")
+                #     XXX = sampled_x
+                #     E_BEAM1 = sampled_xp
+                #
+                #     epsi_wZ = EPSI_DZ + EPSI_PATH # sigma_z * sigma_zp
+                #     rSigmaZ = numpy.sqrt( (epsi_wZ**2) * (sigma_zp**2) + sigma_z**2 )
+                #     rSigmaZp = sigma_zp
+                #     if rSigmaZ * rSigmaZp != 0.0:
+                #         rhoZ = epsi_wZ * sigma_zp**2 / (rSigmaZ * rSigmaZp)
+                #     else:
+                #         rhoZ = 0.0
+                #     mean = [0, 0]
+                #     cov = [[rSigmaZ**2, rhoZ * rSigmaZ * rSigmaZp], [rhoZ * rSigmaZ * rSigmaZp, rSigmaZp**2]]  # diagonal covariance
+                #     sampled_z, sampled_zp = numpy.random.multivariate_normal(mean, cov, 1).T
+                #     # plot_scatter(sampled_z,sampled_zp,title="Z")
+                #     ZZZ = sampled_z
+                #     E_BEAM3 = sampled_zp
+                #
+                # else:
+                #     sigma_x, sigma_xp, sigma_z, sigma_zp = (0.0, 0.0, 0.0, 0.0)
+                #     rhoX = 0.0
+                #     XXX = 0.0
+                #     E_BEAM1 = 0.0
+                #     ZZZ = 0.0
+                #     E_BEAM3 = 0.0
+
+                # retrieve the electron sampled values
+                ANGLE = ANGLE_array[itik]
+                XXX = E_BEAMXXX_array[itik]
+                E_BEAM1 = E_BEAM1_array[itik]
+                ZZZ = E_BEAMZZZ_array[itik]
+                E_BEAM3 = E_BEAM3_array[itik]
+
+
+
+
+                # Synchrotron depth distribution
+                # R_ALADDIN NEGATIVE FOR COUNTER-CLOCKWISE SOURCE
+                if r_aladdin < 0:
+                    YYY = numpy.abs(r_aladdin + XXX) * numpy.sin(ANGLE)
+                else:
+                    YYY = numpy.abs(r_aladdin - XXX) * numpy.sin(ANGLE)
+
+                XXX = numpy.cos(ANGLE) * XXX + r_aladdin * (1.0 - numpy.cos(ANGLE))
+
+                rays[itik,0] = XXX
+                rays[itik,1] = YYY
+                rays[itik,2] = ZZZ
+        else:
+            XXX = E_BEAMXXX_array
+            ZZZ = E_BEAMZZZ_array
             # Synchrotron depth distribution
             # R_ALADDIN NEGATIVE FOR COUNTER-CLOCKWISE SOURCE
             if r_aladdin < 0:
-                YYY = numpy.abs(r_aladdin + XXX) * numpy.sin(ANGLE)
+                YYY = numpy.abs(r_aladdin + XXX) * numpy.sin(ANGLE_array)
             else:
-                YYY = numpy.abs(r_aladdin - XXX) * numpy.sin(ANGLE)
+                YYY = numpy.abs(r_aladdin - XXX) * numpy.sin(ANGLE_array)
 
-            XXX = numpy.cos(ANGLE) * XXX + r_aladdin * (1.0 - numpy.cos(ANGLE))
+            XXX = numpy.cos(ANGLE_array) * XXX + r_aladdin * (1.0 - numpy.cos(ANGLE_array))
 
-            rays[itik,0] = XXX
-            rays[itik,1] = YYY
-            rays[itik,2] = ZZZ
+            rays[:, 0] = XXX
+            rays[:, 1] = YYY
+            rays[:, 2] = ZZZ
+
+        # angular coordinates
+        if do_loop:
+            for itik in range(NRAYS):
+                ANGLE = ANGLE_array[itik]
+                E_BEAM1 = E_BEAM1_array[itik]
+                E_BEAM3 = E_BEAM3_array[itik]
+
+                # ! C Synchrotron source
+                # ! C Note. The angle of emission IN PLANE is the same as the one used
+                # ! C before. This will give rise to a source curved along the orbit.
+                # ! C The elevation angle is instead characteristic of the SR distribution.
+                # ! C The electron beam emittance is included at this stage. Note that if
+                # ! C EPSI = 0, we'll have E_BEAM = 0.0, with no changes.
+                ANGLEX = ANGLE + E_BEAM1
+                DIREC1 = numpy.tan(ANGLEX)
+                if r_aladdin < 0:
+                    DIREC1 *= -1.0
+                DIREC2 = 1.0
+                ARG_ANG = numpy.random.random()
+
+                # ! C In the case of SR, we take into account the fact that the electron
+                # ! C trajectory is not orthogonal to the field. This will give a correction
+                # ! C to the photon energy.  We can write it as a correction to the
+                # ! C magnetic field strength; this will linearly shift the critical energy
+                # ! C and, with it, the energy of the emitted photon.
+                E_TEMP3 = numpy.tan(E_BEAM3) / numpy.cos(E_BEAM1)
+                E_TEMP2 = 1.0
+                E_TEMP1 = numpy.tan(E_BEAM1)
+                E_TEMP_MOD = numpy.sqrt(E_TEMP1**2 + E_TEMP2**2 + E_TEMP3**2)
+                E_TEMP3 /= E_TEMP_MOD
+                E_TEMP2 /= E_TEMP_MOD
+                E_TEMP1 /= E_TEMP_MOD
+
+                # interpolate for the photon energy, vertical angle, and the degree of polarization.
+                wavelength = codata.h * codata.c / codata.e / sampled_photon_energy[itik]
+                Q_WAVE = 2 * numpy.pi / (wavelength*1e2)
+                ANGLEV = sampled_angle[itik]
+                POL_DEG = sampled_polarization[itik]
+
+                if ANGLEV < 0: I_CHANGE = -1
+                ANGLEV += E_BEAM3
+
+                anglev_sign[itik] = numpy.sign(ANGLEV)
+
+                DIREC3 = numpy.tan(ANGLEV) / numpy.cos(ANGLEX)
+
+                DIREC_MOD = numpy.sqrt(DIREC1**2 + DIREC2**2 + DIREC3**2)
+                DIREC3 /= DIREC_MOD
+                DIREC2 /= DIREC_MOD
+                DIREC1 /= DIREC_MOD
+
+                rays[itik,3] = DIREC1
+                rays[itik,4] = DIREC2
+                rays[itik,5] = DIREC3
+        else:
+            ANGLE = ANGLE_array
+            E_BEAM1 = E_BEAM1_array
+            E_BEAM3 = E_BEAM3_array
 
             # ! C Synchrotron source
             # ! C Note. The angle of emission IN PLANE is the same as the one used
@@ -527,8 +608,8 @@ class S4BendingMagnetLightSource(S4LightSource):
             DIREC1 = numpy.tan(ANGLEX)
             if r_aladdin < 0:
                 DIREC1 *= -1.0
-            DIREC2 = 1.0
-            ARG_ANG = numpy.random.random()
+            DIREC2 = numpy.ones_like(DIREC1) # 1.0
+            ARG_ANG = numpy.random.random(NRAYS)
 
             # ! C In the case of SR, we take into account the fact that the electron
             # ! C trajectory is not orthogonal to the field. This will give a correction
@@ -536,36 +617,36 @@ class S4BendingMagnetLightSource(S4LightSource):
             # ! C magnetic field strength; this will linearly shift the critical energy
             # ! C and, with it, the energy of the emitted photon.
             E_TEMP3 = numpy.tan(E_BEAM3) / numpy.cos(E_BEAM1)
-            E_TEMP2 = 1.0
+            E_TEMP2 = numpy.ones_like(E_TEMP3) # 1.0
             E_TEMP1 = numpy.tan(E_BEAM1)
-            E_TEMP_MOD = numpy.sqrt(E_TEMP1**2 + E_TEMP2**2 + E_TEMP3**2)
+            E_TEMP_MOD = numpy.sqrt(E_TEMP1 ** 2 + E_TEMP2 ** 2 + E_TEMP3 ** 2)
             E_TEMP3 /= E_TEMP_MOD
             E_TEMP2 /= E_TEMP_MOD
             E_TEMP1 /= E_TEMP_MOD
 
             # interpolate for the photon energy, vertical angle, and the degree of polarization.
-            wavelength = codata.h * codata.c / codata.e / sampled_photon_energy[itik]
-            Q_WAVE = 2 * numpy.pi / (wavelength*1e2)
-            ANGLEV = sampled_angle[itik]
-            POL_DEG = sampled_polarization[itik]
+            wavelength = codata.h * codata.c / codata.e / sampled_photon_energy
+            Q_WAVE = 2 * numpy.pi / (wavelength * 1e2)
+            ANGLEV = sampled_angle
+            POL_DEG = sampled_polarization
 
-            if ANGLEV < 0: I_CHANGE = -1
-            ANGLEV += E_BEAM3
+            ANGLEV = ANGLEV + E_BEAM3
 
-            anglev_sign[itik] = numpy.sign(ANGLEV)
+            anglev_sign = numpy.sign(ANGLEV)
 
             DIREC3 = numpy.tan(ANGLEV) / numpy.cos(ANGLEX)
 
-            DIREC_MOD = numpy.sqrt(DIREC1**2 + DIREC2**2 + DIREC3**2)
+            DIREC_MOD = numpy.sqrt(DIREC1 ** 2 + DIREC2 ** 2 + DIREC3 ** 2)
             DIREC3 /= DIREC_MOD
             DIREC2 /= DIREC_MOD
             DIREC1 /= DIREC_MOD
 
-            rays[itik,3] = DIREC1
-            rays[itik,4] = DIREC2
-            rays[itik,5] = DIREC3
+            rays[:, 3] = DIREC1
+            rays[:, 4] = DIREC2
+            rays[:, 5] = DIREC3
 
-        t5 = time.time()
+
+        t6 = time.time()
         #
         # electric field vectors (cols 7-9, 16-18) and phases (cols 14-15)
         #
@@ -633,17 +714,18 @@ class S4BendingMagnetLightSource(S4LightSource):
 
         rays[:, 13] = PHASEX
         rays[:, 14] = PHASEZ
-        t6 = time.time()
+        t7 = time.time()
         print("------------ timing---------")
 
-        t = t6-t0
+        t = t7-t0
         print("            Total: ", t)
-        print("            Pre (t1-t0)  ", (t1-t0), 100 * (t1-t0) / t)
-        print("            Pre (t2-t1): ", (t2-t1), 100 * (t2-t1) / t)
-        print("            Pre (t3-t2): ", (t3-t2), 100 * (t3-t2) / t)
-        print("            Pre (t4-t3): ", (t4-t3), 100 * (t4-t3) / t)
-        print("            Loop: ", (t5-t4), 100 * (t5-t4) / t)
-        print("            Post: ", (t6-t5), 100 * (t6-t5) / t)
+        print("            Pre (t1-t0)  ",    (t1-t0), 100 * (t1-t0) / t)
+        print("            Pre (t2-t1): ",    (t2-t1), 100 * (t2-t1) / t)
+        print("            Pre (t3-t2): ",    (t3-t2), 100 * (t3-t2) / t)
+        print("            Pre (t4-t3): ",    (t4-t3), 100 * (t4-t3) / t)
+        print("            emittance:  ",     (t5-t4), 100 * (t5-t4) / t)
+        print("            coor+diverg: ",    (t6-t5), 100 * (t6-t5) / t)
+        print("            Post: ",           (t7-t6), 100 * (t7-t6) / t)
         return rays
 
     def to_python_code(self, **kwargs):

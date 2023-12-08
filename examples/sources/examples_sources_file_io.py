@@ -94,7 +94,7 @@ if __name__ == "__main__":
     light_source = S4BendingMagnetLightSource(name='BendingMagnet',
                                               electron_beam=electron_beam,
                                               magnetic_structure=bm,
-                                              nrays=5000,
+                                              nrays=10000,
                                               seed=5676561)
     print(light_source.info())
     file_name = 'example_sources_file_io_bending_magnet.json'
@@ -115,11 +115,13 @@ if __name__ == "__main__":
         beam1 = light_source.get_beam(verbose=0)
         t1 = time.time()
         plot_scatter(beam1.rays[:, 0], beam1.rays[:, 2], title="BM ", show=0)
+        plot_scatter(beam1.rays[:, 3], beam1.rays[:, 5], title="BM DIVERGENCES", show=1)
 
         t2 = time.time()
         beam2 = light_source_new.get_beam()
         t3 = time.time()
-        plot_scatter(beam2.rays[:, 0], beam2.rays[:, 2], title="BM **LOADED FROM FILE**")
+        plot_scatter(beam2.rays[:, 0], beam2.rays[:, 2], title="BM **LOADED FROM FILE**", show=0)
+        plot_scatter(beam2.rays[:, 3], beam2.rays[:, 5], title="BM DIVERGENCES **LOADED FROM FILE**")
 
 
         print("Running time 1: ", t1 - t0)
