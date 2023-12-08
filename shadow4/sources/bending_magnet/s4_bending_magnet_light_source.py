@@ -196,14 +196,12 @@ class S4BendingMagnetLightSource(S4LightSource):
         # compute the rays in SHADOW matrix (shape (npoints,18) )
         #
         t0 = time.time()
+
+        # retrieve parameters
         NRAYS = self.get_nrays()
 
         if self.get_seed() != 0:
             numpy.random.seed(self.get_seed())
-
-        rays = numpy.zeros((NRAYS,18))
-
-        anglev_sign = numpy.zeros(NRAYS)
 
         r_aladdin = self.get_magnetic_structure().radius()
 
@@ -235,7 +233,20 @@ class S4BendingMagnetLightSource(S4LightSource):
                                           0.5 * psi_interval_in_units_one_over_gamma * 1e3 / gamma,
                                           psi_interval_number_of_points)
 
+
+        # initialize arrays
+        rays = numpy.zeros((NRAYS,18))
+        anglev_sign = numpy.zeros(NRAYS)
+
+        # calculate the sampled_angle, sampled_photon_energy and sampled_polarization.
+        # separate the calculation for monochromatic case (using Sampler1D for angles) and
+        # polychromatic case (use Sampler2D for angles and energies).
+        # The polychromatic case is much slower, and a penalising factor is the cubic spline interpolation
+        # to get the polarization.
         t1 = time.time()
+        method = "new" # new is using sync_f_sigma_and_pi; old is using sync_anf and sync_ene.
+        if verbose: print(">>> calculate_rays: method for calculating sampling distribution: ", method)
+
         if self.get_magnetic_structure().is_monochromatic():
             if verbose:
                 print(">>> calculate_rays: is monochromatic")
@@ -249,38 +260,61 @@ class S4BendingMagnetLightSource(S4LightSource):
                     self.get_magnetic_structure()._EMIN/critical_energy,
                       ))
             t2 = time.time()
-            angular_distribution_s = sync_ang(1, #Flux at a given photon energy
-                                            angle_array_mrad,
-                                            polarization=1, #1 Parallel (l2=1, l3=0, in Sokolov&Ternov notation)
-                                            e_gev=self.get_electron_beam().energy(),
-                                            i_a=self.get_electron_beam().current(),
-                                            hdiv_mrad=(HDIV1 + HDIV2) * 1e3,
-                                            r_m=self.get_magnetic_structure().radius(), #not needed anyway
-                                            energy=self.get_magnetic_structure()._EMIN,
-                                            ec_ev=critical_energy)
 
+            if method == "old":
+                if verbose: print(">>> calculate_rays: sync_ang (p)")
 
-            if verbose:
-                print(">>> calculate_rays: sync_ang (p)")
+                angular_distribution_s = sync_ang(1, #Flux at a given photon energy
+                                                angle_array_mrad,
+                                                polarization=1, #1 Parallel (l2=1, l3=0, in Sokolov&Ternov notation)
+                                                e_gev=self.get_electron_beam().energy(),
+                                                i_a=self.get_electron_beam().current(),
+                                                hdiv_mrad=(HDIV1 + HDIV2) * 1e3,
+                                                r_m=self.get_magnetic_structure().radius(), #not needed anyway
+                                                energy=self.get_magnetic_structure()._EMIN,
+                                                ec_ev=critical_energy)
 
-            angular_distribution_p = sync_ang(1, #Flux at a given photon energy
-                                            angle_array_mrad,
-                                            polarization=2, #1 Parallel (l2=1, l3=0, in Sokolov&Ternov notation)
-                                            e_gev=self.get_electron_beam().energy(),
-                                            i_a=self.get_electron_beam().current(),
-                                            hdiv_mrad=(HDIV1 + HDIV2) * 1e3,
-                                            r_m=self.get_magnetic_structure().radius(), #not needed anyway
-                                            energy=self.get_magnetic_structure()._EMIN,
-                                            ec_ev=critical_energy)
+                angular_distribution_p = sync_ang(1, #Flux at a given photon energy
+                                                angle_array_mrad,
+                                                polarization=2, #1 Parallel (l2=1, l3=0, in Sokolov&Ternov notation)
+                                                e_gev=self.get_electron_beam().energy(),
+                                                i_a=self.get_electron_beam().current(),
+                                                hdiv_mrad=(HDIV1 + HDIV2) * 1e3,
+                                                r_m=self.get_magnetic_structure().radius(), #not needed anyway
+                                                energy=self.get_magnetic_structure()._EMIN,
+                                                ec_ev=critical_energy)
 
-            angular_distribution_s = angular_distribution_s.flatten()
-            angular_distribution_p = angular_distribution_p.flatten()
+                angular_distribution_s = angular_distribution_s.flatten()
+                angular_distribution_p = angular_distribution_p.flatten()
+            else:
+                e_gev = self.get_electron_beam().energy()
+                i_a = self.get_electron_beam().current()
+                hdiv_mrad = (HDIV1 + HDIV2) * 1e3
+                energy = self.get_magnetic_structure()._EMIN
+                ec_ev = critical_energy
+
+                angle_mrad = angle_array_mrad
+                codata_mee = 1e-6 * codata.m_e * codata.c ** 2 / codata.e
+                # e_gev = self.get_electron_beam().energy()
+                # energy = self.get_magnetic_structure()._EMIN
+                # ec_ev = critical_energy
+                # i_a = self.get_electron_beam().current()
+                # hdiv_mrad = (HDIV1 + HDIV2) * 1e3
+
+                eene = energy / ec_ev
+                gamma = e_gev * 1e3 / codata_mee
+                angular_distribution_s, angular_distribution_p = sync_f_sigma_and_pi(angle_mrad * gamma / 1e3, eene)
+
+                a8 = codata.e / numpy.power(codata_mee, 2) / codata.h * (9e-2 / 2 / numpy.pi) # a8 = 1.3264d13
+                angular_distribution_s *= eene**2 * a8 * i_a * hdiv_mrad * e_gev**2
+                angular_distribution_p *= eene**2 * a8 * i_a * hdiv_mrad * e_gev**2
 
             if verbose:
                 from srxraylib.plot.gol import plot
                 plot(angle_array_mrad,angular_distribution_s,
                      angle_array_mrad,angular_distribution_p,
                      xtitle="angle / mrad", legend=["s","p"])
+
             t3 = time.time()
             sampler_angle = Sampler1D(angular_distribution_s + angular_distribution_p, angle_array_mrad * 1e-3)
             if verbose:
@@ -304,8 +338,6 @@ class S4BendingMagnetLightSource(S4LightSource):
             if verbose:
                 print(">>> sync_ene: calculating energy distribution")
 
-
-            method = "old"
             t2 = time.time()
             if method == "old":
                 fm_s = sync_ene(4, photon_energy_array,
@@ -413,8 +445,10 @@ class S4BendingMagnetLightSource(S4LightSource):
                 interpolator = CloughTocher2DInterpolator(Pi, polarization_degree.flatten(), rescale=True)
                 sampled_polarization = interpolator(sampled_angle, sampled_photon_energy)
 
+
         t4 = time.time()
-        # The loop time is 38% of the total for 5k rays. 
+
+        # The loop time is 38% of the total for 5k rays, and 81% for 50k rays.
         for itik in range(NRAYS):
             # ! Synchrontron depth
             ANGLE  =  numpy.random.random() * (HDIV1 + HDIV2) - HDIV2
@@ -447,7 +481,6 @@ class S4BendingMagnetLightSource(S4LightSource):
                 # plot_scatter(sampled_x,sampled_xp,title="X")
                 XXX = sampled_x
                 E_BEAM1 = sampled_xp
-
 
                 epsi_wZ = EPSI_DZ + EPSI_PATH # sigma_z * sigma_zp
                 rSigmaZ = numpy.sqrt( (epsi_wZ**2) * (sigma_zp**2) + sigma_z**2 )
