@@ -67,10 +67,10 @@ class S4WigglerLightSource(S4LightSource):
         tuple
             (trajectory, parameters) with trajectory a numpy array (8, npoints) and parameters a str.
         """
+        if self.__result_trajectory is None: self.__calculate_trajectory()
         return self.__result_trajectory, self.__result_parameters
 
-
-    def __calculate_radiation(self):
+    def __calculate_trajectory(self):
 
         wiggler = self.get_magnetic_structure()
         electron_beam = self.get_electron_beam()
@@ -109,33 +109,21 @@ class S4WigglerLightSource(S4LightSource):
         self.__result_trajectory = traj
         self.__result_parameters = pars
 
-        # print(">>>>>>>>>> traj pars: ",traj.shape,pars)
-        #
-        # plot(traj[1, :], traj[0, :], xtitle="Y", ytitle="X")
-        # plot(traj[1, :], traj[3, :], xtitle="Y", ytitle="BetaX")
-        # plot(traj[1, :], traj[6, :], xtitle="Y", ytitle="Curvature")
-        # plot(traj[1, :], traj[7, :], xtitle="Y", ytitle="B")
 
+    def __calculate_radiation(self):
 
-        # traj[0,ii] = yx[i]
-        # traj[1,ii] = yy[i]+j * per - start_len
-        # traj[2,ii] = 0.0
-        # traj[3,ii] = betax[i]
-        # traj[4,ii] = betay[i]
-        # traj[5,ii] = 0.0
-        # traj[6,ii] = curv[i]
-        # traj[7,ii] = bz[i]
+        wiggler = self.get_magnetic_structure()
 
+        if self.__result_trajectory is None: self.__calculate_trajectory()
 
         #
-        # calculate cdf and write file for Shadow/Source
+        # calculate cumulative distribution function
         #
-
         self.__result_cdf = wiggler_cdf(self.__result_trajectory,
                                         enerMin=wiggler._EMIN,
                                         enerMax=wiggler._EMAX,
-                                        enerPoints=wiggler._NG_E,
-                                        outFile="tmp.cdf",
+                                        enerPoints=1 if wiggler.is_monochromatic() else wiggler._NG_E,
+                                        outFile="",
                                         elliptical=False)
 
 
@@ -159,10 +147,10 @@ class S4WigglerLightSource(S4LightSource):
         syned_electron_beam = self.get_electron_beam()
 
 
-        sampled_photon_energy,sampled_theta,sampled_phi = self._sample_photon_energy_theta_and_phi()
-
-        if verbose:
-            print(">>> sampled sampled_photon_energy,sampled_theta,sampled_phi:  ",sampled_photon_energy,sampled_theta,sampled_phi)
+        # sampled_photon_energy, sampled_theta, sampled_phi = self._sample_photon_energy_theta_and_phi()
+        #
+        # if verbose:
+        #     print(">>> sampled sampled_photon_energy,sampled_theta,sampled_phi:  ",sampled_photon_energy, sampled_theta, sampled_phi)
 
         if self.get_seed() != 0:
             numpy.random.seed(self.get_seed())
@@ -170,27 +158,27 @@ class S4WigglerLightSource(S4LightSource):
 
         sigmas = syned_electron_beam.get_sigmas_all()
 
-        NRAYS = self.get_nrays()
 
+        NRAYS = self.get_nrays()
         rays = numpy.zeros((NRAYS,18))
 
         #
         # sample sizes (cols 1-3)
         #
-
         #
+        t0 = time.time()
         if wiggler._FLAG_EMITTANCE:
             if numpy.array(numpy.abs(sigmas)).sum() == 0:
                 wiggler._FLAG_EMITTANCE = False
 
-        if wiggler._FLAG_EMITTANCE:
-            x_electron = numpy.random.normal(loc=0.0,scale=sigmas[0],size=NRAYS)
-            y_electron = 0.0
-            z_electron = numpy.random.normal(loc=0.0,scale=sigmas[2],size=NRAYS)
-        else:
-            x_electron = 0.0
-            y_electron = 0.0
-            z_electron = 0.0
+        # if wiggler._FLAG_EMITTANCE:
+        #     x_electron = numpy.random.normal(loc=0.0, scale=sigmas[0], size=NRAYS)
+        #     y_electron = 0.0
+        #     z_electron = numpy.random.normal(loc=0.0, scale=sigmas[2], size=NRAYS)
+        # else:
+        #     x_electron = 0.0
+        #     y_electron = 0.0
+        #     z_electron = 0.0
 
         # traj[0,ii] = yx[i]
         # traj[1,ii] = yy[i]+j * per - start_len
@@ -202,13 +190,12 @@ class S4WigglerLightSource(S4LightSource):
         # traj[7,ii] = bz[i]
 
         PATH_STEP = self.__result_cdf["step"]
-        X_TRAJ = self.__result_cdf["x"]
-        Y_TRAJ = self.__result_cdf["y"]
-        SEEDIN = self.__result_cdf["cdf"]
-        ANGLE  = self.__result_cdf["angle"]
-        CURV   = self.__result_cdf["curv"]
+        X_TRAJ    = self.__result_cdf["x"]
+        Y_TRAJ    = self.__result_cdf["y"]
+        SEEDIN    = self.__result_cdf["cdf"]
+        ANGLE     = self.__result_cdf["angle"]
+        CURV      = self.__result_cdf["curv"]
         EPSI_PATH = numpy.arange(CURV.size) * PATH_STEP # self._result_trajectory[7,:]
-
 
         # ! C We define the 5 arrays:
         # ! C    Y_X(5,N)    ---> X(Y)
@@ -226,13 +213,12 @@ class S4WigglerLightSource(S4LightSource):
         # CALL CUBSPL (Y_CURV, C_TEMP,   NP_TRAJ, IER)
         # CALL CUBSPL (Y_PATH, P_TEMP,   NP_TRAJ, IER)
 
-        SEED_Y = interp1d(SEEDIN,Y_TRAJ,kind='linear')
-        Y_X    = interp1d(Y_TRAJ,X_TRAJ,kind='cubic')
-        Y_XPRI = interp1d(Y_TRAJ,ANGLE,kind='cubic')
-        Y_CURV = interp1d(Y_TRAJ,CURV,kind='cubic')
-        Y_PATH = interp1d(Y_TRAJ,EPSI_PATH,kind='cubic')
+        SEED_Y = interp1d(SEEDIN, Y_TRAJ,    kind='linear')
+        Y_X    = interp1d(Y_TRAJ, X_TRAJ,    kind='cubic')
+        Y_XPRI = interp1d(Y_TRAJ, ANGLE,     kind='cubic')
+        Y_CURV = interp1d(Y_TRAJ, CURV,      kind='cubic')
+        Y_PATH = interp1d(Y_TRAJ, EPSI_PATH, kind='cubic')
 
-        # ! C+++
         # ! C Compute the path length to the middle (origin) of the wiggler.
         # ! C We need to know the "center" of the wiggler coordinate.
         # ! C input:     Y_PATH  ---> spline array
@@ -241,39 +227,48 @@ class S4WigglerLightSource(S4LightSource):
         # ! C output:    PATH0   ---> value of Y_PATH at X = Y_TRAJ. If
         # ! C                         Y_TRAJ = 0, then PATH0 = 1/2 length
         # ! C                         of trajectory.
-        # ! C+++
 
         Y_TRAJ = 0.0
         # CALL SPL_INT (Y_PATH, NP_TRAJ, Y_TRAJ, PATH0, IER)
         PATH0 = Y_PATH(Y_TRAJ)
 
 
-        # ! C
         # ! C These flags are set because of the original program structure.
-        # ! C
         # F_PHOT  = 0
         # F_COLOR  = 3
         # FSOUR  = 3
         # FDISTR  = 4
 
-        ws_ev,ws_f,tmp =  wiggler_spectrum(self.__result_trajectory,
-                                           enerMin=wiggler._EMIN, enerMax=wiggler._EMAX, nPoints=500,
-                                           # per=self.syned_wiggler.period_length(),
-                                           electronCurrent=syned_electron_beam._current,
-                                           outFile="", elliptical=False)
+        # this takes a lot of time...
+        t1 = time.time()
 
-        ws_flux_per_ev = ws_f / (ws_ev*1e-3)
-        samplerE = Sampler1D(ws_flux_per_ev,ws_ev)
+        if wiggler.is_monochromatic():
+            sampled_energies = numpy.ones(NRAYS) * wiggler._EMIN
+        else:
+            ws_ev, ws_f, _ =  wiggler_spectrum(self.__result_trajectory,
+                                               enerMin=wiggler._EMIN,
+                                               enerMax=wiggler._EMAX,
+                                               nPoints=500,
+                                               # per=self.syned_wiggler.period_length(),
+                                               electronCurrent=syned_electron_beam._current,
+                                               outFile="",
+                                               elliptical=False)
 
-        sampled_energies,h,h_center = samplerE.get_n_sampled_points_and_histogram(NRAYS)
 
+
+            ws_flux_per_ev = ws_f / (ws_ev * 1e-3)
+
+            samplerE = Sampler1D(ws_flux_per_ev, ws_ev)
+
+            sampled_energies, _, _ = samplerE.get_n_sampled_points_and_histogram(NRAYS)
+
+        t11 = time.time()
 
         ###############################################
 
         gamma = syned_electron_beam.gamma()
         m2ev = codata.c * codata.h / codata.e
         TOANGS = m2ev * 1e10
-
 
         #####################################################
 
@@ -300,13 +295,9 @@ class S4WigglerLightSource(S4LightSource):
                                           0.5*psi_interval_in_units_one_over_gamma * 1e3 / gamma,
                                           psi_interval_number_of_points)
 
-
-        # a = numpy.linspace(-0.6,0.6,150)
-
         a = angle_array_mrad
 
         #####################################################################
-
 
 
         a8 = 1.0
@@ -325,152 +316,146 @@ class S4WigglerLightSource(S4LightSource):
 
 
 
-        for itik in range(NRAYS):
-
-            #     ARG_Y = GRID(2,ITIK)
-            #     CALL SPL_INT (SEED_Y, NP_SY,   ARG_Y,  Y_TRAJ,    IER)
-            arg_y = numpy.random.random() # ARG_Y[itik]
-            Y_TRAJ = SEED_Y(arg_y)
-
-
-            #     ! srio@esrf.eu 2014-05-19
-            #     ! in wiggler some problems arise because spl_int
-            #     ! does not return a Y value in the correct range.
-            #     ! In those cases, we make a linear interpolation instead.
-            #     if ((y_traj.le.y_temp(1)).or.(y_traj.gt.y_temp(NP_SY))) then
-            #         y_traj_old = y_traj
-            #         CALL LIN_INT (SEED_Y, NP_SY,   ARG_Y,  Y_TRAJ,    IER)
-            #         print*,'SOURCESYNC: bad y_traj from SPL_INT, corrected with LIN_SPL: ',y_traj_old,'=>',y_traj
-            #     endif
-            #
-            #     CALL SPL_INT (Y_X,    NP_TRAJ, Y_TRAJ, X_TRAJ,    IER)
-            #     CALL SPL_INT (Y_XPRI, NP_TRAJ, Y_TRAJ, ANGLE,     IER)
-            #     CALL SPL_INT (Y_CURV, NP_TRAJ, Y_TRAJ, CURV,      IER)
-            #     CALL SPL_INT (Y_PATH, NP_TRAJ, Y_TRAJ, EPSI_PATH, IER)
-            # END IF
-
-            X_TRAJ = Y_X(Y_TRAJ)
-            ANGLE = Y_XPRI(Y_TRAJ)
-            CURV = Y_CURV(Y_TRAJ)
-            EPSI_PATH = Y_PATH(Y_TRAJ)
-
-            # print("\n>>><<<",arg_y,Y_TRAJ,X_TRAJ,ANGLE,CURV,EPSI_PATH)
+        arg_y_array     = numpy.random.random(NRAYS)
+        Y_TRAJ_array    = SEED_Y(arg_y_array)
+        X_TRAJ_array    = Y_X(Y_TRAJ_array)
+        ANGLE_array     = Y_XPRI(Y_TRAJ_array)
+        CURV_array      = Y_CURV(Y_TRAJ_array)
+        EPSI_PATH_array = Y_PATH(Y_TRAJ_array)
 
 
-            # EPSI_PATH = EPSI_PATH - PATH0 ! now refer to wiggler's origin
-            # IF (CURV.LT.0) THEN
-            #     POL_ANGLE = 90.0D0  ! instant orbit is CW
-            # ELSE
-            #     POL_ANGLE = -90.0D0  !     CCW
-            # END IF
-            # IF (CURV.EQ.0) THEN
-            #     R_MAGNET = 1.0D+20
-            # ELSE
-            #     R_MAGNET = ABS(1.0D0/CURV)
-            # END IF
-            # POL_ANGLE  = TORAD*POL_ANGLE
+        E_BEAMXXX_array = numpy.zeros(NRAYS)
+        E_BEAM1_array = numpy.zeros(NRAYS)
+        E_BEAMZZZ_array = numpy.zeros(NRAYS)
+        E_BEAM3_array = numpy.zeros(NRAYS)
 
-            EPSI_PATH = EPSI_PATH - PATH0 # now refer to wiggler's origin
-            if CURV < 0:
-                POL_ANGLE = 90.0 # instant orbit is CW
-            else:
-                POL_ANGLE = -90.0 # CCW
+        #
+        # sample coordinates from electron beam
+        #
+        t2 = time.time()
+        if wiggler._FLAG_EMITTANCE:
+            sigmaX, sigmaXp, sigmaZ, sigmaZp = syned_electron_beam.get_sigmas_all()
+            meanX = [0, 0]
+            meanZ = [0, 0]
+            rSigmaXp = sigmaXp
+            rSigmaZp = sigmaZp
 
-            if CURV == 0.0:
-                R_MAGNET = 1.0e20
-            else:
-                R_MAGNET = numpy.abs(1.0/CURV)
+            for itik in range(NRAYS):
+                EPSI_PATH = EPSI_PATH_array[itik] - PATH0  # now refer to wiggler's origin
+                # ! C
+                # ! C Compute the actual distance (EPSI_W*) from the orbital focus
+                # ! C
+                EPSI_WX = EPSI_DX + EPSI_PATH
+                EPSI_WZ = EPSI_DZ + EPSI_PATH
 
-            POL_ANGLE  = POL_ANGLE * numpy.pi / 180.0
+                rSigmaX = numpy.sqrt((EPSI_WX ** 2) * (sigmaXp ** 2) + sigmaX ** 2)
+                rSigmaZ = numpy.sqrt((EPSI_WZ ** 2) * (sigmaZp ** 2) + sigmaZ ** 2)
+                rhoX = EPSI_WX * sigmaXp ** 2 / (rSigmaX * rSigmaXp)
+                rhoZ = EPSI_WZ * sigmaZp ** 2 / (rSigmaZ * rSigmaZp)
+                covX = [[sigmaX ** 2, rhoX * sigmaX * sigmaXp],
+                        [rhoX * sigmaX * sigmaXp, sigmaXp ** 2]]  # diagonal covariance
 
-            # ! C
-            # ! C Compute the actual distance (EPSI_W*) from the orbital focus
-            # ! C
-            EPSI_WX = EPSI_DX + EPSI_PATH
-            EPSI_WZ = EPSI_DZ + EPSI_PATH
+                covZ = [[sigmaZ ** 2, rhoZ * sigmaZ * sigmaZp],
+                        [rhoZ * sigmaZ * sigmaZp, sigmaZp ** 2]]  # diagonal covariance
 
+                # sampling using a multivariare (2) normal distribution
+                # multivariate_normal is very slow.
+                # See https://github.com/numpy/numpy/issues/14193 and shadow4-tests/shadow4tests/devel/check_multivariate_normal.py
+                # for acceleration recipee. For 5k rays this emittance loop passed from 31% to 8% of the total time.
+                # sampled_x, sampled_xp = numpy.random.multivariate_normal(meanX, covX, 1).T
+                # sampled_z, sampled_zp = numpy.random.multivariate_normal(meanZ, covZ, 1).T
+                sampled_x, sampled_xp = (meanX + numpy.linalg.cholesky(covX) @ numpy.random.standard_normal(len(meanX))).T
+                sampled_z, sampled_zp = (meanZ + numpy.linalg.cholesky(covZ) @ numpy.random.standard_normal(len(meanZ))).T
 
-            # ! BUG srio@esrf.eu found that these routine does not make the
-            # ! calculation correctly. Changed to new one BINORMAL
-            # !CALL GAUSS (SIGMAX, EPSI_X, EPSI_WX, XXX, E_BEAM(1), istar1)
-            # !CALL GAUSS (SIGMAZ, EPSI_Z, EPSI_WZ, ZZZ, E_BEAM(3), istar1)
-            # !
-            # ! calculation of the electrom beam moments at the current position
-            # ! (sX,sZ) = (epsi_wx,epsi_ez):
-            # ! <x2> = sX^2 + sigmaX^2
-            # ! <x x'> = sX sigmaXp^2
-            # ! <x'2> = sigmaXp^2                 (same for Z)
-            #
-            # ! then calculate the new recalculated sigmas (rSigmas) and correlation rho of the
-            # ! normal bivariate distribution at the point in the electron trajectory
-            # ! rsigmaX  = sqrt(<x2>)
-            # ! rsigmaXp = sqrt(<x'2>)
-            # ! rhoX =  <x x'>/ (rsigmaX rsigmaXp)      (same for Z)
-            #
-            # if (abs(sigmaX) .lt. 1e-15) then  !no emittance
-            #     sigmaXp = 0.0d0
-            #     XXX = 0.0
-            #     E_BEAM(1) = 0.0
-            # else
-            #     sigmaXp = epsi_Xold/sigmaX    ! true only at waist, use epsi_xOld as it has been redefined :(
-            #     rSigmaX = sqrt( (epsi_wX**2) * (sigmaXp**2) + sigmaX**2 )
-            #     rSigmaXp = sigmaXp
-            #     if (abs(rSigmaX*rSigmaXp) .lt. 1e-15) then  !no emittance
-            #         rhoX = 0.0
-            #     else
-            #         rhoX = epsi_wx * sigmaXp**2 / (rSigmaX * rSigmaXp)
-            #     endif
-            #
-            #     CALL BINORMAL (rSigmaX, rSigmaXp, rhoX, XXX, E_BEAM(1), istar1)
-            # endif
-            #
-
-            if wiggler._FLAG_EMITTANCE:
-                #     CALL BINORMAL (rSigmaX, rSigmaXp, rhoX, XXX, E_BEAM(1), istar1)
-                #     [  c11  c12  ]     [  sigma1^2           rho*sigma1*sigma2   ]
-                #     [  c21  c22  ]  =  [  rho*sigma1*sigma2  sigma2^2            ]
-                sigmaX,sigmaXp,sigmaZ,sigmaZp = syned_electron_beam.get_sigmas_all()
-
-                rSigmaX = numpy.sqrt( (EPSI_WX**2) * (sigmaXp**2) + sigmaX**2 )
-                rSigmaXp = sigmaXp
-                rhoX = EPSI_WX * sigmaXp**2 / (rSigmaX * rSigmaXp)
-                mean = [0, 0]
-                cov = [[sigmaX**2, rhoX*sigmaX*sigmaXp], [rhoX*sigmaX*sigmaXp, sigmaXp**2]]  # diagonal covariance
-                sampled_x, sampled_xp = numpy.random.multivariate_normal(mean, cov, 1).T
                 XXX = sampled_x
-                E_BEAM1 = sampled_xp
-
-                rSigmaZ = numpy.sqrt( (EPSI_WZ**2) * (sigmaZp**2) + sigmaZ**2 )
-                rSigmaZp = sigmaZp
-                rhoZ = EPSI_WZ * sigmaZp**2 / (rSigmaZ * rSigmaZp)
-                mean = [0, 0]
-                cov = [[sigmaZ**2, rhoZ*sigmaZ*sigmaZp], [rhoZ*sigmaZ*sigmaZp, sigmaZp**2]]  # diagonal covariance
-                sampled_z, sampled_zp = numpy.random.multivariate_normal(mean, cov, 1).T
                 ZZZ = sampled_z
+
+                E_BEAM1 = sampled_xp
                 E_BEAM3 = sampled_zp
 
-            else:
-                XXX = 0.0
-                E_BEAM1 = 0.0
-                ZZZ = 0.0
-                E_BEAM3 = 0.0
+                E_BEAM1_array[itik] = E_BEAM1
+                E_BEAM3_array[itik] = E_BEAM3
+                E_BEAMXXX_array[itik] = XXX
+                E_BEAMZZZ_array[itik] = ZZZ
 
-            #
-            # ! C
-            # ! C For normal wiggler, XXX is perpendicular to the electron trajectory at
-            # ! C the point defined by (X_TRAJ,Y_TRAJ,0).
-            # ! C
-            # IF (F_WIGGLER.EQ.1) THEN   ! normal wiggler
-            #     YYY = Y_TRAJ - XXX*SIN(ANGLE)
-            #     XXX = X_TRAJ + XXX*COS(ANGLE)
+        t3 = time.time()
 
-            YYY = Y_TRAJ - XXX * numpy.sin(ANGLE)
-            XXX = X_TRAJ + XXX * numpy.cos(ANGLE)
 
-            rays[itik,0] = XXX
-            rays[itik,1] = YYY
-            rays[itik,2] = ZZZ
+        #
+        # sample sizes
+        #
+        do_loop = 0
 
+        if do_loop:
+            for itik in range(NRAYS):
+
+
+                Y_TRAJ = Y_TRAJ_array[itik]
+
+
+                X_TRAJ = X_TRAJ_array[itik]
+                ANGLE = ANGLE_array[itik]
+                CURV = CURV_array[itik]
+                EPSI_PATH = EPSI_PATH_array[itik] - PATH0 # now refer to wiggler's origin
+
+                if CURV < 0:
+                    POL_ANGLE = numpy.radians(90.0) # instant orbit is CW
+                else:
+                    POL_ANGLE = numpy.radians(-90.0) # CCW
+
+                if CURV == 0.0:
+                    R_MAGNET = 1.0e20
+                else:
+                    R_MAGNET = numpy.abs(1.0 / CURV)
+
+
+                # retrieve the electron sampled values
+                ANGLE = ANGLE_array[itik]
+                XXX = E_BEAMXXX_array[itik]
+                E_BEAM1 = E_BEAM1_array[itik]
+                ZZZ = E_BEAMZZZ_array[itik]
+                E_BEAM3 = E_BEAM3_array[itik]
+
+                # ! C For normal wiggler, XXX is perpendicular to the electron trajectory at
+                # ! C the point defined by (X_TRAJ,Y_TRAJ,0).
+
+                YYY = Y_TRAJ - XXX * numpy.sin(ANGLE)
+                XXX = X_TRAJ + XXX * numpy.cos(ANGLE)
+
+                rays[itik,0] = XXX
+                rays[itik,1] = YYY
+                rays[itik,2] = ZZZ
+        else:
+
+            # EPSI_PATH = EPSI_PATH_array - PATH0  # now refer to wiggler's origin
+            POL_ANGLE_array = numpy.radians(-90.0 * numpy.sign(CURV_array))
+
+            R_MAGNET_array = numpy.abs(1.0 / CURV_array)
+            ibad = numpy.argwhere( numpy.abs(CURV_array) < 1e-10)
+            R_MAGNET_array[ibad] = 1.0e20
+
+            ZZZ = E_BEAMZZZ_array
+            YYY = X_TRAJ_array - E_BEAMXXX_array * numpy.sin(ANGLE_array)
+            XXX = X_TRAJ_array + E_BEAMXXX_array * numpy.cos(ANGLE_array)
+
+            rays[:, 0] = XXX
+            rays[:, 1] = YYY
+            rays[:, 2] = ZZZ
+
+        t4 = time.time()
+
+        #
+        # divergences
+        #
+        do_loop = 1
+
+        for itik in range(NRAYS):
+
+            ############################################# copier from previous
+            POL_ANGLE = POL_ANGLE_array[itik]
+            R_MAGNET = R_MAGNET_array[itik]
+            ANGLE = ANGLE_array[itik]
+            #############################################
             #
             # directions
             #
@@ -495,19 +480,12 @@ class S4WigglerLightSource(S4LightSource):
             DIREC2 = 1.0
 
 
-            #     ! C
             #     ! C In the case of SR, we take into account the fact that the electron
             #     ! C trajectory is not orthogonal to the field. This will give a correction
             #     ! C to the photon energy.  We can write it as a correction to the
             #     ! C magnetic field strength; this will linearly shift the critical energy
             #     ! C and, with it, the energy of the emitted photon.
-            #     ! C
-            #     E_TEMP(3) =   TAN(E_BEAM(3))/COS(E_BEAM(1))
-            #     E_TEMP(2) =   1.0D0
-            #     E_TEMP(1) =   TAN(E_BEAM(1))
-            #     CALL NORM (E_TEMP,E_TEMP)
-            #     CORREC =   SQRT(1.0D0-E_TEMP(3)**2)
-            #     4400 CONTINUE
+
 
             E_TEMP3 = numpy.tan(E_BEAM3)/numpy.cos(E_BEAM1)
             E_TEMP2 = 1.0
@@ -519,8 +497,7 @@ class S4WigglerLightSource(S4LightSource):
             E_TEMP2 /= e_temp_norm
             E_TEMP1 /= e_temp_norm
 
-
-            CORREC = numpy.sqrt(1.0 - E_TEMP3**2)
+            CORREC = numpy.sqrt(1.0 - E_TEMP3**2) # todo: double-check why we do not use CORREC
 
 
             #     IF (FDISTR.EQ.6) THEN
@@ -538,16 +515,10 @@ class S4WigglerLightSource(S4LightSource):
 
             RAD_MIN = numpy.abs(R_MAGNET)
 
-
-            # CALL WHITE (RAD_MIN,CORREC,ARG_ENER,ARG_ANG,Q_WAVE,ANGLEV,POL_DEG,i1)
-            ARG_ANG = numpy.random.random()
             ARG_ENER = numpy.random.random()
 
 
-            # print("   >> R_MAGNET, DIREC",R_MAGNET,DIREC1,DIREC2)
-            # print("   >> RAD_MIN,CORREC,ARG_ENER,ARG_ANG,",RAD_MIN,CORREC,ARG_ENER,ARG_ANG)
-
-#######################################################################
+            #######################################################################
             # gamma = self.syned_electron_beam.gamma()
             # m2ev = codata.c * codata.h / codata.e
             # TOANGS = m2ev * 1e10
@@ -557,32 +528,17 @@ class S4WigglerLightSource(S4LightSource):
             # wavelength = codata.h * codata.c / codata.e /sampled_photon_energy
             # Q_WAVE = 2 * numpy.pi / (wavelength*1e2)
             # print("   >> PHOTON ENERGY, Ec, lambda, Q: ",sampled_photon_energy,critical_energy,wavelength*1e10,Q_WAVE)
-###################################################################################
+            ###################################################################################
             sampled_photon_energy = sampled_energies[itik]
             # wavelength = codata.h * codata.c / codata.e /sampled_photon_energy
             critical_energy = TOANGS * 3.0 * numpy.power(gamma, 3) / 4.0 / numpy.pi / 1.0e10 * (1.0 / RAD_MIN)
             eene = sampled_photon_energy / critical_energy
 
-            # TODO: remove old after testing...
-            method = "new"
-
-            if method == "old":
-                # fm = sync_f(a*1e-3*self.syned_electron_beam.gamma(),eene,polarization=0) * \
-                #     numpy.power(eene,2)*a8*self.syned_electron_beam._current*hdiv_mrad * \
-                #     numpy.power(self.syned_electron_beam._energy_in_GeV,2)
-
-                fm_s = sync_f(a*1e-3*self.syned_electron_beam.gamma(),eene,polarization=1) * \
-                    numpy.power(eene,2)*a8*self.syned_electron_beam._current*hdiv_mrad * \
-                    numpy.power(self.syned_electron_beam._energy_in_GeV,2)
-
-                fm_p = sync_f(a*1e-3*self.syned_electron_beam.gamma(),eene,polarization=2) * \
-                    numpy.power(eene,2)*a8*self.syned_electron_beam._current*hdiv_mrad * \
-                    numpy.power(self.syned_electron_beam._energy_in_GeV,2)
-            else:
-                fm_s , fm_p = sync_f_sigma_and_pi(a*1e-3*syned_electron_beam.gamma(),eene)
-                cte = eene ** 2 * a8 * syned_electron_beam._current * hdiv_mrad * syned_electron_beam._energy_in_GeV ** 2
-                fm_s *= cte
-                fm_p *= cte
+            # print(">>>>>>>>>>>>>>>>>>>>>> a: ", a.shape, eene.shape)
+            fm_s , fm_p = sync_f_sigma_and_pi(a * 1e-3 * syned_electron_beam.gamma(), eene)
+            cte = eene ** 2 * a8 * syned_electron_beam._current * hdiv_mrad * syned_electron_beam._energy_in_GeV ** 2
+            fm_s *= cte
+            fm_p *= cte
 
             fm = fm_s + fm_p
 
@@ -602,14 +558,14 @@ class S4WigglerLightSource(S4LightSource):
 
             pol_deg_interpolator = interp1d(a*1e-3,fm_pol)
 
-            samplerAng = Sampler1D(fm,a*1e-3)
+            samplerAng = Sampler1D(fm, a * 1e-3)
 
             # samplerPol = Sampler1D(fm_s/fm,a*1e-3)
 
             # plot(a*1e-3,fm_s/fm)
 
             if fm.min() == fm.max():
-                print("Warning: cannot compute divergence for ray index %d"%itik)
+                print("Warning: cannot compute divergence for ray index %d" % itik)
                 sampled_theta = 0.0
             else:
                 sampled_theta = samplerAng.get_sampled(ARG_ENER)
@@ -653,6 +609,8 @@ class S4WigglerLightSource(S4LightSource):
             rays[itik,4] = DIREC2 # VY
             rays[itik,5] = DIREC3 # VZ
 
+        t5 = time.time() # end loop
+
         if user_unit_to_m != 1.0:
             rays[:,0] /= user_unit_to_m
             rays[:,1] /= user_unit_to_m
@@ -661,8 +619,6 @@ class S4WigglerLightSource(S4LightSource):
         #
         # sample divergences (cols 4-6): the Shadow way
         #
-
-
 
 
         #
@@ -705,8 +661,6 @@ class S4WigglerLightSource(S4LightSource):
         #
         # obtain polarization for each ray (interpolation)
         #
-
-
 
         POL_DEG = sampled_pol_deg
         DENOM = numpy.sqrt(1.0 - 2.0 * POL_DEG + 2.0 * POL_DEG**2)
@@ -758,6 +712,20 @@ class S4WigglerLightSource(S4LightSource):
 
         # col 13 (optical path)
         rays[:,12] = 0.0
+
+        t6 = time.time()
+
+        print("------------ timing---------")
+
+        t = t6-t0
+        print("            Total: ", t)
+        print("            Pre1 (t1-t0)  ",    (t1-t0), 100 * (t1-t0) / t)
+        print("            Pre2 (t2-t1): ",    (t2-t1), 100 * (t2-t1) / t)
+        print("                 spectrum (t11-t1)  ",   (t11 - t1), 100 * (t11 - t1) / t)
+        print("            loop emitt (t3-t2): ",    (t3-t2), 100 * (t3-t2) / t)
+        print("            loop sizes (t4-t3): ",    (t4-t3), 100 * (t4-t3) / t)
+        print("            loop diver (t5-t4): ",    (t5-t4), 100 * (t5-t4) / t)
+        print("            post (t6-t5): ",    (t6-t5), 100 * (t6-t5) / t)
 
         return rays
 
@@ -834,7 +802,7 @@ class S4WigglerLightSource(S4LightSource):
             e, f, w = wiggler_spectrum(traj,
                           enerMin=e_min,
                           enerMax=e_max,
-                          nPoints=ne,
+                          nPoints=1 if wig.is_monochromatic() else ne,
                           electronCurrent=ring.current(),
                           outFile=output_file,
                           elliptical=False)
@@ -998,13 +966,27 @@ if __name__ == "__main__":
 
     light_source = S4WigglerLightSource(name='wiggler', electron_beam=electron_beam, magnetic_structure=source, nrays=2000,
                                         seed=5676561)
-    beam = light_source.get_beam()
 
+
+
+    if False:
+        traj, parms = light_source.get_trajectory()
+        print(traj.shape, parms)
+        from srxraylib.plot.gol import plot
+        plot(traj[1, :], traj[0, :], xtitle="Y", ytitle="X")
+        plot(traj[1, :], traj[3, :], xtitle="Y", ytitle="BetaX")
+        plot(traj[1, :], traj[6, :], xtitle="Y", ytitle="Curvature")
+        plot(traj[1, :], traj[7, :], xtitle="Y", ytitle="B")
+
+
+        photon_energy, flux, spectral_power = light_source.calculate_spectrum()
+        plot(photon_energy, flux, xtitle="photon energy [eV]", ytitle="Flux photons/s/0.001bw")
+
+
+    beam = light_source.get_beam()
     # test plot
     from srxraylib.plot.gol import plot_scatter
-
     rays = beam.get_rays()
-    plot_scatter(1e6 * rays[:, 0], 1e6 * rays[:, 2], title='(X,Z) in microns')
+    plot_scatter(1e6 * rays[:, 0], 1e6 * rays[:, 2], title='(X,Z) in microns',   xrange=[-1800,100], yrange=[-100,100], show=0)
+    plot_scatter(1e6 * rays[:, 3], 1e6 * rays[:, 5], title='(Xp,Zp) in microns', xrange=[-10000,8000], yrange=[-300,300])
 
-    t, p = light_source.get_trajectory()
-    print(t.shape, p)

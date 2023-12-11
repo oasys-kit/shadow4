@@ -197,7 +197,19 @@ class S4Wiggler(Wiggler):
         tuple
             (emin, emax, npoints)
         """
-        return self._EMIN,self._EMAX,self._NG_E
+        return self._EMIN, self._EMAX, self._NG_E
+
+    def is_monochromatic(self):
+        """
+        Returns a flag indicating if the source is monochromatic (True) or polychromatic (False).
+
+        Returns
+        -------
+        boolean
+        """
+        if self._NG_E == 1: return True
+        if self._EMAX == self._EMIN: return True
+        return False
 
     def set_electron_initial_conditions(self,shift_x_flag=0,shift_x_value=0.0,shift_betax_flag=0,shift_betax_value=0.0):
         self._shift_x_flag      = shift_x_flag
