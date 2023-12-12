@@ -19,6 +19,8 @@ from shadow4.sources.s4_light_source import S4LightSource
 from shadow4.sources.wiggler.s4_wiggler import S4Wiggler
 from shadow4.beam.s4_beam import S4Beam
 
+from shadow4.tools.arrayofvectors import vector_cross, vector_norm
+
 from shadow4.tools.sync_f_sigma_and_pi import sync_f_sigma_and_pi
 import time
 
@@ -625,43 +627,26 @@ class S4WigglerLightSource(S4LightSource):
         # electric field vectors (cols 7-9, 16-18) and phases (cols 14-15)
         #
 
-        # ! C
-        # ! C  ---------------------------------------------------------------------
         # ! C                 POLARIZATION
-        # ! C
         # ! C   Generates the polarization of the ray. This is defined on the
         # ! C   source plane, so that A_VEC is along the X-axis and AP_VEC is along Z-axis.
         # ! C   Then care must be taken so that A will be perpendicular to the ray
         # ! C   direction.
-        # ! C
-        # ! C
-        # A_VEC(1) = 1.0D0
-        # A_VEC(2) = 0.0D0
-        # A_VEC(3) = 0.0D0
-
-        DIREC = rays[:,3:6].copy()
+        DIREC = rays[:, 3:6].copy()
         A_VEC = numpy.zeros_like(DIREC)
-        A_VEC[:,0] = 1.0
+        A_VEC[:, 0] = 1.0  # A_VEC(1) = 1.0 A_VEC(2) = 0.0 A_VEC(3) = 0.0
 
-        # ! C
         # ! C   Rotate A_VEC so that it will be perpendicular to DIREC and with the
         # ! C   right components on the plane.
-        # ! C
-        # CALL CROSS (A_VEC,DIREC,A_TEMP)
-        A_TEMP = self._cross(A_VEC,DIREC)
-        # CALL CROSS (DIREC,A_TEMP,A_VEC)
-        A_VEC = self._cross(DIREC,A_TEMP)
-        # CALL NORM (A_VEC,A_VEC)
-        A_VEC = self._norm(A_VEC)
-        # CALL CROSS (A_VEC,DIREC,AP_VEC)
-        AP_VEC = self._cross(A_VEC,DIREC)
-        # CALL NORM (AP_VEC,AP_VEC)
-        AP_VEC = self._norm(AP_VEC)
+        A_TEMP = vector_cross(A_VEC,DIREC)
+        A_VEC = vector_cross(DIREC,A_TEMP)
+        A_VEC = vector_norm(A_VEC)
+        AP_VEC = vector_cross(A_VEC,DIREC)
+        AP_VEC = vector_norm(AP_VEC)
 
         #
         # obtain polarization for each ray (interpolation)
         #
-
         POL_DEG = sampled_pol_deg
         DENOM = numpy.sqrt(1.0 - 2.0 * POL_DEG + 2.0 * POL_DEG**2)
         AX = POL_DEG/DENOM
@@ -728,26 +713,6 @@ class S4WigglerLightSource(S4LightSource):
         print("            post (t6-t5): ",    (t6-t5), 100 * (t6-t5) / t)
 
         return rays
-
-    def _cross(self,u,v):
-        # w = u X v
-        # u = array (npoints,vector_index)
-
-        w = numpy.zeros_like(u)
-        w[:,0] = u[:,1] * v[:,2] - u[:,2] * v[:,1]
-        w[:,1] = u[:,2] * v[:,0] - u[:,0] * v[:,2]
-        w[:,2] = u[:,0] * v[:,1] - u[:,1] * v[:,0]
-
-        return w
-
-    def _norm(self,u):
-        # w = u / |u|
-        # u = array (npoints,vector_index)
-        u_norm = numpy.zeros_like(u)
-        uu = numpy.sqrt( u[:,0]**2 + u[:,1]**2 + u[:,2]**2)
-        for i in range(3):
-            u_norm[:,i] = uu
-        return u / u_norm
 
     def _sample_photon_energy_theta_and_phi(self):
 
@@ -950,8 +915,10 @@ if __name__ == "__main__":
         K_vertical=10.0,  # syned Wiggler pars: used only if magnetic_field_periodic=1
         period_length=0.1,  # syned Wiggler pars: used only if magnetic_field_periodic=1
         number_of_periods=10,  # syned Wiggler pars: used only if magnetic_field_periodic=1
-        emin=100.0,  # Photon energy scan from energy (in eV)
-        emax=200000.0,  # Photon energy scan to energy (in eV)
+        # emin=100.0,  # Photon energy scan from energy (in eV)
+        # emax=200000.0,  # Photon energy scan to energy (in eV)
+        emin=2000.0,  # Photon energy scan from energy (in eV)
+        emax=2000.0,  # Photon energy scan to energy (in eV)
         ng_e=101,  # Photon energy scan number of points
         ng_j=501,  # Number of points in electron trajectory (per period) for internal calculation only
         flag_emittance=1,  # Use emittance (0=No, 1=Yes)
