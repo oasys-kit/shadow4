@@ -7,11 +7,12 @@ Wiggler light source.
 # The radiation is calculating using sr-xraylib
 import numpy
 
-from srxraylib.util.inverse_method_sampler import Sampler1D
+from srxraylib.util.inverse_method_sampler import Sampler1D, Sampler2D
 from srxraylib.sources.srfunc import wiggler_trajectory, wiggler_spectrum, wiggler_cdf, sync_f
 
 import scipy
 from scipy.interpolate import interp1d
+from scipy.interpolate import griddata, CloughTocher2DInterpolator, LinearNDInterpolator
 import scipy.constants as codata
 
 from shadow4.sources.s4_electron_beam import S4ElectronBeam
@@ -24,6 +25,211 @@ from shadow4.tools.arrayofvectors import vector_cross, vector_norm
 from shadow4.tools.sync_f_sigma_and_pi import sync_f_sigma_and_pi
 import time
 
+
+
+
+###############################################
+
+class Sampler1Dcdf(object):
+
+    """
+    Constructor.
+
+    Parameters
+    ----------
+    pdf : numpy array
+        1D input probability distrubution function.
+    pdf_x : numpy array
+        the abscissas of the odf.
+    cdf_interpolation_factor : float, optional
+        interpolation factor for calculating the cdf (1 makes no interpolation)/
+
+    """
+    def __init__(self, cdf, pdf_x=None):
+
+        self._cdf = cdf
+        if pdf_x is None:
+            self._set_default_pdf_x()
+        else:
+            self._pdf_x = pdf_x
+        self._cdf_x = self._pdf_x.copy()
+        self._cdf_interpolation_factor = 1.0
+
+        if self._cdf_x.size != self._cdf_x.size:
+            raise Exception("Incompatible arrays.")
+
+    def abscissas(self):
+        """
+        Gets the abscissas array.
+
+        Returns
+        -------
+        numpy array
+            The abscissas array (referenced, not copied).
+        """
+        return self._pdf_x
+
+    def cdf(self):
+        """
+        Gets the cumulative distribution function (cdf).
+
+        Returns
+        -------
+        numpy array
+            The cdf (referenced, not copied).
+
+        """
+        return self._cdf
+
+    def cdf_abscissas(self):
+        """
+        Gets the abscissas of the cumulative distribution function (cdf).
+
+        Returns
+        -------
+        numpy array
+            The cdf abscissas (referenced, not copied).
+
+        """
+        return self._cdf_x
+
+    def get_sampled(self, random_in_0_1):
+        """
+        Return an array with sampled points.
+
+        Parameters
+        ----------
+        random_in_0_1  : float or numpy array
+            Points sampled in a uniform interval.
+
+        Returns
+        -------
+        numpy array
+            the points sampled with the current pdf. The number of points is equal to the dimension of random_in_0_1.
+
+        """
+        y = numpy.array(random_in_0_1)
+
+        if y.size > 1:
+            x_rand_array = numpy.zeros_like(random_in_0_1)
+            for i,cdf_rand in enumerate(random_in_0_1):
+                ival,idelta,pendent = self._get_index(cdf_rand)
+                x_rand_array[i] = self._pdf_x[ival] + idelta*(self._pdf_x[1]-self._pdf_x[0])
+            return x_rand_array
+        else:
+            ival,idelta,pendent = self._get_index(random_in_0_1)
+            return self._pdf_x[int(ival)] + idelta*(self._pdf_x[1]-self._pdf_x[0])
+
+    def get_sampled_and_histogram(self, random_in_0_1, bins=51, range=None):
+        """
+        Return an array with sampled points and the histogram.
+
+        Parameters
+        ----------
+        random_in_0_1  : float or numpy array
+            Points sampled in a uniform interval.
+            bins : int, optional
+                Number of bins
+            range : list or tuple
+                [min, max] the histogram limits.
+
+        Returns
+        -------
+        tuple
+            (s1, h, bin_edges)
+            s1: the points sampled with the current pdf. The number of points is equal to the dimension of random_in_0_1,
+            h: the array with the histogram values at the bin edges,
+            bin_edges: the bin edges.
+
+        """
+        s1 = self.get_sampled(random_in_0_1)
+        if range is None:
+            range = [self._pdf_x.min(),self._pdf_x.max()]
+        #
+        # histogram
+        #
+        h, bin_edges = numpy.array(numpy.histogram(s1,bins=bins,range=range))
+        return s1, h, bin_edges
+
+    def get_n_sampled_points(self, npoints, seed=None):
+        """
+        Returns a given number points sampled points sampled with the pdf.
+
+        Parameters
+        ----------
+        npoints : int
+            The number of points.
+        seed : int, optional
+            The seed (numpy generator is initialized with numpy.random.default_rng(seed))
+
+        Returns
+        -------
+        numpy array
+            The sampled points.
+
+        """
+        if not seed is None:
+            rng = numpy.random.default_rng(seed)
+            cdf_rand_array = rng.random(npoints)
+        else:
+            cdf_rand_array = numpy.random.random(npoints)
+
+        return self.get_sampled(cdf_rand_array)
+
+    def get_n_sampled_points_and_histogram(self, npoints, bins=51, range=None, seed=None):
+        """
+        Returns a given number points sampled points sampled with the pdf and the histogram.
+
+        Parameters
+        ----------
+        npoints : int
+            The number of points.
+        seed : int, optional
+            The seed (numpy generator is initialized with numpy.random.default_rng(seed))
+        bins : int, optional
+            Number of bins
+        range : list or tuple
+            [min, max] the histogram limits.
+
+        Returns
+        -------
+        tuple
+            (s1, h, bin_edges)
+            s1: the points sampled with the current pdf. The number of points is equal to the dimension of random_in_0_1,
+            h: the array with the histogram values at the bin edges,
+            bin_edges: the bin edges.
+
+        """
+        if not seed is None:
+            rng = numpy.random.default_rng(seed)
+            cdf_rand_array = rng.random(npoints)
+        else:
+            cdf_rand_array = numpy.random.random(npoints)
+        return self.get_sampled_and_histogram(cdf_rand_array,bins=bins,range=range)
+
+    def _set_default_pdf_x(self):
+        self._pdf_x = numpy.arange(self._pdf.size)
+
+    def _get_index(self,edge):
+        try:
+            ix = numpy.nonzero(self._cdf >= edge)[0][0]
+        except:
+            ix = 0
+
+        if ix > 0:
+            ix -= 1
+
+        if ix >= (self._cdf.size - 1):
+            pendent = 0.0
+            delta = 0.0
+        else:
+            pendent = self._cdf[ix + 1] - self._cdf[ix]
+            delta = (edge - self._cdf[ix]) / pendent
+
+        return ix//self._cdf_interpolation_factor,delta,pendent
+
+
+################################################
 class S4WigglerLightSource(S4LightSource):
     """
     Defines a wiggler light source and implements the mechanism of sampling rays.
@@ -129,10 +335,29 @@ class S4WigglerLightSource(S4LightSource):
                                         elliptical=False)
 
 
-    def __calculate_rays(self,user_unit_to_m=1.0,F_COHER=0,EPSI_DX=0.0,EPSI_DZ=0.0,
-                       psi_interval_in_units_one_over_gamma=None,
-                       psi_interval_number_of_points=1001,
-                       verbose=True):
+    def __psi_max_estimation(self, RAD_MIN, photon_energy_over_critical_energy):
+        #
+        # calculate a "reasonable" uniform vertical divergence (psi) array that will accept all radiation
+        # It uses a fit that can be found at: shadow4-tests/shadow4tests/devel/fit_psi_interval.py
+        #
+        c = numpy.array([-0.3600382, 0.11188709])  # see file fit_psi_interval.py
+        x = numpy.log10(photon_energy_over_critical_energy / 4) # the wiggler that does not have an unique
+                                                            # Ec. To be safe, I use 4 times the
+                                                            # Ec vale to make the interval wider than for the BM
+        y_fit = c[1] + c[0] * x
+        psi_interval_in_units_one_over_gamma = 10 ** y_fit  # this is the semi interval
+        psi_interval_in_units_one_over_gamma *= 4  # doubled interval
+        if psi_interval_in_units_one_over_gamma < 2:
+            psi_interval_in_units_one_over_gamma = 2
+        return psi_interval_in_units_one_over_gamma
+
+    def __calculate_rays(self, user_unit_to_m=1.0,
+                         F_COHER=0,
+                         EPSI_DX=0.0,
+                         EPSI_DZ=0.0,
+                         psi_interval_in_units_one_over_gamma=None,
+                         psi_interval_number_of_points=1001,
+                         verbose=True):
         # compute the rays in SHADOW matrix (shape (npoints,18) )
         # :param F_COHER: set this flag for coherent beam
         # :param user_unit_to_m: default 1.0 (m)
@@ -148,56 +373,40 @@ class S4WigglerLightSource(S4LightSource):
         wiggler = self.get_magnetic_structure()
         syned_electron_beam = self.get_electron_beam()
 
-
-        # sampled_photon_energy, sampled_theta, sampled_phi = self._sample_photon_energy_theta_and_phi()
-        #
-        # if verbose:
-        #     print(">>> sampled sampled_photon_energy,sampled_theta,sampled_phi:  ",sampled_photon_energy, sampled_theta, sampled_phi)
+        gamma = syned_electron_beam.gamma()
+        m2ev = codata.c * codata.h / codata.e
+        TOANGS = m2ev * 1e10
+        NRAYS = self.get_nrays()
+        sigmas = syned_electron_beam.get_sigmas_all()
 
         if self.get_seed() != 0:
             numpy.random.seed(self.get_seed())
 
-
-        sigmas = syned_electron_beam.get_sigmas_all()
-
-
-        NRAYS = self.get_nrays()
-        rays = numpy.zeros((NRAYS,18))
-
-        #
-        # sample sizes (cols 1-3)
-        #
-        #
         t0 = time.time()
         if wiggler._FLAG_EMITTANCE:
             if numpy.array(numpy.abs(sigmas)).sum() == 0:
                 wiggler._FLAG_EMITTANCE = False
 
-        # if wiggler._FLAG_EMITTANCE:
-        #     x_electron = numpy.random.normal(loc=0.0, scale=sigmas[0], size=NRAYS)
-        #     y_electron = 0.0
-        #     z_electron = numpy.random.normal(loc=0.0, scale=sigmas[2], size=NRAYS)
-        # else:
-        #     x_electron = 0.0
-        #     y_electron = 0.0
-        #     z_electron = 0.0
 
-        # traj[0,ii] = yx[i]
-        # traj[1,ii] = yy[i]+j * per - start_len
-        # traj[2,ii] = 0.0
-        # traj[3,ii] = betax[i]
-        # traj[4,ii] = betay[i]
-        # traj[5,ii] = 0.0
-        # traj[6,ii] = curv[i]
-        # traj[7,ii] = bz[i]
-
+        #
+        # sample sizes (cols 1-3)
+        #
         PATH_STEP = self.__result_cdf["step"]
         X_TRAJ    = self.__result_cdf["x"]
         Y_TRAJ    = self.__result_cdf["y"]
         SEEDIN    = self.__result_cdf["cdf"]
         ANGLE     = self.__result_cdf["angle"]
         CURV      = self.__result_cdf["curv"]
-        EPSI_PATH = numpy.arange(CURV.size) * PATH_STEP # self._result_trajectory[7,:]
+        EPSI_PATH = numpy.arange(CURV.size) * PATH_STEP # should be like Y_TRAJ - Y_TRAJ[0]
+
+        if False:
+            if verbose: print(">>>>> PATH_STEP: ", PATH_STEP, Y_TRAJ[1] - Y_TRAJ[0]) # todo: check preprocessor: PATH_STEP:  0.001000019065427119 0.0010000000000000009
+            from srxraylib.plot.gol import plot
+            plot(Y_TRAJ, X_TRAJ, xtitle='y', ytitle='x', title="trajectory", show=0)
+            plot(Y_TRAJ, SEEDIN, xtitle='y', ytitle='cdf', title="cdf", show=0)
+            plot(Y_TRAJ, ANGLE, xtitle='y', ytitle="x'", title="angle", show=0)
+            plot(Y_TRAJ, CURV, xtitle='y', ytitle="1/R", title="curvature", show=0)
+            plot(Y_TRAJ, EPSI_PATH, Y_TRAJ, Y_TRAJ-Y_TRAJ[0], xtitle='y', ytitle="epsi path", title="epsi path", show=1)
 
         # ! C We define the 5 arrays:
         # ! C    Y_X(5,N)    ---> X(Y)
@@ -205,7 +414,6 @@ class S4WigglerLightSource(S4LightSource):
         # ! C    Y_CURV(5,N) ---> CURV(Y)
         # ! C    Y_PATH(5,N) ---> PATH(Y)
         # ! C    F(1,N) contains the array of Y values where the nodes are located.
-
 
         # CALL PIECESPL(SEED_Y, Y_TEMP,   NP_SY,   IER)
         # CALL CUBSPL (Y_X,    X_TEMP,   NP_TRAJ, IER)
@@ -230,20 +438,41 @@ class S4WigglerLightSource(S4LightSource):
         # ! C                         Y_TRAJ = 0, then PATH0 = 1/2 length
         # ! C                         of trajectory.
 
-        Y_TRAJ = 0.0
-        # CALL SPL_INT (Y_PATH, NP_TRAJ, Y_TRAJ, PATH0, IER)
-        PATH0 = Y_PATH(Y_TRAJ)
+        # Y_TRAJ = 0.0
+        # # CALL SPL_INT (Y_PATH, NP_TRAJ, Y_TRAJ, PATH0, IER)
+        # PATH0 = Y_PATH(Y_TRAJ)
+        PATH0 = Y_PATH(0.0)
+
+        #
+        # calculate a "reasonable" uniform vertical divergence (psi) array that will accept all radiation
+        #
+        if psi_interval_in_units_one_over_gamma is None:
+            RAD_MIN_global = 1.0 / numpy.abs(self.__result_cdf["curv"]).max()
+            critical_energy = TOANGS * 3.0 * numpy.power(gamma, 3) / 4.0 / numpy.pi / 1.0e10 * (1.0 / RAD_MIN_global)
+            psi_interval_in_units_one_over_gamma = self.__psi_max_estimation(RAD_MIN_global, wiggler._EMIN / critical_energy)
 
 
-        # ! C These flags are set because of the original program structure.
-        # F_PHOT  = 0
-        # F_COLOR  = 3
-        # FSOUR  = 3
-        # FDISTR  = 4
+        if verbose: print(">>> psi_interval_in_units_one_over_gamma: ",psi_interval_in_units_one_over_gamma)
 
-        # this takes a lot of time...
+        angle_array_mrad = numpy.linspace(-0.5 * psi_interval_in_units_one_over_gamma * 1e3 / gamma,
+                                          0.5 * psi_interval_in_units_one_over_gamma * 1e3 / gamma,
+                                          psi_interval_number_of_points)
+        angle_array_reduced = angle_array_mrad * 1e-3 * gamma
+        angle_array_normalized = numpy.linspace(-0.5, 0.5, psi_interval_number_of_points)
+
+        a8 = 1.0
+        hdiv_mrad = 1.0
+
+        #
+        ####################  SAMPLING ##################
+        #
+
         t1 = time.time()
+        rays = numpy.zeros((NRAYS, 18))
 
+        #
+        # sampling energies
+        #
         if wiggler.is_monochromatic():
             sampled_energies = numpy.ones(NRAYS) * wiggler._EMIN
         else:
@@ -251,7 +480,6 @@ class S4WigglerLightSource(S4LightSource):
                                                enerMin=wiggler._EMIN,
                                                enerMax=wiggler._EMAX,
                                                nPoints=500,
-                                               # per=self.syned_wiggler.period_length(),
                                                electronCurrent=syned_electron_beam._current,
                                                outFile="",
                                                elliptical=False)
@@ -263,61 +491,17 @@ class S4WigglerLightSource(S4LightSource):
             samplerE = Sampler1D(ws_flux_per_ev, ws_ev)
 
             sampled_energies, _, _ = samplerE.get_n_sampled_points_and_histogram(NRAYS)
-
         t11 = time.time()
 
-        ###############################################
-
-        gamma = syned_electron_beam.gamma()
-        m2ev = codata.c * codata.h / codata.e
-        TOANGS = m2ev * 1e10
-
-        #####################################################
-
-        RAD_MIN = 1.0 / numpy.abs(self.__result_cdf["curv"]).max()
-
-        critical_energy = TOANGS * 3.0 * numpy.power(gamma, 3) / 4.0 / numpy.pi / 1.0e10 * (1.0 / RAD_MIN)
-
-        if psi_interval_in_units_one_over_gamma is None:
-            c = numpy.array([-0.3600382, 0.11188709])  # see file fit_psi_interval.py
-            # x = numpy.log10(self._EMIN / critical_energy)
-            x = numpy.log10(wiggler._EMIN / (4 * critical_energy)) # the wiggler that does not have an unique
-                                                                # Ec. To be safe, I use 4 times the
-                                                                # Ec vale to make the interval wider than for the BM
-            y_fit = c[1] + c[0] * x
-            psi_interval_in_units_one_over_gamma = 10 ** y_fit  # this is the semi interval
-            psi_interval_in_units_one_over_gamma *= 4  # doubled interval
-            if psi_interval_in_units_one_over_gamma < 2:
-                psi_interval_in_units_one_over_gamma = 2
-
-        if verbose:
-            print(">>> psi_interval_in_units_one_over_gamma: ",psi_interval_in_units_one_over_gamma)
-
-        angle_array_mrad = numpy.linspace(-0.5*psi_interval_in_units_one_over_gamma * 1e3 / gamma,
-                                          0.5*psi_interval_in_units_one_over_gamma * 1e3 / gamma,
-                                          psi_interval_number_of_points)
-
-        a = angle_array_mrad
-
-        #####################################################################
-
-
-        a8 = 1.0
-        hdiv_mrad = 1.0
-        # i_a = self.syned_electron_beam._current
         #
-        # fm = sync_f(a*self.syned_electron_beam.gamma()/1e3,eene,polarization=0) * \
-        #         numpy.power(eene,2)*a8*i_a*hdiv_mrad*numpy.power(self.syned_electron_beam._energy_in_GeV,2)
+        # sample sizes
+        # note that sizes are not depending on the photon energy, only on the electron trajectory and emittance.
         #
-        # plot(a,fm,title="sync_f")
+
         #
-        # samplerAng = Sampler1D(fm,a)
+        # sample x,y coordinates along the x(y) trajectory and the corresponding
+        # transversal angle x' and curvature
         #
-        # sampled_theta,hx,h = samplerAng.get_n_sampled_points_and_histogram(10*NRAYS)
-        # plot(h,hx)
-
-
-
         arg_y_array     = numpy.random.random(NRAYS)
         Y_TRAJ_array    = SEED_Y(arg_y_array)
         X_TRAJ_array    = Y_X(Y_TRAJ_array)
@@ -325,15 +509,22 @@ class S4WigglerLightSource(S4LightSource):
         CURV_array      = Y_CURV(Y_TRAJ_array)
         EPSI_PATH_array = Y_PATH(Y_TRAJ_array)
 
+        if False:
+            from srxraylib.plot.gol import plot
+            plot(Y_TRAJ, X_TRAJ,
+                Y_TRAJ_array, X_TRAJ_array,
+                 marker=[None,'.'], linestyle=[None,""], legend=['data', 'sampled'], show=1)
+            plot(Y_TRAJ_array, sampled_energies,
+                 marker='.', linestyle="", xtitle='y', ytitle="photon energy", show=1)
 
+        #
+        # sample coordinates from electron beam
+        #
         E_BEAMXXX_array = numpy.zeros(NRAYS)
         E_BEAM1_array = numpy.zeros(NRAYS)
         E_BEAMZZZ_array = numpy.zeros(NRAYS)
         E_BEAM3_array = numpy.zeros(NRAYS)
 
-        #
-        # sample coordinates from electron beam
-        #
         t2 = time.time()
         if wiggler._FLAG_EMITTANCE:
             sigmaX, sigmaXp, sigmaZ, sigmaZp = syned_electron_beam.get_sigmas_all()
@@ -381,7 +572,6 @@ class S4WigglerLightSource(S4LightSource):
                 E_BEAMZZZ_array[itik] = ZZZ
 
         t3 = time.time()
-
 
         #
         # sample sizes
@@ -447,169 +637,194 @@ class S4WigglerLightSource(S4LightSource):
         t4 = time.time()
 
         #
-        # divergences
+        # sample divergences
         #
-        do_loop = 1
+
+        RAD_MIN_array = numpy.abs(R_MAGNET_array)
+        critical_energy_array = TOANGS * 3.0 * numpy.power(gamma, 3) / 4.0 / numpy.pi / 1.0e10 * (1.0 / RAD_MIN_array)
+
+        #@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+        #
+        # calculate the sampled_theta, and sampled_polarization. This part takes >90% of the running time!!!
+        #
+        if wiggler._flag_interpolation == 0:
+            method = 'old' # old, new or both (to compare)
+        elif wiggler._flag_interpolation == 1:
+            method = 'new'
+        elif wiggler._flag_interpolation == 2:
+            method = 'both'
+
+        if method == 'new' or method == 'both':
+            # basically create the cdf vs angle and energy. Note that the limits of the angle are different for each energy.
+            eene = sampled_energies / critical_energy_array
+
+            e_over_ec_array_points = 4 if wiggler._NG_E==1 else wiggler._NG_E
+            e_over_ec_array = numpy.linspace(eene.min(), eene.max(), e_over_ec_array_points)
+
+            CDF1 = numpy.zeros((angle_array_reduced.size, e_over_ec_array.size))
+            FM1 = numpy.zeros((angle_array_reduced.size, e_over_ec_array.size)) # todo: delete?
+            POL1 = numpy.zeros((angle_array_reduced.size, e_over_ec_array.size))
+            PSI1 = numpy.zeros(e_over_ec_array_points)
+            for i in range(e_over_ec_array.size):
+                psi1 = self.__psi_max_estimation(RAD_MIN_global, e_over_ec_array[i])
+                if psi1 > psi_interval_in_units_one_over_gamma:
+                    print("Warning: bad sampling psi1=%f > psi_interval_in_units_one_over_gamma=%f" % (psi1, psi_interval_in_units_one_over_gamma))
+                fm_s, fm_p = sync_f_sigma_and_pi(numpy.linspace(-0.5 * psi1, 0.5 * psi1, psi_interval_number_of_points),
+                                                 e_over_ec_array[i])
+                cte = e_over_ec_array[i] ** 2 * a8 * syned_electron_beam._current * hdiv_mrad * syned_electron_beam._energy_in_GeV ** 2
+
+                fm_i = (fm_s + fm_p) * cte
+                fm_pol = numpy.sqrt(fm_s) / (numpy.sqrt(fm_s) + numpy.sqrt(fm_p))
+
+                i1D =  Sampler1D(fm_i, angle_array_reduced)
+                CDF1[:, i] = i1D.cdf()
+                POL1[:, i] = fm_pol
+                FM1[:, i] = fm_i
+                PSI1[i] = psi1
+
+            if False:
+                from srxraylib.plot.gol import plot, plot_image
+                plot(e_over_ec_array, PSI1, xtitle='E/Ec', ytitle='Psi * gamma limit', title='limits for psi', show=0)
+
+                plot_image(CDF1, angle_array_normalized, e_over_ec_array,
+                           xtitle='normalized reduced angle theta*gamma/psi1',
+                           ytitle='reduced energy', title='CDF1', aspect='auto', show=0)
+
+                plot_image(FM1, angle_array_reduced, e_over_ec_array,
+                           title='intensity', xtitle='reduced angle', ytitle='reduced energy', aspect='auto', show=0)
+                plot_image(POL1, angle_array_reduced, e_over_ec_array,
+                           title='polarization', xtitle='reduced angle', ytitle='reduced energy', aspect='auto')
+
+            # define interpolartors
+            AA = numpy.outer(angle_array_normalized, numpy.ones_like(e_over_ec_array))
+            EE = numpy.outer(numpy.ones_like(angle_array_reduced), e_over_ec_array)
+            Pi = numpy.array([AA.flatten(), EE.flatten()]).transpose()
+
+            interpolator_PSI1 = interp1d(e_over_ec_array, PSI1, kind='cubic')
+            interpolator_cdf = LinearNDInterpolator(Pi, CDF1.flatten(), fill_value=0.0, rescale=True)
+            interpolator_polarization = CloughTocher2DInterpolator(Pi, POL1.flatten(), fill_value=0.0, rescale=True)
+
+
+
+        #@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+        t44 = time.time()
+        sampled_theta_array = numpy.zeros(NRAYS)
+        sampled_pol_deg_array = numpy.zeros(NRAYS)
 
         for itik in range(NRAYS):
-
-            ############################################# copier from previous
-            POL_ANGLE = POL_ANGLE_array[itik]
-            R_MAGNET = R_MAGNET_array[itik]
-            ANGLE = ANGLE_array[itik]
-            #############################################
+            # #
+            # # directions
+            # #
             #
-            # directions
-            #
+            # #     ! C Note. The angle of emission IN PLANE is the same as the one used
+            # #     ! C before. This will give rise to a source curved along the orbit.
+            # #     ! C The elevation angle is instead characteristic of the SR distribution.
+            # #     ! C The electron beam emittance is included at this stage. Note that if
+            # #     ! C EPSI = 0, we'll have E_BEAM = 0.0, with no changes.
 
-            #     ! C
-            #     ! C Synchrotron source
-            #     ! C Note. The angle of emission IN PLANE is the same as the one used
-            #     ! C before. This will give rise to a source curved along the orbit.
-            #     ! C The elevation angle is instead characteristic of the SR distribution.
-            #     ! C The electron beam emittance is included at this stage. Note that if
-            #     ! C EPSI = 0, we'll have E_BEAM = 0.0, with no changes.
-            #     ! C
-            #     IF (F_WIGGLER.EQ.3) ANGLE=0        ! Elliptical Wiggler.
-            #     ANGLEX =   ANGLE + E_BEAM(1)
-            #     DIREC(1)  =   TAN(ANGLEX)
-            #     IF (R_ALADDIN.LT.0.0D0) DIREC(1) = - DIREC(1)
-            #     DIREC(2)  =   1.0D0
-            #     ARG_ANG  =   GRID(6,ITIK)
+            # #     ! C In the case of SR, we take into account the fact that the electron
+            # #     ! C trajectory is not orthogonal to the field. This will give a correction
+            # #     ! C to the photon energy.  We can write it as a correction to the
+            # #     ! C magnetic field strength; this will linearly shift the critical energy
+            # #     ! C and, with it, the energy of the emitted photon.
 
-            ANGLEX = ANGLE + E_BEAM1
-            DIREC1 = numpy.tan(ANGLEX)
-            DIREC2 = 1.0
-
-
-            #     ! C In the case of SR, we take into account the fact that the electron
-            #     ! C trajectory is not orthogonal to the field. This will give a correction
-            #     ! C to the photon energy.  We can write it as a correction to the
-            #     ! C magnetic field strength; this will linearly shift the critical energy
-            #     ! C and, with it, the energy of the emitted photon.
-
-
-            E_TEMP3 = numpy.tan(E_BEAM3)/numpy.cos(E_BEAM1)
-            E_TEMP2 = 1.0
-            E_TEMP1 = numpy.tan(E_BEAM1)
-
-            e_temp_norm = numpy.sqrt( E_TEMP1**2 + E_TEMP2**2 + E_TEMP3**2)
-
-            E_TEMP3 /= e_temp_norm
-            E_TEMP2 /= e_temp_norm
-            E_TEMP1 /= e_temp_norm
-
-            CORREC = numpy.sqrt(1.0 - E_TEMP3**2) # todo: double-check why we do not use CORREC
-
-
-            #     IF (FDISTR.EQ.6) THEN
-            #         CALL ALADDIN1 (ARG_ANG,ANGLEV,F_POL,IER)
-            #         Q_WAVE =   TWOPI*PHOTON(1)/TOCM*CORREC
-            #         POL_DEG =   ARG_ANG
-            #     ELSE IF (FDISTR.EQ.4) THEN
-            #         ARG_ENER =   WRAN (ISTAR1)
-            #         RAD_MIN =   ABS(R_MAGNET)
-            #
-            #         i1 = 1
-            #         CALL WHITE  &
-            #         (RAD_MIN,CORREC,ARG_ENER,ARG_ANG,Q_WAVE,ANGLEV,POL_DEG,i1)
-            #     END IF
-
-            RAD_MIN = numpy.abs(R_MAGNET)
-
-            ARG_ENER = numpy.random.random()
-
-
-            #######################################################################
-            # gamma = self.syned_electron_beam.gamma()
-            # m2ev = codata.c * codata.h / codata.e
-            # TOANGS = m2ev * 1e10
-            # critical_energy = TOANGS*3.0*numpy.power(gamma,3)/4.0/numpy.pi/1.0e10*(1.0/RAD_MIN)
-
-            # sampled_photon_energy = sampled_energies[itik]
-            # wavelength = codata.h * codata.c / codata.e /sampled_photon_energy
-            # Q_WAVE = 2 * numpy.pi / (wavelength*1e2)
-            # print("   >> PHOTON ENERGY, Ec, lambda, Q: ",sampled_photon_energy,critical_energy,wavelength*1e10,Q_WAVE)
-            ###################################################################################
             sampled_photon_energy = sampled_energies[itik]
-            # wavelength = codata.h * codata.c / codata.e /sampled_photon_energy
-            critical_energy = TOANGS * 3.0 * numpy.power(gamma, 3) / 4.0 / numpy.pi / 1.0e10 * (1.0 / RAD_MIN)
-            eene = sampled_photon_energy / critical_energy
+            critical_energy = critical_energy_array[itik]
 
-            # print(">>>>>>>>>>>>>>>>>>>>>> a: ", a.shape, eene.shape)
-            fm_s , fm_p = sync_f_sigma_and_pi(a * 1e-3 * syned_electron_beam.gamma(), eene)
-            cte = eene ** 2 * a8 * syned_electron_beam._current * hdiv_mrad * syned_electron_beam._energy_in_GeV ** 2
-            fm_s *= cte
-            fm_p *= cte
+            if method == 'new' or method == 'both':
+                # get sampled values by interpolation
+                e_index = numpy.argwhere((e_over_ec_array - sampled_photon_energy / critical_energy) > 0)
+                cdf_interpolated = interpolator_cdf(angle_array_normalized, sampled_photon_energy / critical_energy)
+                s = Sampler1Dcdf(cdf_interpolated, angle_array_normalized)
+                r = numpy.random.random()
+                sampled_theta1 = s.get_sampled(r)
+                interpolated_psi1 = interpolator_PSI1(sampled_photon_energy / critical_energy)
+                sampled_theta1 *= interpolated_psi1 / gamma
+                sampled_pol_deg1 = interpolator_polarization(sampled_theta1 * gamma,
+                                                             sampled_photon_energy / critical_energy)
 
-            fm = fm_s + fm_p
+                sampled_pol_deg = sampled_pol_deg1
+                sampled_theta = sampled_theta1
 
-            fm_pol = numpy.zeros_like(fm)
-            for i in range(fm_pol.size):
-                if fm[i] == 0.0:
-                    fm_pol[i] = 0
+            if method == 'old' or method == 'both':
+                # builds the sampler and the interpolator for each ray. This is very slow...
+                RAD_MIN = RAD_MIN_array[itik]  # numpy.abs(R_MAGNET)
+
+                eene = sampled_photon_energy / critical_energy
+
+                fm_s , fm_p = sync_f_sigma_and_pi(angle_array_mrad * 1e-3 * syned_electron_beam.gamma(), eene)
+                cte = eene ** 2 * a8 * syned_electron_beam._current * hdiv_mrad * syned_electron_beam._energy_in_GeV ** 2
+                fm_s *= cte
+                fm_p *= cte
+
+                fm = fm_s + fm_p
+
+                fm_pol = numpy.zeros_like(fm)
+                for i in range(fm_pol.size):
+                    if fm[i] == 0.0:
+                        fm_pol[i] = 0
+                    else:
+                        fm_pol[i] = numpy.sqrt(fm_s[i]) / (numpy.sqrt(fm_s[i]) + numpy.sqrt(fm_p[i]))
+
+                fm.shape = -1
+                fm_s.shape = -1
+                fm_pol.shape = -1
+
+                pol_deg_interpolator = interp1d(angle_array_mrad * 1e-3, fm_pol)
+
+                samplerAng = Sampler1D(fm, angle_array_mrad * 1e-3)
+
+                if fm.min() == fm.max():
+                    print("Warning: cannot compute divergence for ray index %d" % itik)
+                    sampled_theta = 0.0
                 else:
-                    # folowing the bug fixed for BM, this should also be changed.
-                    # fm_pol[i] = fm_s[i] / fm[i]
-                    fm_pol[i] = numpy.sqrt(fm_s[i]) / (numpy.sqrt(fm_s[i]) + numpy.sqrt(fm_p[i]))
+                    ARG_ENER = numpy.random.random()
+                    sampled_theta = samplerAng.get_sampled(ARG_ENER)
 
-            fm.shape = -1
-            fm_s.shape = -1
-            fm_pol.shape = -1
+                sampled_pol_deg = pol_deg_interpolator(sampled_theta)
+
+                if False:
+                    from srxraylib.plot.gol import plot
+                    plot(a*1e-3, samplerAng.cdf(),
+                         [sampled_theta, sampled_theta], [0.5, 0.6],
+                         title="Energy: %f" % sampled_photon_energy)
+
+                if method == 'both':
+                    # display both cdf and result
+                    from srxraylib.plot.gol import plot
+                    plot(e_over_ec_array, PSI1,
+                         [sampled_photon_energy / critical_energy, sampled_photon_energy / critical_energy], [interpolated_psi1, interpolated_psi1],
+                         xtitle='E/Ec', ytitle='Psi * gamma limit', marker=[None,'o'], show=0)
+
+                    plot(angle_array_normalized * interpolated_psi1,
+                         cdf_interpolated,
+                         [sampled_theta1 * gamma, sampled_theta1 * gamma], [0.5, 0.6],
+                         angle_array_reduced, samplerAng.cdf(),
+                         [sampled_theta * gamma, sampled_theta * gamma], [0.6, 0.7],
+                         title="Energy: %f, E/Ec: %f" % (sampled_photon_energy, sampled_photon_energy / critical_energy),
+                         marker=['+', None, None, None],
+                         legend=['new','new','old','old'])
 
 
-            pol_deg_interpolator = interp1d(a*1e-3,fm_pol)
+            sampled_theta_array[itik] = sampled_theta
+            sampled_pol_deg_array[itik] = sampled_pol_deg
+        # end loop
 
-            samplerAng = Sampler1D(fm, a * 1e-3)
+        ANGLEV = sampled_theta_array + E_BEAM3_array
+        ANGLEX = ANGLE_array + E_BEAM1_array
+        DIREC1 = numpy.tan(ANGLEX)
+        DIREC2 = numpy.ones_like(DIREC1)
+        DIREC3 = numpy.tan(ANGLEV) / numpy.cos(ANGLEX)
 
-            # samplerPol = Sampler1D(fm_s/fm,a*1e-3)
+        direc_norm = numpy.sqrt(DIREC1**2 + DIREC2**2 + DIREC3**2)
 
-            # plot(a*1e-3,fm_s/fm)
+        DIREC1 /= direc_norm
+        DIREC2 /= direc_norm
+        DIREC3 /= direc_norm
 
-            if fm.min() == fm.max():
-                print("Warning: cannot compute divergence for ray index %d" % itik)
-                sampled_theta = 0.0
-            else:
-                sampled_theta = samplerAng.get_sampled(ARG_ENER)
-
-            sampled_pol_deg = pol_deg_interpolator(sampled_theta)
-
-
-            # print("sampled_theta: ",sampled_theta, "sampled_energy: ",sampled_photon_energy, "sampled pol ",sampled_pol_deg)
-
-            ANGLEV = sampled_theta
-            ANGLEV += E_BEAM3
-            #     IF (ANGLEV.LT.0.0) I_CHANGE = -1
-            #     ANGLEV =   ANGLEV + E_BEAM(3)
-            #     ! C
-            #     ! C Test if the ray is within the specified limits
-            #     ! C
-            #     IF (FGRID.EQ.0.OR.FGRID.EQ.2) THEN
-            #         IF (ANGLEV.GT.VDIV1.OR.ANGLEV.LT.-VDIV2) THEN
-            #             ARG_ANG = WRAN(ISTAR1)
-            #             ! C
-            #             ! C If it is outside the range, then generate another ray.
-            #             ! C
-            #             GO TO 4400
-            #         END IF
-            #     END IF
-            #     DIREC(3)  =   TAN(ANGLEV)/COS(ANGLEX)
-
-            DIREC3 = numpy.tan(ANGLEV) / numpy.cos(ANGLEX)
-            #     IF (F_WIGGLER.EQ.3) THEN
-            #         CALL ROTATE (DIREC, ANGLE3,ANGLE2,ANGLE1,DIREC)
-            #     END IF
-            #     CALL NORM (DIREC,DIREC)
-
-            direc_norm = numpy.sqrt(DIREC1**2 + DIREC2**2 + DIREC3**2)
-
-            DIREC1 /= direc_norm
-            DIREC2 /= direc_norm
-            DIREC3 /= direc_norm
-
-            rays[itik,3] = DIREC1 # VX
-            rays[itik,4] = DIREC2 # VY
-            rays[itik,5] = DIREC3 # VZ
+        rays[:,3] = DIREC1 # VX
+        rays[:,4] = DIREC2 # VY
+        rays[:,5] = DIREC3 # VZ
 
         t5 = time.time() # end loop
 
@@ -617,10 +832,6 @@ class S4WigglerLightSource(S4LightSource):
             rays[:,0] /= user_unit_to_m
             rays[:,1] /= user_unit_to_m
             rays[:,2] /= user_unit_to_m
-
-        #
-        # sample divergences (cols 4-6): the Shadow way
-        #
 
 
         #
@@ -647,7 +858,7 @@ class S4WigglerLightSource(S4LightSource):
         #
         # obtain polarization for each ray (interpolation)
         #
-        POL_DEG = sampled_pol_deg
+        POL_DEG = sampled_pol_deg_array
         DENOM = numpy.sqrt(1.0 - 2.0 * POL_DEG + 2.0 * POL_DEG**2)
         AX = POL_DEG/DENOM
         for i in range(3):
@@ -656,7 +867,6 @@ class S4WigglerLightSource(S4LightSource):
         AZ = (1.0-POL_DEG)/DENOM
         for i in range(3):
             AP_VEC[:,i] *= AZ
-
 
         rays[:,6:9] =  A_VEC
         rays[:,15:18] = AP_VEC
@@ -667,17 +877,17 @@ class S4WigglerLightSource(S4LightSource):
         # ! C
 
         #
-        POL_ANGLE = 0.5 * numpy.pi
+        # POL_ANGLE = 0.5 * numpy.pi
 
         if F_COHER == 1:
             PHASEX = 0.0
         else:
             PHASEX = numpy.random.random(NRAYS) * 2 * numpy.pi
 
-        # PHASEZ = PHASEX + POL_ANGLE * numpy.sign(ANGLEV)
+        PHASEZ = PHASEX + POL_ANGLE_array * numpy.sign(ANGLEV)
 
-        rays[:,13] = 0.0 # PHASEX
-        rays[:,14] = 0.0 # PHASEZ
+        rays[:,13] = PHASEX
+        rays[:,14] = PHASEZ
 
         # set flag (col 10)
         rays[:,9] = 1.0
@@ -703,13 +913,15 @@ class S4WigglerLightSource(S4LightSource):
         print("------------ timing---------")
 
         t = t6-t0
-        print("            Total: ", t)
-        print("            Pre1 (t1-t0)  ",    (t1-t0), 100 * (t1-t0) / t)
+        print("            method: ", method)
+        print("            Total time [s]: ", t)
+        print("            Pre1 (t1-t0):  ",   (t1-t0), 100 * (t1-t0) / t)
         print("            Pre2 (t2-t1): ",    (t2-t1), 100 * (t2-t1) / t)
-        print("                 spectrum (t11-t1)  ",   (t11 - t1), 100 * (t11 - t1) / t)
+        print("                 spectrum (t11-t1): ",   (t11 - t1), 100 * (t11 - t1) / t)
         print("            loop emitt (t3-t2): ",    (t3-t2), 100 * (t3-t2) / t)
         print("            loop sizes (t4-t3): ",    (t4-t3), 100 * (t4-t3) / t)
-        print("            loop diver (t5-t4): ",    (t5-t4), 100 * (t5-t4) / t)
+        print("            divergence (t5-t4): ",    (t5-t4), 100 * (t5-t4) / t)
+        print("                 loop (t5-t44)  ",   (t5 - t44), 100 * (t5 - t44) / t)
         print("            post (t6-t5): ",    (t6-t5), 100 * (t6-t5) / t)
 
         return rays
@@ -724,31 +936,33 @@ class S4WigglerLightSource(S4LightSource):
     ############################################################################
     #
     ############################################################################
-    def get_beam(self):
+    def get_beam(self, F_COHER=0, psi_interval_in_units_one_over_gamma=None, verbose=1):
         """
         Creates the beam as emitted by the wiggler.
 
+        Parameters
+        ----------
+        F_COHER : int, optional
+            A flag to indicate that the phase for the s-component is set to zero (coherent_beam=1) or is random for incoherent.
+        psi_interval_in_units_one_over_gamma : None or float, optional
+            The interval of psi*gamma for sampling rays.
+        verbose : int, optional
+            Set to 1 for verbose output.
+
         Returns
         -------
-        instance od S4beam
+        instance of S4beam
         """
 
-        user_unit_to_m = 1.0
-        F_COHER = 0
-        EPSI_DX = self.get_magnetic_structure()._EPSI_DX
-        EPSI_DZ = self.get_magnetic_structure()._EPSI_DZ
-        psi_interval_in_units_one_over_gamma = None
-        psi_interval_number_of_points = 1001
-        verbose = True
-
         return S4Beam.initialize_from_array(self.__calculate_rays(
-            user_unit_to_m=user_unit_to_m,
-            F_COHER=F_COHER,
-            EPSI_DX=EPSI_DX,
-            EPSI_DZ=EPSI_DZ,
-            psi_interval_in_units_one_over_gamma=psi_interval_in_units_one_over_gamma,
-            psi_interval_number_of_points=psi_interval_number_of_points,
-            verbose=verbose))
+            user_unit_to_m =1.0,
+            F_COHER                               = F_COHER,
+            EPSI_DX                               = self.get_magnetic_structure()._EPSI_DX,
+            EPSI_DZ                               = self.get_magnetic_structure()._EPSI_DZ,
+            psi_interval_in_units_one_over_gamma = psi_interval_in_units_one_over_gamma,
+            psi_interval_number_of_points        = self.get_magnetic_structure()._psi_interval_number_of_points,
+            verbose                              = verbose,
+        ))
 
     def calculate_spectrum(self, output_file=""):
         """
@@ -918,8 +1132,8 @@ if __name__ == "__main__":
         # emin=100.0,  # Photon energy scan from energy (in eV)
         # emax=200000.0,  # Photon energy scan to energy (in eV)
         emin=2000.0,  # Photon energy scan from energy (in eV)
-        emax=2000.0,  # Photon energy scan to energy (in eV)
-        ng_e=101,  # Photon energy scan number of points
+        emax=2020.0,  # Photon energy scan to energy (in eV)
+        ng_e=51,  # Photon energy scan number of points
         ng_j=501,  # Number of points in electron trajectory (per period) for internal calculation only
         flag_emittance=1,  # Use emittance (0=No, 1=Yes)
         shift_x_flag=4,  # 0="No shift", 1="Half excursion", 2="Minimum", 3="Maximum", 4="Value at zero", 5="User value"
@@ -931,7 +1145,10 @@ if __name__ == "__main__":
     # light source
     from shadow4.sources.wiggler.s4_wiggler_light_source import S4WigglerLightSource
 
-    light_source = S4WigglerLightSource(name='wiggler', electron_beam=electron_beam, magnetic_structure=source, nrays=2000,
+    light_source = S4WigglerLightSource(name='wiggler',
+                                        electron_beam=electron_beam,
+                                        magnetic_structure=source,
+                                        nrays=10000,
                                         seed=5676561)
 
 

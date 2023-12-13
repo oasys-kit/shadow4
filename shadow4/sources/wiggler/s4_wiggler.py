@@ -26,9 +26,21 @@ class S4Wiggler(Wiggler):
     emax : float, optional
         maximum photon energy in eV.
     ng_e : int, optional
-        Number of points in energy.
+        Number of points in energy. This is used for the calculation of the spectrum, and also for
+        sampling rays if flag_interpolation=1.
     ng_j : int, optional
         Number of points in calculating the electron trajectory.
+    psi_interval_number_of_points : int, optional
+        The number of psi (vertical angle) points for internal calculation only.
+    flag_interpolation : int, optional
+        Use interpolation mechanism for sampling vertical divergence of rays. 0=No, 1=Yes,
+        2=Yes and create debugging plots for each ray.
+        Typically the interpolation is faster, and works very well for monochromatic or quasi-monochromatic
+        cases. Here the ng_e and psi_interval_number_of_points can be small (e.g. ~50).
+        In the case of creating polychromatic sources with a very large energy interval, the interpolation method
+        tends to overestimate the tails of the vertical angle. In this case, the number of points should be increased.
+        However, with large number of points, the calculation time is very large, similar to the more accurate option
+        flag_interpolaton=0.
     flag_emittance : int, optional
         Flag: 0=Zero emittance (filament beam), 1=Use emittance.
     shift_x_flag : int, optional
@@ -54,6 +66,8 @@ class S4Wiggler(Wiggler):
                  emax=2000.0,               # Photon energy scan to energy (in eV)
                  ng_e=11,                    # Photon energy scan number of points
                  ng_j=20,                    # Number of points in electron trajectory (per period) for internal calculation only
+                 psi_interval_number_of_points=101,  # the number of angular points for internal calculation only
+                 flag_interpolation=0,  # when sampling vertical angle of rays: Use interpolation method (0=No, 1=Yes)
                  flag_emittance=0,           # when sampling rays: Use emittance (0=No, 1=Yes)
                  shift_x_flag=0,        # Shift x? 0:No, 1:Half excursion, 2:min, 3:max, 4:value at y=0, 5:user value
                  shift_x_value=0.0,     # for shift_x_flag=5, the x value
@@ -72,10 +86,11 @@ class S4Wiggler(Wiggler):
         self._EMIN            = emin   # Photon energy scan from energy (in eV)
         self._EMAX            = emax   # Photon energy scan to energy (in eV)
         self._NG_E            = ng_e   # Photon energy scan number of points
-
+        self._psi_interval_number_of_points = psi_interval_number_of_points
         # other specific inputs
         self._NG_J            = ng_j       # Number of points in electron trajectory (per period)
         self._FLAG_EMITTANCE  =  flag_emittance # Yes  # Use emittance (0=No, 1=Yes)
+        self._flag_interpolation = flag_interpolation
 
         self._shift_x_flag      = shift_x_flag
         self._shift_x_value     = shift_x_value
@@ -91,7 +106,9 @@ class S4Wiggler(Wiggler):
                     ("EMAX", "maximum photon energy", "eV"),
                     ("NG_E", "number of energy points", ""),
                     ("NG_J", "number of points of the electron trajectory", ""),
+                    ("psi_interval_number_of_points", "if flag_interpolation=1, number of points of psi", ""),
                     ("FLAG_EMITTANCE", "Use emittance (0=No, 1=Yes)", "" ),
+                    ("flag_interpolation", "Use interpolation for sampling psi (0=No, 1=Yes)", ""),
                     ("shift_x_flag", "Flag to center e trajectory X (0=No, 1=Yes)", ""),
                     ("shift_x_value", "shift value for X of the e trajectory", "m"),
                     ("shift_betax_flag", "Flag to center e trajectory X' (0=No, 1=Yes)", ""),
@@ -288,20 +305,22 @@ from shadow4.sources.wiggler.s4_wiggler import S4Wiggler
 source = S4Wiggler(
     magnetic_field_periodic  = {magnetic_field_periodic},  # 0=external, 1=periodic
     file_with_magnetic_field = "{file_with_magnetic_field}",  # used only if magnetic_field_periodic=0
-    K_vertical        = {K_vertical},  # syned Wiggler pars: used only if magnetic_field_periodic=1
-    period_length     = {period_length}, # syned Wiggler pars: used only if magnetic_field_periodic=1
-    number_of_periods = {number_of_periods},  # syned Wiggler pars: used only if magnetic_field_periodic=1
-    emin              = {emin},  # Photon energy scan from energy (in eV)
-    emax              = {emax},  # Photon energy scan to energy (in eV)
-    ng_e              = {ng_e},  # Photon energy scan number of points
-    ng_j              = {ng_j} , # Number of points in electron trajectory (per period) for internal calculation only
-    epsi_dx           = {epsi_dx},  # distance to waist in X [m]
-    epsi_dz           = {epsi_dz} , # distance to waist in Z [m]
-    flag_emittance    = {flag_emittance}, # Use emittance (0=No, 1=Yes)
-    shift_x_flag      = {shift_x_flag}, # 0="No shift", 1="Half excursion", 2="Minimum", 3="Maximum", 4="Value at zero", 5="User value"
-    shift_x_value     = {shift_x_value}, # used only if shift_x_flag=5
-    shift_betax_flag  = {shift_betax_flag}, # 0="No shift", 1="Half excursion", 2="Minimum", 3="Maximum", 4="Value at zero", 5="User value"
-    shift_betax_value = {shift_betax_value},#  used only if shift_betax_flag=5
+    K_vertical         = {K_vertical},  # syned Wiggler pars: used only if magnetic_field_periodic=1
+    period_length      = {period_length}, # syned Wiggler pars: used only if magnetic_field_periodic=1
+    number_of_periods  = {number_of_periods},  # syned Wiggler pars: used only if magnetic_field_periodic=1
+    emin               = {emin},  # Photon energy scan from energy (in eV)
+    emax               = {emax},  # Photon energy scan to energy (in eV)
+    ng_e               = {ng_e},  # Photon energy scan number of points for spectrum and internal calculation
+    ng_j               = {ng_j} , # Number of points in electron trajectory (per period) for internal calculation only
+    epsi_dx            = {epsi_dx},  # distance to waist in X [m]
+    epsi_dz            = {epsi_dz} , # distance to waist in Z [m]
+    psi_interval_number_of_points = {psi_interval_number_of_points} , # the number psi (vertical angle) points for internal calculation only
+    flag_interpolation = {flag_interpolation}, # Use interpolation to sample psi (0=No, 1=Yes)
+    flag_emittance     = {flag_emittance}, # Use emittance (0=No, 1=Yes)
+    shift_x_flag       = {shift_x_flag}, # 0="No shift", 1="Half excursion", 2="Minimum", 3="Maximum", 4="Value at zero", 5="User value"
+    shift_x_value      = {shift_x_value}, # used only if shift_x_flag=5
+    shift_betax_flag   = {shift_betax_flag}, # 0="No shift", 1="Half excursion", 2="Minimum", 3="Maximum", 4="Value at zero", 5="User value"
+    shift_betax_value  = {shift_betax_value},#  used only if shift_betax_flag=5
     )"""
 
 
@@ -317,6 +336,8 @@ source = S4Wiggler(
             "ng_j"                     : self._NG_J            ,
             "epsi_dx"                  : self._EPSI_DX,
             "epsi_dz"                  : self._EPSI_DZ,
+            "flag_interpolation"       :self._flag_interpolation,
+            "psi_interval_number_of_points": self._psi_interval_number_of_points,
             "flag_emittance"           : self._FLAG_EMITTANCE  ,
             "shift_x_flag"             : self._shift_x_flag     ,
             "shift_x_value"            : self._shift_x_value    ,
@@ -378,6 +399,8 @@ if __name__ == "__main__":
                  ng_e=11,                    # Photon energy scan number of points
                  ng_j=20,                    # Number of points in electron trajectory (per period) for internal calculation only
                  flag_emittance=0,           # when sampling rays: Use emittance (0=No, 1=Yes)
+                 flag_interpolation=1,
+                 psi_interval_number_of_points=111,
                  shift_x_flag=0, shift_x_value=0.0, shift_betax_flag=0, shift_betax_value=0.0,) # ele)
     print(sw.info())
     print(sw.get_info())
