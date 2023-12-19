@@ -150,7 +150,6 @@ class S4BendingMagnet(BendingMagnet):
         magnetic_radius = cls.calculate_magnetic_radius(magnetic_field, electron_energy_in_GeV)
         return S4BendingMagnet(radius=magnetic_radius,
                                magnetic_field=magnetic_field,
-                               divergence=numpy.abs(divergence * magnetic_radius),
                                emin=emin,
                                emax=emax,
                                ng_e=ng_e,
@@ -197,7 +196,6 @@ class S4BendingMagnet(BendingMagnet):
         magnetic_field = cls.calculate_magnetic_field(magnetic_radius, electron_energy_in_GeV)
         return S4BendingMagnet(radius=magnetic_radius,
                                magnetic_field=magnetic_field,
-                               divergence=numpy.abs(divergence * magnetic_radius),
                                emin=emin,
                                emax=emax,
                                ng_e=ng_e,

@@ -1,4 +1,4 @@
-
+import numpy
 from syned.storage_ring.electron_beam import ElectronBeam
 
 from shadow4.sources.bending_magnet.s4_bending_magnet import S4BendingMagnet
@@ -37,7 +37,7 @@ if __name__ == "__main__":
     print(bm.info())
 
     light_source = S4BendingMagnetLightSource(electron_beam=electron_beam, magnetic_structure=bm,
-                                              nrays=5000, seed=123456)
+                                              nrays=25000, seed=123456)
 
     beam = light_source.get_beam(F_COHER=0, EPSI_DX=0.0, EPSI_DZ=0.0, verbose=False)
 
@@ -53,9 +53,12 @@ if __name__ == "__main__":
     tktS = beam.histo1(6, ref=24)
     tktP = beam.histo1(6, ref=25)
     plot(
-        tktI["bin_path"], tktI["histogram_path"],
-        tktS["bin_path"], tktS["histogram_path"],
-        tktP["bin_path"], tktP["histogram_path"],
+        light_source.angle_array_mrad * 1e-3, light_source.fm[:, 0]/ numpy.max(light_source.fm[:, 0]),
+        light_source.angle_array_mrad * 1e-3, light_source.fm_s[:, 0]/ numpy.max(light_source.fm[:, 0]),
+        light_source.angle_array_mrad * 1e-3, light_source.fm_p[:, 0]/ numpy.max(light_source.fm[:, 0]),
+        tktI["bin_path"], tktI["histogram_path"] / numpy.max(tktI["histogram_path"]),
+        tktS["bin_path"], tktS["histogram_path"] / numpy.max(tktI["histogram_path"]),
+        tktP["bin_path"], tktP["histogram_path"] / numpy.max(tktI["histogram_path"]),
          )
 
     tktP3 = beam.histo1(6, ref=33)
