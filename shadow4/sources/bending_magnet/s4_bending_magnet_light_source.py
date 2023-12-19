@@ -4,8 +4,6 @@ Bending magnet light source.
 import numpy
 
 from srxraylib.util.inverse_method_sampler import Sampler1D, Sampler2D
-from srxraylib.sources.srfunc import sync_ene
-from srxraylib.sources.srfunc import sync_ang, sync_f
 
 import scipy.constants as codata
 from scipy.interpolate import interp1d
@@ -21,6 +19,8 @@ from shadow4.tools.arrayofvectors import vector_cross, vector_norm
 
 from shadow4.tools.sync_f_sigma_and_pi import sync_f_sigma_and_pi
 import time
+
+from srxraylib.sources.srfunc import sync_ene
 
 class S4BendingMagnetLightSource(S4LightSource):
     """
@@ -180,7 +180,7 @@ class S4BendingMagnetLightSource(S4LightSource):
         if self.get_magnetic_structure().is_monochromatic():
             if verbose:
                 print(">>> calculate_rays: is monochromatic")
-                print(">>> calculate_rays: sync_ang (s) E=%f GeV, I=%f A, D=%f mrad, R=%f m, PhE=%f eV, Ec=%f eV, PhE/Ec=%f "% ( \
+                print(">>> calculate_rays: (s) E=%f GeV, I=%f A, D=%f mrad, R=%f m, PhE=%f eV, Ec=%f eV, PhE/Ec=%f "% ( \
                     self.get_electron_beam().energy(),
                     self.get_electron_beam().current(),
                     (HDIV1 + HDIV2) * 1e3,
@@ -264,7 +264,7 @@ class S4BendingMagnetLightSource(S4LightSource):
 
             if verbose:
                 print(angle_array_mrad.shape, photon_energy_array.shape, fm_s.shape, fm_p.shape)
-                print(">>> DONE sync_ene: calculating energy distribution",photon_energy_array.shape,fm.shape)
+                print(">>> DONE : calculating energy distribution",photon_energy_array.shape,fm.shape)
                 from srxraylib.plot.gol import plot,plot_image
                 plot(photon_energy_array, fm[fm.shape[0] // 2, :],
                      xtitle="Energy / eV", ytitle="Flux at zero elevation")
@@ -608,15 +608,52 @@ class S4BendingMagnetLightSource(S4LightSource):
         return rays
 
 
-    def calculate_spectrum(self):
+
+    def calculate_spectrum(self, output_file=""):
         """
-        Calculates the spectrum.
+                Calculates the spectrum.
+
+        Parameters
+        ----------
+        output_file : str, optional
+            Name of the file to write the spectrom (use "" for not writing file).
 
         Returns
         -------
-        numpy array
+        tuple
+            (e, f, w) numpy arrays with photon energy (e), photon flux (f) and spectral power (w).
         """
-        raise NotImplementedError("To be implemented...")
+        try:
+            bm = self.get_magnetic_structure()
+            ring = self.get_electron_beam()
+
+            if bm.is_monochromatic():
+                photon_energy_array = numpy.array([bm._EMIN])
+            else:
+                photon_energy_array = numpy.linspace(bm._EMIN,
+                                                     bm._EMAX,
+                                                     bm._NG_E)
+
+            hdiv = numpy.abs(bm.length() / bm.radius())
+
+            ec_ev = bm.get_critical_energy(ring.energy())
+            i_a = ring.current()
+            e_gev = ring.energy()
+
+            f = sync_ene(0,
+                         photon_energy_array,
+                         ec_ev=ec_ev,
+                         polarization=0,
+                         e_gev=e_gev,
+                         i_a=i_a,
+                         hdiv_mrad=1e3*hdiv,
+                         psi_min=0.0, # not needed
+                         # psi_max=0.0, # not needed
+                         # psi_npoints=1, # not needed
+                        )
+            return photon_energy_array, f, f * codata.e * 1e3
+        except:
+            raise Exception("Cannot compute spectrum")
 
     def to_python_code(self, **kwargs):
         """
@@ -644,3 +681,41 @@ class S4BendingMagnetLightSource(S4LightSource):
 
         script += "\nbeam = light_source.get_beam()"
         return script
+
+
+if __name__ == "__main__":
+    # electron beam
+    from shadow4.sources.s4_electron_beam import S4ElectronBeam
+
+    electron_beam = S4ElectronBeam(energy_in_GeV=6.04, energy_spread=0.001, current=0.2)
+    electron_beam.set_sigmas_all(sigma_x=7.8e-05, sigma_y=4.87179e-05, sigma_xp=3.6e-05, sigma_yp=1.05556e-06)
+
+    # magnetic structure
+    # from shadow4.sources.bending_magnet.s4_bending_magnet import S4BendingMagnet
+
+    source = S4BendingMagnet(
+        radius=25.18408918746048,
+        # from syned BM, can be obtained as S4BendingMagnet.calculate_magnetic_radius(0.8, electron_beam.energy())
+        magnetic_field=0.8,  # from syned BM
+        length=0.02518408918746048,  # from syned BM = abs(BM divergence * magnetic_field)
+        emin=100.0,  # Photon energy scan from energy (in eV)
+        emax=100000,  # Photon energy scan to energy (in eV)
+        ng_e=500,  # Photon energy scan number of points
+        ng_j=-100,  # Number of points in electron trajectory (per period) for internal calculation only
+        flag_emittance=1,  # when sampling rays: Use emittance (0=No, 1=Yes)
+        )
+
+    # light source
+    from shadow4.sources.bending_magnet.s4_bending_magnet_light_source import S4BendingMagnetLightSource
+
+    light_source = S4BendingMagnetLightSource(name='BendingMagnet',
+                                              electron_beam=electron_beam,
+                                              magnetic_structure=source,
+                                              nrays=25000,
+                                              seed=5676561)
+
+    e, f, w = light_source.calculate_spectrum()
+
+    from srxraylib.plot.gol import plot
+    plot(e, f, xlog=1, ylog=1, marker='+')
+    plot(e, w, xlog=1, ylog=1, marker='+')

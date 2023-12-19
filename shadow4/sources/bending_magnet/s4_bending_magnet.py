@@ -22,7 +22,7 @@ class S4BendingMagnet(BendingMagnet):
         maximum photon energy in eV.
     ng_e : int, optional
         Number of points in energy.
-    ng_j : int, optional
+    ng_j : int, optional # todo remove
         Number of points in calculating the electron trajectory.
     flag_emittance : int, optional
         Flag: 0=Zero emmitance (filament beam), 1=Use emittance.
@@ -164,7 +164,7 @@ class S4BendingMagnet(BendingMagnet):
                 emin=10000.0,
                 emax=11000.0,
                 ng_e=11,  # Photon energy scan number of points
-                ng_j=20,
+                ng_j=20, # todo: remove, not used.
                 flag_emittance=0,
                 ):
         """
@@ -218,7 +218,7 @@ from shadow4.sources.bending_magnet.s4_bending_magnet import S4BendingMagnet
 source = S4BendingMagnet(
                  radius={radius}, # from syned BM, can be obtained as S4BendingMagnet.calculate_magnetic_radius({magnetic_field}, electron_beam.energy())
                  magnetic_field={magnetic_field}, # from syned BM
-                 length={length}, # from syned BM = abs(BM divergence * magnetic_field)
+                 length={length}, # from syned BM = abs(BM divergence * magnetic_radius)
                  emin={emin},     # Photon energy scan from energy (in eV)
                  emax={emax},     # Photon energy scan to energy (in eV)
                  ng_e={ng_e},     # Photon energy scan number of points

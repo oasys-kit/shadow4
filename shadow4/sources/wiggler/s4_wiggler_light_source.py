@@ -1021,6 +1021,11 @@ class S4WigglerLightSource(S4LightSource):
         ----------
         output_file : str, optional
             Name of the file to write the spectrom (use "" for not writing file).
+
+        Returns
+        -------
+        tuple
+            (e, f, w) numpy arrays with photon energy (e), photon flux (f) and spectral power (w).
         """
         traj, pars = self.get_trajectory()
         wig = self.get_magnetic_structure()
@@ -1034,7 +1039,7 @@ class S4WigglerLightSource(S4LightSource):
                           electronCurrent=ring.current(),
                           outFile=output_file,
                           elliptical=False)
-            return e,f,w
+            return e, f, w
         else:
             raise Exception("Cannot compute spectrum")
 
