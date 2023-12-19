@@ -14,7 +14,6 @@ source = S4BendingMagnet(
                  emin=8000.0,     # Photon energy scan from energy (in eV)
                  emax=8000.0001,     # Photon energy scan to energy (in eV)
                  ng_e=100,     # Photon energy scan number of points
-                 ng_j=100,     # Number of points in electron trajectory (per period) for internal calculation only
                  flag_emittance=1, # when sampling rays: Use emittance (0=No, 1=Yes)
                  )
 

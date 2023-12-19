@@ -22,8 +22,6 @@ class S4BendingMagnet(BendingMagnet):
         maximum photon energy in eV.
     ng_e : int, optional
         Number of points in energy.
-    ng_j : int, optional # todo remove
-        Number of points in calculating the electron trajectory.
     flag_emittance : int, optional
         Flag: 0=Zero emmitance (filament beam), 1=Use emittance.
     """
@@ -34,7 +32,6 @@ class S4BendingMagnet(BendingMagnet):
                  emin=10000.0,       # Photon energy scan from energy (in eV)
                  emax=11000.0,       # Photon energy scan to energy (in eV)
                  ng_e=11,            # Photon energy scan number of points
-                 ng_j=20,            # Number of points in electron trajectory (per period) for internal calculation only
                  flag_emittance=0,   # when sampling rays: Use emittance (0=No, 1=Yes)
                  ):
         super().__init__(radius=radius, magnetic_field=magnetic_field, length=length)
@@ -44,7 +41,6 @@ class S4BendingMagnet(BendingMagnet):
         self._EMIN            = emin   # Photon energy scan from energy (in eV)
         self._EMAX            = emax   # Photon energy scan to energy (in eV)
         self._NG_E            = ng_e   # Photon energy scan number of points
-        self._NG_J            = ng_j       # Number of points in electron trajectory (per period)
         self._FLAG_EMITTANCE  =  flag_emittance # Yes  # Use emittance (0=No, 1=Yes) #todo kw in calculate rays
 
         # support text containg name of variable, help text and unit. Will be stored in self._support_dictionary
@@ -52,7 +48,6 @@ class S4BendingMagnet(BendingMagnet):
                     ("EMIN", "minimum photon energy", "eV" ),
                     ("EMAX", "maximum photon energy", "eV"),
                     ("NG_E", "number of energy points", ""),
-                    ("NG_J", "number of points of the electron trajectory", ""),
                     ("FLAG_EMITTANCE", "Use emittance (0=No, 1=Yes)", "" ),
             ] )
 
@@ -118,7 +113,6 @@ class S4BendingMagnet(BendingMagnet):
                 emin=10000.0,
                 emax=11000.0,
                 ng_e=11,  # Photon energy scan number of points
-                ng_j=20,
                 flag_emittance=0,
                 ):
         """
@@ -138,8 +132,6 @@ class S4BendingMagnet(BendingMagnet):
             maximum photon energy in eV.
         ng_e : int, optional
             Number of points in energy.
-        ng_j : int, optional
-            Number of points in calculating the electron trajectory.
         flag_emittance : int, optional
             Flag: 0=Zero emmitance (filament beam), 1=Use emittance.
 
@@ -153,7 +145,6 @@ class S4BendingMagnet(BendingMagnet):
                                emin=emin,
                                emax=emax,
                                ng_e=ng_e,
-                               ng_j=ng_j,
                                flag_emittance=flag_emittance)
 
     @classmethod
@@ -164,7 +155,6 @@ class S4BendingMagnet(BendingMagnet):
                 emin=10000.0,
                 emax=11000.0,
                 ng_e=11,  # Photon energy scan number of points
-                ng_j=20, # todo: remove, not used.
                 flag_emittance=0,
                 ):
         """
@@ -184,8 +174,6 @@ class S4BendingMagnet(BendingMagnet):
             maximum photon energy in eV.
         ng_e : int, optional
             Number of points in energy.
-        ng_j : int, optional
-            Number of points in calculating the electron trajectory.
         flag_emittance : int, optional
             Flag: 0=Zero emmitance (filament beam), 1=Use emittance.
 
@@ -199,7 +187,6 @@ class S4BendingMagnet(BendingMagnet):
                                emin=emin,
                                emax=emax,
                                ng_e=ng_e,
-                               ng_j=ng_j,
                                flag_emittance=flag_emittance)
 
     def to_python_code(self):
@@ -222,7 +209,6 @@ source = S4BendingMagnet(
                  emin={emin},     # Photon energy scan from energy (in eV)
                  emax={emax},     # Photon energy scan to energy (in eV)
                  ng_e={ng_e},     # Photon energy scan number of points
-                 ng_j={ng_j},     # Number of points in electron trajectory (per period) for internal calculation only
                  flag_emittance={flag_emittance}, # when sampling rays: Use emittance (0=No, 1=Yes)
                  )
 """
@@ -234,7 +220,6 @@ source = S4BendingMagnet(
             "emin": self._EMIN,
             "emax": self._EMAX,
             "ng_e": self._NG_E,
-            "ng_j": self._NG_J,
             "flag_emittance": self._FLAG_EMITTANCE,
         }
 
@@ -247,7 +232,6 @@ if __name__ == "__main__":
     emin = 5000.0                # Photon energy scan from energy (in eV)
     emax = 100000.0              # Photon energy scan to energy (in eV)
     ng_e = 51                    # Photon energy scan number of points
-    ng_j = 20                    # Number of points in electron trajectory (per period) for internal calculation only
     flag_emittance = 1           # when sampling rays: Use emittance (0=No, 1=Yes)
 
 
@@ -259,7 +243,6 @@ if __name__ == "__main__":
                  emin=emin,               # Photon energy scan from energy (in eV)
                  emax=emax,               # Photon energy scan to energy (in eV)
                  ng_e=ng_e,                    # Photon energy scan number of points
-                 ng_j=ng_j,                    # Number of points in electron trajectory (per period) for internal calculation only
                  flag_emittance=flag_emittance,           # when sampling rays: Use emittance (0=No, 1=Yes)
                 )
 

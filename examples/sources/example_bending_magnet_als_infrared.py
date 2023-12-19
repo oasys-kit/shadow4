@@ -22,7 +22,6 @@ if __name__ == "__main__":
     emin = 1000.0  # Photon energy scan from energy (in eV)
     emax = 1001.0  # Photon energy scan to energy (in eV)
     ng_e = 200     # Photon energy scan number of points
-    ng_j = 100     # Number of points in electron trajectory (per period) for internal calculation only
 
     bm = S4BendingMagnet.initialize_from_magnetic_field_divergence_and_electron_energy(magnetic_field=-1.26754,
                                                                                        divergence=69e-3,
@@ -30,7 +29,6 @@ if __name__ == "__main__":
                                                                                        emin=emin,  # Photon energy scan from energy (in eV)
                                                                                        emax=emax,  # Photon energy scan to energy (in eV)
                                                                                        ng_e=ng_e,  # Photon energy scan number of points
-                                                                                       ng_j=ng_j,  # Number of points in electron trajectory (per period) for internal calculation only
                                                                                        flag_emittance=flag_emittance,  # when sampling rays: Use emittance (0=No, 1=Yes)
                                                                                        )
 

@@ -701,7 +701,6 @@ if __name__ == "__main__":
         emin=100.0,  # Photon energy scan from energy (in eV)
         emax=100000,  # Photon energy scan to energy (in eV)
         ng_e=500,  # Photon energy scan number of points
-        ng_j=-100,  # Number of points in electron trajectory (per period) for internal calculation only
         flag_emittance=1,  # when sampling rays: Use emittance (0=No, 1=Yes)
         )
 
