@@ -14,29 +14,17 @@ source = S4BendingMagnet(
                  emin=8000.0,     # Photon energy scan from energy (in eV)
                  emax=8000.0001,     # Photon energy scan to energy (in eV)
                  ng_e=100,     # Photon energy scan number of points
-                 ng_j=100,     # Number of points in electron trajectory (per period) for internal calculation only
                  flag_emittance=1, # when sampling rays: Use emittance (0=No, 1=Yes)
                  )
-
-# source = S4BendingMagnet.initialize_from_magnetic_field_divergence_and_electron_energy(magnetic_field=-1.26754,
-#                                                                                    divergence=0.8,
-#                                                                                    electron_energy_in_GeV=6.04,
-#                                                                                    emin=8000,
-#                                                                                    # Photon energy scan from energy (in eV)
-#                                                                                    emax=8000.00001,
-#                                                                                    # Photon energy scan to energy (in eV)
-#                                                                                    ng_e=100,
-#                                                                                    # Photon energy scan number of points
-#                                                                                    ng_j=100,
-#                                                                                    # Number of points in electron trajectory (per period) for internal calculation only
-#                                                                                    flag_emittance=0,
-#                                                                                    # when sampling rays: Use emittance (0=No, 1=Yes)
-#                                                                                    )
 
 
 #light source
 from shadow4.sources.bending_magnet.s4_bending_magnet_light_source import S4BendingMagnetLightSource
-light_source = S4BendingMagnetLightSource(name='BendingMagnet',electron_beam=electron_beam,magnetic_structure=source,nrays=5000,seed=5676561)
+light_source = S4BendingMagnetLightSource(name='BendingMagnet',
+                                          electron_beam=electron_beam,
+                                          magnetic_structure=source,
+                                          nrays=25000,
+                                          seed=5676561)
 
 import time
 t0 = time.time()

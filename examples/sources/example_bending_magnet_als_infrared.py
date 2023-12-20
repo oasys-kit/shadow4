@@ -1,4 +1,4 @@
-
+import numpy
 from syned.storage_ring.electron_beam import ElectronBeam
 
 from shadow4.sources.bending_magnet.s4_bending_magnet import S4BendingMagnet
@@ -22,7 +22,6 @@ if __name__ == "__main__":
     emin = 1000.0  # Photon energy scan from energy (in eV)
     emax = 1001.0  # Photon energy scan to energy (in eV)
     ng_e = 200     # Photon energy scan number of points
-    ng_j = 100     # Number of points in electron trajectory (per period) for internal calculation only
 
     bm = S4BendingMagnet.initialize_from_magnetic_field_divergence_and_electron_energy(magnetic_field=-1.26754,
                                                                                        divergence=69e-3,
@@ -30,14 +29,13 @@ if __name__ == "__main__":
                                                                                        emin=emin,  # Photon energy scan from energy (in eV)
                                                                                        emax=emax,  # Photon energy scan to energy (in eV)
                                                                                        ng_e=ng_e,  # Photon energy scan number of points
-                                                                                       ng_j=ng_j,  # Number of points in electron trajectory (per period) for internal calculation only
                                                                                        flag_emittance=flag_emittance,  # when sampling rays: Use emittance (0=No, 1=Yes)
                                                                                        )
 
     print(bm.info())
 
     light_source = S4BendingMagnetLightSource(electron_beam=electron_beam, magnetic_structure=bm,
-                                              nrays=5000, seed=123456)
+                                              nrays=25000, seed=123456)
 
     beam = light_source.get_beam(F_COHER=0, EPSI_DX=0.0, EPSI_DZ=0.0, verbose=False)
 
@@ -53,9 +51,12 @@ if __name__ == "__main__":
     tktS = beam.histo1(6, ref=24)
     tktP = beam.histo1(6, ref=25)
     plot(
-        tktI["bin_path"], tktI["histogram_path"],
-        tktS["bin_path"], tktS["histogram_path"],
-        tktP["bin_path"], tktP["histogram_path"],
+        light_source.angle_array_mrad * 1e-3, light_source.fm[:, 0]/ numpy.max(light_source.fm[:, 0]),
+        light_source.angle_array_mrad * 1e-3, light_source.fm_s[:, 0]/ numpy.max(light_source.fm[:, 0]),
+        light_source.angle_array_mrad * 1e-3, light_source.fm_p[:, 0]/ numpy.max(light_source.fm[:, 0]),
+        tktI["bin_path"], tktI["histogram_path"] / numpy.max(tktI["histogram_path"]),
+        tktS["bin_path"], tktS["histogram_path"] / numpy.max(tktI["histogram_path"]),
+        tktP["bin_path"], tktP["histogram_path"] / numpy.max(tktI["histogram_path"]),
          )
 
     tktP3 = beam.histo1(6, ref=33)

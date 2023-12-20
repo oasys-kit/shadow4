@@ -19,10 +19,9 @@ from shadow4.sources.s4_electron_beam import S4ElectronBeam
 from shadow4.sources.s4_light_source import S4LightSource
 from shadow4.sources.wiggler.s4_wiggler import S4Wiggler
 from shadow4.beam.s4_beam import S4Beam
-
 from shadow4.tools.arrayofvectors import vector_cross, vector_norm
+from shadow4.tools.sync_f_sigma_and_pi import sync_f_sigma_and_pi, sync_f_sigma_and_pi_approx
 
-from shadow4.tools.sync_f_sigma_and_pi import sync_f_sigma_and_pi
 import time
 
 
@@ -30,7 +29,7 @@ import time
 
 ###############################################
 
-class Sampler1Dcdf(object):
+class Sampler1Dcdf(object): # todo: move away
 
     """
     Constructor.
@@ -648,13 +647,17 @@ class S4WigglerLightSource(S4LightSource):
         # calculate the sampled_theta, and sampled_polarization. This part takes >90% of the running time!!!
         #
         if wiggler._flag_interpolation == 0:
-            method = 'old' # old, new or both (to compare)
+            method = 'accurate' # old, new or both (to compare)
         elif wiggler._flag_interpolation == 1:
-            method = 'new'
+            method = 'cdf interpolated'
         elif wiggler._flag_interpolation == 2:
-            method = 'both'
+            method = 'Kv approximated'
+        elif wiggler._flag_interpolation == -1:
+            method = 'accurate+interpolated debug'
+        else:
+            raise Exception("Bad flag_interpolation value.")
 
-        if method == 'new' or method == 'both':
+        if wiggler._flag_interpolation in [1, -1]:
             # basically create the cdf vs angle and energy. Note that the limits of the angle are different for each energy.
             eene = sampled_energies / critical_energy_array
 
@@ -663,24 +666,21 @@ class S4WigglerLightSource(S4LightSource):
 
             CDF1 = numpy.zeros((angle_array_reduced.size, e_over_ec_array.size))
             FM1 = numpy.zeros((angle_array_reduced.size, e_over_ec_array.size)) # todo: delete?
-            POL1 = numpy.zeros((angle_array_reduced.size, e_over_ec_array.size))
-            PSI1 = numpy.zeros(e_over_ec_array_points)
+            # PSI1 = numpy.zeros(e_over_ec_array_points)
             for i in range(e_over_ec_array.size):
                 psi1 = self.__psi_max_estimation(RAD_MIN_global, e_over_ec_array[i])
-                if psi1 > psi_interval_in_units_one_over_gamma:
+                if (psi1 - psi_interval_in_units_one_over_gamma) > 1e-3:
                     print("Warning: bad sampling psi1=%f > psi_interval_in_units_one_over_gamma=%f" % (psi1, psi_interval_in_units_one_over_gamma))
-                fm_s, fm_p = sync_f_sigma_and_pi(numpy.linspace(-0.5 * psi1, 0.5 * psi1, psi_interval_number_of_points),
+                fm_s, fm_p = sync_f_sigma_and_pi_approx(numpy.linspace(-0.5 * psi1, 0.5 * psi1, psi_interval_number_of_points),
                                                  e_over_ec_array[i])
                 cte = e_over_ec_array[i] ** 2 * a8 * syned_electron_beam._current * hdiv_mrad * syned_electron_beam._energy_in_GeV ** 2
 
                 fm_i = (fm_s + fm_p) * cte
-                fm_pol = numpy.sqrt(fm_s) / (numpy.sqrt(fm_s) + numpy.sqrt(fm_p))
 
                 i1D =  Sampler1D(fm_i, angle_array_reduced)
                 CDF1[:, i] = i1D.cdf()
-                POL1[:, i] = fm_pol
-                FM1[:, i] = fm_i
-                PSI1[i] = psi1
+                FM1[:, i] = fm_i # todo: delete?
+                # PSI1[i] = psi1
 
             if False:
                 from srxraylib.plot.gol import plot, plot_image
@@ -692,25 +692,22 @@ class S4WigglerLightSource(S4LightSource):
 
                 plot_image(FM1, angle_array_reduced, e_over_ec_array,
                            title='intensity', xtitle='reduced angle', ytitle='reduced energy', aspect='auto', show=0)
-                plot_image(POL1, angle_array_reduced, e_over_ec_array,
-                           title='polarization', xtitle='reduced angle', ytitle='reduced energy', aspect='auto')
+
 
             # define interpolartors
             AA = numpy.outer(angle_array_normalized, numpy.ones_like(e_over_ec_array))
             EE = numpy.outer(numpy.ones_like(angle_array_reduced), e_over_ec_array)
             Pi = numpy.array([AA.flatten(), EE.flatten()]).transpose()
-
-            interpolator_PSI1 = interp1d(e_over_ec_array, PSI1, kind='cubic')
+            # interpolator_PSI1 = interp1d(e_over_ec_array, PSI1, kind='cubic')
             interpolator_cdf = LinearNDInterpolator(Pi, CDF1.flatten(), fill_value=0.0, rescale=True)
-            interpolator_polarization = CloughTocher2DInterpolator(Pi, POL1.flatten(), fill_value=0.0, rescale=True)
-
 
 
         #@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
         t44 = time.time()
         sampled_theta_array = numpy.zeros(NRAYS)
-        sampled_pol_deg_array = numpy.zeros(NRAYS)
 
+        t111 = 0
+        t222 = 0
         for itik in range(NRAYS):
             # #
             # # directions
@@ -730,26 +727,34 @@ class S4WigglerLightSource(S4LightSource):
 
             sampled_photon_energy = sampled_energies[itik]
             critical_energy = critical_energy_array[itik]
-
-            if method == 'new' or method == 'both':
+            if wiggler._flag_interpolation in [1, -1]:
                 # get sampled values by interpolation
                 e_index = numpy.argwhere((e_over_ec_array - sampled_photon_energy / critical_energy) > 0)
                 cdf_interpolated = interpolator_cdf(angle_array_normalized, sampled_photon_energy / critical_energy)
                 s = Sampler1Dcdf(cdf_interpolated, angle_array_normalized)
                 r = numpy.random.random()
                 sampled_theta1 = s.get_sampled(r)
-                interpolated_psi1 = interpolator_PSI1(sampled_photon_energy / critical_energy)
-                sampled_theta1 *= interpolated_psi1 / gamma
-                sampled_pol_deg1 = interpolator_polarization(sampled_theta1 * gamma,
-                                                             sampled_photon_energy / critical_energy)
 
-                sampled_pol_deg = sampled_pol_deg1
+
+
+                ########################
+                # interpolated_psi1 = interpolator_PSI1(sampled_photon_energy / critical_energy)
+                RAD_MIN = RAD_MIN_array[itik]  # numpy.abs(R_MAGNET)
+                eene = sampled_photon_energy / critical_energy
+                interpolated_psi1 = self.__psi_max_estimation(RAD_MIN, eene)
+                ########################
+
+                sampled_theta1 *= interpolated_psi1 / gamma
                 sampled_theta = sampled_theta1
 
-            if method == 'old' or method == 'both':
+            if wiggler._flag_interpolation in [0, -1]:
                 # builds the sampler and the interpolator for each ray. This is very slow...
                 RAD_MIN = RAD_MIN_array[itik]  # numpy.abs(R_MAGNET)
 
+                # if RAD_MIN > 1e6:
+                #     RAD_MIN = 1e6
+                #     RAD_MIN_array[itik] = 1e6
+                #     print(">>>>>>>>>>>>> RESET RAD_MIN", itik)
                 eene = sampled_photon_energy / critical_energy
 
                 fm_s , fm_p = sync_f_sigma_and_pi(angle_array_mrad * 1e-3 * syned_electron_beam.gamma(), eene)
@@ -758,30 +763,19 @@ class S4WigglerLightSource(S4LightSource):
                 fm_p *= cte
 
                 fm = fm_s + fm_p
-
-                fm_pol = numpy.zeros_like(fm)
-                for i in range(fm_pol.size):
-                    if fm[i] == 0.0:
-                        fm_pol[i] = 0
-                    else:
-                        fm_pol[i] = numpy.sqrt(fm_s[i]) / (numpy.sqrt(fm_s[i]) + numpy.sqrt(fm_p[i]))
-
                 fm.shape = -1
                 fm_s.shape = -1
-                fm_pol.shape = -1
-
-                pol_deg_interpolator = interp1d(angle_array_mrad * 1e-3, fm_pol)
 
                 samplerAng = Sampler1D(fm, angle_array_mrad * 1e-3)
 
-                if fm.min() == fm.max():
-                    print("Warning: cannot compute divergence for ray index %d" % itik)
-                    sampled_theta = 0.0
+                if fm.min() == fm.max():  # typically when the trajectory is flat or RAD_MIN is very high
+                    print("Warning: cannot compute divergence for ray index %d (energy=%f eV, RAD_MIN: %f)" %
+                          (itik, sampled_photon_energy, RAD_MIN))
+                    sampled_theta = 0
                 else:
                     ARG_ENER = numpy.random.random()
                     sampled_theta = samplerAng.get_sampled(ARG_ENER)
 
-                sampled_pol_deg = pol_deg_interpolator(sampled_theta)
 
                 if False:
                     from srxraylib.plot.gol import plot
@@ -789,8 +783,12 @@ class S4WigglerLightSource(S4LightSource):
                          [sampled_theta, sampled_theta], [0.5, 0.6],
                          title="Energy: %f" % sampled_photon_energy)
 
-                if method == 'both':
+                if wiggler._flag_interpolation in [-1]:
                     # display both cdf and result
+                    PSI1 = numpy.zeros(e_over_ec_array_points)
+                    for i in range(e_over_ec_array.size):
+                        PSI1[i] = self.__psi_max_estimation(RAD_MIN_global, e_over_ec_array[i])
+
                     from srxraylib.plot.gol import plot
                     plot(e_over_ec_array, PSI1,
                          [sampled_photon_energy / critical_energy, sampled_photon_energy / critical_energy], [interpolated_psi1, interpolated_psi1],
@@ -805,9 +803,42 @@ class S4WigglerLightSource(S4LightSource):
                          marker=['+', None, None, None],
                          legend=['new','new','old','old'])
 
+            if wiggler._flag_interpolation in [2]: #
+                RAD_MIN = RAD_MIN_array[itik]  # numpy.abs(R_MAGNET)
+                eene = sampled_photon_energy / critical_energy
 
+                if True:
+                    # builds the sampler and the interpolator for each ray. This is very slow...
+                    psi1 = self.__psi_max_estimation(RAD_MIN, eene)
+                    if (psi1 - psi_interval_in_units_one_over_gamma) > 1e-3:
+                        print("Warning: bad sampling ray index %d: psi1=%f > psi_interval_in_units_one_over_gamma=%f" % (
+                        itik, psi1, psi_interval_in_units_one_over_gamma))
+
+                    angle_array_reduced = numpy.linspace(-0.5 * psi1, 0.5 * psi1, psi_interval_number_of_points)
+
+                    tmp000 = time.time()
+                    fm_s, fm_p = sync_f_sigma_and_pi_approx(angle_array_reduced, eene)
+                    t111 += time.time() - tmp000
+                    tmp000 = time.time()
+
+                    fm = fm_s + fm_p
+
+                    samplerAng = Sampler1D(fm, angle_array_reduced)
+
+                    if fm.min() == fm.max(): # typically when the trajectory is flat or RAD_MIN is very high
+                        print("Warning: cannot compute divergence for ray index %d (energy=%f eV, RAD_MIN: %f)" %
+                              (itik, sampled_photon_energy, RAD_MIN))
+                        sampled_theta = 0.0
+                    else:
+                        ARG_ENER = numpy.random.random()
+                        sampled_theta = samplerAng.get_sampled(ARG_ENER) / gamma
+
+                    t222 += time.time() - tmp000
+
+            if numpy.isnan(sampled_theta):
+                print("Warning: sampled vertical psi for ray index %d changed from nan to 0." % itik)
+                sampled_theta = 0
             sampled_theta_array[itik] = sampled_theta
-            sampled_pol_deg_array[itik] = sampled_pol_deg
         # end loop
 
         ANGLEV = sampled_theta_array + E_BEAM3_array
@@ -856,9 +887,20 @@ class S4WigglerLightSource(S4LightSource):
         AP_VEC = vector_norm(AP_VEC)
 
         #
-        # obtain polarization for each ray (interpolation)
+        # obtain polarization for each ray
         #
-        POL_DEG = sampled_pol_deg_array
+
+        fm_s, fm_p = sync_f_sigma_and_pi(sampled_theta_array * gamma, sampled_energies / critical_energy_array)
+        # avoid zero intensity (typically when the trajectory is flat).
+        denominator = (numpy.sqrt(fm_s) + numpy.sqrt(fm_p))
+        idx = numpy.argwhere(denominator == 0)
+        if idx.size > 0: fm_s[idx] += 1e-10
+        # avoid nan.
+        idx = numpy.argwhere(numpy.isnan(denominator))
+        if idx.size > 0: fm_s[idx] = 1e10
+
+
+        POL_DEG = numpy.sqrt(fm_s) / (numpy.sqrt(fm_s) + numpy.sqrt(fm_p))
         DENOM = numpy.sqrt(1.0 - 2.0 * POL_DEG + 2.0 * POL_DEG**2)
         AX = POL_DEG/DENOM
         for i in range(3):
@@ -910,19 +952,25 @@ class S4WigglerLightSource(S4LightSource):
 
         t6 = time.time()
 
-        print("------------ timing---------")
+        if verbose:
+            print("------------ timing---------")
 
-        t = t6-t0
-        print("            method: ", method)
-        print("            Total time [s]: ", t)
-        print("            Pre1 (t1-t0):  ",   (t1-t0), 100 * (t1-t0) / t)
-        print("            Pre2 (t2-t1): ",    (t2-t1), 100 * (t2-t1) / t)
-        print("                 spectrum (t11-t1): ",   (t11 - t1), 100 * (t11 - t1) / t)
-        print("            loop emitt (t3-t2): ",    (t3-t2), 100 * (t3-t2) / t)
-        print("            loop sizes (t4-t3): ",    (t4-t3), 100 * (t4-t3) / t)
-        print("            divergence (t5-t4): ",    (t5-t4), 100 * (t5-t4) / t)
-        print("                 loop (t5-t44)  ",   (t5 - t44), 100 * (t5 - t44) / t)
-        print("            post (t6-t5): ",    (t6-t5), 100 * (t6-t5) / t)
+            t = t6-t0
+            print("            method: ", method)
+            print("            Total time [s]: ", t)
+            print("            Pre1 (t1-t0):  ",   (t1-t0), 100 * (t1-t0) / t)
+            print("            Pre2 (t2-t1): ",    (t2-t1), 100 * (t2-t1) / t)
+            print("                 spectrum (t11-t1): ",   (t11 - t1), 100 * (t11 - t1) / t)
+            print("            loop emitt (t3-t2): ",    (t3-t2), 100 * (t3-t2) / t)
+            print("            loop sizes (t4-t3): ",    (t4-t3), 100 * (t4-t3) / t)
+            print("            divergence (t5-t4): ",    (t5-t4), 100 * (t5-t4) / t)
+            print("                 loop (t5-t44)  ",   (t5 - t44), 100 * (t5 - t44) / t)
+            print("            post (t6-t5): ",    (t6-t5), 100 * (t6-t5) / t)
+
+            try:
+                print("            t111, t222: ", t111, t222, t111/(t111+t222), t222/(t111+t222))
+            except:
+                pass
 
         return rays
 
@@ -951,7 +999,7 @@ class S4WigglerLightSource(S4LightSource):
 
         Returns
         -------
-        instance of S4beam
+        instance of S4Beam
         """
 
         return S4Beam.initialize_from_array(self.__calculate_rays(
@@ -972,6 +1020,11 @@ class S4WigglerLightSource(S4LightSource):
         ----------
         output_file : str, optional
             Name of the file to write the spectrom (use "" for not writing file).
+
+        Returns
+        -------
+        tuple
+            (e, f, w) numpy arrays with photon energy (e), photon flux (f) and spectral power (w).
         """
         traj, pars = self.get_trajectory()
         wig = self.get_magnetic_structure()
@@ -985,7 +1038,7 @@ class S4WigglerLightSource(S4LightSource):
                           electronCurrent=ring.current(),
                           outFile=output_file,
                           elliptical=False)
-            return e,f,w
+            return e, f, w
         else:
             raise Exception("Cannot compute spectrum")
 
@@ -1129,12 +1182,14 @@ if __name__ == "__main__":
         K_vertical=10.0,  # syned Wiggler pars: used only if magnetic_field_periodic=1
         period_length=0.1,  # syned Wiggler pars: used only if magnetic_field_periodic=1
         number_of_periods=10,  # syned Wiggler pars: used only if magnetic_field_periodic=1
-        # emin=100.0,  # Photon energy scan from energy (in eV)
-        # emax=200000.0,  # Photon energy scan to energy (in eV)
-        emin=2000.0,  # Photon energy scan from energy (in eV)
-        emax=2020.0,  # Photon energy scan to energy (in eV)
+        emin=100.0,  # Photon energy scan from energy (in eV)
+        emax=200000.0,  # Photon energy scan to energy (in eV)
+        # emin=2000.0,  # Photon energy scan from energy (in eV)
+        # emax=2020.0,  # Photon energy scan to energy (in eV)
         ng_e=51,  # Photon energy scan number of points
         ng_j=501,  # Number of points in electron trajectory (per period) for internal calculation only
+        flag_interpolation=2,  #
+        psi_interval_number_of_points=101,
         flag_emittance=1,  # Use emittance (0=No, 1=Yes)
         shift_x_flag=4,  # 0="No shift", 1="Half excursion", 2="Minimum", 3="Maximum", 4="Value at zero", 5="User value"
         shift_x_value=0.001,  # used only if shift_x_flag=5
@@ -1148,7 +1203,7 @@ if __name__ == "__main__":
     light_source = S4WigglerLightSource(name='wiggler',
                                         electron_beam=electron_beam,
                                         magnetic_structure=source,
-                                        nrays=10000,
+                                        nrays=20000,
                                         seed=5676561)
 
 
