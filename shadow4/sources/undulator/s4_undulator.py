@@ -44,6 +44,20 @@ class S4Undulator(Undulator):
         self._FLAG_SIZE  =  flag_size # 0=point,1=Gaussian,2=backpropagate Divergences
         self._use_gaussian_approximation = use_gaussian_approximation
 
+        # support text containg name of variable, help text and unit. Will be stored in self._support_dictionary
+        self._add_support_text([
+                    ("EMIN", "minimum photon energy", "eV" ),
+                    ("EMAX", "maximum photon energy", "eV"),
+                    ("NG_E", "number of energy points", ""),
+                    ("MAXANGLE", "Maximum radiation semiaperture", "rad"),
+                    ("NG_T", "Number of points in angle theta", ""),
+                    ("NG_P", "Number of points in angle phi", ""),
+                    ("NG_J", "number of points of the electron trajectory", ""),
+                    ("FLAG_EMITTANCE", "Use emittance (0=No, 1=Yes)", ""),
+                    ("FLAG_SIZE", "Size philament beam 0=point,1=Gaussian,2=backpropagate Divergences", ""),
+                    ("use_gaussian_approximation", "0=No, 1=Yes", ""),
+            ] )
+
         # # results of calculations
         #
         # self._result_radiation = None
@@ -53,7 +67,7 @@ class S4Undulator(Undulator):
     def use_gaussian_approximation(self):
         return self._use_gaussian_approximation
 
-    def info(self,debug=False):
+    def get_info(self,debug=False):
 
         txt = ""
 
@@ -140,6 +154,18 @@ class S4Undulator(Undulator):
         """
         return self._EMIN,self._EMAX,self._NG_E
 
+    def is_monochromatic(self):
+        """
+        Returns a flag indicating if the source is monochromatic (True) or polychromatic (False).
+
+        Returns
+        -------
+        boolean
+        """
+        if self._NG_E == 1: return True
+        if self._EMAX == self._EMIN: return True
+        return False
+
     def to_python_code(self):
         script_template = """
 
@@ -185,9 +211,9 @@ source = S4Undulator(
         return script
 
 if __name__ == "__main__":
-
     u = S4Undulator(use_gaussian_approximation=1)
     print(u.info())
+    print(u.get_info())
     print(u.to_python_code())
 
 

@@ -19,10 +19,9 @@ from shadow4.sources.s4_electron_beam import S4ElectronBeam
 from shadow4.sources.s4_light_source import S4LightSource
 from shadow4.sources.wiggler.s4_wiggler import S4Wiggler
 from shadow4.beam.s4_beam import S4Beam
-
 from shadow4.tools.arrayofvectors import vector_cross, vector_norm
-
 from shadow4.tools.sync_f_sigma_and_pi import sync_f_sigma_and_pi, sync_f_sigma_and_pi_approx
+
 import time
 
 
@@ -30,7 +29,7 @@ import time
 
 ###############################################
 
-class Sampler1Dcdf(object):
+class Sampler1Dcdf(object): # todo: move away
 
     """
     Constructor.
@@ -1000,7 +999,7 @@ class S4WigglerLightSource(S4LightSource):
 
         Returns
         -------
-        instance of S4beam
+        instance of S4Beam
         """
 
         return S4Beam.initialize_from_array(self.__calculate_rays(

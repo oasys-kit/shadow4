@@ -41,7 +41,7 @@ import scipy.integrate
 def _pysru_analytical_trajectory_plane_undulator(K=1.87 , gamma=2544.03131115, lambda_u=0.020, Nb_period=10, Nb_point=10, Beta_et=0.99993):
 
 
-    N = Nb_period * Nb_point + 1
+    N = int(Nb_period * Nb_point + 1)
     ku = 2.0 * np.pi / lambda_u
     omega_u = Beta_et * codata.c * ku
 
