@@ -43,11 +43,13 @@ class S4AdditionalNumericalMeshGrating(S4NumericalMeshGrating):
             "numerical_mesh_grating": numerical_mesh_grating,
         }
 
+    def ideal_grating(self): return self.__ideal_grating
+
     def to_python_code(self, **kwargs):
-        txt = self.__ideal_crystal.to_python_code()
-        txt += "ideal_crystal = optical_element"
-        txt += self.__numerical_mesh_crystal.to_python_code()
-        txt += "numerical_mesh_crystal = optical_element"
+        txt = self.__ideal_grating.to_python_code()
+        txt += "ideal_grating = optical_element"
+        txt += self.__numerical_mesh_grating.to_python_code()
+        txt += "numerical_mesh_grating = optical_element"
 
         txt += self.to_python_code_boundary_shape()
         txt_pre = """

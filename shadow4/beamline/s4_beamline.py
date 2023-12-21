@@ -46,7 +46,7 @@ class S4Beamline(Beamline):
 
         for i, element in enumerate(self.get_beamline_elements()):
             try:
-                element.input_beam = output_beam
+                element.set_input_beam(output_beam)
                 output_beam, output_mirr = element.trace_beam(**params)
             except:
                 raise Exception("Error running beamline element # %d" % (i+1) )

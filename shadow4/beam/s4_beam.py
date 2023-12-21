@@ -16,6 +16,8 @@ import os
 
 from syned.beamline.shape import Rectangle, Ellipse, TwoEllipses, Circle
 
+A2EV = 2.0 * numpy.pi / (codata.h * codata.c / codata.e * 1e2)
+
 class S4Beam(object):
     """
     Implements a beam. Internally it is an array of N rays and 18 columns.
@@ -245,7 +247,6 @@ class S4Beam(object):
             The photon energies (in eV) of the rays.
 
         """
-        A2EV = 2.0 * numpy.pi / (codata.h * codata.c / codata.e * 1e2)
         return self.get_column(11, nolost=nolost) / A2EV
 
     def get_photon_wavelength(self, nolost=0):
@@ -362,7 +363,6 @@ class S4Beam(object):
         if column <= 18:
             out = self.rays[:,column-1]
         else:
-            A2EV = 2.0*numpy.pi/(codata.h*codata.c/codata.e*1e2)
             column_index = column - 1
             ray = self.rays
 
@@ -990,7 +990,6 @@ class S4Beam(object):
             The values of the photon energies in eV.
 
         """
-        A2EV = 2.0*numpy.pi/(codata.h*codata.c/codata.e*1e2)
         self.rays[:,10] = energy_eV * A2EV
 
     def set_photon_wavelength(self,wavelength):

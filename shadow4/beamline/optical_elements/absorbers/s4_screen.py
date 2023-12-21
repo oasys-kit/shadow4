@@ -38,7 +38,6 @@ class S4Screen(Absorber, S4OpticalElementDecorator):
         self._material = material
         self._density = density
 
-
         self.__inputs = {
             "name": name,
             "boundary_shape": boundary_shape,
