@@ -43,22 +43,189 @@ class S4Conic(S4OpticalSurface):
         conic.set_sphere_from_focal_distances(p, q, theta1)
         return cls._transform_conic(conic, cylindrical, cylangle, switch_convexity)
 
+    # todo: delete
     @classmethod
-    def initialize_as_ellipsoid_from_focal_distances(cls, p, q, theta1, cylindrical=0, cylangle=0.0, switch_convexity=0):
+    def initialize_as_ellipsoid_from_focal_distances_old(cls, p, q, theta1, cylindrical=0, cylangle=0.0, switch_convexity=0):
         conic = S4Conic()
         conic.set_ellipsoid_from_focal_distances(p, q, theta1)
         return cls._transform_conic(conic, cylindrical, cylangle, switch_convexity)
 
     @classmethod
-    def initialize_as_paraboloid_from_focal_distances(cls, p, q, theta1, cylindrical=0, cylangle=0.0, switch_convexity=0):
+    def initialize_as_ellipsoid_from_focal_distances(cls, p, q, theta1,
+                                                     cylindrical=0, cylangle=0.0, switch_convexity=0,
+                                                     method=1, verbose=1):
+        if method == 0:
+            ccc = [1,
+                    numpy.sin(theta1) ** 2,
+                    1 - (numpy.sin(theta1) * (p - q) / (p + q)) ** 2,
+                    0,
+                    -2 * numpy.sin(theta1) * numpy.cos(theta1) * (q - p) / (p + q),
+                    0,
+                    0,
+                    0,
+                    -4 * numpy.sin(theta1) * p * q / (p + q),
+                    0,
+                    ]
+        else:
+            a = (p + q) / 2
+            b = numpy.sqrt(p * q) * numpy.sin(theta1)
+            c = numpy.sqrt(a ** 2 - b ** 2)
+            Yc = (p ** 2 - q ** 2) / (4 * c)
+            X = numpy.array([0, Yc, -b * numpy.sqrt(1 - (Yc / a) ** 2)])
+            N = numpy.array([0, -2 * Yc / a ** 2, -2 * X[2] / b ** 2])
+            n = N / numpy.sqrt(N[0] ** 2 + N[1] ** 2 + N[2] ** 2)
+
+            b_over_a = b / a
+            b_over_a_square = b_over_a ** 2
+            ccc = [1,
+                    n[1] ** 2 + b_over_a_square * n[2] ** 2,
+                    n[2] ** 2 + b_over_a_square * n[1] ** 2,
+                    0,
+                    -2 * n[1] * n[2] * (1 - b_over_a_square),
+                    0,
+                    0,
+                    0,
+                    2 * (n[2] * X[2] + b_over_a_square * n[1] * X[1]),
+                    0]
+            if verbose:
+                txt = ""
+                txt += "p=%f, q=%f, theta_grazing=%f rad, theta_normal=%f rad\n" % (p, q, theta1, numpy.pi - theta1)
+                txt += 'Ellipsoid of revolution a=%f \n'%a
+                txt += 'Ellipsoid of revolution b=%f \n'%b
+                txt += 'Ellipsoid of revolution c=%f \n'%c
+                txt += 'Ellipsoid of revolution eccentricity: %f \n'%(c/a)
+                txt += 'Optical element center at: [%f,%f,%f]\n'%(X[0], X[1], X[2])
+                txt += 'Optical element normal: [%f,%f,%f]\n'%(n[0], n[1], n[2])
+                print(txt)
+        conic = S4Conic(ccc=numpy.array(ccc))
+        return cls._transform_conic(conic, cylindrical, cylangle, switch_convexity)
+
+    # todo: delete
+    @classmethod
+    def initialize_as_paraboloid_from_focal_distances_old(cls, p, q, theta1, cylindrical=0, cylangle=0.0, switch_convexity=0):
         conic = S4Conic()
         conic.set_paraboloid_from_focal_distances(p, q, theta1)
         return cls._transform_conic(conic, cylindrical, cylangle, switch_convexity)
 
     @classmethod
-    def initialize_as_hyperboloid_from_focal_distances(cls, p, q, theta1, cylindrical=0, cylangle=0.0, switch_convexity=0):
+    def initialize_as_paraboloid_from_focal_distances(cls, p, q, theta1,
+                                                      cylindrical=0, cylangle=0.0, switch_convexity=0,
+                                                      method=1, verbose=1):
+        if method == 0:
+            if p > q: # focusing
+                ccc = [1,
+                        numpy.sin(theta1) ** 2,
+                        numpy.cos(theta1) ** 2,
+                        0,
+                        2 * numpy.cos(theta1) * numpy.sin(theta1),
+                        0,
+                        0,
+                        0,
+                        -4 * q * numpy.sin(theta1),
+                        0,
+                        ]
+            else: # collimating
+                ccc = [1,
+                        numpy.sin(theta1) ** 2,
+                        numpy.cos(theta1) ** 2,
+                        0,
+                        -2 * numpy.cos(theta1) * numpy.sin(theta1),
+                        0,
+                        0,
+                        0,
+                        -4 * p * numpy.sin(theta1),
+                        0,
+                        ]
+        else:
+            if p > q:
+                a_p = q * numpy.sin(theta1) ** 2
+                X = numpy.array([0, -q * numpy.sin(2 * theta1), q * numpy.cos(theta1) ** 2])
+                N = numpy.array([0, 2 * q * numpy.sin(2 * theta1), 4 * a_p])
+                n = N / numpy.sqrt(N[0] ** 2 + N[1] ** 2 + N[2] ** 2)
+            else:
+                a_p = p * numpy.sin(theta1) ** 2
+                X = numpy.array([0, p * numpy.sin(2 * theta1), p * numpy.cos(theta1) ** 2])
+                N = numpy.array([0, -2 * p * numpy.sin(2 * theta1), 4 * a_p])
+                n = N / numpy.sqrt(N[0] ** 2 + N[1] ** 2 + N[2] ** 2)
+
+            ccc = [1, n[2] ** 2, n[1] ** 2, 0, 2 * n[1] * n[2], 0, 0, 0, -4 * a_p / n[2], 0]
+
+            if verbose:
+                txt = ""
+                if p > q:
+                    txt += "Source is at infinity\n"
+                    txt += "q=%f, theta_grazing=%f rad, theta_normal=%f rad\n" % (q, theta1, numpy.pi - theta1)
+                else:
+                    txt += "Image is at infinity\n"
+                    txt += "p=%f, theta_grazing=%f rad, theta_normal=%f rad\n" % (p, theta1, numpy.pi - theta1)
+                txt += 'Parabloid of revolution [Y^2=2 PARAM Z] PARAM=%f \n' % (2 * a_p)
+                txt += 'Parabloid of revolution [Y^2=4 a_p Z] a_p=%f \n' % (a_p)
+                txt += 'Optical element center at: [%f,%f,%f]\n' % (X[0], X[1], X[2])
+                txt += 'Optical element normal: [%f,%f,%f]\n' % (n[0], n[1], n[2])
+                print(txt)
+
+        conic = S4Conic(ccc=numpy.array(ccc))
+        return cls._transform_conic(conic, cylindrical, cylangle, switch_convexity)
+
+    # todo: delete
+    @classmethod
+    def initialize_as_hyperboloid_from_focal_distances_old(cls, p, q, theta1, cylindrical=0, cylangle=0.0, switch_convexity=0):
         conic = S4Conic()
         conic.set_hyperboloid_from_focal_distances(p, q, theta1)
+        return cls._transform_conic(conic, cylindrical, cylangle, switch_convexity)
+
+    @classmethod
+    def initialize_as_hyperboloid_from_focal_distances(cls, p, q, theta1,
+                                                       cylindrical=0, cylangle=0.0, switch_convexity=0,
+                                                       method=0, verbose=1):
+
+        if method == 0:
+            ccc = [1,
+                    numpy.sin(theta1) ** 2,
+                    1 - (numpy.sin(theta1) * (p + q) / (p - q)) ** 2,
+                    0,
+                    -2 * numpy.sin(theta1) * numpy.cos(theta1) * (q + p) / (q - p),
+                    0,
+                    0,
+                    0,
+                    -4 * numpy.sin(theta1) * p * q / (q - p),
+                    0,
+                    ]
+        else:
+            a = numpy.abs(p - q) / 2
+            c = 0.5 * numpy.sqrt(p ** 2 + q ** 2 - 2 * p * q * numpy.cos(2 * theta1))
+            b = numpy.sqrt(c ** 2 - a ** 2)
+            Yc = (p ** 2 - q ** 2) / (4 * c)
+            X = numpy.array([0, Yc, b * numpy.sqrt((Yc / a) ** 2 - 1)])
+            N = numpy.array([0, -2 * Yc / a ** 2, 2 * X[2] / b ** 2])
+            if q > p:
+                N *= -1
+            n = N / numpy.sqrt(N[0] ** 2 + N[1] ** 2 + N[2] ** 2)
+
+            b_over_a = b / a
+            b_over_a_square = b_over_a ** 2
+
+            ccc = [1,
+                    n[1] ** 2 - b_over_a_square * n[2] ** 2,
+                    n[2] ** 2 - b_over_a_square * n[1] ** 2,
+                    0,
+                    -2 * n[1] * n[2] * (1 + b_over_a_square),
+                    0,
+                    0,
+                    0,
+                    2 * (n[2] * X[2] - b_over_a_square * n[1] * X[1]),
+                    0]
+            if verbose:
+                txt = ""
+                txt += "p=%f, q=%f, theta_grazing=%f rad, theta_normal=%f rad\n" % (p, q, theta1, numpy.pi - theta1)
+                txt += 'Hyperboloid of revolution a=%f \n' % a
+                txt += 'Hyperboloid of revolution b=%f \n' % b
+                txt += 'Hyperboloid of revolution c=%f \n' % c
+                txt += 'Hyperboloid of revolution eccentricity: %f \n' % (c / a)
+                txt += 'Optical element center at: [%f,%f,%f]\n' % (X[0], X[1], X[2])
+                txt += 'Optical element normal: [%f,%f,%f]\n' % (n[0], n[1], n[2])
+                print(txt)
+        conic = S4Conic(ccc=numpy.array(ccc))
         return cls._transform_conic(conic, cylindrical, cylangle, switch_convexity)
 
     @classmethod
@@ -617,6 +784,7 @@ class S4Conic(S4OpticalSurface):
         self.ccc[9 - 1] = -2 * rmirr  # Z
         self.ccc[10 - 1] = .0  # G
 
+    # todo: delete
     def set_ellipsoid_from_focal_distances(self, ssour, simag, theta_grazing, verbose=True):
         tkt = self.calculate_ellipsoid_parameters_from_focal_distances(ssour, simag, theta_grazing, verbose=verbose)
 
@@ -644,6 +812,7 @@ class S4Conic(S4OpticalSurface):
         self.ccc[8] = 2 * (B * YCEN * RNCEN[2 - 1] + C * ZCEN * RNCEN[3 - 1])
         self.ccc[9] = 0.0
 
+    # todo: delete
     def set_paraboloid_from_focal_distances(self, SSOUR, SIMAG, theta_grazing, at_infinity=None,  verbose=True):
         # ;C
         # ;C Computes the parabola
@@ -734,7 +903,7 @@ class S4Conic(S4OpticalSurface):
             txt += 'Hyperboloid of revolution b=%f \n' % AXMIN
             txt += 'Hyperboloid of revolution c=%f \n' % AFOCI
             txt += 'Hyperboloid of revolution focal distance c^2=%f \n' % (AFOCI ** 2)
-            txt += 'Hyperboloid of revolution excentricity: %f \n' % ECCENT
+            txt += 'Hyperboloid of revolution eccentricity: %f \n' % ECCENT
             txt += 'Optical element center at: [0,%f,%f]\n' % (YCEN, ZCEN)
             txt += 'Optical element normal: [%f,%f,%f]\n' % (RNCEN[0], RNCEN[1], RNCEN[2])
             txt += 'Optical element tangent: [%f,%f,%f]\n' % (RTCEN[0], RTCEN[1], RTCEN[2])
@@ -761,6 +930,7 @@ class S4Conic(S4OpticalSurface):
         self.ccc[8] = 2 * (B * YCEN * RNCEN[2 - 1] + C * ZCEN * RNCEN[3 - 1])
         self.ccc[9] = 0.0
 
+    # todo: delete
     @classmethod
     def calculate_ellipsoid_parameters_from_focal_distances(cls,ssour, simag, theta_grazing, verbose=True):
         theta = (numpy.pi/2) - theta_grazing
@@ -808,16 +978,15 @@ class S4Conic(S4OpticalSurface):
         else:
             YCEN2 = numpy.abs(YCEN2)
 
-        print("YCEN2,ZCEN2: ", YCEN2, ZCEN2)
-
         if verbose:
+            print("YCEN2,ZCEN2: ", YCEN2, ZCEN2)
             txt = ""
             txt += "p=%f, q=%f, theta_grazing=%f rad, theta_normal=%f rad\n" % (ssour, simag, theta_grazing, theta)
             txt += 'Ellipsoid of revolution a=%f \n'%AXMAJ
             txt += 'Ellipsoid of revolution b=%f \n'%AXMIN
             txt += 'Ellipsoid of revolution c=sqrt(a^2-b^2)=%f \n'%AFOCI
             txt += 'Ellipsoid of revolution focal distance c^2=%f \n'%(AFOCI**2)
-            txt += 'Ellipsoid of revolution excentricity: %f \n'%ECCENT
+            txt += 'Ellipsoid of revolution eccentricity: %f \n'%ECCENT
             txt += 'Optical element center at: [0,%f,%f]\n'%(YCEN,ZCEN)
             txt += 'Optical element normal: [%f,%f,%f]\n'%(RNCEN[0],RNCEN[1],RNCEN[2])
             txt += 'Optical element tangent: [%f,%f,%f]\n'%(RTCEN[0],RTCEN[1],RTCEN[2])
@@ -1145,7 +1314,7 @@ if __name__ == "__main__":
     from srxraylib.plot.gol import set_qt
     set_qt()
 
-    if True:
+    if False:
         ccc = S4Conic.initialize_as_plane()
         x2 = numpy.zeros((3,10))
         print("plane: ", ccc.get_normal(x2))
@@ -1240,4 +1409,56 @@ if __name__ == "__main__":
         s5 =  [-3703.714814855263, -0.033333333332666124, -3703.5998488688692, 0.0, 41.269717460237345, 0.0, 0.0, 3.0796371740537288e-12, 190.47647619130194, 0]
         for i in range(10):
             assert ( numpy.abs(s5[i] - c[i]) < 1e-3)
+
+
+    shape = 0 # 0=parabola, 1=ellipse, 2=hyperbola
+    method = 1 # 0: Goldberg&Sanchez del Rio, 1: Sanchez del Rio&Goldberg.
+    if True:
+        ntimes = 100
+        for i in range(ntimes):
+            p = 1000 * numpy.random.rand()
+            q = 1000 * numpy.random.rand()
+            theta1 = numpy.random.rand()
+
+            # p = 200
+            # q = 10
+            # theta = 0.001
+
+            if shape == 0:
+                conic = S4Conic.initialize_as_paraboloid_from_focal_distances_old(p, q, theta1, cylindrical=0,
+                                                                                 cylangle=0.0, switch_convexity=0)
+                print(conic.get_coefficients())
+
+                ccc = S4Conic.initialize_as_paraboloid_from_focal_distances(p, q, theta1,
+                                                                           cylindrical=0, cylangle=0.0,
+                                                                           switch_convexity=0,
+                                                                           method=method, verbose=1)
+            elif shape == 1:
+                conic = S4Conic.initialize_as_ellipsoid_from_focal_distances_old(p, q, theta1, cylindrical=0, cylangle=0.0, switch_convexity=0)
+                print(conic.get_coefficients())
+
+                ccc = S4Conic.initialize_as_ellipsoid_from_focal_distances(p, q, theta1,
+                                                                           cylindrical=0, cylangle=0.0, switch_convexity=0,
+                                                                           method=method, verbose=1)
+            elif shape == 2:
+                conic = S4Conic.initialize_as_hyperboloid_from_focal_distances_old(p, q, theta1, cylindrical=0, cylangle=0.0, switch_convexity=0)
+                print(conic.get_coefficients())
+
+                ccc = S4Conic.initialize_as_hyperboloid_from_focal_distances(p, q, theta1,
+                                                                           cylindrical=0, cylangle=0.0, switch_convexity=0,
+                                                                           method=method, verbose=1)
+
+
+            print(ccc.get_coefficients() * conic.get_coefficients()[0])
+
+            c_p_1 = conic.get_coefficients()
+            c_p_2 = ccc.get_coefficients() * c_p_1[0]
+            for i in range(10):
+                diff = numpy.abs(c_p_1[i] - c_p_2[i])
+                if diff < 1e-5:
+                    ss = ''
+                else:
+                    ss = '<<<<<  PROBLEM >>>>>'
+                print(i, c_p_1[i], c_p_2[i], ss)
+                # assert (diff < 1e-5)
 
