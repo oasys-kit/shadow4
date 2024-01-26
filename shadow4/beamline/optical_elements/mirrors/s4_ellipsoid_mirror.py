@@ -116,3 +116,6 @@ if __name__ == "__main__":
     print(a.to_python_code())
     print(b.to_python_code())
 
+    print(">>>>", a.info())
+
+    print(">>>>", a.get_info())

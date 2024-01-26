@@ -1,4 +1,16 @@
+"""
+Defines the shadow4 Conic class to deal with conic surfaces (plane, sphere, ellipsoid, paraboloid and hyperboloid.)
 
+The conic surface is expressed as F(x,y,z)=0, with F a quadratic finction of x, y, and z. In other words
+
+      F(x,y,z) =
+      ccc[0]*X^2 + ccc[1]*Y^2 + ccc[2]*Z^2 +
+      ccc[3]*X*Y + ccc[4]*Y*Z + ccc[5]*X*Z  +
+      ccc[6]*X   + ccc[7]*Y   + ccc[8]*Z + ccc[9] = 0
+
+
+
+"""
 import numpy
 
 from shadow4.optical_surfaces.s4_optical_surface import S4OpticalSurface
@@ -6,14 +18,9 @@ from shadow4.tools.arrayofvectors import vector_refraction, vector_scattering
 from shadow4.tools.arrayofvectors import vector_cross, vector_dot, vector_multiply_scalar, vector_sum, vector_diff
 from shadow4.tools.arrayofvectors import vector_modulus_square, vector_modulus, vector_norm, vector_rotate_around_axis
 
-# OE surface in form of conic equation:
-#      ccc[0]*X^2 + ccc[1]*Y^2 + ccc[2]*Z^2 +
-#      ccc[3]*X*Y + ccc[4]*Y*Z + ccc[5]*X*Z  +
-#      ccc[6]*X   + ccc[7]*Y   + ccc[8]*Z + ccc[9] = 0
-
 
 class S4Conic(S4OpticalSurface):
-    def __init__(self, ccc=numpy.zeros(10)):
+    def __init__(self, ccc=None):
         self.set_coefficients(ccc)
 
     @classmethod
@@ -22,7 +29,7 @@ class S4Conic(S4OpticalSurface):
 
     @classmethod
     def initialize_as_plane(cls):
-        return S4Conic(numpy.array([0, 0, 0, 0, 0, 0, 0, 0, -1., 0]))
+        return S4Conic([0, 0, 0, 0, 0, 0, 0, 0, -1., 0])
 
     #
     # initializers from surface parameters
@@ -31,7 +38,6 @@ class S4Conic(S4OpticalSurface):
     def initialize_as_sphere_from_curvature_radius(cls, radius, cylindrical=0, cylangle=0.0, switch_convexity=0):
         conic = S4Conic()
         conic.set_sphere_from_curvature_radius(radius)
-
         return cls._transform_conic(conic, cylindrical, cylangle, switch_convexity)
 
     #
@@ -41,13 +47,6 @@ class S4Conic(S4OpticalSurface):
     def initialize_as_sphere_from_focal_distances(cls, p, q, theta1, cylindrical=0, cylangle=0.0, switch_convexity=0):
         conic = S4Conic()
         conic.set_sphere_from_focal_distances(p, q, theta1)
-        return cls._transform_conic(conic, cylindrical, cylangle, switch_convexity)
-
-    # todo: delete
-    @classmethod
-    def initialize_as_ellipsoid_from_focal_distances_old(cls, p, q, theta1, cylindrical=0, cylangle=0.0, switch_convexity=0):
-        conic = S4Conic()
-        conic.set_ellipsoid_from_focal_distances(p, q, theta1)
         return cls._transform_conic(conic, cylindrical, cylangle, switch_convexity)
 
     @classmethod
@@ -98,13 +97,6 @@ class S4Conic(S4OpticalSurface):
                 txt += 'Optical element normal: [%f,%f,%f]\n'%(n[0], n[1], n[2])
                 print(txt)
         conic = S4Conic(ccc=numpy.array(ccc))
-        return cls._transform_conic(conic, cylindrical, cylangle, switch_convexity)
-
-    # todo: delete
-    @classmethod
-    def initialize_as_paraboloid_from_focal_distances_old(cls, p, q, theta1, cylindrical=0, cylangle=0.0, switch_convexity=0):
-        conic = S4Conic()
-        conic.set_paraboloid_from_focal_distances(p, q, theta1)
         return cls._transform_conic(conic, cylindrical, cylangle, switch_convexity)
 
     @classmethod
@@ -165,13 +157,6 @@ class S4Conic(S4OpticalSurface):
                 print(txt)
 
         conic = S4Conic(ccc=numpy.array(ccc))
-        return cls._transform_conic(conic, cylindrical, cylangle, switch_convexity)
-
-    # todo: delete
-    @classmethod
-    def initialize_as_hyperboloid_from_focal_distances_old(cls, p, q, theta1, cylindrical=0, cylangle=0.0, switch_convexity=0):
-        conic = S4Conic()
-        conic.set_hyperboloid_from_focal_distances(p, q, theta1)
         return cls._transform_conic(conic, cylindrical, cylangle, switch_convexity)
 
     @classmethod
@@ -237,6 +222,30 @@ class S4Conic(S4OpticalSurface):
     def duplicate(self):
         return S4Conic.initialize_from_coefficients(self.ccc)
 
+    # todo: delete
+    @classmethod
+    def initialize_as_ellipsoid_from_focal_distances_old(cls, p, q, theta1, cylindrical=0, cylangle=0.0,
+                                                         switch_convexity=0):
+        conic = S4Conic()
+        conic.set_ellipsoid_from_focal_distances(p, q, theta1)
+        return cls._transform_conic(conic, cylindrical, cylangle, switch_convexity)
+
+    # todo: delete
+    @classmethod
+    def initialize_as_paraboloid_from_focal_distances_old(cls, p, q, theta1, cylindrical=0, cylangle=0.0,
+                                                          switch_convexity=0):
+        conic = S4Conic()
+        conic.set_paraboloid_from_focal_distances(p, q, theta1)
+        return cls._transform_conic(conic, cylindrical, cylangle, switch_convexity)
+
+    # todo: delete
+    @classmethod
+    def initialize_as_hyperboloid_from_focal_distances_old(cls, p, q, theta1, cylindrical=0, cylangle=0.0,
+                                                           switch_convexity=0):
+        conic = S4Conic()
+        conic.set_hyperboloid_from_focal_distances(p, q, theta1)
+        return cls._transform_conic(conic, cylindrical, cylangle, switch_convexity)
+
     #
     # getters
     #
@@ -255,59 +264,53 @@ class S4Conic(S4OpticalSurface):
         else:
             self.ccc = numpy.zeros(10)
 
-    def set_cylindrical(self,CIL_ANG):
-
+    def set_cylindrical(self, CIL_ANG):
         COS_CIL = numpy.cos(CIL_ANG)
         SIN_CIL = numpy.sin(CIL_ANG)
 
-        A_1	 =   self.ccc[1-1]
-        A_2	 =   self.ccc[2-1]
-        A_3	 =   self.ccc[3-1]
-        A_4	 =   self.ccc[4-1]
-        A_5	 =   self.ccc[5-1]
-        A_6	 =   self.ccc[6-1]
-        A_7	 =   self.ccc[7-1]
-        A_8	 =   self.ccc[8-1]
-        A_9	 =   self.ccc[9-1]
-        A_10 =   self.ccc[10-1]
+        A_1	 = self.ccc[0]
+        A_2	 = self.ccc[1]
+        A_3	 = self.ccc[2]
+        A_4	 = self.ccc[3]
+        A_5	 = self.ccc[4]
+        A_6	 = self.ccc[5]
+        A_7	 = self.ccc[6]
+        A_8	 = self.ccc[7]
+        A_9	 = self.ccc[8]
+        A_10 = self.ccc[9]
 
 
-        self.ccc[1-1] =  A_1 * SIN_CIL**4 + A_2 * COS_CIL**2 * SIN_CIL**2 - A_4 * COS_CIL * SIN_CIL**3
-        self.ccc[2-1] =  A_2 * COS_CIL**4 + A_1 * COS_CIL**2 * SIN_CIL**2 - A_4 * COS_CIL**3 * SIN_CIL
-        self.ccc[3-1] =  A_3						 # Z^2
-        self.ccc[4-1] =  - 2*A_1 * COS_CIL * SIN_CIL**3 - 2 * A_2 * COS_CIL**3 * SIN_CIL + 2 * A_4 * COS_CIL**2 *SIN_CIL**2 # X Y
-        self.ccc[5-1] =  A_5 * COS_CIL**2 - A_6 * COS_CIL * SIN_CIL	 # Y Z
-        self.ccc[6-1] =  A_6 * SIN_CIL**2 - A_5 * COS_CIL * SIN_CIL	 # X Z
-        self.ccc[7-1] =  A_7 * SIN_CIL**2 - A_8 * COS_CIL * SIN_CIL	 # X
-        self.ccc[8-1] =  A_8 * COS_CIL**2 - A_7 * COS_CIL * SIN_CIL	 # Y
-        self.ccc[9-1] =  A_9						 # Z
-        self.ccc[10-1]=  A_10
+        self.ccc[0] =  A_1 * SIN_CIL**4 + A_2 * COS_CIL**2 * SIN_CIL**2 - A_4 * COS_CIL * SIN_CIL**3
+        self.ccc[1] =  A_2 * COS_CIL**4 + A_1 * COS_CIL**2 * SIN_CIL**2 - A_4 * COS_CIL**3 * SIN_CIL
+        self.ccc[2] =  A_3						                     # Z^2
+        self.ccc[3] =  - 2 * A_1 * COS_CIL * SIN_CIL**3 - 2 * A_2 * COS_CIL**3 * SIN_CIL + 2 * A_4 * COS_CIL**2 * SIN_CIL**2 # X Y
+        self.ccc[4] =  A_5 * COS_CIL**2 - A_6 * COS_CIL * SIN_CIL	 # Y Z
+        self.ccc[5] =  A_6 * SIN_CIL**2 - A_5 * COS_CIL * SIN_CIL	 # X Z
+        self.ccc[6] =  A_7 * SIN_CIL**2 - A_8 * COS_CIL * SIN_CIL	 # X
+        self.ccc[7] =  A_8 * COS_CIL**2 - A_7 * COS_CIL * SIN_CIL	 # Y
+        self.ccc[8] =  A_9						                     # Z
+        self.ccc[9] =  A_10
 
-    def set_sphere_from_curvature_radius(self,rmirr):
-        self.ccc[1-1] =  1.0   # X^2  # = 0 in cylinder case
-        self.ccc[2-1] =  1.0   # Y^2
-        self.ccc[3-1] =  1.0   # Z^2
-        self.ccc[4-1] =  0.0   # X*Y   # = 0 in cylinder case
-        self.ccc[5-1] =  0.0   # Y*Z
-        self.ccc[6-1] =  0.0   # X*Z   # = 0 in cylinder case
-        self.ccc[7-1] =  0.0   # X     # = 0 in cylinder case
-        self.ccc[8-1] =  0.0   # Y
-        self.ccc[9-1] = -2 * rmirr  # Z
-        self.ccc[10-1] = 0.0       # G
+    def set_sphere_from_curvature_radius(self, rmirr):
+        self.ccc[0] =  1.0        # X^2  # = 0 in cylinder case
+        self.ccc[1] =  1.0        # Y^2
+        self.ccc[2] =  1.0        # Z^2
+        self.ccc[3] =  0.0        # X*Y   # = 0 in cylinder case
+        self.ccc[4] =  0.0        # Y*Z
+        self.ccc[5] =  0.0        # X*Z   # = 0 in cylinder case
+        self.ccc[6] =  0.0        # X     # = 0 in cylinder case
+        self.ccc[7] =  0.0        # Y
+        self.ccc[8] = -2 * rmirr  # Z
+        self.ccc[9] = 0.0         # G
 
+    # todo: change to new nomenclature.
     def set_ellipsoid_from_external_parameters(self, AXMAJ, AXMIN, ELL_THE):
         YCEN  = AXMAJ * AXMIN
         YCEN  = YCEN / numpy.sqrt(AXMIN**2 + AXMAJ**2 * numpy.tan(ELL_THE)**2)
         ZCEN  = YCEN * numpy.tan(ELL_THE)
         ZCEN  = - numpy.abs(ZCEN)
-        if (numpy.cos(ELL_THE) < 0):
-            YCEN = - numpy.abs(YCEN)
-        else:
-            YCEN = numpy.abs(YCEN)
-
-
-        AFOCI = numpy.sqrt( AXMAJ**2 - AXMIN**2 )
-        # ECCENT = AFOCI/AXMAJ
+        if (numpy.cos(ELL_THE) < 0): YCEN = -numpy.abs(YCEN)
+        else:                        YCEN =  numpy.abs(YCEN)
 
         # ;C
         # ;C Computes now the normal in the mirror center.
@@ -316,7 +319,6 @@ class S4Conic(S4OpticalSurface):
         RNCEN[1-1] =  0.0
         RNCEN[2-1] = -2 * YCEN / AXMAJ**2
         RNCEN[3-1] = -2 * ZCEN / AXMIN**2
-        # ;CALL NORM(RNCEN,RNCEN)
         RNCEN = RNCEN / numpy.sqrt((RNCEN**2).sum())
         # ;C
         # ;C Computes the tangent versor in the mirror center.
@@ -325,8 +327,6 @@ class S4Conic(S4OpticalSurface):
         RTCEN[1-1] =  0.0
         RTCEN[2-1] =  RNCEN[3-1]
         RTCEN[3-1] = -RNCEN[2-1]
-
-
 
         # ;C Computes now the quadric coefficient with the mirror center
         # ;C located at (0,0,0) and normal along (0,0,1)
@@ -355,101 +355,35 @@ class S4Conic(S4OpticalSurface):
 
     def get_normal(self,x2):
         # ;
-        # ; Calculates the normal at intercept points x2 [see shadow's normal.F]
+        # ; Calculates the normal at intercept points x2
         # ;
-        # VOUT(1) = 2*CCC(1)*X_IN +  CCC(4)*Y_IN + CCC(6)*Z_IN + CCC(7)
-        # VOUT(2) = 2*CCC(2)*Y_IN +  CCC(4)*X_IN + CCC(5)*Z_IN + CCC(8)
-        # VOUT(3) = 2*CCC(3)*Z_IN +  CCC(5)*Y_IN + CCC(6)*X_IN + CCC(9)
-
         normal = numpy.zeros_like(x2)
 
         normal[0,:] = 2 * self.ccc[1-1] * x2[0,:] + self.ccc[4-1] * x2[1,:] + self.ccc[6-1] * x2[2,:] + self.ccc[7-1]
         normal[1,:] = 2 * self.ccc[2-1] * x2[1,:] + self.ccc[4-1] * x2[0,:] + self.ccc[5-1] * x2[2,:] + self.ccc[8-1]
         normal[2,:] = 2 * self.ccc[3-1] * x2[2,:] + self.ccc[5-1] * x2[1,:] + self.ccc[6-1] * x2[0,:] + self.ccc[9-1]
 
-        normalmod =  numpy.sqrt( normal[0,:]**2 + normal[1,:]**2 + normal[2,:]**2 )
-        normal[0,:] /= normalmod
-        normal[1,:] /= normalmod
-        normal[2,:] /= normalmod
+        normalmod =  numpy.sqrt( normal[0, :]**2 + normal[1, :]**2 + normal[2, :]**2 )
+        normal[0, :] /= normalmod
+        normal[1, :] /= normalmod
+        normal[2, :] /= normalmod
 
         return normal
 
-    def calculate_intercept(self, XIN, VIN): # todo: return here the complex solutions and make the choice in choose_solution
-
-        # # FUNCTION conicintercept,ccc,xIn1,vIn1,iflag
-        # #
-        # #
-        # # ;+
-        # # ;
-        # # ;       NAME:
-        # # ;               CONICINTERCEPT
-        # # ;
-        # # ;       PURPOSE:
-        # # ;               This function Calculates the intersection of a
-        # # ;               conic (defined by its 10 coefficients in ccc)
-        # # ;               with a straight line, defined by a point xIn and
-        # # ;               an unitary direction vector vIn
-        # # ;
-        # # ;       CATEGORY:
-        # # ;               SHADOW tools
-        # # ;
-        # # ;       CALLING SEQUENCE:
-        # # ;               t = conicIntercept(ccc,xIn,vIn,iFlag)
-        # # ;
-        # # ; 	INPUTS:
-        # # ;		ccc: the array with the 10 coefficients defining the
-        # # ;                    conic.
-        # # ;		xIn: a vector DblArr(3) or stack of vectors DblArr(3,nvectors)
-        # # ;		vIn: a vector DblArr(3) or stack of vectors DblArr(3,nvectors)
-        # # ;
-        # # ;       OUTPUTS
-        # # ;		t the "travelled" distance between xIn and the surface
-        # # ;
-        # # ; 	OUTPUT KEYWORD PARAMETERS
-        # # ;		IFLAG: A flag (negative if no intersection)
-        # # ;
-        # # ;	ALGORITHM:
-        # # ;		 Adapted from SHADOW/INTERCEPT
-        # # ;
-        # # ;		 Equation of the conic:
-        # # ;
-        # # ;	         c[0]*X^2 + c[1]*Y^2 + c[2]*Z^2 +
-        # # ;                c[3]*X*Y + c[4]*Y*Z + c[5]*X*Z  +
-        # # ;                c[6]*X + c[7]*Y + c[8]*Z + c[9] = 0
-        # # ;
-        # # ;       NOTE that the vectors, that are usually DblArr(3) can be
-        # # ;            stacks of vectors DblArr(3,nvectors). In such a case,
-        # # ;            the routine returns t
-        # # ;
-        # # ;
-        # # ;	AUTHOR:
-        # # ;		M. Sanchez del Rio srio@esrf.eu, Sept. 29, 2009
-        # # ;
-        # # ;	MODIFICATION HISTORY:
-        # # ;
-        # # ;-
-        # #
-        # #
-        # # ;CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
-        # # ;C
-        # # ;C	subroutine	intercept	( xin, vin, tpar, iflag)
-        # # ;C
-        # # ;C	purpose		computes the intercepts onto the mirror surface
-        # # ;C
-        # # ;C	arguments	xin	ray starting position     mirror RF
-        # # ;C			vin	ray direction		  mirror RF
-        # # ;C			tpar	distance from start of
-        # # ;C				intercept
-        # # ;C			iflag   input		1	ordinary case
-        # # ;C					       -1	ripple case
-        # # ;C			iflag	output		0	success
-        # # ;C					       -1       complex sol.
-        # # ;C
-        # # ;CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
-        # #
-
-
-
+    # todo: return here the complex solutions and make the choice in choose_solution
+    def calculate_intercept(self, XIN, VIN):
+        #   This function Calculates the intersection of a
+        #               conic (defined by its 10 coefficients in ccc)
+        #               with a straight line, defined by a point xIn and
+        #               an unitary direction vector vIn
+        # 	INPUTS:
+        #		ccc: the array with the 10 coefficients defining the
+        #                    conic.
+        #		xIn: a vector DblArr(3) or stack of vectors DblArr(3,nvectors)
+        #		vIn: a vector DblArr(3) or stack of vectors DblArr(3,nvectors)
+        #
+        #   OUTPUTS
+        #		t the "travelled" distance between xIn and the surface
         CCC = self.ccc
 
         if XIN.shape==(3,):
@@ -493,12 +427,9 @@ class S4Conic(S4OpticalSurface):
         # ;C
         # ;C Solve now the second deg. equation **
         # ;C
-
         TPAR1 = numpy.zeros_like(AA)
         TPAR2 = numpy.zeros_like(AA)
         IFLAG = numpy.ones_like(AA)
-
-        # shape_x =  x.shape
 
         # TODO: remove loop!
         for i in range(AA.size):
@@ -528,9 +459,7 @@ class S4Conic(S4OpticalSurface):
         #             but replacing TSOURCE (unavailable here) by reference_distance
         # method = 1: use first solution
         # method = 2: use second solution
-
         TPAR = numpy.zeros(TPAR1.size)
-
 
         if method == 0:
             for i in range(TPAR1.size):
@@ -551,7 +480,6 @@ class S4Conic(S4OpticalSurface):
         return t, iflag
 
     def z_vs_xy(self,x,y):
-
         if isinstance(x, numpy.ndarray):
             pass
         else:
@@ -577,7 +505,6 @@ class S4Conic(S4OpticalSurface):
             roots = numpy.roots([CCf[i],BBf[i],AAf[i]])
             TPAR1[i] = roots[0]
             TPAR2[i] = roots[1]
-            # print("Found solutions: ",TPAR1[i],TPAR2[i])
 
         TPAR2.shape = shape_x
 
@@ -587,7 +514,6 @@ class S4Conic(S4OpticalSurface):
         return TPAR2.real
 
     def rotation_surface_conic(self, alpha, axis ):
-
         if axis == 'x':
             self.rotation_surface_conic_x(alpha)
         elif axis == 'y':
@@ -596,7 +522,6 @@ class S4Conic(S4OpticalSurface):
             self.rotation_surface_conic_z(alpha)
 
     def rotation_surface_conic_x(self, alpha):
-
         a = numpy.cos(alpha)
         b = numpy.sin(alpha)
 
@@ -731,12 +656,7 @@ class S4Conic(S4OpticalSurface):
     # info
     #
     def info(self):
-        """
-
-        :return:
-        """
         txt = ""
-
         txt += "++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++\n"
         txt += "OE surface in form of conic equation: \n"
         txt += "  ccc[0]*X^2 + ccc[1]*Y^2 + ccc[2]*Z^2  \n"
@@ -754,7 +674,6 @@ class S4Conic(S4OpticalSurface):
         txt += " c[8] = %g \n "%self.ccc[8]
         txt += " c[9] = %g \n "%self.ccc[9]
         txt += "++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++'n"
-
         return txt
 
     #
@@ -773,16 +692,16 @@ class S4Conic(S4OpticalSurface):
             txt += "Radius= %f \n" % (rmirr)
             print(txt)
 
-        self.ccc[1 - 1] = 1.0  # X^2  # = 0 in cylinder case
-        self.ccc[2 - 1] = 1.0  # Y^2
-        self.ccc[3 - 1] = 1.0  # Z^2
-        self.ccc[4 - 1] = .0  # X*Y   # = 0 in cylinder case
-        self.ccc[5 - 1] = .0  # Y*Z
-        self.ccc[6 - 1] = .0  # X*Z   # = 0 in cylinder case
-        self.ccc[7 - 1] = .0  # X     # = 0 in cylinder case
-        self.ccc[8 - 1] = .0  # Y
-        self.ccc[9 - 1] = -2 * rmirr  # Z
-        self.ccc[10 - 1] = .0  # G
+        self.ccc[0] = 1.0  # X^2  # = 0 in cylinder case
+        self.ccc[1] = 1.0  # Y^2
+        self.ccc[2] = 1.0  # Z^2
+        self.ccc[3] = .0  # X*Y   # = 0 in cylinder case
+        self.ccc[4] = .0  # Y*Z
+        self.ccc[5] = .0  # X*Z   # = 0 in cylinder case
+        self.ccc[6] = .0  # X     # = 0 in cylinder case
+        self.ccc[7] = .0  # Y
+        self.ccc[8] = -2 * rmirr  # Z
+        self.ccc[9] = .0  # G
 
     # todo: delete
     def set_ellipsoid_from_focal_distances(self, ssour, simag, theta_grazing, verbose=True):
@@ -894,7 +813,6 @@ class S4Conic(S4OpticalSurface):
             RNCEN /= numpy.sqrt(RNCEN[0] ** 2 + RNCEN[1] ** 2 + RNCEN[2] ** 2)
 
             RTCEN = numpy.array((0, RNCEN[3 - 1], -RNCEN[2 - 1]))
-
 
         if verbose:
             txt = ""
@@ -1024,19 +942,16 @@ class S4Conic(S4OpticalSurface):
         # ;
         # ; Calculates the normal at each intercept [see shadow's normal.F]
         # ;
-
         normal = self.get_normal(x2)
 
         # ;
         # ; reflection
         # ;
-
         v2 = self.vector_reflection(v1, normal)
 
         # ;
-        # ; writes the mirr.XX file
+        # ; writes the mirr arrays
         # ;
-
         newbeam.set_column(1, x2[0])
         newbeam.set_column(2, x2[1])
         newbeam.set_column(3, x2[2])
@@ -1067,7 +982,6 @@ class S4Conic(S4OpticalSurface):
     #
     # refractor routines
     #
-
     def apply_refraction_on_beam(self,
                                  beam,
                                  refraction_index_object,
@@ -1101,7 +1015,6 @@ class S4Conic(S4OpticalSurface):
         # ;
         # ; Calculates the normal at each intercept [see shadow's normal.F]
         # ;
-
         normal = self.get_normal(x2)
 
         # if surface is convex normal_z > 0;  if concave normal_z < 0
@@ -1462,3 +1375,5 @@ if __name__ == "__main__":
                 print(i, c_p_1[i], c_p_2[i], ss)
                 # assert (diff < 1e-5)
 
+
+            print(conic.info())
