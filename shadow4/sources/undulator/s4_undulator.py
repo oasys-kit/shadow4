@@ -1,8 +1,47 @@
+"""
+S4 Undulator magnetic structure.
+"""
+
 from syned.storage_ring.magnetic_structures.undulator import Undulator
 
 
 
 class S4Undulator(Undulator):
+    """
+    Defines a shadow4 undulator magnetic structure.
+
+    Parameters
+    ----------
+    K_vertical : float, optional
+        the K value.
+    period_length : float, optional
+        for magnetic_field_periodic=1, the period in m.
+    number_of_periods : float, optional
+        for magnetic_field_periodic=1, the number of periods.
+    emin : float, optional
+        minimum photon energy in eV.
+    emax : float, optional
+        maximum photon energy in eV.
+    ng_e : int, optional
+        Number of points in energy. This is used for the calculation of the spectrum, and also for
+        sampling rays if flag_interpolation=1.
+    maxangle
+    ng_t : int, optional
+        the number of points for angle theta.
+    ng_p : int, optional
+        the number of points for angle phi.
+    ng_j : int, optional
+        Number of points per period in calculating the electron trajectory.
+    code_undul_phot : str, optional
+        code to be used for calculating the emission vs angle: internal, pysru, SRW
+    flag_emittance : int, optional
+        Flag: 0=Zero emittance (filament beam), 1=Use emittance.
+    flag_size : int, optional
+        Method used for sampling the source size:
+        0=point, 1=Gaussian, 2=FT(Divergences).
+    use_gaussian_approximation : int, optional
+        0=No, 1=Yes.
+    """
     def __init__(self,
                  K_vertical=1.0,               # syned Undulator parameter
                  period_length=0.01,           # syned Undulator parameter
@@ -14,13 +53,12 @@ class S4Undulator(Undulator):
                  ng_t=31,                      # Number of points in angle theta
                  ng_p=21,                      # Number of points in angle phi
                  ng_j=20,                      # Number of points in electron trajectory (per period) for internal calculation only
-                 code_undul_phot="internal",   # internal, pysru, srw
+                 code_undul_phot="internal",   # internal, pysru, srw # todo: remove
                  flag_emittance=0,             # when sampling rays: Use emittance (0=No, 1=Yes)
                  flag_size=0,                  # when sampling rays: 0=point,1=Gaussian,2=FT(Divergences)
                  use_gaussian_approximation=0, # use Gaussian approximation for generating simplified beam
                  ):
-
-        super().__init__(K_vertical = K_vertical,
+        super().__init__(K_vertical=K_vertical,
                  K_horizontal = 0.0,
                  period_length = period_length,
                  number_of_periods = number_of_periods)
@@ -28,15 +66,16 @@ class S4Undulator(Undulator):
         # Photon energy scan
         self._EMIN            = emin   # Photon energy scan from energy (in eV)
         self._EMAX            = emax   # Photon energy scan to energy (in eV)
-        self._NG_E            = ng_e   # Photon energy scan number of points
+        # Photon energy scan number of points
+        if emin == emax: self._NG_E = 1
+        else:            self._NG_E            = ng_e
+
         # Geometry
         self._MAXANGLE        = maxangle   # Maximum radiation semiaperture in RADIANS
         self._NG_T            = ng_t       # Number of points in angle theta
         self._NG_P            = ng_p       # Number of points in angle phi
         self._NG_J            = ng_j       # Number of points in electron trajectory (per period)
-        # ray tracing
-        # self.SEED            = SEED   # Random seed
-        # self.NRAYS           = NRAYS  # Number of rays
+
 
         self.code_undul_phot = code_undul_phot
 
@@ -58,17 +97,26 @@ class S4Undulator(Undulator):
                     ("use_gaussian_approximation", "0=No, 1=Yes", ""),
             ] )
 
-        # # results of calculations
-        #
-        # self._result_radiation = None
-        # self._result_photon_size_distribution = None
-        # self._result_photon_size_sigma = None
 
     def use_gaussian_approximation(self):
+        """
+        Returns a flag to indicate if the computations use the Gaussian approximation.
+
+        Returns
+        -------
+        int
+            0=No, 1=Yes.
+        """
         return self._use_gaussian_approximation
 
-    def get_info(self,debug=False):
+    def get_info(self):
+        """
+        Returns the specific information of the wiggler magnetic structure.
 
+        Returns
+        -------
+        str
+        """
         txt = ""
 
         txt += "Input Undulator parameters: \n"
@@ -120,39 +168,69 @@ class S4Undulator(Undulator):
         return txt
 
     def get_flag_emittance(self):
+        """
+        Returns the flag for considering electron beam emittance.
+
+        Returns
+        -------
+        int
+            0=No, 1=Yes.
+        """
         return self._FLAG_EMITTANCE
 
-    def set_energy_monochromatic(self,emin):
+    def set_energy_monochromatic(self, emin):
         """
-        Sets a single energy line for the source (monochromatic)
-        :param emin: the energy in eV
-        :return:
+        Sets a single energy line for the source (monochromatic).
+
+        Parameters
+        ----------
+        emin : float
+            photon energy in eV.
         """
         self._EMIN = emin
         self._EMAX = emin
         self._NG_E = 1
 
 
-    def set_energy_box(self,emin,emax,npoints=None):
+    def set_energy_box(self, emin, emax, npoints=None):
         """
-        Sets a box for photon energy distribution for the source
-        :param emin:  Photon energy scan from energy (in eV)
-        :param emax:  Photon energy scan to energy (in eV)
-        :param npoints:  Photon energy scan number of points (optinal, if not set no changes)
-        :return:
-        """
+        Sets a box for photon energy distribution for the source.
 
+        Parameters
+        ----------
+        emin : float
+            minimum photon energy in eV.
+        emax : float
+            maximum photon energy in eV.
+        npoints : int or None, optional
+            Number of points in energy. If None, it does not modify the number of points already stored.
+        """
         self._EMIN = emin
         self._EMAX = emax
         if npoints != None:
             self._NG_E = npoints
 
+    def set_maxangle(self, maxangle):
+        """
+        Defines the maximum angle (in rads) for radiation calculations.
+
+        Parameters
+        ----------
+        maxangle : float
+            The angle in rads.
+        """
+        self._MAXANGLE = maxangle
+
     def get_energy_box(self):
         """
-        Gets the limits of photon energy distribution for the source
-        :return: emin,emax,number_of_points
+        Returns the limits of photon energy distribution for the source and the number of points.
+
+        Returns
+        -------
+        tuple
+            (emin, emax, npoints)
         """
-        return self._EMIN,self._EMAX,self._NG_E
+        return self._EMIN, self._EMAX, self._NG_E
 
     def is_monochromatic(self):
         """
@@ -167,6 +245,14 @@ class S4Undulator(Undulator):
         return False
 
     def to_python_code(self):
+        """
+        returns the python code for defining the wiggler magnetic structure.
+
+        Returns
+        -------
+        str
+            The python code.
+        """
         script_template = """
 
 # magnetic structure

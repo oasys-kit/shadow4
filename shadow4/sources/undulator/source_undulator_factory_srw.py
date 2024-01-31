@@ -1,18 +1,13 @@
-__authors__ = ["M Sanchez del Rio - ESRF ISDD Advanced Analysis and Modelling"]
-__license__ = "MIT"
-__date__ = "12/01/2017"
-
 #
-# SHADOW Undulator preprocessors implemented in python
+# SHADOW3 Undulator preprocessors implemented in python
 #
-# this code replaces SHADOW's undul_phot
+# this code replaces SHADOW3's undul_phot
 #
 # It calculates the undulator radiation as a function of energy, theta and phi. Phi is the polar angle.
 #
 # It uses SRW
 #
-#
-# Available public funcmethodtion:
+# Available public functions:
 #
 #     undul_phot()   : like undul_phot of SHADOW but using SRW
 #
@@ -37,7 +32,9 @@ from scipy import interpolate
 
 
 
-def _srw_electron_beam(x=0., y=0., z=0., xp=0., yp=0., e=6.04, Iavg=0.2, sigX=345e-6*1.e-20, sigY=23e-6*1.e-20, mixX=0.0, mixY=0.0, sigXp=4.e-9*1.e-20/345e-6, sigYp=4.e-11*1.e-20/23e-6, sigE = 1.e-4):
+def _srw_electron_beam(x=0., y=0., z=0., xp=0., yp=0., e=6.04, Iavg=0.2,
+                       sigX=345e-6*1.e-20, sigY=23e-6*1.e-20, mixX=0.0, mixY=0.0,
+                       sigXp=4.e-9*1.e-20/345e-6, sigYp=4.e-11*1.e-20/23e-6, sigE = 1.e-4):
   el_rest = 0.51099890221e-03
   eBeam = sl.SRWLPartBeam()
   eBeam.Iavg = Iavg
@@ -46,7 +43,7 @@ def _srw_electron_beam(x=0., y=0., z=0., xp=0., yp=0., e=6.04, Iavg=0.2, sigX=34
   eBeam.partStatMom1.z     =  z
   eBeam.partStatMom1.xp    =  xp
   eBeam.partStatMom1.yp    =  yp
-  eBeam.partStatMom1.gamma =  e/el_rest
+  eBeam.partStatMom1.gamma =  e / el_rest
   eBeam.partStatMom1.relE0 =  1.0
   eBeam.partStatMom1.nq    = -1
   eBeam.arStatMom2[ 0] = sigX**2  #from here it is not necessary for Single Electron calculation, obviously....
@@ -62,17 +59,17 @@ def _srw_drift_electron_beam(eBeam, und ):
   if isinstance(und, float):
     length = und
   elif isinstance(und, sl.SRWLMagFldU):    # Always defined in (0., 0., 0.) move the electron beam before the magnetic field.
-    length = 0.0-0.55*und.nPer*und.per-eBeam.partStatMom1.z
+    length = 0.0 - 0.55 * und.nPer * und.per - eBeam.partStatMom1.z
   elif isinstance(und, sl.SRWLMagFldC):
     if isinstance(und.arMagFld[0], sl.SRWLMagFldU):
-      length = und.arZc[0]-0.55*und.arMagFld[0].nPer*und.arMagFld[0].per-eBeam.partStatMom1.z
+      length = und.arZc[0] - 0.55 * und.arMagFld[0].nPer * und.arMagFld[0].per - eBeam.partStatMom1.z
     else: raise NameError
   else: raise NameError
   eBeam.partStatMom1.z += length
-  eBeam.arStatMom2[0]  += 2*length*eBeam.arStatMom2[1]+length**2*eBeam.arStatMom2[2]
-  eBeam.arStatMom2[1]  += length*eBeam.arStatMom2[2]
-  eBeam.arStatMom2[3]  += 2*length*eBeam.arStatMom2[4]+length**2*eBeam.arStatMom2[5]
-  eBeam.arStatMom2[4]  += length*eBeam.arStatMom2[5]
+  eBeam.arStatMom2[0]  += 2 * length * eBeam.arStatMom2[1] + length**2 * eBeam.arStatMom2[2]
+  eBeam.arStatMom2[1]  += length * eBeam.arStatMom2[2]
+  eBeam.arStatMom2[3]  += 2 * length * eBeam.arStatMom2[4] + length**2 * eBeam.arStatMom2[5]
+  eBeam.arStatMom2[4]  += length * eBeam.arStatMom2[5]
   eBeam.moved = length
   return eBeam
 
@@ -94,7 +91,11 @@ def _srw_default_mesh_bis():
 def _srw_single_electron_source(eBeam,
                                 cnt,
                                 mesh=None,
-                                params=[1, 0.01, 0., 0., 20000, 1, 0]):
+                                params=[1, 0.01, 0., 0., 20000, 1, 0],  # params: arPrecPar = [meth, relPrec,
+                                                                        # zStartInteg, zEndInteg,
+                                                                        # npTraj, useTermin, sampFactNxNyForProp]
+                                ):
+
   if mesh is None:
       mesh = _srw_default_mesh_bis()
   wfr = sl.SRWLWfr()
@@ -102,6 +103,7 @@ def _srw_single_electron_source(eBeam,
   wfr.partBeam = eBeam
   wfr.allocate(mesh.ne, mesh.nx, mesh.ny)
   eBeam = _srw_drift_electron_beam(eBeam, cnt)
+  #srwl.CalcElecFieldSR(wfr1, partTraj, magFldCnt, arPrecPar)
   sl.srwl.CalcElecFieldSR(wfr, 0, cnt, params)
   stk = sl.SRWLStokes()
   stk.mesh = mesh
@@ -124,34 +126,34 @@ def _srw_multi_electron_source(eBeam,
 
 def _srw_stokes0_to_arrays(stk):
   Shape = (4,stk.mesh.ny,stk.mesh.nx,stk.mesh.ne)
-  data = numpy.ndarray(buffer=stk.arS, shape=Shape,dtype=stk.arS.typecode)
+  data = numpy.ndarray(buffer=stk.arS, shape=Shape, dtype=stk.arS.typecode)
   data0 = data[0]
   data1 = data[1]
-  x = numpy.linspace(stk.mesh.xStart,stk.mesh.xFin,stk.mesh.nx)
-  y = numpy.linspace(stk.mesh.yStart,stk.mesh.yFin,stk.mesh.ny)
-  e = numpy.linspace(stk.mesh.eStart,stk.mesh.eFin,stk.mesh.ne)
-  Z2 = numpy.zeros((e.size,x.size,y.size))
-  POL_DEG = numpy.zeros((e.size,x.size,y.size))
+  x = numpy.linspace(stk.mesh.xStart, stk.mesh.xFin, stk.mesh.nx)
+  y = numpy.linspace(stk.mesh.yStart, stk.mesh.yFin, stk.mesh.ny)
+  e = numpy.linspace(stk.mesh.eStart, stk.mesh.eFin, stk.mesh.ne)
+  Z2 = numpy.zeros((e.size, x.size, y.size))
+  POL_DEG = numpy.zeros((e.size, x.size, y.size))
   for ie in range(e.size):
       for ix in range(x.size):
           for iy in range(y.size):
-            Z2[ie,ix,iy] = data0[iy,ix,ie]
+            Z2[ie, ix, iy] = data0[iy, ix, ie]
             # this is shadow definition, that uses POL_DEG = |Ex|/(|Ex|+|Ey|)
-            Ex = numpy.sqrt(numpy.abs(0.5*(data0[iy,ix,ie]+data1[iy,ix,ie])))
-            Ey = numpy.sqrt(numpy.abs(0.5*(data0[iy,ix,ie]-data1[iy,ix,ie])))
-            POL_DEG[ie,ix,iy] =  Ex / (Ex + Ey)
-  return Z2,POL_DEG,e,x,y
+            Ex = numpy.sqrt(numpy.abs(0.5 * (data0[iy, ix, ie] + data1[iy, ix, ie])))
+            Ey = numpy.sqrt(numpy.abs(0.5 * (data0[iy, ix, ie] - data1[iy, ix, ie])))
+            POL_DEG[ie,ix,iy] = Ex / (Ex + Ey)
+  return Z2, POL_DEG, e, x, y
 
 def _srw_stokes0_to_spec(stk, fname="srw_xshundul.spec"):
   #
   # writes emission in a SPEC file (cartesian grid)
   #
-  Shape = (4,stk.mesh.ny,stk.mesh.nx,stk.mesh.ne)
-  data = numpy.ndarray(buffer=stk.arS, shape=Shape,dtype=stk.arS.typecode)
+  Shape = (4, stk.mesh.ny, stk.mesh.nx, stk.mesh.ne)
+  data = numpy.ndarray(buffer=stk.arS, shape=Shape, dtype=stk.arS.typecode)
   data0 = data[0]
-  x = numpy.linspace(stk.mesh.xStart,stk.mesh.xFin,stk.mesh.nx)
-  y = numpy.linspace(stk.mesh.yStart,stk.mesh.yFin,stk.mesh.ny)
-  e = numpy.linspace(stk.mesh.eStart,stk.mesh.eFin,stk.mesh.ne)
+  x = numpy.linspace(stk.mesh.xStart, stk.mesh.xFin, stk.mesh.nx)
+  y = numpy.linspace(stk.mesh.yStart, stk.mesh.yFin, stk.mesh.ny)
+  e = numpy.linspace(stk.mesh.eStart, stk.mesh.eFin, stk.mesh.ne)
   f = open(fname,"w")
   for k in range(len(e)):
     f.write("#S %d intensity E= %f\n"%(k+1,e[k]))
@@ -163,30 +165,30 @@ def _srw_stokes0_to_spec(stk, fname="srw_xshundul.spec"):
   f.close()
   sys.stdout.write('  file written: srw_xshundul.spec\n')
 
-def _srw_interpol_object(x,y,z):
+def _srw_interpol_object(x, y, z):
     #2d interpolation
-    if numpy.iscomplex(z[0,0]):
-        tck_real = interpolate.RectBivariateSpline(x,y,numpy.real(z))
-        tck_imag = interpolate.RectBivariateSpline(x,y,numpy.imag(z))
+    if numpy.iscomplex(z[0, 0]):
+        tck_real = interpolate.RectBivariateSpline(x, y, numpy.real(z))
+        tck_imag = interpolate.RectBivariateSpline(x, y, numpy.imag(z))
         return tck_real,tck_imag
     else:
-        tck = interpolate.RectBivariateSpline(x,y,z)
+        tck = interpolate.RectBivariateSpline(x, y, z)
         return tck
 
-def _srw_interpol(x,y,z,x1,y1):
+def _srw_interpol(x, y, z, x1, y1):
     #2d interpolation
-    if numpy.iscomplex(z[0,0]):
-        tck_real,tck_imag = _srw_interpol_object(x,y,z)
-        z1_real = tck_real(numpy.real(x1),numpy.real(y1))
-        z1_imag = tck_imag(numpy.imag(x1),numpy.imag(y1))
-        return (z1_real+1j*z1_imag)
+    if numpy.iscomplex(z[0, 0]):
+        tck_real, tck_imag = _srw_interpol_object(x, y, z)
+        z1_real = tck_real(numpy.real(x1), numpy.real(y1))
+        z1_imag = tck_imag(numpy.imag(x1), numpy.imag(y1))
+        return (z1_real + 1j * z1_imag)
     else:
-        tck = _srw_interpol_object(x,y,z)
-        z1 = tck(x1,y1)
+        tck = _srw_interpol_object(x, y, z)
+        z1 = tck(x1, y1)
         return z1
 
-def undul_phot_SRW(E_ENERGY,INTENSITY,LAMBDAU,NPERIODS,K,EMIN,EMAX,NG_E,MAXANGLE,NG_T,NG_P):
-
+def _undul_phot_SRW(E_ENERGY, INTENSITY, LAMBDAU, NPERIODS, K, EMIN, EMAX, NG_E, MAXANGLE, NG_T, NG_P,
+                    number_of_trajectory_points=100):
     lambdau = LAMBDAU
     k = K
     e_energy = E_ENERGY
@@ -216,11 +218,10 @@ def undul_phot_SRW(E_ENERGY,INTENSITY,LAMBDAU,NPERIODS,K,EMIN,EMAX,NG_E,MAXANGLE
     print ("ez = ",ez)
     print ("emin =%g, emax=%g, ne=%d "%(emin,emax,ne))
 
-
     #
     # define additional parameters needed by SRW
     #
-    B = k/93.4/lambdau
+    B = k / 93.4 / lambdau
     slit_distance = 100.0
     method = "SE" # single-electron  "ME" multi-electron
     sE = 1e-9 # 0.89e-3
@@ -237,12 +238,12 @@ def undul_phot_SRW(E_ENERGY,INTENSITY,LAMBDAU,NPERIODS,K,EMIN,EMAX,NG_E,MAXANGLE
     # ez *= 1.0e-2
 
     if sx != 0.0:
-      sxp = ex/sx
+      sxp = ex / sx
     else:
       sxp = 0.0
 
     if sz != 0.0:
-      szp = ez/sz
+      szp = ez / sz
     else:
       szp = 0.0
 
@@ -265,17 +266,19 @@ def undul_phot_SRW(E_ENERGY,INTENSITY,LAMBDAU,NPERIODS,K,EMIN,EMAX,NG_E,MAXANGLE
     #
     # calculations
     #
-    print("nperiods: %d, lambdau: %f, B: %f)"%(nperiods,lambdau,B))
+    print("nperiods: %d, lambdau: %f, B: %f)" % (nperiods, lambdau, B))
 
-    und = _srw_simple_undulator(nperiods,lambdau,B)
-    print("e=%f,Iavg=%f,sigX=%f,sigY=%f,mixX=%f,mixY=%f,sigXp=%f,sigYp=%f,sigE=%f"%(e_energy,intensity,sx,sz,xxp,zzp,sxp,szp,sE) )
-    eBeam = _srw_electron_beam(e=e_energy,Iavg=intensity,sigX=sx,sigY=sz,mixX=xxp,mixY=zzp,sigXp=sxp,sigYp=szp,sigE=sE)
+    und = _srw_simple_undulator(nperiods, lambdau, B)
+    print("e=%f, Iavg=%f, sigX=%f, sigY=%f, mixX=%f, mixY=%f, sigXp=%f, sigYp=%f, sigE=%f" %
+          (e_energy, intensity, sx, sz, xxp, zzp, sxp, szp, sE) )
+    eBeam = _srw_electron_beam(e=e_energy, Iavg=intensity,
+                               sigX=sx, sigY=sz, mixX=xxp, mixY=zzp, sigXp=sxp, sigYp=szp, sigE=sE)
 
 
     cnt = _srw_undulators(und, 0., 0., 0.)
     sys.stdout.flush()
 
-    mesh = sl.SRWLRadMesh(emin,emax,ne,slit_xmin,slit_xmax,nx,slit_zmin,slit_zmax,nz,slit_distance)
+    mesh = sl.SRWLRadMesh(emin, emax, ne, slit_xmin, slit_xmax, nx,slit_zmin, slit_zmax, nz, slit_distance)
     if (method == 'SE'):
         print ("Calculating SE...")
         stkSE, eBeam = _srw_single_electron_source(eBeam, cnt, mesh, params)
@@ -299,30 +302,30 @@ def undul_phot_SRW(E_ENERGY,INTENSITY,LAMBDAU,NPERIODS,K,EMIN,EMAX,NG_E,MAXANGLE
     #
 
     # polar grid
-    theta = numpy.linspace(0,MAXANGLE,NG_T)
-    phi = numpy.linspace(0,numpy.pi/2,NG_P)
-    Z2 = numpy.zeros((NG_E,NG_T,NG_P))
-    POL_DEG = numpy.zeros((NG_E,NG_T,NG_P))
+    theta = numpy.linspace(0, MAXANGLE, NG_T)
+    phi = numpy.linspace(0, numpy.pi / 2, NG_P)
+    Z2 = numpy.zeros((NG_E, NG_T, NG_P))
+    POL_DEG = numpy.zeros((NG_E, NG_T, NG_P))
 
     # interpolate on polar grid
-    radiation,pol_deg,e,x,y = _srw_stokes0_to_arrays(stk)
+    radiation, pol_deg, e, x, y = _srw_stokes0_to_arrays(stk)
     for ie in range(e.size):
       tck = _srw_interpol_object(x,y,radiation[ie])
-      tck_pol_deg = _srw_interpol_object(x,y,pol_deg[ie])
+      tck_pol_deg = _srw_interpol_object(x, y, pol_deg[ie])
       for itheta in range(theta.size):
         for iphi in range(phi.size):
           R = slit_distance / numpy.cos(theta[itheta])
           r = R * numpy.sin(theta[itheta])
           X = r * numpy.cos(phi[iphi])
           Y = r * numpy.sin(phi[iphi])
-          tmp = tck(X,Y)
+          tmp = tck(X, Y)
 
           #  Conversion from SRW units (photons/mm^2/0.1%bw) to SHADOW units (photons/rad^2/eV)
-          tmp *= (slit_distance*1e3)**2 # photons/mm^2 -> photons/rad^2
+          tmp *= (slit_distance * 1e3)**2 # photons/mm^2 -> photons/rad^2
           tmp /= 1e-3 * e[ie] # photons/o.1%bw -> photons/eV
 
-          Z2[ie,itheta,iphi] = tmp
-          POL_DEG[ie,itheta,iphi] = tck_pol_deg(X,Y)
+          Z2[ie, itheta, iphi] = tmp
+          POL_DEG[ie, itheta, iphi] = tck_pol_deg(X, Y)
 
     # !C SHADOW defines the degree of polarization by |E| instead of |E|^2
     # !C i.e.  P = |Ex|/(|Ex|+|Ey|)   instead of   |Ex|^2/(|Ex|^2+|Ey|^2)
@@ -330,7 +333,7 @@ def undul_phot_SRW(E_ENERGY,INTENSITY,LAMBDAU,NPERIODS,K,EMIN,EMAX,NG_E,MAXANGLE
 
     # we use, however, POL_DEG = |Ex|^2/(|Ex|^2+|Ey|^2)
 
-    return {'radiation':Z2,'polarization':POL_DEG,'photon_energy':e,'theta':theta,'phi':phi}
+    return {'radiation':Z2, 'polarization':POL_DEG, 'photon_energy':e, 'theta':theta, 'phi':phi, 'trajectory':None}
 
 def calculate_undulator_emission_SRW(
                      electron_energy              = 6.0,
@@ -345,8 +348,7 @@ def calculate_undulator_emission_SRW(
                      number_of_points             = 100,
                      NG_P                         = 100,
                      number_of_trajectory_points  = 100):
-    # (E_ENERGY,INTENSITY,LAMBDAU,NPERIODS,K,EMIN,EMAX,NG_E,MAXANGLE,NG_T,NG_P)
-    return undul_phot_SRW(
+    return _undul_phot_SRW(
                         electron_energy,
                         electron_current,
                         undulator_period,
@@ -358,6 +360,5 @@ def calculate_undulator_emission_SRW(
                         MAXANGLE,
                         number_of_points,
                         NG_P,
-                        # number_of_trajectory_points=number_of_trajectory_points,
+                        number_of_trajectory_points=number_of_trajectory_points,
                         )
-

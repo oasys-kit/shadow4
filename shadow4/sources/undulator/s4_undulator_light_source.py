@@ -104,7 +104,7 @@ class S4UndulatorLightSource(S4LightSource):
         return 1.0 / self.get_electron_beam().gamma() * numpy.sqrt(
             ring_order / harmonic_number * (1 + 0.5 * self.get_magnetic_structure().K_vertical()**2))
 
-    def set_energy_monochromatic_at_resonance(self, harmonic_number):
+    def set_energy_monochromatic_at_resonance(self, harmonic_number=1):
         """
         Sets the undulator to a resonance photon energy.
 
@@ -120,8 +120,30 @@ class S4UndulatorLightSource(S4LightSource):
         u.set_energy_monochromatic(
             u.resonance_energy(e.gamma(), harmonic=harmonic_number)
         )
-        # take 3*sigma - _MAXANGLE is in RAD
-        u._MAXANGLE = 3 * 0.69 * u.gaussian_central_cone_aperture(e.gamma(), harmonic_number)
+        # take 3*sigma - _MAXANGLE is in RAD  TODO: why 0.69??
+        u.set_maxangle(3 * 0.69 * u.gaussian_central_cone_aperture(e.gamma(), harmonic_number))
+
+    def set_energy_at_resonance(self, harmonic_number=1, delta_e=0.0):
+        """
+        Sets the undulator to a resonance photon energy.
+
+        It changes the K_vertical and MAXANGLE.
+
+        Parameters
+        ----------
+        harmonic_number : int, optinal
+            Harmonic number.
+        delta_e : float, optinal
+            Harmonic number.
+        """
+        e = self.get_electron_beam()
+        u = self.get_magnetic_structure()
+        e0 = u.resonance_energy(e.gamma(), harmonic=harmonic_number)
+        u.set_energy_box(e0 - delta_e / 2, e0 + delta_e / 2)
+        # take 3*sigma - _MAXANGLE is in RAD  TODO: why 0.69??
+        u.set_maxangle(3 * 0.69 * u.gaussian_central_cone_aperture(e.gamma(), harmonic_number))
+
+
 
     #
     # get from results
@@ -226,6 +248,21 @@ class S4UndulatorLightSource(S4LightSource):
         """
         return self.get_result_dictionary()["photon_energy"]
 
+    def get_result_trajectory(self):
+        """
+        Returns the trajectory arrays y, x, beta_x [in SHADOW frame].
+
+        Returns
+        -------
+        tuple
+            (y, x, beta_x) arrays with coordinates y and x and beta (velocity in c units) along x.
+        """
+        traj = self.get_result_dictionary()["trajectory"]
+        y = traj[3].copy() * codata.c
+        x = traj[1].copy() * codata.c
+        beta_x = traj[4].copy()
+        return y, x, beta_x
+
     def get_radiation_polar(self):
         """
         Returns all radiation arrays.
@@ -290,7 +327,7 @@ class S4UndulatorLightSource(S4LightSource):
             interpolator_value = interpolate.RectBivariateSpline(thetabm, phi, radiation[i])
             radiation_interpolated[i] = interpolator_value.ev(THETA, PHI)
 
-        return radiation_interpolated,photon_energy, vx, vz
+        return radiation_interpolated, photon_energy, vx, vz
 
     def get_power_density(self):
         """
@@ -306,17 +343,21 @@ class S4UndulatorLightSource(S4LightSource):
         phi = self.get_result_phi()
         photon_energy = self.get_result_photon_energy()
 
-        step_e = photon_energy[1] - photon_energy[0]
-
-        for i in range(radiation.shape[0]):
-            radiation[i] *= 1e-3 * photon_energy[i] # photons/eV/rad2 -> photons/0.1%bw/rad2
-
-        if INTEGRATION_METHOD == 0:
-            power_density = radiation.sum(axis=0) * step_e * codata.e * 1e3 # W/rad2
+        if self.get_magnetic_structure().is_monochromatic():
+            step_e = 1.0
+            power_density = radiation[0] * step_e * codata.e * 1e3  # W/rad2/eV
         else:
-            power_density = numpy.trapz(radiation,photon_energy,axis=0) * codata.e * 1e3 # W/rad2
+            step_e = photon_energy[1] - photon_energy[0]
 
-        return power_density,theta,phi
+            for i in range(radiation.shape[0]):
+                radiation[i] *= 1e-3 * photon_energy[i] # photons/eV/rad2 -> photons/0.1%bw/rad2
+
+            if INTEGRATION_METHOD == 0:
+                power_density = radiation.sum(axis=0) * step_e * codata.e * 1e3 # W/rad2
+            else:
+                power_density = numpy.trapz(radiation, photon_energy, axis=0) * codata.e * 1e3 # W/rad2
+
+        return power_density, theta, phi
 
 
     def get_power_density_interpolated_cartesian(self, npointsx=100, npointsz=100, thetamax=None):
@@ -339,7 +380,7 @@ class S4UndulatorLightSource(S4LightSource):
 
         """
 
-        power_density_polar,theta,phi = self.get_power_density()
+        power_density_polar, theta, phi = self.get_power_density()
 
         if thetamax is None:
             thetamax = theta.max()
@@ -385,6 +426,18 @@ class S4UndulatorLightSource(S4LightSource):
         spectral_power = flux*codata.e*1e3
 
         return flux, spectral_power, photon_energy
+
+    def calculate_spectrum(self):
+        """
+        Calculates the spectrum.
+
+        Returns
+        -------
+        tuple
+            (e, f, w) numpy arrays with photon energy (e), photon flux (f) and spectral power (w).
+        """
+        flux, spectral_power, photon_energy = self.get_flux_and_spectral_power()
+        return photon_energy, flux, spectral_power
 
     def get_flux(self):
         """
@@ -728,51 +781,52 @@ class S4UndulatorLightSource(S4LightSource):
         undulator = self.get_magnetic_structure()
 
         self.__result_radiation = None
-
         # undul_phot
         if undulator.code_undul_phot == 'internal':
             undul_phot_dict = calculate_undulator_emission(
-                electron_energy= syned_electron_beam.energy(),
-                electron_current= syned_electron_beam.current(),
-                undulator_period= undulator.period_length(),
-                undulator_nperiods= undulator.number_of_periods(),
-                K         = undulator.K(),
-                photon_energy= undulator._EMIN,
-                EMAX      = undulator._EMAX,
-                NG_E      = undulator._NG_E,
-                MAXANGLE  = undulator._MAXANGLE,
-                number_of_points= undulator._NG_T,
-                NG_P      = undulator._NG_P,
+                electron_energy             = syned_electron_beam.energy(),
+                electron_current            = syned_electron_beam.current(),
+                undulator_period            = undulator.period_length(),
+                undulator_nperiods          = undulator.number_of_periods(),
+                K                           = undulator.K(),
+                photon_energy               = undulator._EMIN,
+                EMAX                        = undulator._EMAX,
+                NG_E                        = undulator._NG_E,
+                MAXANGLE                    = undulator._MAXANGLE,
+                number_of_points            = undulator._NG_T,
+                NG_P                        = undulator._NG_P,
                 number_of_trajectory_points = undulator._NG_J,
                 )
 
         elif undulator.code_undul_phot == 'pysru' or  undulator.code_undul_phot == 'pySRU':
             undul_phot_dict = calculate_undulator_emission_pySRU(
-                electron_energy= syned_electron_beam.energy(),
-                electron_current= syned_electron_beam.current(),
-                undulator_period= undulator.period_length(),
-                undulator_nperiods= undulator.number_of_periods(),
-                K         = undulator.K(),
-                photon_energy= undulator._EMIN,
-                EMAX      = undulator._EMAX,
-                NG_E      = undulator._NG_E,
-                MAXANGLE  = undulator._MAXANGLE,
-                number_of_points= undulator._NG_T,
-                NG_P      = undulator._NG_P,
+                electron_energy            = syned_electron_beam.energy(),
+                electron_current           = syned_electron_beam.current(),
+                undulator_period           = undulator.period_length(),
+                undulator_nperiods         = undulator.number_of_periods(),
+                K                          = undulator.K(),
+                photon_energy              = undulator._EMIN,
+                EMAX                       = undulator._EMAX,
+                NG_E                       = undulator._NG_E,
+                MAXANGLE                   = undulator._MAXANGLE,
+                number_of_points           = undulator._NG_T,
+                NG_P                       = undulator._NG_P,
+                number_of_trajectory_points= int(undulator._NG_J * undulator.number_of_periods()),
                 )
         elif undulator.code_undul_phot == 'srw' or  undulator.code_undul_phot == 'SRW':
             undul_phot_dict = calculate_undulator_emission_SRW(
-                electron_energy= syned_electron_beam.energy(),
-                electron_current= syned_electron_beam.current(),
-                undulator_period= undulator.period_length(),
-                undulator_nperiods= undulator.number_of_periods(),
-                K         = undulator.K(),
-                photon_energy= undulator._EMIN,
-                EMAX      = undulator._EMAX,
-                NG_E      = undulator._NG_E,
-                MAXANGLE  = undulator._MAXANGLE,
-                number_of_points= undulator._NG_T,
-                NG_P      = undulator._NG_P,
+                electron_energy             = syned_electron_beam.energy(),
+                electron_current            = syned_electron_beam.current(),
+                undulator_period            = undulator.period_length(),
+                undulator_nperiods          = undulator.number_of_periods(),
+                K                           = undulator.K(),
+                photon_energy               = undulator._EMIN,
+                EMAX                        = undulator._EMAX,
+                NG_E                        = undulator._NG_E,
+                MAXANGLE                    = undulator._MAXANGLE,
+                number_of_points            = undulator._NG_T,
+                NG_P                        = undulator._NG_P,
+                number_of_trajectory_points = undulator._NG_J,
                 )
         else:
             raise Exception("Not implemented undul_phot code: "+undulator.code_undul_phot)
@@ -801,9 +855,7 @@ class S4UndulatorLightSource(S4LightSource):
 
         sampled_photon_energy,sampled_theta,sampled_phi = self._sample_photon_energy_theta_and_phi(NRAYS)
 
-        if self.get_seed() != 0:
-            numpy.random.seed(self.get_seed())
-
+        if self.get_seed() != 0: numpy.random.seed(self.get_seed())
 
         sigmas = syned_electron_beam.get_sigmas_all()
 
@@ -815,9 +867,9 @@ class S4UndulatorLightSource(S4LightSource):
 
 
         if undulator._FLAG_EMITTANCE:
-            x_electron = numpy.random.normal(loc=0.0,scale=sigmas[0],size=NRAYS)
+            x_electron = numpy.random.normal(loc=0.0, scale=sigmas[0], size=NRAYS)
             y_electron = 0.0
-            z_electron = numpy.random.normal(loc=0.0,scale=sigmas[2],size=NRAYS)
+            z_electron = numpy.random.normal(loc=0.0, scale=sigmas[2], size=NRAYS)
         else:
             x_electron = 0.0
             y_electron = 0.0
@@ -839,7 +891,7 @@ class S4UndulatorLightSource(S4LightSource):
             y_photon = 0.0
             z_photon = 0.0
             # for plot, a delta
-            x = numpy.linspace(-1e-6,1e-6,101)
+            x = numpy.linspace(-1e-6, 1e-6, 101)
             y = numpy.zeros_like(x)
             y[y.size//2] = 1.0
             self.__result_photon_size_distribution = {"x":x, "y":y}
@@ -871,19 +923,19 @@ class S4UndulatorLightSource(S4LightSource):
             radial_flux = radiation.sum(axis=2) / shape_radiation[2]
             radial_flux = radial_flux.sum(axis=0) / shape_radiation[0]
             # doble the arrays for 1D propagation
-            THETA = numpy.concatenate((-theta[::-1],theta[1::]),axis=None)
-            RADIAL_FLUX = numpy.concatenate( (radial_flux[::-1],radial_flux[1::]),axis=None)
+            THETA = numpy.concatenate((-theta[::-1], theta[1::]), axis=None)
+            RADIAL_FLUX = numpy.concatenate( (radial_flux[::-1], radial_flux[1::]), axis=None)
 
             #
             # we propagate the emission at a long distance back to the source plane
             #
             distance = 100.
 
-            magnification = s_phot*10 / (theta[-1]*distance)
+            magnification = s_phot*10 / (theta[-1] * distance)
 
             # do the propagation; result is stored in self._photon_size_distribution
-            self._back_propagation_for_size_calculation(THETA,RADIAL_FLUX,
-                                mean_photon_energy,distance=distance,magnification=magnification)
+            self._back_propagation_for_size_calculation(THETA, RADIAL_FLUX,
+                                mean_photon_energy, distance=distance, magnification=magnification)
 
 
             # we sample rays following the resulting radial distribution
@@ -898,8 +950,8 @@ class S4UndulatorLightSource(S4LightSource):
             # self._result_photon_size_distribution = {"x":xx,"y":yy}
             # #########################################################
 
-            sampler_radial = Sampler1D(yy*numpy.abs(xx),xx)
-            r,hy,hx = sampler_radial.get_n_sampled_points_and_histogram(NRAYS,bins=101)
+            sampler_radial = Sampler1D(yy*numpy.abs(xx), xx)
+            r, hy, hx = sampler_radial.get_n_sampled_points_and_histogram(NRAYS, bins=101)
             angle = numpy.random.random(NRAYS) * 2 * numpy.pi
 
             x_photon = r / numpy.sqrt(2.0) * numpy.sin(angle)
@@ -922,8 +974,8 @@ class S4UndulatorLightSource(S4LightSource):
         #
         THETABM = sampled_theta
         PHI = sampled_phi
-        A_Z = numpy.arcsin(numpy.sin(THETABM)*numpy.sin(PHI))
-        A_X = numpy.arccos(numpy.cos(THETABM)/numpy.cos(A_Z))
+        A_Z = numpy.arcsin(numpy.sin(THETABM) * numpy.sin(PHI))
+        A_X = numpy.arccos(numpy.cos(THETABM) / numpy.cos(A_Z))
         THETABM = A_Z
         PHI  = A_X
         # ! C Decide in which quadrant THETA and PHI are.
@@ -933,8 +985,8 @@ class S4UndulatorLightSource(S4LightSource):
         PHI[numpy.where(myrand < 0.5)] *= -1.0
 
         if undulator._FLAG_EMITTANCE:
-            EBEAM1 = numpy.random.normal(loc=0.0,scale=sigmas[1],size=NRAYS)
-            EBEAM3 = numpy.random.normal(loc=0.0,scale=sigmas[3],size=NRAYS)
+            EBEAM1 = numpy.random.normal(loc=0.0, scale=sigmas[1], size=NRAYS)
+            EBEAM3 = numpy.random.normal(loc=0.0, scale=sigmas[3], size=NRAYS)
             ANGLEX = EBEAM1 + PHI
             ANGLEV = EBEAM3 + THETABM
         else:
@@ -943,8 +995,8 @@ class S4UndulatorLightSource(S4LightSource):
 
         VX = numpy.tan(ANGLEX)
         VY = 1.0
-        VZ = numpy.tan(ANGLEV)/numpy.cos(ANGLEX)
-        VN = numpy.sqrt( VX*VX + VY*VY + VZ*VZ)
+        VZ = numpy.tan(ANGLEV) / numpy.cos(ANGLEX)
+        VN = numpy.sqrt( VX * VX + VY * VY + VZ * VZ)
         VX /= VN
         VY /= VN
         VZ /= VN
@@ -974,9 +1026,9 @@ class S4UndulatorLightSource(S4LightSource):
         # A_VEC(2) = 0.0D0
         # A_VEC(3) = 0.0D0
 
-        DIREC = rays[:,3:6].copy()
+        DIREC = rays[:, 3:6].copy()
         A_VEC = numpy.zeros_like(DIREC)
-        A_VEC[:,0] = 1.0
+        A_VEC[:, 0] = 1.0
 
         # ! C
         # ! C   Rotate A_VEC so that it will be perpendicular to DIREC and with the
@@ -1002,8 +1054,7 @@ class S4UndulatorLightSource(S4LightSource):
                 (self.__result_radiation["theta"], self.__result_radiation["phi"]),
                 self.__result_radiation["polarization"][0])
 
-            pts = numpy.dstack( (sampled_theta,
-                                 sampled_phi) )
+            pts = numpy.dstack( (sampled_theta, sampled_phi) )
             pts = pts[0]
             POL_DEG = fn(pts)
         else: # 3D interpolation
@@ -1032,14 +1083,14 @@ class S4UndulatorLightSource(S4LightSource):
         DENOM = numpy.sqrt(1.0 - 2.0 * POL_DEG + 2.0 * POL_DEG**2)
         AX = POL_DEG/DENOM
         for i in range(3):
-            A_VEC[:,i] *= AX
+            A_VEC[:, i] *= AX
 
-        AZ = (1.0-POL_DEG)/DENOM
+        AZ = (1.0 - POL_DEG) / DENOM
         for i in range(3):
-            AP_VEC[:,i] *= AZ
+            AP_VEC[:, i] *= AZ
 
-        rays[:,6:9] =  A_VEC
-        rays[:,15:18] = AP_VEC
+        rays[:, 6:9] =  A_VEC
+        rays[:, 15:18] = AP_VEC
 
         #
         # ! C
@@ -1061,39 +1112,34 @@ class S4UndulatorLightSource(S4LightSource):
 
         PHASEZ = PHASEX + POL_ANGLE * numpy.sign(ANGLEV)
 
-        rays[:,13] = PHASEX
-        rays[:,14] = PHASEZ
+        rays[:, 13] = PHASEX
+        rays[:, 14] = PHASEZ
 
         # set flag (col 10)
-        rays[:,9] = 1.0
+        rays[:, 9] = 1.0
 
         #
         # photon energy (col 11)
         #
 
-        A2EV = 2.0*numpy.pi/(codata.h*codata.c/codata.e*1e2)
-        rays[:,10] =  sampled_photon_energy * A2EV
+        A2EV = 2.0 * numpy.pi / (codata.h * codata.c / codata.e*1e2)
+        rays[:, 10] =  sampled_photon_energy * A2EV
 
         # col 12 (ray index)
-        rays[:,11] =  1 + numpy.arange(NRAYS)
+        rays[:, 11] =  1 + numpy.arange(NRAYS)
 
         # col 13 (optical path)
-        rays[:,12] = 0.0
+        rays[:, 12] = 0.0
 
         return rays
 
-    def _back_propagation_for_size_calculation(self,theta,radiation_flux,photon_energy,
-                                                distance=100.0,magnification=0.010000):
+    def _back_propagation_for_size_calculation(self, theta, radiation_flux, photon_energy,
+                                                distance=100.0, magnification=0.010000):
         """
         Calculate the radiation_flux vs theta at a "distance"
         Back propagate to -distance
         The result is the size distrubution
 
-        :param theta:
-        :param radiation_flux:
-        :param photon_energy:
-        :param distance:
-        :param magnification:
         :return: None; stores results in self._photon_size_distribution
         """
 
@@ -1105,9 +1151,10 @@ class S4UndulatorLightSource(S4LightSource):
         from wofryimpl.beamline.optical_elements.ideal_elements.screen import WOScreen1D
 
 
-        input_wavefront = GenericWavefront1D().initialize_wavefront_from_arrays(theta*distance,numpy.sqrt(radiation_flux)+0j)
+        input_wavefront = GenericWavefront1D().initialize_wavefront_from_arrays(theta * distance,
+                                                                                numpy.sqrt(radiation_flux) + 0j)
         input_wavefront.set_photon_energy(photon_energy)
-        input_wavefront.set_spherical_wave(radius=distance,complex_amplitude=numpy.sqrt(radiation_flux)+0j)
+        input_wavefront.set_spherical_wave(radius=distance, complex_amplitude=numpy.sqrt(radiation_flux) + 0j)
         # input_wavefront.save_h5_file("tmp2.h5","wfr")
 
         optical_element = WOScreen1D()
@@ -1132,81 +1179,45 @@ class S4UndulatorLightSource(S4LightSource):
             pass
         output_wavefront = propagator.do_propagation(propagation_parameters=propagation_parameters,handler_name='FRESNEL_ZOOM_1D')
 
-        self.__result_photon_size_distribution = {"x":output_wavefront.get_abscissas(), "y":output_wavefront.get_intensity()}
+        self.__result_photon_size_distribution = {"x":output_wavefront.get_abscissas(),
+                                                  "y":output_wavefront.get_intensity()}
 
-
-    # def _cross(self,u,v):
-    #     # w = u X v
-    #     # u = array (npoints,vector_index)
-    #
-    #     w = numpy.zeros_like(u)
-    #     w[:,0] = u[:,1] * v[:,2] - u[:,2] * v[:,1]
-    #     w[:,1] = u[:,2] * v[:,0] - u[:,0] * v[:,2]
-    #     w[:,2] = u[:,0] * v[:,1] - u[:,1] * v[:,0]
-    #
-    #     return w
-    #
-    # def _norm(self,u):
-    #     # w = u / |u|
-    #     # u = array (npoints,vector_index)
-    #     u_norm = numpy.zeros_like(u)
-    #     uu = numpy.sqrt( u[:,0]**2 + u[:,1]**2 + u[:,2]**2)
-    #     for i in range(3):
-    #         u_norm[:,i] = uu
-    #     return u / u_norm
-
-    def _sample_photon_energy_theta_and_phi(self,NRAYS):
+    def _sample_photon_energy_theta_and_phi(self, NRAYS):
 
         #
         # sample divergences
         #
-
-        theta = self.__result_radiation["theta"]
-        phi = self.__result_radiation["phi"]
+        theta         = self.__result_radiation["theta"]
+        phi           = self.__result_radiation["phi"]
         photon_energy = self.__result_radiation["photon_energy"]
 
-        photon_energy_spectrum = 'polychromatic' # 'monochromatic' #
-        if self.get_magnetic_structure()._EMIN == self.get_magnetic_structure()._EMAX:
-            photon_energy_spectrum = 'monochromatic'
-        if self.get_magnetic_structure()._NG_E == 1:
-            photon_energy_spectrum = 'monochromatic'
-
-
-        if photon_energy_spectrum == 'monochromatic':
-
+        if self.get_magnetic_structure().is_monochromatic():
             #2D case
             tmp = self.__result_radiation["radiation"][0, :, :].copy()
             tmp /= tmp.max()
-
             # correct radiation for DxDz / DthetaDphi
-            tmp_theta = numpy.outer(theta,numpy.ones_like(phi))
+            tmp_theta = numpy.outer(theta, numpy.ones_like(phi))
             tmp_theta /= tmp_theta.max()
             tmp_theta += 1e-6 # to avoid zeros
             tmp *= tmp_theta
             # plot_image(tmp_theta,theta,phi,aspect='auto')
-
-            s2d = Sampler2D(tmp,theta,phi)
+            s2d = Sampler2D(tmp, theta, phi)
             sampled_theta,sampled_phi = s2d.get_n_sampled_points(NRAYS)
-
             sampled_photon_energy = self.get_magnetic_structure()._EMIN
-
-        elif photon_energy_spectrum == "polychromatic":
+        else:
             #3D case
             tmp = self.__result_radiation["radiation"].copy()
             tmp /= tmp.max()
             # correct radiation for DxDz / DthetaDphi
-            tmp_theta = numpy.outer(theta,numpy.ones_like(phi))
+            tmp_theta = numpy.outer(theta, numpy.ones_like(phi))
             tmp_theta /= tmp_theta.max()
             tmp_theta += 1e-6 # to avoid zeros
             for i in range(tmp.shape[0]):
                 tmp[i,:,:] *= tmp_theta
-
-            s3d = Sampler3D(tmp,photon_energy,theta,phi)
-
+            s3d = Sampler3D(tmp, photon_energy, theta, phi)
             sampled_photon_energy,sampled_theta,sampled_phi = s3d.get_n_sampled_points(NRAYS)
 
-
-        return sampled_photon_energy,sampled_theta,sampled_phi
+        return sampled_photon_energy, sampled_theta, sampled_phi
 
 
 
@@ -1219,7 +1230,7 @@ if __name__ == "__main__":
     su = S4Undulator(K_vertical=0.25,
                      period_length=0.032,
                      number_of_periods=50,
-                     code_undul_phot='SRW',
+                     code_undul_phot='internal',
                      use_gaussian_approximation=1,
                      emin=10000.0,
                      emax=15000.0,
@@ -1238,25 +1249,27 @@ if __name__ == "__main__":
 
     ls = S4UndulatorLightSource(name="", electron_beam=ebeam, magnetic_structure=su)
 
-    # beam =  ls.get_beam()
-
-    print(ls.info())
-    # print(ls.to_python_code())
-
-    # ls.set_energy_monochromatic_at_resonance(harmonic_number=1)
-    print(ls.info())
-    print("source size: ", ls.get_result_photon_size_sigma())
+    # # beam =  ls.get_beam()
+    #
+    # print(ls.info())
+    # # print(ls.to_python_code())
+    #
+    ls.set_energy_monochromatic_at_resonance(harmonic_number=1)
+    # print(ls.info())
+    # print("source size: ", ls.get_result_photon_size_sigma())
 
     print("dict: ")
     d = ls.get_result_dictionary()
     for key in d.keys():
         print(key)
 
-    print("radiation: ", d["radiation"].shape)
-    print("polarization: ", d["polarization"].shape)
-    print("phi: ", d["phi"].shape)
-    print("theta: ", d["theta"].shape)
-
-    # print(ls.get_flux_and_spectral_power())
-    # print(ls.get_photon_size_distribution())
+    # print("radiation: ", d["radiation"].shape)
+    # print("polarization: ", d["polarization"].shape)
+    # print("phi: ", d["phi"].shape)
+    # print("theta: ", d["theta"].shape)
+    traj = d['trajectory']
+    from srxraylib.plot.gol import plot
+    import scipy.constants as codata
+    plot(traj[3] * codata.c, traj[1] * codata.c, xtitle="Z", ytitle="X")
+    plot(traj[3] * codata.c, traj[4], xtitle="Z", ytitle="beta_x")
 

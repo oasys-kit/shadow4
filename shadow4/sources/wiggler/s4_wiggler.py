@@ -1,5 +1,5 @@
 """
-Wiggler magnetic structure.
+S4 Wiggler magnetic structure.
 """
 import numpy
 from syned.storage_ring.magnetic_structures.wiggler import Wiggler
@@ -119,13 +119,12 @@ class S4Wiggler(Wiggler):
 
     def get_info(self):
         """
-        Returns the specific information of the wiggler magnetic structure. .
+        Returns the specific information of the wiggler magnetic structure.
 
         Returns
         -------
         str
         """
-
         txt = ""
         # txt += "-----------------------------------------------------\n"
 
@@ -172,7 +171,7 @@ class S4Wiggler(Wiggler):
         """
         return self._FLAG_EMITTANCE
 
-    def set_energy_monochromatic(self,emin):
+    def set_energy_monochromatic(self, emin):
         """
         Sets a single energy line for the source (monochromatic).
 
@@ -186,7 +185,7 @@ class S4Wiggler(Wiggler):
         self._NG_E = 1
 
 
-    def set_energy_box(self,emin,emax,npoints=None):
+    def set_energy_box(self, emin, emax, npoints=None):
         """
         Sets a box for photon energy distribution for the source.
 
@@ -228,7 +227,21 @@ class S4Wiggler(Wiggler):
         if self._EMAX == self._EMIN: return True
         return False
 
-    def set_electron_initial_conditions(self,shift_x_flag=0,shift_x_value=0.0,shift_betax_flag=0,shift_betax_value=0.0):
+    def set_electron_initial_conditions(self, shift_x_flag=0, shift_x_value=0.0, shift_betax_flag=0, shift_betax_value=0.0):
+        """
+        Defines the shifts in position and velocity of the electron trajectory.
+
+        Parameters
+        ----------
+        shift_x_flag : int, optional
+            flag values are 0:'no_shift', 1:'half_excursion', 2:'minimum', 3:'maximum', 4:'value_at_zero', 5:'user_value'.
+        shift_betax_flag : int, optional
+            flag values are 0:'no_shift', 1:'half_excursion', 2:'minimum', 3:'maximum', 4:'value_at_zero', 5:'user_value'.
+        shift_x_value : float, optional
+            For shift_x_flag=5, the numeric value to consider.
+        shift_betax_value : float, optional
+            For shift_betax_flag=5, the numeric value to consider.
+        """
         self._shift_x_flag      = shift_x_flag
         self._shift_x_value     = shift_x_value
         self._shift_betax_flag  = shift_betax_flag
