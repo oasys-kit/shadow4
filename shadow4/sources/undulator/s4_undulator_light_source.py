@@ -412,15 +412,15 @@ class S4UndulatorLightSource(S4LightSource):
         theta = self.get_result_theta()
         phi = self.get_result_phi()
         photon_energy = self.get_result_photon_energy()
-        THETA = numpy.outer(theta,numpy.ones_like(phi))
+        THETA = numpy.outer(theta, numpy.ones_like(phi))
         for i in range(radiation2.shape[0]):
             radiation2[i] *= THETA
 
         if INTEGRATION_METHOD == 0:
-            flux = radiation2.sum(axis=2).sum(axis=1) * (1e-3*photon_energy) # photons/eV -> photons/0.1%bw
-            flux *= 4 * (theta[1]-theta[0]) * (phi[1]-phi[0]) # adding the four quadrants!
+            flux = radiation2.sum(axis=2).sum(axis=1) * (1e-3 * photon_energy) # photons/eV -> photons/0.1%bw
+            flux *= 4 * (theta[1] - theta[0]) * (phi[1] - phi[0]) # adding the four quadrants!
         else:
-            flux = 4 * numpy.trapz(numpy.trapz(radiation2,phi,axis=2),theta,axis=1) * (1e-3*photon_energy) # photons/eV -> photons/0.1%bw
+            flux = 4 * numpy.trapz(numpy.trapz(radiation2, phi, axis=2), theta, axis=1) * (1e-3 * photon_energy) # photons/eV -> photons/0.1%bw
 
 
         spectral_power = flux*codata.e*1e3
