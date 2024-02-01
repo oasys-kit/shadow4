@@ -63,6 +63,7 @@ class S4UndulatorLightSource(S4LightSource):
         self.__result_radiation = None
         self.__result_photon_size_distribution = None
         self.__result_photon_size_sigma = None
+        self.__result_photon_size_farfield = None
 
     def get_beam(self, F_COHER=0, verbose=1):
         """
@@ -477,6 +478,26 @@ class S4UndulatorLightSource(S4LightSource):
 
         return self.__result_photon_size_distribution["x"], self.__result_photon_size_distribution["y"]
 
+    def get_photon_size_farfield(self):
+        """
+        Returns the arrays of far field distribution.
+
+        Returns
+        -------
+        tuple
+            (array_x, array_z).
+        """
+        if self.__result_photon_size_distribution is None:
+            raise Exception("Not yet calculated...")
+
+        # theta, radial_flux, mean_photon_energy, distance, magnification
+        return self.__result_photon_size_farfield["theta"],\
+               self.__result_photon_size_farfield["radial_flux"], \
+               self.__result_photon_size_farfield["mean_photon_energy"], \
+               self.__result_photon_size_farfield["distance"], \
+               self.__result_photon_size_farfield["magnification"]
+
+
     def get_beam_in_gaussian_approximation(self):
         """
         Returns the beam with the sampled rays using for an undulator modelled with the Gaussian approximation.
@@ -853,7 +874,7 @@ class S4UndulatorLightSource(S4LightSource):
         syned_electron_beam = self.get_electron_beam()
         undulator = self.get_magnetic_structure()
 
-        sampled_photon_energy,sampled_theta,sampled_phi = self._sample_photon_energy_theta_and_phi(NRAYS)
+        sampled_photon_energy, sampled_theta, sampled_phi = self._sample_photon_energy_theta_and_phi(NRAYS)
 
         if self.get_seed() != 0: numpy.random.seed(self.get_seed())
 
@@ -912,11 +933,9 @@ class S4UndulatorLightSource(S4LightSource):
             x = numpy.linspace(-5*s_phot,5*s_phot,101)
             y = numpy.exp(-x**2/2/s_phot**2)
             self.__result_photon_size_distribution = {"x":x, "y":y}
-
-
         elif undulator._FLAG_SIZE == 2:
             # we need to retrieve the emission as a function of the angle
-            radiation,photon_energy, theta,phi = self.get_radiation_polar()
+            radiation, photon_energy, theta,phi = self.get_radiation_polar()
 
             mean_photon_energy = numpy.array(sampled_photon_energy).mean() # todo: use the weighted mean?
             shape_radiation = radiation.shape
@@ -934,8 +953,16 @@ class S4UndulatorLightSource(S4LightSource):
             magnification = s_phot*10 / (theta[-1] * distance)
 
             # do the propagation; result is stored in self._photon_size_distribution
-            self._back_propagation_for_size_calculation(THETA, RADIAL_FLUX,
-                                mean_photon_energy, distance=distance, magnification=magnification)
+
+            self.__result_photon_size_farfield = {
+                                                "theta": THETA,
+                                                "radial_flux": RADIAL_FLUX,
+                                                "mean_photon_energy": mean_photon_energy,
+                                                "distance": distance,
+                                                "magnification": magnification}
+
+            self._back_propagation_for_size_calculation() #THETA, RADIAL_FLUX, mean_photon_energy,
+                                                        # distance=distance, magnification=magnification)
 
 
             # we sample rays following the resulting radial distribution
@@ -1133,8 +1160,9 @@ class S4UndulatorLightSource(S4LightSource):
 
         return rays
 
-    def _back_propagation_for_size_calculation(self, theta, radiation_flux, photon_energy,
-                                                distance=100.0, magnification=0.010000):
+    # todo: insert the phase!!
+    def _back_propagation_for_size_calculation(self): # self, theta, radiation_flux, photon_energy,
+                                                # distance=100.0, magnification=0.010000):
         """
         Calculate the radiation_flux vs theta at a "distance"
         Back propagate to -distance
@@ -1149,6 +1177,12 @@ class S4UndulatorLightSource(S4LightSource):
         from syned.beamline.element_coordinates import ElementCoordinates
         from wofryimpl.propagator.propagators1D.fresnel_zoom import FresnelZoom1D
         from wofryimpl.beamline.optical_elements.ideal_elements.screen import WOScreen1D
+
+        theta          = self.__result_photon_size_farfield["theta"]
+        radiation_flux = self.__result_photon_size_farfield["radial_flux"]
+        photon_energy  = self.__result_photon_size_farfield["mean_photon_energy"]
+        distance       = self.__result_photon_size_farfield["distance"]
+        magnification  = self.__result_photon_size_farfield["magnification"]
 
 
         input_wavefront = GenericWavefront1D().initialize_wavefront_from_arrays(theta * distance,
