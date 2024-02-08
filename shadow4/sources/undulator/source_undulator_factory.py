@@ -82,8 +82,8 @@ def _pysru_energy_radiated_approximation_and_farfield(omega=2.53465927101e17, el
     # trajectory_a_y = trajectory[8]
     # trajectory_a_z = trajectory[9]
 
-    E = np.zeros((3,), dtype=np.complex)
-    integrand = np.zeros((3, N), dtype=np.complex)
+    E = np.zeros((3,), dtype=complex)
+    integrand = np.zeros((3, N), dtype=complex)
     A1 = ( n_chap[1] * trajectory_v_z - n_chap[2] * trajectory_v_y)
     A2 = (-n_chap[0] * trajectory_v_z + n_chap[2] * trajectory_v_x)
     A3 = ( n_chap[0] * trajectory_v_y - n_chap[1] * trajectory_v_x)
@@ -100,7 +100,7 @@ def _pysru_energy_radiated_approximation_and_farfield(omega=2.53465927101e17, el
         E[k] = np.trapz(integrand[k], trajectory_t)
     E *= omega * 1j
 
-    terme_bord = np.full((3), 0. + 1j * 0., dtype=np.complex)
+    terme_bord = np.full((3), 0. + 1j * 0., dtype=complex)
     Alpha_1 = (1.0 / (1.0 - n_chap[0] * trajectory_v_x[-1]
                       - n_chap[1] * trajectory_v_y[-1] - n_chap[2] * trajectory_v_z[-1]))
     Alpha_0 = (1.0 / (1.0 - n_chap[0] * trajectory_v_x[0]
@@ -139,6 +139,9 @@ def _undul_phot(E_ENERGY,INTENSITY, LAMBDAU, NPERIODS, K, EMIN, EMAX, NG_E, MAXA
 
     Z2 = np.zeros((omega_array.size, theta.size, phi.size))
     POL_DEG = np.zeros_like(Z2)
+    EFIELD_X = np.zeros_like(Z2, dtype=complex)
+    EFIELD_Y = np.zeros_like(Z2, dtype=complex)
+    EFIELD_Z = np.zeros_like(Z2, dtype=complex)
     for o in range(omega_array.size):
         print("Calculating energy %8.3f eV (%d of %d)"%(E[o],o+1,omega_array.size))
         for t in range(theta.size):
@@ -157,15 +160,29 @@ def _undul_phot(E_ENERGY,INTENSITY, LAMBDAU, NPERIODS, K, EMIN, EMAX, NG_E, MAXA
                 # pol_deg = np.abs(ElecField[0])**2 / (np.abs(ElecField[0])**2 + np.abs(ElecField[1])**2)
                 pol_deg = np.abs(ElecField[0]) / (np.abs(ElecField[0]) + np.abs(ElecField[1])) # SHADOW definition
                 intensity =  (np.abs(ElecField[0]) ** 2 + np.abs(ElecField[1])** 2 + np.abs(ElecField[2])** 2)
+                # print(np.abs(ElecField[0]) ** 2 / intensity,
+                #       np.abs(ElecField[1]) ** 2 / intensity,
+                #       np.abs(ElecField[2]) ** 2 / intensity,)
 
                 #  Conversion from pySRU units (photons/mm^2/0.1%bw) to SHADOW units (photons/rad^2/eV)
                 intensity *= (D * 1e3)**2 # photons/mm^2 -> photons/rad^2
                 intensity /= 1e-3 * E[o] # photons/o.1%bw -> photons/eV
 
-                Z2[o,t,p] = intensity
-                POL_DEG[o,t,p] = pol_deg
+                Z2[o, t, p] = intensity
+                POL_DEG[o, t, p] = pol_deg
+                EFIELD_X[o, t, p] = ElecField[0]
+                EFIELD_Y[o, t, p] = ElecField[1]
+                EFIELD_Z[o, t, p] = ElecField[2]
 
-    return {'radiation':Z2, 'polarization':POL_DEG, 'photon_energy':E, 'theta':theta, 'phi':phi, 'trajectory':T}
+    return {'radiation':Z2,
+            'polarization':POL_DEG,
+            'photon_energy':E,
+            'theta':theta,
+            'phi':phi,
+            'trajectory':T,
+            'e_amplitude_sigma': EFIELD_X, # todo: verify!
+            'e_amplitude_pi':    EFIELD_Y, # todo: verify!
+            }
 
 def calculate_undulator_emission(electron_energy              = 6.0,
                                  electron_current             = 0.2,
@@ -248,3 +265,25 @@ def undul_cdf(undul_phot_dict, method='trapz'):
             'theta':T,
             'phi':P,
             'polarization':POL_DEG}
+
+if __name__ == "__main__":
+    dict1 = calculate_undulator_emission(
+                     electron_energy              = 6.0,
+                     electron_current             = 0.2,
+                     undulator_period             = 0.025,
+                     undulator_nperiods           = 188.0,
+                     K                            = 1.681183,
+                     photon_energy                = 5591.0,
+                     EMAX                         = 5700.0,
+                     NG_E                         = 11,
+                     MAXANGLE                     = 2e-5,
+                     number_of_points             = 51,
+                     NG_P                         = 11,
+                     number_of_trajectory_points  = 51)
+
+    from srxraylib.plot.gol import plot_image
+    plot_image(dict1['radiation'][0], dict1['theta'], dict1['phi'], aspect='auto',  title="first", show=0)
+    plot_image(dict1['radiation'][-1], dict1['theta'], dict1['phi'], aspect='auto', title="last", show=1)
+
+    plot_image(dict1['CART_radiation'][0], 1e6 * dict1['CART_x'], 1e6 * dict1['CART_y'], aspect='auto', title="first", show=0)
+    plot_image(dict1['CART_radiation'][-1], 1e6 * dict1['CART_x'], 1e6 * dict1['CART_y'], aspect='auto', title="last", show=1)
