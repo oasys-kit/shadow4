@@ -147,11 +147,12 @@ class _ShadowOEHybridScreen():
         calculation_parameters.set("shadow_beam",    beam_at_image_plane)
         calculation_parameters.set("footprint_beam", footprint_beam)
 
-        image_beam_good, image_beam_lost = self._process_shadow_beam(beam_at_image_plane, lost=True)  # xshi change from 0 to 1
+        image_beam_good, image_beam_lost, good_only_cursor = self._process_shadow_beam(beam_at_image_plane, lost=True)  # xshi change from 0 to 1
         #image_beam.set_initial_flux(input_parameters.original_beam.wrapped_beam.get_initial_flux())
 
         calculation_parameters.set("image_plane_beam_good", image_beam_good)
         calculation_parameters.set("image_plane_beam_lost", image_beam_lost)
+        calculation_parameters.set("good_only_cursor",      good_only_cursor)
 
         input_parameters.listener.status_message("Projecting beam at HYBRID screen")
 
@@ -266,9 +267,9 @@ class _ShadowOEHybridScreen():
             out_beam_lo = S4Beam()
             out_beam_lo.rays = lost_rays
     
-            return out_beam_go, out_beam_lo
+            return out_beam_go, out_beam_lo, cursor_go
         else:
-            return out_beam_go
+            return out_beam_go, None, cursor_go
 
     def _apply_convolution_to_rays(self, input_parameters: HybridInputParameters, calculation_parameters : AbstractHybridScreen.CalculationParameters):
         image_plane_beam_good = calculation_parameters.get("image_plane_beam_good")
@@ -418,17 +419,21 @@ class _S4OEWithSurfaceHybridScreen(_ShadowOEHybridScreen):
         return geometrical_parameters
 
     def _get_footprint_spatial_coordinates(self, input_parameters: HybridInputParameters, calculation_parameters : AbstractHybridScreen.CalculationParameters) -> Tuple[numpy.ndarray, numpy.ndarray]:
-        footprint_beam = calculation_parameters.get("footprint_beam")
+        footprint_beam   = calculation_parameters.get("footprint_beam")
+        good_only_cursor = calculation_parameters.get("good_only_cursor")
 
-        xx_mirr = footprint_beam.rays[:, 0]
-        yy_mirr = footprint_beam.rays[:, 1]
+        xx_mirr = footprint_beam.rays[:, 0][good_only_cursor]
+        yy_mirr = footprint_beam.rays[:, 1][good_only_cursor]
 
         return xx_mirr, yy_mirr
 
     def _get_rays_angles(self, input_parameters: HybridInputParameters, calculation_parameters: AbstractHybridScreen.CalculationParameters) -> Tuple[numpy.ndarray, numpy.ndarray]:
         beamline_element = input_parameters.optical_element.wrapped_optical_element
+        good_only_cursor = calculation_parameters.get("good_only_cursor")
 
         input_beam       = beamline_element.get_input_beam().duplicate()
+        input_beam.rays  = input_beam.rays[good_only_cursor]
+
         optical_element  = beamline_element.get_optical_element().duplicate()
 
         v_in = input_beam.get_columns([4, 5, 6])
@@ -455,35 +460,35 @@ class _S4OEWithSurfaceHybridScreen(_ShadowOEHybridScreen):
         shadow_element = calculation_parameters.get("shadow_element")
         movements      = shadow_element.get_movements()
 
-        if movements is None: return False
+        if movements is None: return False, 0.0
         else: return movements.rotation_x != 0.0, movements.rotation_x
 
     def _has_roll_displacement(self, input_parameters: HybridInputParameters, calculation_parameters : AbstractHybridScreen.CalculationParameters) -> Tuple[bool, float]:
         shadow_element = calculation_parameters.get("shadow_element")
         movements      = shadow_element.get_movements()
 
-        if movements is None: return False
+        if movements is None: return False, 0.0
         else: return movements.rotation_y != 0.0, movements.rotation_y
 
     def _has_sagittal_offset(self, input_parameters: HybridInputParameters, calculation_parameters : AbstractHybridScreen.CalculationParameters) -> Tuple[bool, float]:
         shadow_element = calculation_parameters.get("shadow_element")
         movements      = shadow_element.get_movements()
 
-        if movements is None: return False
+        if movements is None: return False, 0.0
         else: return movements.offset_x != 0.0, movements.offset_x
 
     def _has_normal_offset(self, input_parameters: HybridInputParameters, calculation_parameters : AbstractHybridScreen.CalculationParameters) -> Tuple[bool, float]:
         shadow_element = calculation_parameters.get("shadow_element")
         movements      = shadow_element.get_movements()
 
-        if movements is None: return False
+        if movements is None: return False, 0.0
         else: return movements.offset_z != 0.0, movements.offset_z
 
     def _get_optical_element_angles(self, input_parameters: HybridInputParameters, calculation_parameters : AbstractHybridScreen.CalculationParameters) -> Tuple[float, float]:
         shadow_element = calculation_parameters.get("shadow_element")
         coordinates    = shadow_element.get_coordinates()
         
-        return (numpy.pi / 2 - coordinates.angle_radial()) , (numpy.pi / 2 - coordinates.angle_radial_out())
+        return (numpy.pi / 2 - coordinates.angle_radial()), (numpy.pi / 2 - coordinates.angle_radial_out())
    
     def _get_optical_element_spatial_limits(self, input_parameters: HybridInputParameters, calculation_parameters : AbstractHybridScreen.CalculationParameters) -> Tuple[float, float, float, float]:
         shadow_element = calculation_parameters.get("shadow_element")
