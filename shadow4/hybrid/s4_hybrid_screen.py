@@ -196,7 +196,7 @@ class _ShadowOEHybridScreen():
         return calculation_parameters
 
     def _get_shadow_beam_for_initial_tracing(self, input_parameters: HybridInputParameters):
-        return input_parameters.beam.wrapped_beam
+        return input_parameters.optical_element.wrapped_optical_element.get_input_beam()
 
     def _get_shadow_optical_element_for_initial_tracing(self, input_parameters: HybridInputParameters, beamline_element: BeamlineElement):
         return beamline_element.get_optical_element()
@@ -221,9 +221,9 @@ class _ShadowOEHybridScreen():
                                               ref=23)
 
             histogram_s  = ticket['histogram_h']
-            bins_s       = ticket['bin_h_edges']
+            bins_s       = ticket['bin_h_center']
             histogram_t  = ticket['histogram_v']
-            bins_t       = ticket['bin_v_edges']
+            bins_t       = ticket['bin_v_center']
             histogram_2D = ticket['histogram']
         else:
             if input_parameters.diffraction_plane in [HybridDiffractionPlane.SAGITTAL, HybridDiffractionPlane.BOTH_2X1D]:  # 1d in X
