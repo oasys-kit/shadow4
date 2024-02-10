@@ -127,23 +127,22 @@ class _ShadowOEHybridScreen():
 
         if not movements is None:
             # tracing must be done without o.e. movements: hybrid is going to take care of that
-            x_rot                = movements.rotation_x
-            y_rot                = movements.rotation_y
-            z_rot                = movements.rotation_z
+            x_rot = movements.rotation_x
+            y_rot = movements.rotation_y
+            z_rot = movements.rotation_z
 
-            movements.rotation_x   = 0.0
-            movements.rotation_y   = 0.0
-            movements.rotation_z   = 0.0
+            movements.rotation_x = 0.0
+            movements.rotation_y = 0.0
+            movements.rotation_z = 0.0
 
         beam_at_image_plane, footprint_beam = shadow_element.trace_beam()
 
         if not movements is None:
             # restore o.e. setting for further calculations
-            movements.rotation_x   = x_rot
-            movements.rotation_y   = y_rot
-            movements.rotation_z   = z_rot
+            movements.rotation_x = x_rot
+            movements.rotation_y = y_rot
+            movements.rotation_z = z_rot
 
-        calculation_parameters.set("shadow_element", shadow_element)
         calculation_parameters.set("shadow_beam",    beam_at_image_plane)
         calculation_parameters.set("footprint_beam", footprint_beam)
 
@@ -345,7 +344,7 @@ class _S4ApertureHybridScreen(_ShadowOEHybridScreen):
         if not shadow_oe_element.get_movements() is None: raise Exception("O.E. Movements are not supported for this kind of calculation")
 
     def _calculate_geometrical_parameters(self, input_parameters: HybridInputParameters):
-        geometrical_parameters = S4SimpleApertureHybridScreen.GeometricalParameters()
+        geometrical_parameters = AbstractHybridScreen.GeometricalParameters()
 
         shadow_element = input_parameters.optical_element.wrapped_optical_element
         beam_before      = shadow_element.get_input_beam()
@@ -390,7 +389,7 @@ class _S4OEWithSurfaceHybridScreen(_ShadowOEHybridScreen):
                 if movements.rotation_z != 0.0:                               raise Exception("Only rotations around the X and Y axis are supported for Both (1D+1D) diffraction planes")
 
     def _calculate_geometrical_parameters(self, input_parameters: HybridInputParameters):
-        geometrical_parameters = S4SimpleApertureHybridScreen.GeometricalParameters()
+        geometrical_parameters = AbstractHybridScreen.GeometricalParameters()
 
         beamline_element = input_parameters.optical_element.wrapped_optical_element.duplicate()
         beam_before      = beamline_element.get_input_beam()
@@ -401,16 +400,22 @@ class _S4OEWithSurfaceHybridScreen(_ShadowOEHybridScreen):
         else:
             beam_before.rays = beam_before.rays[numpy.where(beam_before.rays[:, 9] == 1)]  # GOOD ONLY BEFORE THE BEAM
 
-            _, footprint_beam = beamline_element.trace_beam()
+            boundary_shape = oe_before.get_boundary_shape()
 
-            boundaries = oe_before.get_boundary_shape().get_boundaries()
+            boundaries = boundary_shape.get_boundaries()
 
             geometrical_parameters.max_tangential = boundaries[3]
             geometrical_parameters.min_tangential = boundaries[2]
             geometrical_parameters.max_sagittal   = boundaries[1]
             geometrical_parameters.min_sagittal   = boundaries[0]
 
-            ticket_tangential = footprint_beam.histo1(3, nbins=500, nolost=1, ref=23)
+            oe_before._boundary_shape = None # make it infinite to compute the real size of the beam
+
+            _, footprint_beam = beamline_element.trace_beam()
+
+            oe_before._boundary_shape = boundary_shape
+
+            ticket_tangential = footprint_beam.histo1(2, nbins=500, nolost=1, ref=23)
             ticket_sagittal   = footprint_beam.histo1(1, nbins=500, nolost=1, ref=23)
 
             geometrical_parameters.ticket_tangential = {'histogram' : ticket_tangential["histogram"], 'bins' : ticket_tangential["bin_center"]}
@@ -457,49 +462,46 @@ class _S4OEWithSurfaceHybridScreen(_ShadowOEHybridScreen):
         return incidence_angle, reflection_angle
 
     def _has_pitch_displacement(self, input_parameters: HybridInputParameters, calculation_parameters : AbstractHybridScreen.CalculationParameters) -> Tuple[bool, float]:
-        shadow_element = calculation_parameters.get("shadow_element")
-        movements      = shadow_element.get_movements()
+        movements      = input_parameters.optical_element.wrapped_optical_element.get_movements()
 
         if movements is None: return False, 0.0
         else: return movements.rotation_x != 0.0, movements.rotation_x
 
     def _has_roll_displacement(self, input_parameters: HybridInputParameters, calculation_parameters : AbstractHybridScreen.CalculationParameters) -> Tuple[bool, float]:
-        shadow_element = calculation_parameters.get("shadow_element")
-        movements      = shadow_element.get_movements()
+        movements      = input_parameters.optical_element.wrapped_optical_element.get_movements()
 
         if movements is None: return False, 0.0
         else: return movements.rotation_y != 0.0, movements.rotation_y
 
     def _has_sagittal_offset(self, input_parameters: HybridInputParameters, calculation_parameters : AbstractHybridScreen.CalculationParameters) -> Tuple[bool, float]:
-        shadow_element = calculation_parameters.get("shadow_element")
-        movements      = shadow_element.get_movements()
+        movements      = input_parameters.optical_element.wrapped_optical_element.get_movements()
 
         if movements is None: return False, 0.0
         else: return movements.offset_x != 0.0, movements.offset_x
 
     def _has_normal_offset(self, input_parameters: HybridInputParameters, calculation_parameters : AbstractHybridScreen.CalculationParameters) -> Tuple[bool, float]:
-        shadow_element = calculation_parameters.get("shadow_element")
-        movements      = shadow_element.get_movements()
+        movements      = input_parameters.optical_element.wrapped_optical_element.get_movements()
 
         if movements is None: return False, 0.0
         else: return movements.offset_z != 0.0, movements.offset_z
 
     def _get_optical_element_angles(self, input_parameters: HybridInputParameters, calculation_parameters : AbstractHybridScreen.CalculationParameters) -> Tuple[float, float]:
-        shadow_element = calculation_parameters.get("shadow_element")
-        coordinates    = shadow_element.get_coordinates()
+        coordinates    = input_parameters.optical_element.wrapped_optical_element.get_coordinates()
         
         return (numpy.pi / 2 - coordinates.angle_radial()), (numpy.pi / 2 - coordinates.angle_radial_out())
    
     def _get_optical_element_spatial_limits(self, input_parameters: HybridInputParameters, calculation_parameters : AbstractHybridScreen.CalculationParameters) -> Tuple[float, float, float, float]:
-        shadow_element = calculation_parameters.get("shadow_element")
-        boundaries = shadow_element.get_optical_element().get_boundary_shape().get_boundaries()
+        boundaries = input_parameters.optical_element.wrapped_optical_element.get_optical_element().get_boundary_shape().get_boundaries()
 
         return boundaries[1], boundaries[0], boundaries[3], boundaries[2]
 
     def _get_focal_length_from_optical_element(self, input_parameters: HybridInputParameters, calculation_parameters : AbstractHybridScreen.CalculationParameters) -> float:
-        shadow_element = calculation_parameters.get("shadow_element")
-        coordinates    = shadow_element.get_coordinates()
-        surface_shape  = shadow_element.get_optical_element().get_surface_shape()
+        if isinstance(input_parameters.optical_element.wrapped_optical_element, S4AdditionalNumericalMeshMirrorElement):
+            surface_shape = input_parameters.optical_element.wrapped_optical_element.get_optical_element().ideal_mirror().get_surface_shape()
+        elif isinstance(input_parameters.optical_element.wrapped_optical_element, S4AdditionalNumericalMeshGratingElement):
+            surface_shape = input_parameters.optical_element.wrapped_optical_element.get_optical_element().ideal_grating().get_surface_shape()
+        else:
+            surface_shape  = input_parameters.optical_element.wrapped_optical_element.get_optical_element().get_surface_shape()
 
         if   (isinstance(surface_shape, Ellipsoid) or isinstance(surface_shape, EllipticalCylinder)) or \
              (isinstance(surface_shape, Hyperboloid) or isinstance(surface_shape, HyperbolicCylinder)): return surface_shape.get_p_focus()
@@ -515,8 +517,7 @@ class _S4OEWithSurfaceAndErrorHybridScreen(_S4OEWithSurfaceHybridScreen):
         else: raise ValueError("This should never happen")
 
     def _get_error_profile(self, input_parameters: HybridInputParameters, calculation_parameters : AbstractHybridScreen.CalculationParameters) -> ScaledMatrix:
-        shadow_element  = calculation_parameters.get("shadow_element")
-        optical_surface = shadow_element.get_optical_element().get_optical_surface_instance()
+        optical_surface = input_parameters.optical_element.wrapped_optical_element.get_optical_element().get_optical_surface_instance()
 
         x_coords, y_coords = optical_surface.get_mesh_x_y()
         z_values           = optical_surface.get_mesh_z()
@@ -524,16 +525,14 @@ class _S4OEWithSurfaceAndErrorHybridScreen(_S4OEWithSurfaceHybridScreen):
         return ScaledMatrix(x_coords, y_coords, z_values)
 
     def _get_tangential_displacement_index(self, input_parameters: HybridInputParameters, calculation_parameters: AbstractHybridScreen.CalculationParameters):
-        shadow_element = calculation_parameters.get("shadow_element")
-        movements      = shadow_element.get_movements()
+        movements      = input_parameters.optical_element.wrapped_optical_element.get_movements()
 
         error_profile = calculation_parameters.get("error_profile")
 
         return 0.0 if movements is None else movements.offset_y / error_profile.delta_y()
 
     def _get_sagittal_displacement_index(self, input_parameters: HybridInputParameters, calculation_parameters: AbstractHybridScreen.CalculationParameters):
-        shadow_element = calculation_parameters.get("shadow_element")
-        movements      = shadow_element.get_movements()
+        movements      = input_parameters.optical_element.wrapped_optical_element.get_movements()
 
         error_profile = calculation_parameters.get("error_profile")
 
@@ -543,7 +542,7 @@ class _S4OELensHybridScreen(_S4ApertureHybridScreen):
     def _check_oe_displacements(self, input_parameters : HybridInputParameters): pass
 
     def _calculate_geometrical_parameters(self, input_parameters: HybridInputParameters):
-        geometrical_parameters = S4SimpleApertureHybridScreen.GeometricalParameters()
+        geometrical_parameters = AbstractHybridScreen.GeometricalParameters()
 
         shadow_element = input_parameters.optical_element.wrapped_optical_element
         beam_before      = shadow_element.get_input_beam()
