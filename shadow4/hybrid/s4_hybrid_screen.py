@@ -456,8 +456,11 @@ class _S4OEWithSurfaceHybridScreen(_ShadowOEHybridScreen):
                                  v_out[1,:] * normal[1,:] +
                                  v_out[2,:] * normal[2,:])
 
-        incidence_angle  = numpy.pi / 2 - angle_in
-        reflection_angle = numpy.pi / 2 - angle_out
+        incidence_angle  = (numpy.pi / 2) - angle_in  # grazing angles
+        reflection_angle = (numpy.pi / 2) - angle_out # grazing angles
+
+        #print(numpy.min(1000*(incidence_angle)),  numpy.average(1000*(incidence_angle)),  numpy.max(1000*(incidence_angle)))
+        #print(numpy.min(1000*(reflection_angle)), numpy.average(1000*(reflection_angle)), numpy.max(1000*(reflection_angle)))
 
         return incidence_angle, reflection_angle
 
