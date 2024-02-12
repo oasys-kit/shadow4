@@ -47,7 +47,7 @@
 import numpy
 import scipy.constants as codata
 
-from syned.beamline.shape import Ellipsoid, EllipticalCylinder, Hyperboloid, HyperbolicCylinder, Sphere, SphericalCylinder, Paraboloid, ParabolicCylinder
+from syned.beamline.shape import Ellipsoid, EllipticalCylinder, Hyperboloid, HyperbolicCylinder, Circle
 
 from shadow4.beam.s4_beam import S4Beam
 from shadow4.optical_surfaces.s4_mesh import S4Mesh
@@ -119,8 +119,8 @@ class _ShadowOEHybridScreen():
 
     def _manage_common_initial_screen_projection_data(self, input_parameters: HybridInputParameters, calculation_parameters: AbstractHybridScreen.CalculationParameters):
         shadow_element = input_parameters.optical_element.wrapped_optical_element.duplicate()
-        shadow_element.set_input_beam(self._get_shadow_beam_for_initial_tracing(input_parameters))
-        shadow_element.set_optical_element(self._get_shadow_optical_element_for_initial_tracing(input_parameters, shadow_element))
+        shadow_element.set_input_beam(self._get_shadow_beam_for_initial_tracing(input_parameters, calculation_parameters))
+        shadow_element.set_optical_element(self._get_shadow_optical_element_for_initial_tracing(input_parameters, calculation_parameters, shadow_element))
 
         coordinates = shadow_element.get_coordinates()
         movements   = shadow_element.get_movements()
@@ -195,10 +195,15 @@ class _ShadowOEHybridScreen():
 
         return calculation_parameters
 
-    def _get_shadow_beam_for_initial_tracing(self, input_parameters: HybridInputParameters):
+    def _get_shadow_element(self, input_parameters: HybridInputParameters, calculation_parameters: AbstractHybridScreen.CalculationParameters):
+        shadow_element = input_parameters.optical_element.wrapped_optical_element.duplicate()
+        shadow_element.set_input_beam(self._get_shadow_beam_for_initial_tracing(input_parameters, calculation_parameters))
+        shadow_element.set_optical_element(self._get_shadow_optical_element_for_initial_tracing(input_parameters, calculation_parameters, shadow_element))
+
+    def _get_shadow_beam_for_initial_tracing(self, input_parameters: HybridInputParameters, calculation_parameters: AbstractHybridScreen.CalculationParameters):
         return input_parameters.optical_element.wrapped_optical_element.get_input_beam()
 
-    def _get_shadow_optical_element_for_initial_tracing(self, input_parameters: HybridInputParameters, beamline_element: BeamlineElement):
+    def _get_shadow_optical_element_for_initial_tracing(self, input_parameters: HybridInputParameters, calculation_parameters: AbstractHybridScreen.CalculationParameters, beamline_element: BeamlineElement):
         return beamline_element.get_optical_element()
 
     def _get_screen_plane_histograms(self, input_parameters: HybridInputParameters, calculation_parameters : AbstractHybridScreen.CalculationParameters):
@@ -438,9 +443,31 @@ class _S4OEWithSurfaceHybridScreen(_ShadowOEHybridScreen):
 
         input_beam       = beamline_element.get_input_beam().duplicate()
         input_beam.rays  = input_beam.rays[good_only_cursor]
-
         optical_element  = beamline_element.get_optical_element().duplicate()
 
+        # put beam in mirror reference system --------------
+        #
+        p              = beamline_element.get_coordinates().p()
+        theta_grazing1 = numpy.pi / 2 - beamline_element.get_coordinates().angle_radial()
+        alpha1         = beamline_element.get_coordinates().angle_azimuthal()
+
+        input_beam.rotate(alpha1, axis=2)
+        input_beam.rotate(theta_grazing1, axis=1)
+        input_beam.translation([0.0, -p * numpy.cos(theta_grazing1), p * numpy.sin(theta_grazing1)])
+
+        # mirror movement:
+        movements = beamline_element.get_movements()
+        if movements is not None:
+            if movements.f_move:
+                input_beam.rot_for(OFFX=movements.offset_x,
+                                   OFFY=movements.offset_y,
+                                   OFFZ=movements.offset_z,
+                                   X_ROT=movements.rotation_x,
+                                   Y_ROT=movements.rotation_y,
+                                   Z_ROT=movements.rotation_z)
+
+        # compute angles in mirror reference system --------------
+        #
         v_in = input_beam.get_columns([4, 5, 6])
 
         if   isinstance(beamline_element, S4MirrorElement):  _, normal = optical_element.apply_mirror_reflection(input_beam)
@@ -448,19 +475,17 @@ class _S4OEWithSurfaceHybridScreen(_ShadowOEHybridScreen):
 
         v_out = input_beam.get_columns([4, 5, 6])
 
-        angle_in = numpy.arccos(v_in[0,:] * normal[0,:] +
-                                v_in[1,:] * normal[1,:] +
-                                v_in[2,:] * normal[2,:])
+        angle_in  = numpy.arccos(v_in[0,:] * normal[0,:] +
+                                 v_in[1,:] * normal[1,:] +
+                                 v_in[2,:] * normal[2,:])
 
         angle_out = numpy.arccos(v_out[0,:] * normal[0,:] +
                                  v_out[1,:] * normal[1,:] +
                                  v_out[2,:] * normal[2,:])
 
-        incidence_angle  = (numpy.pi / 2) - angle_in  # grazing angles
-        reflection_angle = (numpy.pi / 2) - angle_out # grazing angles
-
-        #print(numpy.min(1000*(incidence_angle)),  numpy.average(1000*(incidence_angle)),  numpy.max(1000*(incidence_angle)))
-        #print(numpy.min(1000*(reflection_angle)), numpy.average(1000*(reflection_angle)), numpy.max(1000*(reflection_angle)))
+        # grazing angles
+        incidence_angle  = numpy.absolute((numpy.pi / 2) - angle_in)  # abs is necessary for a bug in S4 to be fixed
+        reflection_angle = (numpy.pi / 2) - angle_out
 
         return incidence_angle, reflection_angle
 
@@ -507,12 +532,12 @@ class _S4OEWithSurfaceHybridScreen(_ShadowOEHybridScreen):
             surface_shape  = input_parameters.optical_element.wrapped_optical_element.get_optical_element().get_surface_shape()
 
         if   (isinstance(surface_shape, Ellipsoid) or isinstance(surface_shape, EllipticalCylinder)) or \
-             (isinstance(surface_shape, Hyperboloid) or isinstance(surface_shape, HyperbolicCylinder)): return surface_shape.get_p_focus()
+             (isinstance(surface_shape, Hyperboloid) or isinstance(surface_shape, HyperbolicCylinder)): return surface_shape.get_q_focus()
         else: raise ValueError("calculation support for elliptical or hyperbolic elements: TO BE COMPLETED")
 
 
 class _S4OEWithSurfaceAndErrorHybridScreen(_S4OEWithSurfaceHybridScreen):
-    def _get_shadow_optical_element_for_initial_tracing(self, input_parameters: HybridInputParameters, beamline_element: BeamlineElement):
+    def _get_shadow_optical_element_for_initial_tracing(self, input_parameters: HybridInputParameters, calculation_parameters: AbstractHybridScreen.CalculationParameters, beamline_element: BeamlineElement):
         shadow_oe = beamline_element.get_optical_element()
 
         if   isinstance(shadow_oe, S4AdditionalNumericalMeshMirror):  return shadow_oe.ideal_mirror()
@@ -548,10 +573,9 @@ class _S4OELensHybridScreen(_S4ApertureHybridScreen):
         geometrical_parameters = AbstractHybridScreen.GeometricalParameters()
 
         shadow_element = input_parameters.optical_element.wrapped_optical_element
-        beam_before      = shadow_element.get_input_beam()
-        oe_before        = shadow_element.get_optical_element()
-        coordinates      = shadow_element.get_coordinates()
-
+        beam_before    = shadow_element.get_input_beam()
+        oe_before      = shadow_element.get_optical_element()
+        coordinates    = shadow_element.get_coordinates()
 
         if oe_before.get_boundary_shape() is None:
             geometrical_parameters.is_infinite = True
@@ -559,12 +583,19 @@ class _S4OELensHybridScreen(_S4ApertureHybridScreen):
             beam_at_the_first_lens = beam_before.duplicate()
             beam_at_the_first_lens.retrace(coordinates.q())  # TRACE INCIDENT BEAM UP TO THE first lens
 
-            boundaries = oe_before.get_boundary_shape().get_boundaries()
+            boundary_shape = oe_before.get_boundary_shape()
+            boundaries     = boundary_shape.get_boundaries()
 
-            geometrical_parameters.max_tangential    = boundaries[3]
-            geometrical_parameters.min_tangential    = boundaries[2]
-            geometrical_parameters.max_sagittal      = boundaries[1]
-            geometrical_parameters.min_sagittal      = boundaries[0]
+            if isinstance(boundary_shape, Circle): # radius, sag center, tang center
+                geometrical_parameters.max_tangential    = boundaries[2] + boundaries[0]
+                geometrical_parameters.min_tangential    = boundaries[2] - boundaries[0]
+                geometrical_parameters.max_sagittal      = boundaries[1] + boundaries[0]
+                geometrical_parameters.min_sagittal      = boundaries[1] - boundaries[0]
+            else:
+                geometrical_parameters.max_tangential    = boundaries[3]
+                geometrical_parameters.min_tangential    = boundaries[2]
+                geometrical_parameters.max_sagittal      = boundaries[1]
+                geometrical_parameters.min_sagittal      = boundaries[0]
 
             ticket_tangential = beam_at_the_first_lens.histo1(3, nbins=500, nolost=1, ref=23)
             ticket_sagittal   = beam_at_the_first_lens.histo1(1, nbins=500, nolost=1, ref=23)
@@ -574,7 +605,10 @@ class _S4OELensHybridScreen(_S4ApertureHybridScreen):
 
         return geometrical_parameters
 
-    def _get_shadow_beam_for_initial_tracing(self, input_parameters: HybridInputParameters, calculation_parameters: AbstractHybridScreen.CalculationParameters):
+
+    def _get_shadow_element(self, input_parameters: HybridInputParameters, calculation_parameters: AbstractHybridScreen.CalculationParameters):
+
+
         compound_oe_element = input_parameters.optical_element.wrapped_optical_element
         boundary_shape      = compound_oe_element.get_optical_element().get_boundary_shape()
 
@@ -588,8 +622,11 @@ class _S4OELensHybridScreen(_S4ApertureHybridScreen):
 
         shadow_beam, _ = screen_slit_element.trace_beam()
 
-        calculation_parameters.set("shadow_beam", shadow_beam)
-        
+        screen_slit_element.set_input_beam(shadow_beam)
+
+        return screen_slit_element
+
+
 class _S4OELensAndErrorHybridScreen(_S4OELensHybridScreen):
     def _get_error_profiles(self, input_parameters: HybridInputParameters, calculation_parameters: AbstractHybridScreen.CalculationParameters):
         coords_to_m    = input_parameters.get("crl_coords_to_m")
