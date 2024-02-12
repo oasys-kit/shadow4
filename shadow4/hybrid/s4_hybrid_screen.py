@@ -607,8 +607,6 @@ class _S4OELensHybridScreen(_S4ApertureHybridScreen):
 
 
     def _get_shadow_element(self, input_parameters: HybridInputParameters, calculation_parameters: AbstractHybridScreen.CalculationParameters):
-
-
         compound_oe_element = input_parameters.optical_element.wrapped_optical_element
         boundary_shape      = compound_oe_element.get_optical_element().get_boundary_shape()
 
