@@ -67,7 +67,7 @@ class S4Mesh(S4OpticalSurface):
         if alg == 0:
             self.surface = interpolate.interp2d(self.mesh_x, self.mesh_y, self.mesh_z.T, kind=self.kind)
         elif alg == 1:
-            self.__TMP = interpolate.RectBivariateSpline(self.mesh_x, self.mesh_y, self.mesh_z, kx=1, ky=2)
+            self.__TMP = interpolate.RectBivariateSpline(self.mesh_x, self.mesh_y, self.mesh_z, kx=1, ky=3)
             self.surface = lambda x, y: self.__TMP.ev(x, y)
 
     def surface_height(self, x, y):
