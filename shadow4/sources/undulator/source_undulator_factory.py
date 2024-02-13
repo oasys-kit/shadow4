@@ -114,7 +114,7 @@ def _pysru_energy_radiated_approximation_and_farfield(omega=2.53465927101e17, el
 
 # now, undul_phot
 def _undul_phot(E_ENERGY,INTENSITY, LAMBDAU, NPERIODS, K, EMIN, EMAX, NG_E, MAXANGLE, NG_T, NG_P,
-               number_of_trajectory_points=20):
+               number_of_trajectory_points=20, flag_size=0, distance=100.0, magnification=0.01, ):
     #
     # calculate trajectory
     #
@@ -133,7 +133,7 @@ def _undul_phot(E_ENERGY,INTENSITY, LAMBDAU, NPERIODS, K, EMIN, EMAX, NG_E, MAXA
     #
     # polar grid
     #
-    D = 100.0 # placed far away (100 m)
+    D = distance # placed far away (100 m)
     theta = np.linspace(0, MAXANGLE, NG_T, dtype=float)
     phi = np.linspace(0, np.pi/2, NG_P, dtype=float)
 
@@ -195,19 +195,27 @@ def calculate_undulator_emission(electron_energy              = 6.0,
                                  MAXANGLE                     = 0.1,
                                  number_of_points             = 100,
                                  NG_P                         = 100,
-                                 number_of_trajectory_points  = 100):
+                                 number_of_trajectory_points  = 100,
+                                 flag_size                    = 2,
+                                 distance                     = 100.0,
+                                 magnification                = 0.01,
+                                 ):
     return _undul_phot(electron_energy,
-                      electron_current,
-                      undulator_period,
-                      undulator_nperiods,
-                      K,
-                      photon_energy,
-                      EMAX,
-                      NG_E,
-                      MAXANGLE,
-                      number_of_points,
-                      NG_P,
-                      number_of_trajectory_points=number_of_trajectory_points)
+                       electron_current,
+                       undulator_period,
+                       undulator_nperiods,
+                       K,
+                       photon_energy,
+                       EMAX,
+                       NG_E,
+                       MAXANGLE,
+                       number_of_points,
+                       NG_P,
+                       number_of_trajectory_points=number_of_trajectory_points,
+                       flag_size=flag_size,
+                       distance=distance,
+                       magnification=magnification,
+                       )
 
 #
 # undul_cdf

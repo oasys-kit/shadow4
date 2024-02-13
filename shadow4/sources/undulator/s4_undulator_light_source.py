@@ -65,6 +65,8 @@ class S4UndulatorLightSource(S4LightSource):
         self.__result_photon_size_sigma = None
         self.__result_photon_size_farfield = None
 
+
+
     def get_beam(self, F_COHER=0, verbose=1):
         """
         Creates the beam as emitted by the undulator.
@@ -829,6 +831,8 @@ class S4UndulatorLightSource(S4LightSource):
                 NG_P                        = undulator._NG_P,
                 number_of_trajectory_points = undulator._NG_J,
                 flag_size                   = undulator._FLAG_SIZE,
+                distance                   = undulator._distance,
+                magnification              = undulator._magnification,
                 )
 
         elif undulator.code_undul_phot == 'pysru' or  undulator.code_undul_phot == 'pySRU':
@@ -846,6 +850,9 @@ class S4UndulatorLightSource(S4LightSource):
                 NG_P                       = undulator._NG_P,
                 number_of_trajectory_points= int(undulator._NG_J),
                 flag_size                  = undulator._FLAG_SIZE,
+                distance                   = undulator._distance,
+                magnification              = undulator._magnification,
+                pysru_source               = undulator._pysru_source,
                 )
         elif undulator.code_undul_phot == 'srw' or  undulator.code_undul_phot == 'SRW':
             undul_phot_dict = calculate_undulator_emission_SRW(
@@ -862,6 +869,10 @@ class S4UndulatorLightSource(S4LightSource):
                 NG_P                        = undulator._NG_P,
                 number_of_trajectory_points = undulator._NG_J,
                 flag_size                   = undulator._FLAG_SIZE,
+                distance                    = undulator._distance,
+                srw_range                   = undulator._srw_range,
+                srw_resolution              = undulator._srw_resolution,
+                srw_semianalytical          = undulator._srw_semianalytical,
                 )
         else:
             raise Exception("Not implemented undul_phot code: "+undulator.code_undul_phot)
@@ -918,45 +929,25 @@ class S4UndulatorLightSource(S4LightSource):
             radiation, photon_energy, theta, phi = self.get_result_radiation_polar()
             e_amplitude_sigma, e_amplitude_pi = self.get_result_e_amplitudes()
 
-            print(">>>>>>>>>>>>>>>>>>>", radiation.shape, e_amplitude_sigma.shape, e_amplitude_pi.shape)
-
-            from srxraylib.plot.gol import plot_image
-            plot_image(radiation, theta, phi, title='RADIATION<<<<<<<<<<<<', aspect='auto', show=0)
-            plot_image(numpy.abs(e_amplitude_sigma)**2, theta, phi, title='RADIATION FROM E<<<<<<<<<<<<', aspect='auto', show=1)
-
-
-            mean_photon_energy = numpy.array(sampled_photon_energy).mean() # todo: use the weighted mean?
-            shape_radiation = radiation.shape
 
             #
-            # we propagate the emission at a long distance back to the source plane
+            # we propagate the emission at a long distance (fat field) to sample angles
+            # Then it was propagated back to the source plane to sample the size.
             #
-            distance = 100.
-
-            magnification = s_phot * 10 / (theta[-1] * distance)
-
-            # if undulator.code_undul_phot == 'internal':
-            #     propagation_method = 0 # 0=wofry1D, 1=hankel 1D, 2= 2D wofry, 3= 2D SRW.
-            # elif undulator.code_undul_phot == 'pysru':
-            #     propagation_method = 2 # 0=wofry1D, 1=hankel 1D, 2= 2D wofry, 3= 2D SRW.
-            # elif undulator.code_undul_phot == 'srw':
-            #     propagation_method = 3 # 0=wofry1D, 1=hankel 1D, 2= 2D wofry, 3= 2D SRW.
-
-            # propagation_method = 2 # 0=wofry1D, 1=hankel 1D, 2= 2D wofry, 3= 2D SRW.
-
             if undulator.code_undul_phot == 'internal': # wofry1D
+                distance = 100.
+                magnification = s_phot * 10 / (theta[-1] * distance)
+                mean_photon_energy = numpy.array(sampled_photon_energy).mean()  # todo: use the weighted mean?
+
                 if True:
                     THETA = numpy.concatenate((-theta[::-1], theta[1::]), axis=None)
-
-                    # radial_e_amplitude_sigma = e_amplitude_sigma.sum(axis=2) / shape_radiation[2]
-                    # radial_e_amplitude_sigma = radial_e_amplitude_sigma.sum(axis=0) / shape_radiation[0]
 
                     radial_e_amplitude_sigma = e_amplitude_sigma[0, :, 0]
                     RADIAL_E_AMPLITUDE = numpy.concatenate((radial_e_amplitude_sigma[::-1], radial_e_amplitude_sigma[1::]), axis=None)
                     # doble the arrays for 1D propagation
 
-                    from srxraylib.plot.gol import plot
-                    plot(THETA, numpy.abs(RADIAL_E_AMPLITUDE)**2, title="WOFRY E=%f, Nener=%d" % (mean_photon_energy, photon_energy.size))
+                    # from srxraylib.plot.gol import plot
+                    # plot(THETA, numpy.abs(RADIAL_E_AMPLITUDE)**2, title="WOFRY E=%f, Nener=%d" % (mean_photon_energy, photon_energy.size))
 
                     ############################### WOFRY ############################################
                     self.__result_photon_size_farfield = {
@@ -972,7 +963,7 @@ class S4UndulatorLightSource(S4LightSource):
                     xx = self.__result_photon_size_distribution["x"]
                     yy = self.__result_photon_size_distribution["y"]
 
-                    plot(xx, yy)
+                    # plot(xx, yy)
                     # #################################################################################
                     sampler_radial = Sampler1D(yy * numpy.abs(xx), xx)
                     r, hy, hx = sampler_radial.get_n_sampled_points_and_histogram(NRAYS, bins=101)
@@ -982,9 +973,7 @@ class S4UndulatorLightSource(S4LightSource):
                     y_photon = 0.0
                     z_photon = r / numpy.sqrt(2.0) * numpy.cos(angle)
                 else: # hankel
-                    # radial_e_amplitude_sigma = e_amplitude_sigma.sum(axis=2) / shape_radiation[2]
-                    # radial_e_amplitude_sigma = radial_e_amplitude_sigma.sum(axis=0) / shape_radiation[0]
-                    print(">>>>>>>>>>>>>>>>>>>>>>>>>", e_amplitude_sigma.shape)
+                    # print(">>>>>>>>>>>>>>>>>>>>>>>>>", e_amplitude_sigma.shape)
                     radial_e_amplitude_sigma =  e_amplitude_sigma[0, :, 0]
 
                     from srxraylib.plot.gol import plot
@@ -1018,64 +1007,43 @@ class S4UndulatorLightSource(S4LightSource):
                 if self.get_magnetic_structure().is_monochromatic():
                     i_prop = dict1['CART_BACKPROPAGATED_radiation'][0]  # todo something
                 else:
-                    i_prop = dict1['CART_BACKPROPAGATED_radiation'][0]  # todo something
+                    i_prop = dict1['CART_BACKPROPAGATED_radiation'].sum()  # todo something
                 x = dict1['CART_BACKPROPAGATED_x']
                 y = dict1['CART_BACKPROPAGATED_y']
-
-                from srxraylib.plot.gol import plot_image
-                plot_image(i_prop, x, y, title='backpropagated')
-                print(">>>>>>>>>>>>>><<<<<<<<<<<<<<<", i_prop.shape, x.shape, y.shape)
-                # plot_image(tmp_theta,theta,phi,aspect='auto')
 
                 s2d = Sampler2D(i_prop, x, y)
                 sampled_x, sampled_z = s2d.get_n_sampled_points(NRAYS)
 
-                from srxraylib.plot.gol import plot_scatter
-                plot_scatter(1e6 * sampled_x, 1e6 * sampled_z, title='>>>>>>>>>> SAMPLED (X,Z) in microns')
+                # from srxraylib.plot.gol import plot_scatter
+                # plot_scatter(1e6 * sampled_x, 1e6 * sampled_z, title='>>>>>>>>>> SAMPLED (X,Z) in microns')
 
                 x_photon = sampled_x
                 y_photon = 0.0
                 z_photon = sampled_z
 
-                # sampler_radial = Sampler1D(yy * numpy.abs(xx), xx)
-                # r, hy, hx = sampler_radial.get_n_sampled_points_and_histogram(NRAYS, bins=101)
-                # angle = numpy.random.random(NRAYS) * 2 * numpy.pi
-                #
-                # x_photon = r / numpy.sqrt(2.0) * numpy.sin(angle)
-                # y_photon = 0.0
-                # z_photon = r / numpy.sqrt(2.0) * numpy.cos(angle)
             elif undulator.code_undul_phot == 'srw':
                 self.__result_photon_size_farfield = {}
                 dict1 = self.__result_radiation
                 if self.get_magnetic_structure().is_monochromatic():
                     i_prop = dict1['CART_BACKPROPAGATED_radiation'][0] # todo something
                 else:
-                    i_prop = dict1['CART_BACKPROPAGATED_radiation'][0] # todo something
+                    i_prop = dict1['CART_BACKPROPAGATED_radiation'].sum() # todo something
                 x = dict1['CART_BACKPROPAGATED_x']
                 y = dict1['CART_BACKPROPAGATED_y']
 
-                from srxraylib.plot.gol import plot_image
-                plot_image(i_prop, x, y, title='backpropagated')
-                print(">>>>>>>>>>>>>><<<<<<<<<<<<<<<", i_prop.shape, x.shape, y.shape)
+                # from srxraylib.plot.gol import plot_image
+                # plot_image(i_prop, x, y, title='backpropagated')
                 # plot_image(tmp_theta,theta,phi,aspect='auto')
 
                 s2d = Sampler2D(i_prop, x, y)
                 sampled_x, sampled_z = s2d.get_n_sampled_points(NRAYS)
 
-                from srxraylib.plot.gol import plot_scatter
-                plot_scatter(1e6 * sampled_x, 1e6 * sampled_z, title='>>>>>>>>>> SAMPLED (X,Z) in microns')
+                # from srxraylib.plot.gol import plot_scatter
+                # plot_scatter(1e6 * sampled_x, 1e6 * sampled_z, title='>>>>>>>>>> SAMPLED (X,Z) in microns')
 
                 x_photon = sampled_x
                 y_photon = 0.0
                 z_photon = sampled_z
-
-                # sampler_radial = Sampler1D(yy * numpy.abs(xx), xx)
-                # r, hy, hx = sampler_radial.get_n_sampled_points_and_histogram(NRAYS, bins=101)
-                # angle = numpy.random.random(NRAYS) * 2 * numpy.pi
-                #
-                # x_photon = r / numpy.sqrt(2.0) * numpy.sin(angle)
-                # y_photon = 0.0
-                # z_photon = r / numpy.sqrt(2.0) * numpy.cos(angle)
 
         return x_photon, y_photon, z_photon
 

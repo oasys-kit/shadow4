@@ -57,6 +57,12 @@ class S4Undulator(Undulator):
                  flag_emittance=0,             # when sampling rays: Use emittance (0=No, 1=Yes)
                  flag_size=0,                  # when sampling rays: 0=point,1=Gaussian,2=FT(Divergences)
                  use_gaussian_approximation=0, # use Gaussian approximation for generating simplified beam
+                 distance=100,
+                 srw_range=0.05,
+                 srw_resolution=50.0,
+                 srw_semianalytical=0,
+                 magnification=0.01,
+                 pysru_source=0, # for pysru/wofry backpropagation: source interpolated from polar (0) or recalculated (1)
                  ):
         super().__init__(K_vertical=K_vertical,
                  K_horizontal = 0.0,
@@ -83,6 +89,15 @@ class S4Undulator(Undulator):
         self._FLAG_SIZE  =  flag_size # 0=point,1=Gaussian,2=backpropagate Divergences
         self._use_gaussian_approximation = use_gaussian_approximation
 
+        # specific parameters
+        self._distance = distance
+        self._srw_range = srw_range
+        self._srw_resolution = srw_resolution
+        self._srw_semianalytical = srw_semianalytical
+        self._magnification = magnification
+        self._pysru_source = pysru_source
+
+
         # support text containg name of variable, help text and unit. Will be stored in self._support_dictionary
         self._add_support_text([
                     ("EMIN", "minimum photon energy", "eV" ),
@@ -95,6 +110,12 @@ class S4Undulator(Undulator):
                     ("FLAG_EMITTANCE", "Use emittance (0=No, 1=Yes)", ""),
                     ("FLAG_SIZE", "Size philament beam 0=point,1=Gaussian,2=backpropagate Divergences", ""),
                     ("use_gaussian_approximation", "0=No, 1=Yes", ""),
+            ("distance", "Distance to far field plane", "m"),
+            ("srw_range", "for SRW (range magnification)", ""),
+            ("srw_resolution", "for SRW (resolution factor)", ""),
+            ("srw_semianalytical", "for SRW (semianalytical treatment of phase)", ""),
+            ("magnification", "for internal/wofry magnification in propagation", ""),
+            ("pysru_source", "for pysru/wofry backpropagation: source interpolated from polar (0) or recalculated (1)", ""),
             ] )
 
 
@@ -272,6 +293,12 @@ source = S4Undulator(
     flag_emittance    = {flag_emittance}, # when sampling rays: Use emittance (0=No, 1=Yes)
     flag_size         = {flag_size}, # when sampling rays: 0=point,1=Gaussian,2=FT(Divergences)
     use_gaussian_approximation = {use_gaussian_approximation}, # use Gaussian approximation for generating simplified beam
+    distance          = {distance}, # distance to far field plane
+    srw_range         = {srw_range}, # for SRW backpropagation, the range factor
+    srw_resolution    = {srw_resolution}, # for SRW backpropagation, the resolution factor
+    srw_semianalytical= {srw_semianalytical}, # for SRW backpropagation, use semianalytical treatement of phase
+    magnification     = {magnification}, # for internal/wofry backpropagation, the magnification factor
+    pysru_source      = {pysru_source}, # for pysru/wofry backpropagation: source interpolated from polar (0) or recalculated (1)
     )"""
 
 
@@ -290,6 +317,12 @@ source = S4Undulator(
             "flag_emittance"             : self._FLAG_EMITTANCE  ,
             "flag_size"                  : self._FLAG_SIZE,
             "use_gaussian_approximation" : self._use_gaussian_approximation,
+            "distance"                   : self._distance,
+            "srw_range"                  : self._srw_range,
+            "srw_resolution"             : self._srw_resolution,
+            "srw_semianalytical"         : self._srw_semianalytical,
+            "magnification"              : self._magnification,
+            "pysru_source"               : self._pysru_source,
         }
 
         script = script_template.format_map(script_dict)

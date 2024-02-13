@@ -133,11 +133,10 @@ def _srw_interpol(x, y, z, x1, y1):
 def _undul_phot_SRW(E_ENERGY, INTENSITY, LAMBDAU, NPERIODS, K, EMIN, EMAX, NG_E, MAXANGLE, NG_T, NG_P,
                     number_of_trajectory_points=100,
                     flag_size=0,
-                    srw_zStart=100.0,
-                    srw_h_range=0.05,      # **** [5]: Horizontal Range modification factor at Resizing (1. means no modification)
-                    srw_h_resolution=50.0, # **** [6]: Horizontal Resolution modification factor at Resizing
-                    srw_v_range=0.05,      # **** [7]: Vertical Range modification factor at Resizing
-                    srw_v_resolution=50.0, # **** [8]: Vertical Resolution modification factor at Resizing
+                    distance=100.0,
+                    srw_range=0.05,       # **** [5]: Horizontal Range modification factor at Resizing (1. means no modification)
+                    srw_resolution=50.0,  # **** [6]: Horizontal Resolution modification factor at Resizing
+                    srw_semianalytical=0, # **** [3]: Allow (1) or not (0) for semi-analytical treatment of the quadratic (leading) phase terms at the propagation
                     ):
 
     lambdau = LAMBDAU
@@ -173,12 +172,11 @@ def _undul_phot_SRW(E_ENERGY, INTENSITY, LAMBDAU, NPERIODS, K, EMIN, EMAX, NG_E,
     #
     # prepare inputs
     #
-    slit_distance = srw_zStart
 
-    slit_xmin = -maxangle * slit_distance
-    slit_xmax =  maxangle * slit_distance
-    slit_zmin = -maxangle * slit_distance
-    slit_zmax =  maxangle * slit_distance
+    slit_xmin = -maxangle * distance
+    slit_xmax =  maxangle * distance
+    slit_zmin = -maxangle * distance
+    slit_zmax =  maxangle * distance
 
     print("H slit: %f, %f, %f" % (slit_xmin, slit_xmax, nx))
     print("V slit: %f, %f, %f" % (slit_zmin, slit_zmax, nz))
@@ -236,9 +234,9 @@ def _undul_phot_SRW(E_ENERGY, INTENSITY, LAMBDAU, NPERIODS, K, EMIN, EMAX, NG_E,
                        _yStart=slit_zmin,
                        _yFin=slit_zmax,
                        _ny=nz,
-                       _zStart=slit_distance)
+                       _zStart=distance)
 
-    print ("Calculating source...", mesh.ne, mesh.eStart, mesh.eFin, mesh.xStart, mesh.xFin, mesh.yStart, mesh.yFin)
+    print ("Calculating source (SRW)...", mesh.ne, mesh.eStart, mesh.eFin, mesh.xStart, mesh.xFin, mesh.yStart, mesh.yFin)
 
     wfr = sl.SRWLWfr()
     wfr.allocate(mesh.ne, mesh.nx, mesh.ny)
@@ -304,14 +302,14 @@ def _undul_phot_SRW(E_ENERGY, INTENSITY, LAMBDAU, NPERIODS, K, EMIN, EMAX, NG_E,
       tck_efield_p_angle = _srw_interpol_object(x, y, wAnglePi[ie])
       for itheta in range(theta.size):
         for iphi in range(phi.size):
-          R = slit_distance / numpy.cos(theta[itheta])
+          R = distance / numpy.cos(theta[itheta])
           r = R * numpy.sin(theta[itheta])
           X = r * numpy.cos(phi[iphi])
           Y = r * numpy.sin(phi[iphi])
           tmp = tck(X, Y)
 
           #  Conversion from SRW units (photons/mm^2/0.1%bw) to SHADOW units (photons/rad^2/eV)
-          tmp *= (slit_distance * 1e3)**2 # photons/mm^2 -> photons/rad^2
+          tmp *= (distance * 1e3)**2 # photons/mm^2 -> photons/rad^2
           tmp /= 1e-3 * e[ie] # photons/o.1%bw -> photons/eV
 
           Z2[ie, itheta, iphi] = tmp
@@ -331,8 +329,8 @@ def _undul_phot_SRW(E_ENERGY, INTENSITY, LAMBDAU, NPERIODS, K, EMIN, EMAX, NG_E,
             'e_amplitude_pi': efield_p_mod * numpy.exp(1j * efield_p_angle),
             'CART_radiation': radiation,
             'CART_polarizartion': pol_deg,
-            'CART_x': x / slit_distance, # angle in rad
-            'CART_y': y / slit_distance, # angle in rad
+            'CART_x': x / distance, # angle in rad
+            'CART_y': y / distance, # angle in rad
             'CART_e_amplitude_sigma': wSigma[:, :, :, 0],
             'CART_e_amplitude_pi': wPi[:, :, :, 0],
             }
@@ -347,12 +345,12 @@ def _undul_phot_SRW(E_ENERGY, INTENSITY, LAMBDAU, NPERIODS, K, EMIN, EMAX, NG_E,
         srw_oe_array = []
         srw_pp_array = []
 
-        drift_before_oe_0 = sl.SRWLOptD(-slit_distance)
+        drift_before_oe_0 = sl.SRWLOptD(-distance)
         # Wavefront Propagation Parameters:
         # [0]: Auto-Resize (1) or not (0) Before propagation
         # [1]: Auto-Resize (1) or not (0) After propagation
         # [2]: Relative Precision for propagation with Auto-Resizing (1. is nominal)
-        # [3]: Allow (1) or not (0) for semi-analytical treatment of the quadratic (leading) phase terms at the propagation
+        # **** [3]: Allow (1) or not (0) for semi-analytical treatment of the quadratic (leading) phase terms at the propagation
         # [4]: Do any Resizing on Fourier side, using FFT, (1) or not (0)
         # **** [5]: Horizontal Range modification factor at Resizing (1. means no modification)
         # **** [6]: Horizontal Resolution modification factor at Resizing
@@ -363,7 +361,7 @@ def _undul_phot_SRW(E_ENERGY, INTENSITY, LAMBDAU, NPERIODS, K, EMIN, EMAX, NG_E,
         # [11]: New Vertical wavefront Center position after Shift (not yet implemented)
         # pp_drift_before_oe_0 = [0, 0, 1.0, 0, 0, 0.05, 50.0, 0.05, 50.0, 0, 0.0, 0.0]
         # srw_h_range = 0.05, srw_h_resolution = 50.0, srw_v_range = 0.05, srw_v_resolution = 50.0,
-        pp_drift_before_oe_0 = [0, 0, 1.0, 0, 0, srw_h_range, srw_h_resolution, srw_v_range, srw_v_resolution, 0, 0.0, 0.0]
+        pp_drift_before_oe_0 = [0, 0, 1.0, srw_semianalytical, 0, srw_range, srw_resolution, srw_range, srw_resolution, 0, 0.0, 0.0]
         print('pp_drift_before_oe_0: ', pp_drift_before_oe_0)
 
         srw_oe_array.append(drift_before_oe_0)
@@ -374,7 +372,7 @@ def _undul_phot_SRW(E_ENERGY, INTENSITY, LAMBDAU, NPERIODS, K, EMIN, EMAX, NG_E,
 
         optBL = sl.SRWLOptC(srw_oe_array, srw_pp_array)
 
-        print("Backpropagating source...")
+        print("Backpropagating source (SRW)...")
         sl.srwl.PropagElecField(wfr, optBL)
 
 
@@ -416,11 +414,10 @@ def calculate_undulator_emission_SRW(
                      NG_P                         = 100,
                      number_of_trajectory_points  = 100,
                      flag_size                    = 2,
-                     srw_zStart                   = 100.0,
-                     srw_h_range                  = 0.05,
-                     srw_h_resolution             = 50.0,
-                     srw_v_range                  = 0.05,
-                     srw_v_resolution             = 50.0,
+                     distance                     = 100.0,
+                     srw_range                    = 0.05,
+                     srw_resolution               = 50.0,
+                     srw_semianalytical           = 0,
                      ):
     return _undul_phot_SRW(
                         electron_energy,
@@ -436,11 +433,10 @@ def calculate_undulator_emission_SRW(
                         NG_P,
                         number_of_trajectory_points=number_of_trajectory_points,
                         flag_size=flag_size,
-                        srw_zStart=srw_zStart,
-                        srw_h_range=srw_h_range,
-                        srw_h_resolution=srw_h_resolution,
-                        srw_v_range=srw_v_range,
-                        srw_v_resolution=srw_v_resolution,
+                        distance=distance,
+                        srw_range=srw_range,
+                        srw_resolution=srw_resolution,
+                        srw_semianalytical=srw_semianalytical,
                         )
 
 if __name__ == "__main__":
@@ -458,19 +454,21 @@ if __name__ == "__main__":
                      NG_P                         = 11,
                      number_of_trajectory_points  = 51,
                      flag_size                    = 2,
-                     srw_zStart                   =100,
-                     srw_h_range=0.05, srw_h_resolution=50.0, srw_v_range=0.05, srw_v_resolution=50.0,
+                     distance                     = 100.0,
+                     srw_range                    = 0.05,
+                     srw_resolution               = 50.0,
+                     srw_semianalytical           = 1,
     )
 
     from srxraylib.plot.gol import plot_image, plot
-    if True:
+    if False:
         plot_image(dict1['radiation'][0], dict1['theta'], dict1['phi'], aspect='auto',  title="first", show=0)
         plot_image(dict1['radiation'][-1], dict1['theta'], dict1['phi'], aspect='auto', title="last", show=1)
 
         plot_image(dict1['CART_radiation'][0], 1e6 * dict1['CART_x'], 1e6 * dict1['CART_y'], aspect='auto', title="first", show=0)
         plot_image(dict1['CART_radiation'][-1], 1e6 * dict1['CART_x'], 1e6 * dict1['CART_y'], aspect='auto', title="last", show=1)
 
-    if False:
+    if True:
         plot_image(numpy.abs(dict1['CART_e_amplitude_sigma'][0])**2  + numpy.abs(dict1['CART_e_amplitude_pi'][0])**2 ,
                    100 * 1e6 * dict1['CART_x'], 100 * 1e6 * dict1['CART_y'], aspect='auto', title="first", show=0)
         plot_image(numpy.abs(dict1['CART_e_amplitude_sigma'][-1])**2 + numpy.abs(dict1['CART_e_amplitude_pi'][-1])**2,
