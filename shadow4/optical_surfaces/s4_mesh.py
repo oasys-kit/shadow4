@@ -7,6 +7,7 @@ from shadow4.optical_surfaces.s4_optical_surface import S4OpticalSurface
 # from scipy.optimize import fsolve
 from scipy.optimize import root, root_scalar, brentq
 from scipy import interpolate
+
 from srxraylib.plot.gol import plot,plot_image, plot_surface, plot_scatter
 import sys
 import time
@@ -18,10 +19,11 @@ from shadow4.tools.arrayofvectors import vector_cross, vector_dot, vector_multip
 from shadow4.tools.arrayofvectors import vector_modulus_square, vector_modulus, vector_norm, vector_rotate_around_axis
 
 
+
 # TODO: interp2d is deprecated in SciPy 1.10 and will be removed in SciPy 1.13.0.
 
 class S4Mesh(S4OpticalSurface):
-    def __init__(self, surface=None, mesh_x=None, mesh_y=None, mesh_z=None, kind='cubic'):
+    def __init__(self, surface=None, mesh_x=None, mesh_y=None, mesh_z=None, kind='linear'):
         self.__x0 = [0.0,0.0,0.0]
         self.__v0 = [0.0,0.0,0.0]
         self.surface = surface # Surface must be the function defining height(x,y) or a scipy.interpolate.interp2d instance
@@ -61,12 +63,15 @@ class S4Mesh(S4OpticalSurface):
     def get_mesh_z(self):
         return self.mesh_z
 
-    def calculate_surface_from_mesh(self):
-        self.surface = interpolate.interp2d(self.mesh_x, self.mesh_y, self.mesh_z.T, kind=self.kind)
+    def calculate_surface_from_mesh(self, alg=1):
+        if alg == 0:
+            self.surface = interpolate.interp2d(self.mesh_x, self.mesh_y, self.mesh_z.T, kind=self.kind)
+        elif alg == 1:
+            self.__TMP = interpolate.RectBivariateSpline(self.mesh_x, self.mesh_y, self.mesh_z, kx=1, ky=2)
+            self.surface = lambda x, y: self.__TMP.ev(x, y)
 
     def surface_height(self, x, y):
         return self.surface(x, y)
-
 
     def add_to_mesh(self, z1):
         print(">>>>>>>>>>>>>>ADDING TO MESH", z1.shape, self.mesh_z.shape, z1, self.mesh_z)
@@ -91,15 +96,12 @@ class S4Mesh(S4OpticalSurface):
 
         self.calculate_surface_from_mesh()
 
-
-
-    def load_h5file(self,filename,kind='cubic'):
+    def load_h5file(self,filename):
         x,y,z = self.read_surface_error_h5file(filename)
         self.mesh_x = x
         self.mesh_y = y
         self.mesh_z = z
         self.calculate_surface_from_mesh()
-        # self.surface = interpolate.interp2d(x,y,z.T, kind=kind)
 
     def load_surface_data(self, surface_data_object):
         self.mesh_x = surface_data_object._xx.copy()
@@ -107,15 +109,11 @@ class S4Mesh(S4OpticalSurface):
         self.mesh_z = surface_data_object._zz.copy().T
         self.calculate_surface_from_mesh()
 
-        # self.surface = interpolate.interp2d(surface_data_object._xx, surface_data_object._yy, surface_data_object._zz, kind=kind)
-
     def load_surface_data_arrays(self,x,y,Z):
         self.mesh_x = x
         self.mesh_y = y
         self.mesh_z = Z
         self.calculate_surface_from_mesh()
-
-        # self.surface = interpolate.interp2d(x,y,Z.T, kind=kind)
 
     def load_file(self,filename):
         x,y,z = self.read_surface_error_file(filename)
@@ -140,14 +138,12 @@ class S4Mesh(S4OpticalSurface):
     def surface_z_vs_t(self,t):
         return self.surface_vs_t(t)[2]
 
-    def surface_vs_t(self,t):
+    def surface_vs_t(self, t):
         x1 = self.__x0[0] + self.__v0[0] * t
         y1 = self.__x0[1] + self.__v0[1] * t
         return x1,y1,self.surface(x1,y1)
 
     def equation_to_solve(self, t):
-        # return self.surface_z_vs_t(t)-self.line_z(t)
-
         t = numpy.array(t)
         # surface height
         x1 = self.__x0[0] + self.__v0[0] * t
@@ -166,7 +162,7 @@ class S4Mesh(S4OpticalSurface):
 
         return z1 - l1
 
-    def solve(self,x_start):
+    def solve(self, x_start):
         # t_solution = fsolve(lambda t:self.surface_z_vs_t(t)-self.line_z(t), x_start)
         # return t_solution[0]
 
@@ -188,12 +184,11 @@ class S4Mesh(S4OpticalSurface):
         # t_solution = root(self.equation_to_solve, x_start, method='hybr', tol=1e-11)  # 6.17/5.27
         # t_solution = root(self.equation_to_solve, x_start, method='hybr')  # 6.17/5.27
         # t_solution = root(self.equation_to_solve, x_start, method='anderson') # 6.36/5.27
-        t_solution = root(self.equation_to_solve, x_start, method='hybr', tol=1e-13)  # 6.07/5.27
 
+        t_solution = root(self.equation_to_solve, x_start, method='hybr', tol=1e-13)  # 6.07/5.27
 
         # print(t_solution['message'])
         return t_solution['x']
-
 
 
     #
@@ -303,20 +298,15 @@ class S4Mesh(S4OpticalSurface):
 
         X_0 = x2[0,:]
         Y_0 = x2[1,:]
-        Z_0 = x2[2,:]
 
-        N_0 = numpy.zeros_like(X_0)
-        N_1 = numpy.zeros_like(X_0)
+        z00 = self.surface(X_0, Y_0)
+
+        N_0 = -1.0 * (self.surface(X_0 + eps, Y_0) - z00) / eps
+        N_1 = -1.0 * (self.surface(X_0, Y_0 + eps) - z00) / eps
         N_2 = numpy.ones_like(X_0)
-        for i in range(X_0.size):
-            z00 = self.surface(X_0[i],Y_0[i])
-            N_0[i] = -1.0 * (self.surface(X_0[i]+eps,Y_0[i]) - z00) / eps
-            N_1[i] = -1.0 * (self.surface(X_0[i],Y_0[i]+eps) - z00) / eps
-
-
 
         n2 = numpy.sqrt(N_0**2 + N_1**2 + N_2**2)
-        #
+
         normal[0,:] = N_0 / n2
         normal[1,:] = N_1 / n2
         normal[2,:] = N_2 / n2
@@ -324,11 +314,9 @@ class S4Mesh(S4OpticalSurface):
         return normal
 
     def calculate_intercept(self,XIN,VIN,keep=0):
-
         npoints = XIN.shape[1]
         answer = numpy.zeros(npoints)
         i_flag = numpy.ones(npoints)
-
 
         print("\n\n>>>>> main loop to find solutions (slow...)")
         t0 = time.time()
@@ -340,11 +328,45 @@ class S4Mesh(S4OpticalSurface):
                 answer[i] = t_solution
             except:
                 i_flag[i] = -1
+
         t1 = time.time()
         print(">>>>", answer)
         print(">>>>> done main loop to find solutions (Thanks for waiting!) Spent: %g s for %d rays (%g ms/ray)\n\n" % \
               (t1-t0, npoints, 1000 * (t1-t0) / npoints))
+
         return answer,i_flag
+
+    def calculate_intercept_2(self,XIN,VIN,keep=0):
+        npoints = XIN.shape[1]
+        i_flag = numpy.ones(npoints)
+
+        print("\n\n>>>>> main loop to find solutions (slow...)")
+        t0 = time.time()
+
+        def solve():
+            def equation_to_solve(t):
+                # surface height
+                x1 = XIN[0, :] + numpy.multiply(VIN[0, :], t)
+                y1 = XIN[1, :] + numpy.multiply(VIN[1, :], t)
+                l1 = XIN[2, :] + numpy.multiply(VIN[2, :], t)
+
+                return self.surface(x1, y1) - l1
+
+            t_solution = root(equation_to_solve, numpy.zeros(npoints), method='df-sane', tol=None)#tol=1e-10)
+
+            return t_solution['x'], t_solution['success']
+
+        answer, success = solve()
+        i_flag[numpy.where(success==False)] = -1
+
+        t1 = time.time()
+        print(">>>>", answer)
+        print(">>>>> done main loop to find solutions (Thanks for waiting!) Spent: %g s for %d rays (%g ms/ray)\n\n" % \
+              (t1-t0, npoints, 1000 * (t1-t0) / npoints))
+
+        return answer,i_flag
+
+
 
     def calculate_intercept_and_choose_solution(self, x1, v1, reference_distance=10.0, method=0):
         return self.calculate_intercept(x1, v1)
@@ -355,12 +377,18 @@ class S4Mesh(S4OpticalSurface):
         # ; TRACING...
         # ;
 
+        import time
+        t0 = time.time()
+
         x1 =   newbeam.get_columns([1,2,3])
         v1 =   newbeam.get_columns([4,5,6])
         flag = newbeam.get_column(10)
         optical_path = newbeam.get_column(13)
 
-        t,iflag = self.calculate_intercept(x1,v1)
+        #t,iflag = self.calculate_intercept(x1,v1)
+        t,iflag = self.calculate_intercept_2(x1,v1)
+
+        print("check point 1", time.time() - t0, "s")
 
         x2 = numpy.zeros_like(x1)
         x2[0,:] = x1[0,:] + v1[0,:] * t
@@ -376,11 +404,15 @@ class S4Mesh(S4OpticalSurface):
 
         normal = self.get_normal(x2)
 
+        print("check point 2", time.time() - t0, "s")
+
         # ;
         # ; reflection
         # ;
 
         v2 = self.vector_reflection(v1,normal)
+
+        print("check point 3", time.time() - t0, "s")
 
         # # ;
         # # ; writes the mirr.XX file
