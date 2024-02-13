@@ -45,22 +45,31 @@
 # POSSIBILITY OF SUCH DAMAGE.                                             #
 # ----------------------------------------------------------------------- #
 import numpy
-import scipy.constants as codata
+import copy
+from typing import Tuple
+
+from srxraylib.util.data_structures import ScaledMatrix
 
 from syned.beamline.shape import Ellipsoid, EllipticalCylinder, Hyperboloid, HyperbolicCylinder, Circle
+from syned.beamline.beamline_element import BeamlineElement
 
 from shadow4.beam.s4_beam import S4Beam
 from shadow4.optical_surfaces.s4_mesh import S4Mesh
 from shadow4.beamline.s4_beamline_element import S4BeamlineElement, ElementCoordinates
 from shadow4.beamline.optical_elements.absorbers.s4_screen import S4Screen, S4ScreenElement
-from shadow4.beamline.optical_elements.mirrors.s4_mirror import S4Mirror, S4MirrorElement
-from shadow4.beamline.optical_elements.gratings.s4_grating import S4Grating, S4GratingElement
+from shadow4.beamline.optical_elements.mirrors.s4_mirror import S4MirrorElement
+from shadow4.beamline.optical_elements.gratings.s4_grating import S4GratingElement
 from shadow4.beamline.optical_elements.mirrors.s4_additional_numerical_mesh_mirror import S4AdditionalNumericalMeshMirror, S4AdditionalNumericalMeshMirrorElement
 from shadow4.beamline.optical_elements.gratings.s4_additional_numerical_mesh_grating import S4AdditionalNumericalMeshGrating, S4AdditionalNumericalMeshGratingElement
-from shadow4.beamline.optical_elements.refractors.s4_crl import S4CRL, S4CRLElement
-from shadow4.beamline.optical_elements.refractors.s4_lens import S4Lens, S4LensElement
+from shadow4.beamline.optical_elements.refractors.s4_crl import S4CRLElement
+from shadow4.beamline.optical_elements.refractors.s4_lens import S4LensElement
 
-from hybrid_methods.coherence.hybrid_screen import *
+try:
+    from hybrid_methods.coherence.hybrid_screen import HybridBeamWrapper, HybridLengthUnits, HybridOEWrapper, HybridCalculationType, HybridInputParameters, AbstractHybridScreen, \
+        HybridDiffractionPlane, HybridPropagationType, AbstractSimpleApertureHybridScreen, HybridWaveOpticsProvider, AbstractMirrorOrGratingSizeHybridScreen, \
+        AbstractMirrorSizeAndErrorHybridScreen, AbstractGratingSizeAndErrorHybridScreen, AbstractCRLSizeHybridScreen, AbstractCRLSizeAndErrorHybridScreen, HybridScreenManager
+except:
+    print("Install oasys-hybrid-methods to use this module")
 
 IMPLEMENTATION = "SHADOW4"
 
