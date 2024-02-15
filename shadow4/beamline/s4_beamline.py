@@ -22,15 +22,18 @@ class S4Beamline(Beamline):
 
 
     def to_python_code(self, **kwargs):
-        script = ''
+        script = "from shadow4.beamline.s4_beamline import S4Beamline"
+        script += "\n\nbeamline = S4Beamline()"
         try:
             script += self.get_light_source().to_python_code()
+            script += "\n\nbeamline.set_light_source(light_source)"
         except:
             script +=  "\n\n\n# Error getting python code for S4Beamline S4LightSource "
 
         for i,element in enumerate(self.get_beamline_elements()):
             try:
                 script += element.to_python_code()
+                script += "\n\nbeamline.append_beamline_element(beamline_element)"
             except:
                 script += "\n\n\n# Error getting python code for S4Beamline S4BeamlineElement # %d  :" % (i+1)
                 script += "\n#       %s " % (str(element))
