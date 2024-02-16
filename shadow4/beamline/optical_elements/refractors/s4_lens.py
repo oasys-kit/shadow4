@@ -1,7 +1,7 @@
-import numpy
-
 from syned.beamline.element_coordinates import ElementCoordinates
 from syned.beamline.optical_elements.refractors.lens import Lens
+from syned.beamline.shape import Rectangle, Ellipse, Circle
+
 from shadow4.beam.s4_beam import S4Beam
 from shadow4.beamline.s4_beamline_element import S4BeamlineElement
 from shadow4.beamline.optical_elements.refractors.s4_conic_interface import S4ConicInterface, S4ConicInterfaceElement
@@ -63,9 +63,47 @@ class S4Lens(Lens, S4RefractiveLensOpticalElementDecorator):
             "conic_coefficients":      repr(conic_coefficients),
         }
 
+    def to_python_code_boundary_shape(self):
+        txt = ""
+        bs = self._boundary_shape
+        if bs is None:
+            txt += "\nboundary_shape = None"
+        elif isinstance(bs, Rectangle):
+            txt += "\nfrom syned.beamline.shape import Rectangle"
+            txt += "\nboundary_shape = Rectangle(x_left=%g, x_right=%g, y_bottom=%g, y_top=%g)" % bs.get_boundaries()
+        elif isinstance(bs, Circle):
+            txt += "\nfrom syned.beamline.shape import Circle"
+            txt += "\nboundary_shape = Circle(radius=%g, x_center=%g,y_center=%g)" % bs.get_boundaries()
+        elif isinstance(bs, Ellipse):
+            txt += "\nfrom syned.beamline.shape import Ellipse"
+            txt += "\nboundary_shape = Ellipse(a_axis_min=%g, a_axis_max=%g, b_axis_min=%g, b_axis_max=%g)" % bs.get_boundaries()
+        return txt
 
     def to_python_code(self, **kwargs):
-        return "# ** not implemented python code for S4Lens() **"
+        txt = self.to_python_code_boundary_shape()
+
+        txt_pre = """
+from shadow4.beamline.optical_elements.refractors.s4_lens import S4Lens
+
+optical_element = S4Lens(name='{name:s}',
+     boundary_shape=boundary_shape,         # syned stuff, replaces "diameter" in the shadow3 append_lens
+     material="", # syned stuff, not (yet) used
+     thickness={thickness}, # syned stuff, lens thickness [m] (distance between the two interfaces at the center of the lenses)
+     surface_shape={surface_shape}, # now: 0=plane, 1=sphere, 2=parabola, 3=conic coefficients
+                                    # (in shadow3: 1=sphere 4=paraboloid, 5=plane)
+     convex_to_the_beam={convex_to_the_beam}, # for surface_shape: convexity of the first interface exposed to the beam 0=No, 1=Yes
+     cylinder_angle={cylinder_angle}, # for surface_shape: 0=not cylindricaL, 1=meridional 2=sagittal
+     ri_calculation_mode={ri_calculation_mode},   # source of refraction indices and absorption coefficients
+                                     # 0=User, 1=prerefl file, 2=xraylib, 3=dabax
+     prerefl_file='{prerefl_file:s}', # for ri_calculation_mode=0: file name (from prerefl) to get the refraction index.
+     refraction_index={refraction_index:g}, # for ri_calculation_mode=1: n (real)
+     attenuation_coefficient={attenuation_coefficient:g}, # for ri_calculation_mode=1: mu in cm^-1 (real)
+     radius={radius:g}, # for surface_shape=(1,2): lens radius [m] (for spherical, or radius at the tip for paraboloid)
+     conic_coefficients=None, # for surface_shape = 3: the conic coefficients [todo: noy yet implemented]
+     )
+    """
+        txt += txt_pre.format(**self.__inputs)
+        return txt
 
     def get_lens_interfaces(self):
         return _get_lens_interfaces(lens_optical_surfaces=self.get_optical_surface_instance(),
@@ -169,7 +207,17 @@ class S4LensElement(S4BeamlineElement):
                          input_beam=input_beam)
 
     def to_python_code(self, **kwargs):
-        return "# ** not implemented python code for S4LensElement() **"
+        txt = "\n\n# optical element number XX"
+        txt += self.get_optical_element().to_python_code()
+        coordinates = self.get_coordinates()
+        txt += "\nfrom syned.beamline.element_coordinates import ElementCoordinates"
+        txt += "\nimport numpy"
+        txt += "\ncoordinates = ElementCoordinates(p=%g, q=%g, angle_radial=0, angle_azimuthal=0, angle_radial_out=numpy.pi)" % \
+               (coordinates.p(), coordinates.q())
+        txt += "\nfrom shadow4.beamline.optical_elements.refractors.s4_lens import S4LensElement"
+        txt += "\nbeamline_element = S4LensElement(optical_element=optical_element, coordinates=coordinates, input_beam=beam)"
+        txt += "\n\nbeam, mirr = beamline_element.trace_beam()"
+        return txt
 
     # def trace_beam(self, **params):
     #     # raise NotImplementedError()

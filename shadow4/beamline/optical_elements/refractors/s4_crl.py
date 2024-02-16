@@ -2,15 +2,13 @@ import numpy
 
 from syned.beamline.element_coordinates import ElementCoordinates
 from syned.beamline.optical_elements.refractors.crl import CRL
+from syned.beamline.shape import Rectangle, Ellipse, Circle
 
 from shadow4.beam.s4_beam import S4Beam
 from shadow4.beamline.s4_beamline_element import S4BeamlineElement
-from shadow4.beamline.optical_elements.refractors.s4_conic_interface import S4ConicInterface, S4ConicInterfaceElement
+from shadow4.beamline.optical_elements.refractors.s4_conic_interface import S4ConicInterfaceElement
 from shadow4.beamline.s4_optical_element_decorators import S4RefractiveLensOpticalElementDecorator
 from shadow4.beamline.optical_elements.refractors.s4_lens import _get_lens_interfaces
-
-from syned.beamline.shape import Rectangle, Ellipse, Circle
-
 
 class S4CRL(CRL, S4RefractiveLensOpticalElementDecorator):
     def __init__(self,
@@ -158,16 +156,7 @@ class S4CRLElement(S4BeamlineElement):
         txt += "\n\nbeam, mirr = beamline_element.trace_beam()"
         return txt
 
-    # def trace_beam(self, **params):
-    #     # raise NotImplementedError()
     def trace_beam(self, **params):
-        # p = self.get_coordinates().p()
-        # q = self.get_coordinates().q()
-        # theta_grazing1 = numpy.pi / 2 - self.get_coordinates().angle_radial()
-        # theta_grazing2 = numpy.pi / 2 - self.get_coordinates().angle_radial_out()
-        # alpha1 = self.get_coordinates().angle_azimuthal()
-        #
-        # #
         input_beam = self.get_input_beam().duplicate()
         oe         = self.get_optical_element()
 
@@ -193,16 +182,12 @@ class S4CRLElement(S4BeamlineElement):
 
             if lens_index < n_lens-1: input_beam = beam2.duplicate()
 
-            # print("\n\n\n>>>>>>> lens: ", lens_index)
-            # print(">>>>>>> interface1: ", beamline_element_1.get_optical_element().get_optical_surface_instance().ccc)
-            # print(">>>>>>> interface2: ", beamline_element_2.get_optical_element().get_optical_surface_instance().ccc)
             print(beamline_element_2.info())
 
         return beam2, [footprint1, footprint2]
 
 
 if __name__ == "__main__":
-    import numpy
     from shadow4.physical_models.prerefl.prerefl import PreRefl
 
     #
@@ -231,5 +216,4 @@ if __name__ == "__main__":
 
     e.trace_beam()
 
-    # print(lens.to_python_code())
     print(e.to_python_code())
