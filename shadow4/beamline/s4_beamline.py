@@ -20,10 +20,9 @@ class S4Beamline(Beamline):
     def append_beamline_element(self, beamline_element: S4BeamlineElement):
         self._beamline_elements_list.append(beamline_element)
 
-
     def to_python_code(self, **kwargs):
         script = "from shadow4.beamline.s4_beamline import S4Beamline"
-        script += "\n\nbeamline = S4Beamline()"
+        script += "\n\nbeamline = S4Beamline()\n"
         try:
             script += self.get_light_source().to_python_code()
             script += "\n\nbeamline.set_light_source(light_source)"
