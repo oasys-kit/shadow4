@@ -18,6 +18,7 @@
 #
 import numpy
 import numpy as np
+from scipy import interpolate
 
 import scipy.constants as codata
 import scipy.integrate
@@ -112,6 +113,103 @@ def _pysru_energy_radiated_approximation_and_farfield(omega=2.53465927101e17, el
     E *= c6**0.5
     return E
 
+
+def _get_radiation_interpolated_cartesian(radiation, photon_energy, thetabm, phi,
+                                          npointsx=100, npointsz=100, thetamax=None):
+    """
+    Interpolates the radiation array (in polar coordinates) to cartesian coordinates.
+
+    Parameters
+    ----------
+    npointsx : int, optional
+        The number of points in X.
+    npointsz : int, optional
+        The number of points in Z.
+    thetamax : None or float, optional
+        Maximum value of theta. By default (None) it uses the maximum theta.
+
+    Returns
+    -------
+    tuple
+        (radiation, array_x, array_y) in units of W/rad^2.
+    """
+
+    # radiation, photon_energy, thetabm, phi = self.get_result_radiation_polar()
+
+    if thetamax is None:
+        thetamax = thetabm.max()
+
+    vx = numpy.linspace(-1.1 * thetamax, 1.1 * thetamax, npointsx)
+    vz = numpy.linspace(-1.1 * thetamax, 1.1 * thetamax, npointsz)
+    VX = numpy.outer(vx, numpy.ones_like(vz))
+    VZ = numpy.outer(numpy.ones_like(vx), vz)
+    VY = numpy.sqrt(1 - VX**2 - VZ**2)
+
+    IN_thetabm = numpy.outer(thetabm, numpy.ones_like(phi))
+    IN_phi = numpy.outer(numpy.ones_like(thetabm), phi)
+    IN = numpy.zeros( (IN_thetabm.size, 2))
+    IN[:,0] = IN_thetabm.flatten()
+    IN[:,1] = IN_phi.flatten()
+
+    # THETA = numpy.abs(numpy.arctan(numpy.sqrt(VX**2 + VZ**2) / VY))
+    THETA = numpy.arctan(numpy.sqrt(VX**2 + VZ**2) / VY)
+    # PHI = numpy.arctan2(numpy.abs(VZ), numpy.abs(VX))
+    PHI = numpy.arctan2(VZ, VX)
+
+    print(">> interpolating: THETA min, max: ", THETA.min(), THETA.max())
+    print(">> interpolating: PHI min, max: ", PHI.min(), PHI.max())
+
+    radiation_interpolated = numpy.zeros((radiation.shape[0], npointsx, npointsz))
+
+    for i in range(radiation.shape[0]):
+        interpolator_value = interpolate.RectBivariateSpline(thetabm, phi, radiation[i])
+        radiation_interpolated[i] = interpolator_value.ev(THETA, PHI)
+
+        # print(">>>>>>>>>>>>>>", IN_thetabm.shape, IN_phi.shape, radiation[i].shape)
+        # interpolator_value = interpolate.NearestNDInterpolator(IN, radiation[i].flatten(), rescale=1)
+        # print(">>>>>>>>>>>>>>>>", interpolator_value(THETA, PHI).shape)
+        # radiation_interpolated[i] = interpolator_value(THETA, PHI)
+
+    return radiation_interpolated, photon_energy, vx, vz
+
+def _propagate_complex_amplitude_from_arrays(
+                                            amplitude_flatten,
+                                            X_flatten,
+                                            Y_flatten,
+                                            det_X_flatten=None,
+                                            det_Y_flatten=None,
+                                            wavelength=1e-10,
+                                            propagation_distance=100):
+    #
+    # Fresnel-Kirchhoff integral (neglecting inclination factor)
+    #
+    if det_X_flatten is None: det_X_flatten = X_flatten
+    if det_Y_flatten is None: det_Y_flatten = Y_flatten
+
+    ngood = det_X_flatten.size
+
+    fla_complex_amplitude_propagated = numpy.zeros(ngood, dtype=complex)
+
+    Propagation_distance = numpy.ones_like(X_flatten) * propagation_distance
+
+    wavenumber = 2 * numpy.pi / wavelength
+
+    for i in range(ngood):
+        r = numpy.sqrt( (X_flatten - det_X_flatten[i])**2 +
+                        (Y_flatten - det_Y_flatten[i])**2 +
+                        Propagation_distance**2 )
+
+        fla_complex_amplitude_propagated[i] = (amplitude_flatten / r * numpy.exp(1.j * wavenumber *  r)).sum()
+
+
+    # added srio@esrf.eu 2018-03-23 to conserve energy - TODO: review method!
+    i0 = numpy.abs(amplitude_flatten)**2
+    i1 = numpy.abs(fla_complex_amplitude_propagated)**2
+
+    fla_complex_amplitude_propagated *= i0.sum() / i1.sum()
+
+    return fla_complex_amplitude_propagated
+
 # now, undul_phot
 def _undul_phot(E_ENERGY,INTENSITY, LAMBDAU, NPERIODS, K, EMIN, EMAX, NG_E, MAXANGLE, NG_T, NG_P,
                number_of_trajectory_points=20, flag_size=0, distance=100.0, magnification=0.01, ):
@@ -123,66 +221,292 @@ def _undul_phot(E_ENERGY,INTENSITY, LAMBDAU, NPERIODS, K, EMIN, EMAX, NG_E, MAXA
     Beta = np.sqrt(1.0 - (1.0 / gamma**2))
     Beta_et = Beta * (1.0 - (K / (2.0 * gamma))**2)
 
-    E = np.linspace(EMIN, EMAX, NG_E,dtype=float)
+    E = np.linspace(EMIN, EMAX, NG_E, dtype=float)
     wavelength_array_in_A = angstroms_to_eV / E
     omega_array = 2 * np.pi * codata.c / (wavelength_array_in_A * 1e-10)
 
+
+    #
+    # calculate source in polar coordinates
+    #
+    Nb_pts_trajectory = int(number_of_trajectory_points * NPERIODS)
+    print("Calculating trajectory...")
     T = _pysru_analytical_trajectory_plane_undulator(K=K, gamma=gamma, lambda_u=LAMBDAU, Nb_period=NPERIODS,
-                                        Nb_point=number_of_trajectory_points, Beta_et=Beta_et)
+                                        Nb_point=Nb_pts_trajectory,
+                                        Beta_et=Beta_et)
+    print("Done calculating trajectory...")
 
     #
     # polar grid
     #
     D = distance # placed far away (100 m)
+
+    #
+    # for divergences sample angle in [0,MAXANGLE]
+    #
+    # theta = np.linspace(-MAXANGLE, MAXANGLE, NG_T, dtype=float)
+    # phi = (numpy.arange(NG_P) / NG_P - 0.5) * numpy.pi # np.linspace(-numpy.pi/2, numpy.pi/2, NG_P, dtype=float)
     theta = np.linspace(0, MAXANGLE, NG_T, dtype=float)
-    phi = np.linspace(0, np.pi/2, NG_P, dtype=float)
+    phi = numpy.linspace(0, numpy.pi / 2, NG_P)
+    # phi = (numpy.arange(NG_P) / NG_P - 0.5) * 2 * numpy.pi # np.linspace(-numpy.pi/2, numpy.pi/2, NG_P, dtype=float)
 
-    Z2 = np.zeros((omega_array.size, theta.size, phi.size))
-    POL_DEG = np.zeros_like(Z2)
-    EFIELD_X = np.zeros_like(Z2, dtype=complex)
-    EFIELD_Y = np.zeros_like(Z2, dtype=complex)
-    EFIELD_Z = np.zeros_like(Z2, dtype=complex)
-    for o in range(omega_array.size):
-        print("Calculating energy %8.3f eV (%d of %d)"%(E[o],o+1,omega_array.size))
-        for t in range(theta.size):
-            for p in range(phi.size):
-                R = D / np.cos(theta[t])
-                r = R * np.sin(theta[t])
-                X = r * np.cos(phi[p])
-                Y = r * np.sin(phi[p])
-                ElecField = _pysru_energy_radiated_approximation_and_farfield(omega=omega_array[o],
-                                                                              electron_current=INTENSITY,
-                                                                              trajectory=T ,
-                                                                              x=X ,
-                                                                              y=Y,
-                                                                              D=D)
+    THETA = numpy.outer(theta, numpy.ones_like(phi))
+    PHI = numpy.outer(numpy.ones_like(theta), phi)
+    r = distance / numpy.cos(THETA) * numpy.sin(THETA)
+    xx = r * numpy.cos(PHI)
+    yy = r * numpy.sin(PHI)
 
-                # pol_deg = np.abs(ElecField[0])**2 / (np.abs(ElecField[0])**2 + np.abs(ElecField[1])**2)
-                pol_deg = np.abs(ElecField[0]) / (np.abs(ElecField[0]) + np.abs(ElecField[1])) # SHADOW definition
-                intensity =  (np.abs(ElecField[0]) ** 2 + np.abs(ElecField[1])** 2 + np.abs(ElecField[2])** 2)
-                # print(np.abs(ElecField[0]) ** 2 / intensity,
-                #       np.abs(ElecField[1]) ** 2 / intensity,
-                #       np.abs(ElecField[2]) ** 2 / intensity,)
+    POL_DEG = np.zeros((omega_array.size, theta.size, phi.size))
+    EFIELD_X = np.zeros_like(POL_DEG, dtype=complex)
+    EFIELD_Y = np.zeros_like(POL_DEG, dtype=complex)
 
-                #  Conversion from pySRU units (photons/mm^2/0.1%bw) to SHADOW units (photons/rad^2/eV)
-                intensity *= (D * 1e3)**2 # photons/mm^2 -> photons/rad^2
-                intensity /= 1e-3 * E[o] # photons/o.1%bw -> photons/eV
+    print("Calculating radiation...", POL_DEG.shape, theta.shape, phi.shape)
+    # for o in range(omega_array.size):
+    #     print("Calculating energy %8.3f eV (%d of %d)"%(E[o],o+1,omega_array.size))
+    #     for t in range(theta.size):
+    #         for p in range(phi.size):
+    #             R = D / np.cos(theta[t])
+    #             r = R * np.sin(theta[t])
+    #             X = r * np.cos(phi[p])
+    #             Y = r * np.sin(phi[p])
+    #             ElecField = _pysru_energy_radiated_approximation_and_farfield(omega=omega_array[o],
+    #                                                                           electron_current=INTENSITY,
+    #                                                                           trajectory=T ,
+    #                                                                           x=X ,
+    #                                                                           y=Y,
+    #                                                                           D=D)
+    #
+    #             # if numpy.abs(phi[p]) > numpy.pi / 3: ElecField *= 0
+    #
+    #             pol_deg = np.abs(ElecField[0]) / (np.abs(ElecField[0]) + np.abs(ElecField[1])) # SHADOW definition
+    #             intensity =  (np.abs(ElecField[0]) ** 2 + np.abs(ElecField[1])** 2 + np.abs(ElecField[2])** 2)
+    #
+    #             #  Conversion from pySRU units (photons/mm^2/0.1%bw) to SHADOW units (photons/rad^2/eV)
+    #             coeff = (D * 1e3) ** 2  # photons/mm^2 -> photons/rad^2
+    #             coeff /= 1e-3 * E[o]  # photons/o.1%bw -> photons/eV
+    #             intensity *= coeff
+    #
+    #             Z2[o, t, p] = intensity
+    #             POL_DEG[o, t, p] = pol_deg
+    #             EFIELD_X[o, t, p] = ElecField[0] * numpy.sqrt(coeff)
+    #             EFIELD_Y[o, t, p] = ElecField[1] * numpy.sqrt(coeff)
+    #             EFIELD_Z[o, t, p] = ElecField[2] * numpy.sqrt(coeff)
 
-                Z2[o, t, p] = intensity
-                POL_DEG[o, t, p] = pol_deg
-                EFIELD_X[o, t, p] = ElecField[0]
-                EFIELD_Y[o, t, p] = ElecField[1]
-                EFIELD_Z[o, t, p] = ElecField[2]
 
-    return {'radiation':Z2,
-            'polarization':POL_DEG,
-            'photon_energy':E,
-            'theta':theta,
-            'phi':phi,
-            'trajectory':T,
+    from pySRU.Simulation import create_simulation
+    from pySRU.ElectronBeam import ElectronBeam as PysruElectronBeam
+    from pySRU.MagneticStructureUndulatorPlane import MagneticStructureUndulatorPlane as PysruUndulator
+    from pySRU.TrajectoryFactory import TRAJECTORY_METHOD_ANALYTIC
+    from pySRU.RadiationFactory import RADIATION_METHOD_APPROX_FARFIELD
+
+    for ie, e in enumerate(E):
+        print("Calculating undulator source at energy %g eV (%d of %d) (%d x %d points) %d traj."%(e,
+                                            ie+1, E.size, NG_T, NG_P, Nb_pts_trajectory))
+        simulation_test = create_simulation(magnetic_structure=PysruUndulator(
+                                                                        K=K,
+                                                                        period_length=LAMBDAU,
+                                                                        length=LAMBDAU*NPERIODS),
+                                            electron_beam=PysruElectronBeam(
+                                                                        Electron_energy=E_ENERGY,
+                                                                        I_current=INTENSITY),
+                                            magnetic_field=None,
+                                            photon_energy=e,
+                                            traj_method=TRAJECTORY_METHOD_ANALYTIC,
+                                            Nb_pts_trajectory=Nb_pts_trajectory, #None,
+                                            rad_method=RADIATION_METHOD_APPROX_FARFIELD,
+                                            initial_condition=None,
+                                            distance=D,
+                                            X=xx.flatten(),
+                                            Y=yy.flatten(),
+                                            XY_are_list=True)
+
+        Efield = simulation_test.electric_field._electrical_field
+        tmp_x = Efield[:, 0].copy()
+        tmp_y = Efield[:, 1].copy()
+        tmp_x.shape = (theta.size, phi.size)
+        tmp_y.shape = (theta.size, phi.size)
+
+        EFIELD_X[ie, :, :] = tmp_x
+        EFIELD_Y[ie, :, :] = tmp_y
+
+        POL_DEG[ie, :, :] = numpy.abs(tmp_x) / (numpy.abs(tmp_x) + numpy.abs(tmp_y)) # SHADOW definition
+    print("Done calculating radiation...")
+
+    radiation = numpy.abs(EFIELD_X)**2 + numpy.abs(EFIELD_Y)**2
+    out = {'radiation'         : radiation,
+            'polarization'     : POL_DEG,
+            'photon_energy'    : E,
+            'theta'            : theta,
+            'phi'              : phi,
+            'trajectory'       : T,
             'e_amplitude_sigma': EFIELD_X, # todo: verify!
-            'e_amplitude_pi':    EFIELD_Y, # todo: verify!
+            'e_amplitude_pi'   : EFIELD_Y, # todo: verify!
             }
+
+    # from srxraylib.plot.gol import plot
+    # plot(out['theta'], out['radiation'].sum(axis=2).sum(axis=0), title='accumulated intensity far field')
+    #
+    # interpolate to cartesian grid
+    #
+    npointsx = theta.size
+    npointsz = theta.size
+    thetamax = None
+    print("Interpolating to cartesian grid (%d x %d points)" % (npointsx, npointsz))
+    # interpolate intensity
+    radiation_interpolated, photon_energy, vx, vz = _get_radiation_interpolated_cartesian(
+        radiation, E, theta, phi, npointsx=npointsx, npointsz=npointsz, thetamax=thetamax)
+
+    out['CART_radiation'] = radiation_interpolated
+    out['CART_x'] = vx  # angle in rad
+    out['CART_y'] = vz  # angle in rad
+
+    ####################################################
+
+    #
+    # back propagation
+    #
+    if flag_size == 2:
+        #
+        # recalculate....
+        #
+        if True:
+            #
+            # for sizes sample angle in [-MAXANGLE,MAXANGLE]
+            #
+            theta = np.linspace(-MAXANGLE, MAXANGLE, NG_T, dtype=float)
+            # NG_P *= 2
+            phi = (numpy.arange(NG_P) / NG_P - 0.5) * numpy.pi # np.linspace(-numpy.pi/2, numpy.pi/2, NG_P, dtype=float)
+            THETA = numpy.outer(theta, numpy.ones_like(phi))
+            PHI = numpy.outer(numpy.ones_like(theta), phi)
+            r = distance / numpy.cos(THETA) * numpy.sin(THETA)
+            xx = r * numpy.cos(PHI)
+            yy = r * numpy.sin(PHI)
+
+            EFIELD_X = np.zeros((omega_array.size, theta.size, phi.size), dtype=complex)
+
+            print("RE-Calculating radiation...", POL_DEG.shape, theta.shape, phi.shape)
+
+            from pySRU.Simulation import create_simulation
+            from pySRU.ElectronBeam import ElectronBeam as PysruElectronBeam
+            from pySRU.MagneticStructureUndulatorPlane import MagneticStructureUndulatorPlane as PysruUndulator
+            from pySRU.TrajectoryFactory import TRAJECTORY_METHOD_ANALYTIC
+            from pySRU.RadiationFactory import RADIATION_METHOD_APPROX_FARFIELD
+
+            for ie, e in enumerate(E):
+                print("Calculating undulator source at energy %g eV (%d of %d) (%d x %d points) %d traj." % (e,
+                                                                                                             ie + 1, E.size,
+                                                                                                             NG_T, NG_P,
+                                                                                                             Nb_pts_trajectory))
+                simulation_test = create_simulation(magnetic_structure=PysruUndulator(
+                    K=K,
+                    period_length=LAMBDAU,
+                    length=LAMBDAU * NPERIODS),
+                    electron_beam=PysruElectronBeam(
+                        Electron_energy=E_ENERGY,
+                        I_current=INTENSITY),
+                    magnetic_field=None,
+                    photon_energy=e,
+                    traj_method=TRAJECTORY_METHOD_ANALYTIC,
+                    Nb_pts_trajectory=Nb_pts_trajectory,  # None,
+                    rad_method=RADIATION_METHOD_APPROX_FARFIELD,
+                    initial_condition=None,
+                    distance=D,
+                    X=xx.flatten(),
+                    Y=yy.flatten(),
+                    XY_are_list=True)
+
+                Efield = simulation_test.electric_field._electrical_field
+                tmp_x = Efield[:, 0].copy()
+                tmp_x.shape = (theta.size, phi.size)
+                EFIELD_X[ie, :, :] = tmp_x
+
+            print("Done calculating radiation...")
+            ca = EFIELD_X
+        else:
+            ca = out['e_amplitude_sigma']
+        # x_in = input_wavefront.get_coordinate_x()
+        # y_in = input_wavefront.get_coordinate_y()
+        # print(x_in.min(), x_in.max(), y_in.min(), y_in.max())
+
+        det_half = MAXANGLE * distance * magnification
+        x_axis = numpy.linspace(-det_half, det_half, 1000)
+        y_axis = numpy.linspace(-det_half, det_half, 1000)
+
+        xx_fla = xx.flatten()
+        yy_fla = yy.flatten()
+
+        # backpropagated_efield_sigma = numpy.zeros((omega_array.size, theta.size, phi.size), dtype=complex)
+        CART_BACKPROPAGATED_radiation= numpy.zeros((omega_array.size, x_axis.size), dtype=float)
+
+        print(">>>>>ca: ", ca.shape, E.shape)
+        for ie, e in enumerate(E):
+            fla_complex_amplitude_propagated_x_axis = _propagate_complex_amplitude_from_arrays(
+                ca[ie].flatten(),
+                xx_fla,
+                yy_fla,
+                det_X_flatten=x_axis,
+                det_Y_flatten=y_axis * 0,
+                wavelength=wavelength_array_in_A[ie] * 1e-10,
+                propagation_distance=-distance)
+
+            fla_complex_amplitude_propagated_y_axis = _propagate_complex_amplitude_from_arrays(
+                ca[ie].flatten(),
+                xx_fla,
+                yy_fla,
+                det_X_flatten=x_axis * 0,
+                det_Y_flatten=y_axis,
+                wavelength=wavelength_array_in_A[ie] * 1e-10,
+                propagation_distance=-distance)
+
+            # area = (x_axis[1] - x_axis[0]) * numpy.abs(x_axis) * 2 * numpy.pi
+            # x_norm = 1.0 / (0.025**2 * area)
+            # print(x_norm)
+            # plot(x_axis * 0.025, x_norm)
+            ii_x = numpy.abs(fla_complex_amplitude_propagated_x_axis) ** 2
+            ii_y = numpy.abs(fla_complex_amplitude_propagated_y_axis) ** 2
+            ii_x /= ii_x.max()
+            ii_y /= ii_y.max()
+            # from srxraylib.plot.gol import plot
+            # if ie < 4:
+            #     plot(x_axis, ii_x,
+            #          y_axis, ii_y,
+            #          legend=['x axis', 'y axis'])
+
+            CART_BACKPROPAGATED_radiation[ie, :] = ii_x
+
+        out['BACKPROPAGATED_radiation'] = CART_BACKPROPAGATED_radiation
+        out['BACKPROPAGATED_r'] = x_axis  # size in m
+
+
+        #
+        # plot(x_axis * 0.025, numpy.abs(fla_complex_amplitude_propagated) ** 2,
+        #      y_axis * 0.025, numpy.abs(fla_complex_amplitude_propagated) ** 2,
+        #      legend=['x', 'y'])
+        #
+
+        #
+        # tmp = numpy.zeros((x.size, y.size), dtype=complex)
+        # tmp[:, y.size // 2] = fla_complex_amplitude_propagated[0:x.size]
+        # tmp[x.size // 2, :] = fla_complex_amplitude_propagated[x.size:]
+        # output_wavefront = GenericWavefront2D.initialize_wavefront_from_arrays(x * 0.025, y * 0.025,
+        #                                                                        tmp,
+        #                                                                        wavelength=wavelength)
+
+
+
+
+
+
+
+
+        # out['CART_BACKPROPAGATED_radiation'] = radiation_interpolated
+        # out['CART_BACKPROPAGATED_x'] = vx * D  # size in m
+        # out['CART_BACKPROPAGATED_y'] = vz * D  # size in m
+
+
+    #####################################################
+    return out
+
 
 def calculate_undulator_emission(electron_energy              = 6.0,
                                  electron_current             = 0.2,
@@ -275,6 +599,7 @@ def undul_cdf(undul_phot_dict, method='trapz'):
             'polarization':POL_DEG}
 
 if __name__ == "__main__":
+
     dict1 = calculate_undulator_emission(
                      electron_energy              = 6.0,
                      electron_current             = 0.2,
@@ -283,15 +608,55 @@ if __name__ == "__main__":
                      K                            = 1.681183,
                      photon_energy                = 5591.0,
                      EMAX                         = 5700.0,
-                     NG_E                         = 11,
-                     MAXANGLE                     = 2e-5,
-                     number_of_points             = 51,
+                     NG_E                         = 1,
+                     MAXANGLE                     = 30e-6,
+                     number_of_points             = 151,
                      NG_P                         = 11,
-                     number_of_trajectory_points  = 51)
+                     number_of_trajectory_points  = 20,
+                     flag_size                    = 2,
+                     distance                     = 100.0,
+                     magnification                = 0.0125,
+    )
 
-    from srxraylib.plot.gol import plot_image
-    plot_image(dict1['radiation'][0], dict1['theta'], dict1['phi'], aspect='auto',  title="first", show=0)
-    plot_image(dict1['radiation'][-1], dict1['theta'], dict1['phi'], aspect='auto', title="last", show=1)
+    from srxraylib.plot.gol import plot_image, plot
+    # plot_image(dict1['radiation'][0], dict1['theta'], dict1['phi'], aspect='auto',  title="first", show=0)
+    plot_image(dict1['radiation'][-1], dict1['theta'], numpy.degrees(dict1['phi']), aspect='auto',
+               title="last", xtitle="theta", ytitle="phi [deg]", show=0)
 
-    plot_image(dict1['CART_radiation'][0], 1e6 * dict1['CART_x'], 1e6 * dict1['CART_y'], aspect='auto', title="first", show=0)
-    plot_image(dict1['CART_radiation'][-1], 1e6 * dict1['CART_x'], 1e6 * dict1['CART_y'], aspect='auto', title="last", show=1)
+    profiles = numpy.abs(dict1['e_amplitude_sigma'][-1])**2
+    plot(100 * dict1['theta'], profiles[:, 0],
+         100 * dict1['theta'], profiles[:, 2],
+         100 * dict1['theta'], profiles[:, 4],
+         100 * dict1['theta'], profiles[:, 6],
+         100 * dict1['theta'], profiles[:, 8],
+         100 * dict1['theta'], profiles[:, 10],
+         xtitle="r [m] (%d points)" % (dict1['theta'].size),
+         ytitle="intensity (%d points)" % (profiles.shape[0]),
+         )
+
+    ii = numpy.abs(dict1['e_amplitude_sigma'])**2 + numpy.abs(dict1['e_amplitude_pi'])**2
+    plot_image(ii[-1], dict1['theta'], numpy.degrees(dict1['phi']), aspect='auto',
+               title="last (from amplitudes)", xtitle="theta", ytitle="phi [deg]", show=1)
+
+    if True:
+        plot_image(dict1['CART_radiation'][0],
+                   100 * 1e6 * dict1['CART_x'], 100 * 1e6 * dict1['CART_y'], aspect='auto', title="first", show=0)
+        plot_image(dict1['CART_radiation'][-1],
+                   100 * 1e6 * dict1['CART_x'], 100 * 1e6 * dict1['CART_y'], aspect='auto', title="last", show=1)
+
+
+    # BACK...
+
+    ii = dict1['BACKPROPAGATED_radiation']
+    plot(1e6 * dict1['BACKPROPAGATED_r'], ii[-1],
+               title="backpropagated last", xtitle="x [um]", ytitle="intensity", show=1)
+
+    # plot_image(dict1['CART_BACKPROPAGATED_radiation'][-1],
+    #            1e6 * dict1['CART_BACKPROPAGATED_x'], 1e6 * dict1['CART_BACKPROPAGATED_y'], aspect='auto',
+    #            title="last CART BACKPROPAGATED", xtitle="x [um]", ytitle="y [um]", show=1)
+
+    if False:
+        plot_image(dict1['CART_radiation'][0],
+                   100 * 1e6 * dict1['CART_x'], 100 * 1e6 * dict1['CART_y'], aspect='auto', title="first", show=0)
+        plot_image(dict1['CART_radiation'][-1],
+                   100 * 1e6 * dict1['CART_x'], 100 * 1e6 * dict1['CART_y'], aspect='auto', title="last", show=1)

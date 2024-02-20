@@ -63,7 +63,7 @@ class S4UndulatorLightSource(S4LightSource):
         self.__result_radiation = None
         self.__result_photon_size_distribution = None
         self.__result_photon_size_sigma = None
-        self.__result_photon_size_farfield = None
+        # self.__result_photon_size_farfield = None
 
 
 
@@ -491,24 +491,24 @@ class S4UndulatorLightSource(S4LightSource):
 
         return self.__result_photon_size_distribution["x"], self.__result_photon_size_distribution["y"]
 
-    def get_photon_size_farfield(self):
-        """
-        Returns the arrays of far field distribution.
-
-        Returns
-        -------
-        tuple
-            (array_x, array_z).
-        """
-        if self.__result_photon_size_distribution is None:
-            raise Exception("Not yet calculated...")
-
-        # theta, radial_flux, mean_photon_energy, distance, magnification
-        return self.__result_photon_size_farfield["theta"],\
-               self.__result_photon_size_farfield["radial_e_amplitude"], \
-               self.__result_photon_size_farfield["mean_photon_energy"], \
-               self.__result_photon_size_farfield["distance"], \
-               self.__result_photon_size_farfield["magnification"]
+    # def get_photon_size_farfield(self):
+    #     """
+    #     Returns the arrays of far field distribution.
+    #
+    #     Returns
+    #     -------
+    #     tuple
+    #         (array_x, array_z).
+    #     """
+    #     if self.__result_photon_size_distribution is None:
+    #         raise Exception("Not yet calculated...")
+    #
+    #     # theta, radial_flux, mean_photon_energy, distance, magnification
+    #     return self.__result_photon_size_farfield["theta"],\
+    #            self.__result_photon_size_farfield["radial_e_amplitude"], \
+    #            self.__result_photon_size_farfield["mean_photon_energy"], \
+    #            self.__result_photon_size_farfield["distance"], \
+    #            self.__result_photon_size_farfield["magnification"]
 
 
     def get_beam_in_gaussian_approximation(self):
@@ -935,79 +935,26 @@ class S4UndulatorLightSource(S4LightSource):
             # Then it was propagated back to the source plane to sample the size.
             #
             if undulator.code_undul_phot == 'internal': # wofry1D
-                distance = 100.
-                magnification = s_phot * 10 / (theta[-1] * distance)
-                mean_photon_energy = numpy.array(sampled_photon_energy).mean()  # todo: use the weighted mean?
+                dict1 = self.__result_radiation
+                xx = dict1['BACKPROPAGATED_r']
+                if self.get_magnetic_structure().is_monochromatic():
+                    yy = dict1['BACKPROPAGATED_radiation'][0]  # todo something
+                else:
+                    yy = dict1['BACKPROPAGATED_radiation'].sum(axis=0)  # todo something
 
-                if True:
-                    THETA = numpy.concatenate((-theta[::-1], theta[1::]), axis=None)
+                sampler_radial = Sampler1D(yy * numpy.abs(xx), xx)
+                r, hy, hx = sampler_radial.get_n_sampled_points_and_histogram(NRAYS, bins=101)
+                angle = numpy.random.random(NRAYS) * 2 * numpy.pi
 
-                    radial_e_amplitude_sigma = e_amplitude_sigma[0, :, 0]
-                    RADIAL_E_AMPLITUDE = numpy.concatenate((radial_e_amplitude_sigma[::-1], radial_e_amplitude_sigma[1::]), axis=None)
-                    # doble the arrays for 1D propagation
-
-                    # from srxraylib.plot.gol import plot
-                    # plot(THETA, numpy.abs(RADIAL_E_AMPLITUDE)**2, title="WOFRY E=%f, Nener=%d" % (mean_photon_energy, photon_energy.size))
-
-                    ############################### WOFRY ############################################
-                    self.__result_photon_size_farfield = {
-                                                        "theta": THETA,
-                                                        "radial_e_amplitude": RADIAL_E_AMPLITUDE,
-                                                        "mean_photon_energy": mean_photon_energy,
-                                                        "distance": distance,
-                                                        "magnification": magnification}
-
-                    self._back_propagation_for_size_calculation_wofry()
-
-                    # we sample rays following the resulting radial distribution
-                    xx = self.__result_photon_size_distribution["x"]
-                    yy = self.__result_photon_size_distribution["y"]
-
-                    # plot(xx, yy)
-                    # #################################################################################
-                    sampler_radial = Sampler1D(yy * numpy.abs(xx), xx)
-                    r, hy, hx = sampler_radial.get_n_sampled_points_and_histogram(NRAYS, bins=101)
-                    angle = numpy.random.random(NRAYS) * 2 * numpy.pi
-
-                    x_photon = r / numpy.sqrt(2.0) * numpy.sin(angle)
-                    y_photon = 0.0
-                    z_photon = r / numpy.sqrt(2.0) * numpy.cos(angle)
-                else: # hankel
-                    # print(">>>>>>>>>>>>>>>>>>>>>>>>>", e_amplitude_sigma.shape)
-                    radial_e_amplitude_sigma =  e_amplitude_sigma[0, :, 0]
-
-                    from srxraylib.plot.gol import plot
-                    plot(theta, numpy.abs(radial_e_amplitude_sigma)**2, title="HANKEL E=%f, Nener=%d" % (mean_photon_energy, photon_energy.size))
-
-                    self.__result_photon_size_farfield = {
-                                                        "theta": theta,
-                                                        "radial_e_amplitude": radial_e_amplitude_sigma,
-                                                        "mean_photon_energy": mean_photon_energy,
-                                                        "distance": distance,
-                                                        "magnification": magnification}
-
-                    self._back_propagation_for_size_calculation_hankel()
-
-                    # we sample rays following the resulting radial distribution
-                    xx = self.__result_photon_size_distribution["x"]
-                    yy = self.__result_photon_size_distribution["y"]
-
-                    plot(xx, yy)
-                    # #################################################################################
-                    sampler_radial = Sampler1D(yy * numpy.abs(xx), xx)
-                    r, hy, hx = sampler_radial.get_n_sampled_points_and_histogram(NRAYS, bins=101)
-                    angle = numpy.random.random(NRAYS) * 2 * numpy.pi
-
-                    x_photon = r / numpy.sqrt(2.0) * numpy.sin(angle)
-                    y_photon = 0.0
-                    z_photon = r / numpy.sqrt(2.0) * numpy.cos(angle)
+                x_photon = r / numpy.sqrt(2.0) * numpy.sin(angle)
+                y_photon = 0.0
+                z_photon = r / numpy.sqrt(2.0) * numpy.cos(angle)
             elif undulator.code_undul_phot == 'pysru':
-                self.__result_photon_size_farfield = {}
                 dict1 = self.__result_radiation
                 if self.get_magnetic_structure().is_monochromatic():
                     i_prop = dict1['CART_BACKPROPAGATED_radiation'][0]  # todo something
                 else:
-                    i_prop = dict1['CART_BACKPROPAGATED_radiation'].sum()  # todo something
+                    i_prop = dict1['CART_BACKPROPAGATED_radiation'].sum(axis=0)  # todo something
                 x = dict1['CART_BACKPROPAGATED_x']
                 y = dict1['CART_BACKPROPAGATED_y']
 
@@ -1022,12 +969,11 @@ class S4UndulatorLightSource(S4LightSource):
                 z_photon = sampled_z
 
             elif undulator.code_undul_phot == 'srw':
-                self.__result_photon_size_farfield = {}
                 dict1 = self.__result_radiation
                 if self.get_magnetic_structure().is_monochromatic():
                     i_prop = dict1['CART_BACKPROPAGATED_radiation'][0] # todo something
                 else:
-                    i_prop = dict1['CART_BACKPROPAGATED_radiation'].sum() # todo something
+                    i_prop = dict1['CART_BACKPROPAGATED_radiation'].sum(axis=0) # todo something
                 x = dict1['CART_BACKPROPAGATED_x']
                 y = dict1['CART_BACKPROPAGATED_y']
 
@@ -1040,7 +986,6 @@ class S4UndulatorLightSource(S4LightSource):
 
                 # from srxraylib.plot.gol import plot_scatter
                 # plot_scatter(1e6 * sampled_x, 1e6 * sampled_z, title='>>>>>>>>>> SAMPLED (X,Z) in microns')
-
                 x_photon = sampled_x
                 y_photon = 0.0
                 z_photon = sampled_z
@@ -1258,151 +1203,151 @@ class S4UndulatorLightSource(S4LightSource):
         return rays
 
 
-    def _back_propagation_for_size_calculation_wofry(self):
-        """
-        Calculate the radiation_flux vs theta at a "distance"
-        Back propagate to -distance
-        The result is the size distrubution
+    # def _back_propagation_for_size_calculation_wofry(self):
+    #     """
+    #     Calculate the radiation_flux vs theta at a "distance"
+    #     Back propagate to -distance
+    #     The result is the size distrubution
+    #
+    #     :return: None; stores results in self._photon_size_distribution
+    #     """
+    #
+    #     from wofry.propagator.wavefront1D.generic_wavefront import GenericWavefront1D
+    #     from wofry.propagator.propagator import PropagationManager, PropagationElements, PropagationParameters
+    #     from syned.beamline.beamline_element import BeamlineElement
+    #     from syned.beamline.element_coordinates import ElementCoordinates
+    #     from wofryimpl.propagator.propagators1D.fresnel_zoom import FresnelZoom1D
+    #     from wofryimpl.beamline.optical_elements.ideal_elements.screen import WOScreen1D
+    #
+    #     theta          = self.__result_photon_size_farfield["theta"]
+    #     photon_energy  = self.__result_photon_size_farfield["mean_photon_energy"]
+    #     distance       = self.__result_photon_size_farfield["distance"]
+    #     magnification  = self.__result_photon_size_farfield["magnification"]
+    #     radial_e_amplitude = self.__result_photon_size_farfield["radial_e_amplitude"] # numpy.sqrt(self.__result_photon_size_farfield["radial_flux"]) + 0j
+    #
+    #     input_wavefront = GenericWavefront1D().initialize_wavefront_from_arrays(theta * distance, radial_e_amplitude)
+    #     input_wavefront.set_photon_energy(photon_energy)
+    #     # input_wavefront.set_spherical_wave(radius=distance, complex_amplitude=radial_e_amplitude)
+    #     # input_wavefront.save_h5_file("tmp2.h5","wfr")
+    #
+    #     optical_element = WOScreen1D()
+    #     #
+    #     # propagating
+    #     #
+    #     #
+    #     propagation_elements = PropagationElements()
+    #     beamline_element = BeamlineElement(optical_element=optical_element,
+    #                     coordinates=ElementCoordinates(p=0.0,q=-distance,
+    #                     angle_radial=numpy.radians(0.000000),
+    #                     angle_azimuthal=numpy.radians(0.000000)))
+    #     propagation_elements.add_beamline_element(beamline_element)
+    #     propagation_parameters = PropagationParameters(wavefront=input_wavefront.duplicate(),propagation_elements = propagation_elements)
+    #     propagation_parameters.set_additional_parameters('magnification_x', magnification)
+    #
+    #     #
+    #     propagator = PropagationManager.Instance()
+    #     try:
+    #         propagator.add_propagator(FresnelZoom1D())
+    #     except:
+    #         pass
+    #     output_wavefront = propagator.do_propagation(propagation_parameters=propagation_parameters,handler_name='FRESNEL_ZOOM_1D')
+    #
+    #     self.__result_photon_size_distribution = {"x":output_wavefront.get_abscissas(),
+    #                                               "y":output_wavefront.get_intensity()}
 
-        :return: None; stores results in self._photon_size_distribution
-        """
-
-        from wofry.propagator.wavefront1D.generic_wavefront import GenericWavefront1D
-        from wofry.propagator.propagator import PropagationManager, PropagationElements, PropagationParameters
-        from syned.beamline.beamline_element import BeamlineElement
-        from syned.beamline.element_coordinates import ElementCoordinates
-        from wofryimpl.propagator.propagators1D.fresnel_zoom import FresnelZoom1D
-        from wofryimpl.beamline.optical_elements.ideal_elements.screen import WOScreen1D
-
-        theta          = self.__result_photon_size_farfield["theta"]
-        photon_energy  = self.__result_photon_size_farfield["mean_photon_energy"]
-        distance       = self.__result_photon_size_farfield["distance"]
-        magnification  = self.__result_photon_size_farfield["magnification"]
-        radial_e_amplitude = self.__result_photon_size_farfield["radial_e_amplitude"] # numpy.sqrt(self.__result_photon_size_farfield["radial_flux"]) + 0j
-
-        input_wavefront = GenericWavefront1D().initialize_wavefront_from_arrays(theta * distance, radial_e_amplitude)
-        input_wavefront.set_photon_energy(photon_energy)
-        # input_wavefront.set_spherical_wave(radius=distance, complex_amplitude=radial_e_amplitude)
-        # input_wavefront.save_h5_file("tmp2.h5","wfr")
-
-        optical_element = WOScreen1D()
-        #
-        # propagating
-        #
-        #
-        propagation_elements = PropagationElements()
-        beamline_element = BeamlineElement(optical_element=optical_element,
-                        coordinates=ElementCoordinates(p=0.0,q=-distance,
-                        angle_radial=numpy.radians(0.000000),
-                        angle_azimuthal=numpy.radians(0.000000)))
-        propagation_elements.add_beamline_element(beamline_element)
-        propagation_parameters = PropagationParameters(wavefront=input_wavefront.duplicate(),propagation_elements = propagation_elements)
-        propagation_parameters.set_additional_parameters('magnification_x', magnification)
-
-        #
-        propagator = PropagationManager.Instance()
-        try:
-            propagator.add_propagator(FresnelZoom1D())
-        except:
-            pass
-        output_wavefront = propagator.do_propagation(propagation_parameters=propagation_parameters,handler_name='FRESNEL_ZOOM_1D')
-
-        self.__result_photon_size_distribution = {"x":output_wavefront.get_abscissas(),
-                                                  "y":output_wavefront.get_intensity()}
-
-    def _back_propagation_for_size_calculation_hankel(self):
-        """
-        Calculate the radiation_flux vs theta at a "distance"
-        Back propagate to -distance
-        The result is the size distrubution
-
-        :return: None; stores results in self._photon_size_distribution
-        """
-
-        theta          = self.__result_photon_size_farfield["theta"]
-        photon_energy  = self.__result_photon_size_farfield["mean_photon_energy"]
-        distance       = self.__result_photon_size_farfield["distance"]
-        magnification  = self.__result_photon_size_farfield["magnification"]
-        radial_e_amplitude = self.__result_photon_size_farfield["radial_e_amplitude"] # numpy.sqrt(self.__result_photon_size_farfield["radial_flux"]) + 0j
-
-        n2 = theta.size
-###############################################################################
-        from pyhank import HankelTransform
-        from srxraylib.plot.gol import plot, plot_image
-        do_plot = 1
-
-        r = theta * distance
-        nr = r.size
-
-        print(">>>>>>>> rminmax: ", r[0], r[-1], r.min(), r.max())
-        lambda_ = codata.h * codata.c / codata.e / photon_energy #  1.5e-10  # 488e-9  # wavelength 488nm
-        k0 = 2 * numpy.pi / lambda_  # Vacuum k vector
-
-        # Set up a :class:`.HankelTransform` object, telling it the order (``0``) and
-        # the radial grid.
-        # def __init__(self, order: int, max_radius: float = None, n_points: int = None,
-        #              radial_grid: np.ndarray = None, k_grid: np.ndarray = None):
-        H = HankelTransform(order=0, radial_grid=r)
-
-        # Set up the electric field profile at :math:`z = 0`, and resample onto the correct radial grid
-        # (``transformer.r``) as required for the QDHT.
-        Er = (radial_e_amplitude)     # Initial field
-        ErH = H.to_transform_r(Er)  # Resampled field
-
-        # # Now plot an image showing the intensity as a function of radius and propagation distance.
-
-        if do_plot:
-            plot(r   * 1e6, numpy.abs(Er) ** 2,
-                 H.r * 1e6, numpy.abs(ErH) ** 2,
-                 # xrange=[0, 1], yrange=[0, 1],
-                 xtitle="r [um]", ytitle="Field intensity /arb", title="Initial electric field distribution",
-                 legend=['$|E(r)|^2$', '$|E(H.r)|^2$', ],
-                 marker=[None, None,], linestyle=[None, None,],
-                 )
-
-            plot(
-                 r   * 1e6, numpy.unwrap(numpy.angle(Er)),
-                 H.r * 1e6, numpy.unwrap(numpy.angle(ErH)),
-                 # xrange=[0, 1], yrange=[0, 1],
-                 xtitle="r [um]", ytitle="Phase /arb", title="Initial electric field distribution",
-                 legend=['$\\phi(r)$', '$\\phi(H.r)$'],
-                 marker=[None, '+'], linestyle=[None, ''],
-                 )
-
-        # Perform Hankel Transform
-        # ------------------------
-        # Convert from physical field to physical wavevector
-        EkrH = H.qdht(ErH)
-
-        if do_plot:
-            plot(H.kr, numpy.abs(EkrH) ** 2,
-                 # xrange=[0,1], yrange=[0,1],
-                 xtitle=r'Radial wave-vector ($k_r$) /rad $m^{-1}$', ytitle='Field intensity /arb.',
-                 title="Radial wave-vector distribution",
-                 )
-
-
-        # Propagate the beam - loop
-        # -------------------------
-        # Do the propagation in a loop over :math:`z`
-
-        # Pre-allocate an array for field as a function of r and z
-        # Erz = numpy.zeros((nr, Nz), dtype=complex)
-        kz = numpy.sqrt(k0 ** 2 - H.kr ** 2)
-        print(">>>>>000 kz", kz.shape)
-
-        phi_z = kz * distance  # Propagation phase
-        EkrHz = EkrH * numpy.exp(1j * phi_z)  # Apply propagation
-        print("   >>>>", EkrHz.shape)
-        ErHz = H.iqdht(EkrHz)  # iQDHT
-        Erz = H.to_original_r(ErHz)  # Interpolate output
-        Irz = numpy.abs(Erz) ** 2
-
-###############################################################################
-
-
-        self.__result_photon_size_distribution = {"x":r,
-                                                  "y":numpy.abs(Erz) ** 2}
+#     def _back_propagation_for_size_calculation_hankel(self):
+#         """
+#         Calculate the radiation_flux vs theta at a "distance"
+#         Back propagate to -distance
+#         The result is the size distrubution
+#
+#         :return: None; stores results in self._photon_size_distribution
+#         """
+#
+#         theta          = self.__result_photon_size_farfield["theta"]
+#         photon_energy  = self.__result_photon_size_farfield["mean_photon_energy"]
+#         distance       = self.__result_photon_size_farfield["distance"]
+#         magnification  = self.__result_photon_size_farfield["magnification"]
+#         radial_e_amplitude = self.__result_photon_size_farfield["radial_e_amplitude"] # numpy.sqrt(self.__result_photon_size_farfield["radial_flux"]) + 0j
+#
+#         n2 = theta.size
+# ###############################################################################
+#         from pyhank import HankelTransform
+#         from srxraylib.plot.gol import plot, plot_image
+#         do_plot = 1
+#
+#         r = theta * distance
+#         nr = r.size
+#
+#         print(">>>>>>>> rminmax: ", r[0], r[-1], r.min(), r.max())
+#         lambda_ = codata.h * codata.c / codata.e / photon_energy #  1.5e-10  # 488e-9  # wavelength 488nm
+#         k0 = 2 * numpy.pi / lambda_  # Vacuum k vector
+#
+#         # Set up a :class:`.HankelTransform` object, telling it the order (``0``) and
+#         # the radial grid.
+#         # def __init__(self, order: int, max_radius: float = None, n_points: int = None,
+#         #              radial_grid: np.ndarray = None, k_grid: np.ndarray = None):
+#         H = HankelTransform(order=0, radial_grid=r)
+#
+#         # Set up the electric field profile at :math:`z = 0`, and resample onto the correct radial grid
+#         # (``transformer.r``) as required for the QDHT.
+#         Er = (radial_e_amplitude)     # Initial field
+#         ErH = H.to_transform_r(Er)  # Resampled field
+#
+#         # # Now plot an image showing the intensity as a function of radius and propagation distance.
+#
+#         if do_plot:
+#             plot(r   * 1e6, numpy.abs(Er) ** 2,
+#                  H.r * 1e6, numpy.abs(ErH) ** 2,
+#                  # xrange=[0, 1], yrange=[0, 1],
+#                  xtitle="r [um]", ytitle="Field intensity /arb", title="Initial electric field distribution",
+#                  legend=['$|E(r)|^2$', '$|E(H.r)|^2$', ],
+#                  marker=[None, None,], linestyle=[None, None,],
+#                  )
+#
+#             plot(
+#                  r   * 1e6, numpy.unwrap(numpy.angle(Er)),
+#                  H.r * 1e6, numpy.unwrap(numpy.angle(ErH)),
+#                  # xrange=[0, 1], yrange=[0, 1],
+#                  xtitle="r [um]", ytitle="Phase /arb", title="Initial electric field distribution",
+#                  legend=['$\\phi(r)$', '$\\phi(H.r)$'],
+#                  marker=[None, '+'], linestyle=[None, ''],
+#                  )
+#
+#         # Perform Hankel Transform
+#         # ------------------------
+#         # Convert from physical field to physical wavevector
+#         EkrH = H.qdht(ErH)
+#
+#         if do_plot:
+#             plot(H.kr, numpy.abs(EkrH) ** 2,
+#                  # xrange=[0,1], yrange=[0,1],
+#                  xtitle=r'Radial wave-vector ($k_r$) /rad $m^{-1}$', ytitle='Field intensity /arb.',
+#                  title="Radial wave-vector distribution",
+#                  )
+#
+#
+#         # Propagate the beam - loop
+#         # -------------------------
+#         # Do the propagation in a loop over :math:`z`
+#
+#         # Pre-allocate an array for field as a function of r and z
+#         # Erz = numpy.zeros((nr, Nz), dtype=complex)
+#         kz = numpy.sqrt(k0 ** 2 - H.kr ** 2)
+#         print(">>>>>000 kz", kz.shape)
+#
+#         phi_z = kz * distance  # Propagation phase
+#         EkrHz = EkrH * numpy.exp(1j * phi_z)  # Apply propagation
+#         print("   >>>>", EkrHz.shape)
+#         ErHz = H.iqdht(EkrHz)  # iQDHT
+#         Erz = H.to_original_r(ErHz)  # Interpolate output
+#         Irz = numpy.abs(Erz) ** 2
+#
+# ###############################################################################
+#
+#
+#         self.__result_photon_size_distribution = {"x":r,
+#                                                   "y":numpy.abs(Erz) ** 2}
 
 
 
@@ -1492,6 +1437,7 @@ if __name__ == "__main__":
     # print("phi: ", d["phi"].shape)
     # print("theta: ", d["theta"].shape)
     traj = d['trajectory']
+    print(">>> traj ", traj.shape)
     from srxraylib.plot.gol import plot
     import scipy.constants as codata
     plot(traj[3] * codata.c, traj[1] * codata.c, xtitle="Z", ytitle="X")
