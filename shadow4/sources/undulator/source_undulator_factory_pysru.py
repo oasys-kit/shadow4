@@ -181,7 +181,8 @@ def _pysru_wofry_2D_run(photon_energy,
 
         return CART_e_amplitude_sigma, CART_e_amplitude_pi, CART_BACKPROPAGATED_radiation, CART_BACKPROPAGATED_x, CART_BACKPROPAGATED_y
 
-def _get_radiation_interpolated_cartesian(radiation, photon_energy, thetabm, phi, npointsx=100, npointsz=100, thetamax=None):
+def _get_radiation_interpolated_cartesian(radiation, photon_energy, thetabm, phi,
+                                          npointsx=100, npointsz=100, thetamax=None): # todo: import from source_undulator_factory.py
     """
     Interpolates the radiation array (in polar coordinates) to cartesian coordinates.
 
