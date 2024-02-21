@@ -1,21 +1,16 @@
-#
-# SHADOW3 Undulator preprocessors implemented in python
-#
-# this code replaces SHADOW3's undul_phot and undul_cdf
-#
-# It calculates the undulator radiation as a function of energy, theta and phi. Phi is the polar angle.
-#
-# It uses internal code (no dependency) hacked from pySRU
-#  (see SourceUndulatorFactorySrw.py and SourceUndulatorFactoryPysru.py for SRW and native pySRU backends, respectively)
-#
-#
-# Available functions:
-#
-#     calculate_undulator_emission: interface for undul_phot (like undul_phot of SHADOW3 but written in python with
-#                                   internal code hacked from pySRU).
-#     undul_cdf                   : like undul_cdf in SHADOW3.
-#
-#
+"""
+Calculation of undulator far field and backpropagation to the center of the undulator
+Implementation using internal code (no dependency) hacked from pySRU for source simulation
+and Wofry2D for backpropagation.
+
+
+Available public functions:
+
+    calculate_undulator_emission()
+
+    undul_cdf() [like undul_cdf in SHADOW3].
+
+"""
 import numpy
 import numpy as np
 from scipy import interpolate
@@ -23,6 +18,7 @@ from scipy import interpolate
 import scipy.constants as codata
 import scipy.integrate
 
+from shadow4.sources.undulator.calculate_undulator_emission_pysru import _get_radiation_interpolated_cartesian
 #
 # calculate a theorical trajectory in an undulator
 # adapted from pySRU: analytical_trajectory_plane_undulator()
@@ -114,63 +110,63 @@ def _pysru_energy_radiated_approximation_and_farfield(omega=2.53465927101e17, el
     return E
 
 
-def _get_radiation_interpolated_cartesian(radiation, photon_energy, thetabm, phi,
-                                          npointsx=100, npointsz=100, thetamax=None):
-    """
-    Interpolates the radiation array (in polar coordinates) to cartesian coordinates.
-
-    Parameters
-    ----------
-    npointsx : int, optional
-        The number of points in X.
-    npointsz : int, optional
-        The number of points in Z.
-    thetamax : None or float, optional
-        Maximum value of theta. By default (None) it uses the maximum theta.
-
-    Returns
-    -------
-    tuple
-        (radiation, array_x, array_y) in units of W/rad^2.
-    """
-
-    # radiation, photon_energy, thetabm, phi = self.get_result_radiation_polar()
-
-    if thetamax is None:
-        thetamax = thetabm.max()
-
-    vx = numpy.linspace(-1.1 * thetamax, 1.1 * thetamax, npointsx)
-    vz = numpy.linspace(-1.1 * thetamax, 1.1 * thetamax, npointsz)
-    VX = numpy.outer(vx, numpy.ones_like(vz))
-    VZ = numpy.outer(numpy.ones_like(vx), vz)
-    VY = numpy.sqrt(1 - VX**2 - VZ**2)
-
-    IN_thetabm = numpy.outer(thetabm, numpy.ones_like(phi))
-    IN_phi = numpy.outer(numpy.ones_like(thetabm), phi)
-    IN = numpy.zeros( (IN_thetabm.size, 2))
-    IN[:,0] = IN_thetabm.flatten()
-    IN[:,1] = IN_phi.flatten()
-
-    # THETA = numpy.abs(numpy.arctan(numpy.sqrt(VX**2 + VZ**2) / VY))
-    THETA = numpy.arctan(numpy.sqrt(VX**2 + VZ**2) / VY)
-    # PHI = numpy.arctan2(numpy.abs(VZ), numpy.abs(VX))
-    PHI = numpy.arctan2(VZ, VX)
-
-    print(">> interpolating: THETA min, max: ", THETA.min(), THETA.max())
-    print(">> interpolating: PHI min, max: ", PHI.min(), PHI.max())
-
-    radiation_interpolated = numpy.zeros((radiation.shape[0], npointsx, npointsz))
-
-    for i in range(radiation.shape[0]):
-        interpolator_value = interpolate.RectBivariateSpline(thetabm, phi, radiation[i])
-        radiation_interpolated[i] = interpolator_value.ev(THETA, PHI)
-
-        # print(">>>>>>>>>>>>>>", IN_thetabm.shape, IN_phi.shape, radiation[i].shape)
-        # interpolator_value = interpolate.NearestNDInterpolator(IN, radiation[i].flatten(), rescale=1)
-        # print(">>>>>>>>>>>>>>>>", interpolator_value(THETA, PHI).shape)
-        # radiation_interpolated[i] = interpolator_value(THETA, PHI)
-
-    return radiation_interpolated, photon_energy, vx, vz
+# def _get_radiation_interpolated_cartesian(radiation, photon_energy, thetabm, phi,
+#                                           npointsx=100, npointsz=100, thetamax=None):
+#     """
+#     Interpolates the radiation array (in polar coordinates) to cartesian coordinates.
+#
+#     Parameters
+#     ----------
+#     npointsx : int, optional
+#         The number of points in X.
+#     npointsz : int, optional
+#         The number of points in Z.
+#     thetamax : None or float, optional
+#         Maximum value of theta. By default (None) it uses the maximum theta.
+#
+#     Returns
+#     -------
+#     tuple
+#         (radiation, array_x, array_y) in units of W/rad^2.
+#     """
+#
+#     # radiation, photon_energy, thetabm, phi = self.get_result_radiation_polar()
+#
+#     if thetamax is None:
+#         thetamax = thetabm.max()
+#
+#     vx = numpy.linspace(-1.1 * thetamax, 1.1 * thetamax, npointsx)
+#     vz = numpy.linspace(-1.1 * thetamax, 1.1 * thetamax, npointsz)
+#     VX = numpy.outer(vx, numpy.ones_like(vz))
+#     VZ = numpy.outer(numpy.ones_like(vx), vz)
+#     VY = numpy.sqrt(1 - VX**2 - VZ**2)
+#
+#     IN_thetabm = numpy.outer(thetabm, numpy.ones_like(phi))
+#     IN_phi = numpy.outer(numpy.ones_like(thetabm), phi)
+#     IN = numpy.zeros( (IN_thetabm.size, 2))
+#     IN[:,0] = IN_thetabm.flatten()
+#     IN[:,1] = IN_phi.flatten()
+#
+#     # THETA = numpy.abs(numpy.arctan(numpy.sqrt(VX**2 + VZ**2) / VY))
+#     THETA = numpy.arctan(numpy.sqrt(VX**2 + VZ**2) / VY)
+#     # PHI = numpy.arctan2(numpy.abs(VZ), numpy.abs(VX))
+#     PHI = numpy.arctan2(VZ, VX)
+#
+#     print(">> interpolating: THETA min, max: ", THETA.min(), THETA.max())
+#     print(">> interpolating: PHI min, max: ", PHI.min(), PHI.max())
+#
+#     radiation_interpolated = numpy.zeros((radiation.shape[0], npointsx, npointsz))
+#
+#     for i in range(radiation.shape[0]):
+#         interpolator_value = interpolate.RectBivariateSpline(thetabm, phi, radiation[i])
+#         radiation_interpolated[i] = interpolator_value.ev(THETA, PHI)
+#
+#         # print(">>>>>>>>>>>>>>", IN_thetabm.shape, IN_phi.shape, radiation[i].shape)
+#         # interpolator_value = interpolate.NearestNDInterpolator(IN, radiation[i].flatten(), rescale=1)
+#         # print(">>>>>>>>>>>>>>>>", interpolator_value(THETA, PHI).shape)
+#         # radiation_interpolated[i] = interpolator_value(THETA, PHI)
+#
+#     return radiation_interpolated, photon_energy, vx, vz
 
 def _propagate_complex_amplitude_from_arrays(
                                             amplitude_flatten,
@@ -239,7 +235,6 @@ def _undul_phot(E_ENERGY,INTENSITY, LAMBDAU, NPERIODS, K, EMIN, EMAX, NG_E, MAXA
     #
     # polar grid
     #
-    D = distance # placed far away (100 m)
 
     #
     # for divergences sample angle in [0,MAXANGLE]
@@ -315,19 +310,24 @@ def _undul_phot(E_ENERGY,INTENSITY, LAMBDAU, NPERIODS, K, EMIN, EMAX, NG_E, MAXA
                                             Nb_pts_trajectory=Nb_pts_trajectory, #None,
                                             rad_method=RADIATION_METHOD_APPROX_FARFIELD,
                                             initial_condition=None,
-                                            distance=D,
+                                            distance=distance,
                                             X=xx.flatten(),
                                             Y=yy.flatten(),
                                             XY_are_list=True)
 
         Efield = simulation_test.electric_field._electrical_field
+
+        #  Conversion from pySRU units (photons/mm^2/0.1%bw) to SHADOW units (photons/rad^2/eV)
+        coeff = (distance * 1e3)**2 # photons/mm^2 -> photons/rad^2
+        coeff /= 1e-3 * e # photons/o.1%bw -> photons/eV
+
         tmp_x = Efield[:, 0].copy()
         tmp_y = Efield[:, 1].copy()
         tmp_x.shape = (theta.size, phi.size)
         tmp_y.shape = (theta.size, phi.size)
 
-        EFIELD_X[ie, :, :] = tmp_x
-        EFIELD_Y[ie, :, :] = tmp_y
+        EFIELD_X[ie, :, :] = tmp_x * numpy.sqrt(coeff)
+        EFIELD_Y[ie, :, :] = tmp_y * numpy.sqrt(coeff)
 
         POL_DEG[ie, :, :] = numpy.abs(tmp_x) / (numpy.abs(tmp_x) + numpy.abs(tmp_y)) # SHADOW definition
     print("Done calculating radiation...")
@@ -354,11 +354,12 @@ def _undul_phot(E_ENERGY,INTENSITY, LAMBDAU, NPERIODS, K, EMIN, EMAX, NG_E, MAXA
     print("Interpolating to cartesian grid (%d x %d points)" % (npointsx, npointsz))
     # interpolate intensity
     radiation_interpolated, photon_energy, vx, vz = _get_radiation_interpolated_cartesian(
-        radiation, E, theta, phi, npointsx=npointsx, npointsz=npointsz, thetamax=thetamax)
+        radiation, E, theta, phi, npointsx=npointsx, npointsz=npointsz, thetamax=thetamax,
+        distance=distance)
 
     out['CART_radiation'] = radiation_interpolated
-    out['CART_x'] = vx  # angle in rad
-    out['CART_y'] = vz  # angle in rad
+    out['CART_x'] = vx / distance # angle in rad
+    out['CART_y'] = vz / distance # angle in rad
 
     ####################################################
 
@@ -367,7 +368,7 @@ def _undul_phot(E_ENERGY,INTENSITY, LAMBDAU, NPERIODS, K, EMIN, EMAX, NG_E, MAXA
     #
     if flag_size == 2:
         #
-        # recalculate....
+        # recalculate or reuse the radiation....
         #
         if True:
             #
@@ -410,7 +411,7 @@ def _undul_phot(E_ENERGY,INTENSITY, LAMBDAU, NPERIODS, K, EMIN, EMAX, NG_E, MAXA
                     Nb_pts_trajectory=Nb_pts_trajectory,  # None,
                     rad_method=RADIATION_METHOD_APPROX_FARFIELD,
                     initial_condition=None,
-                    distance=D,
+                    distance=distance,
                     X=xx.flatten(),
                     Y=yy.flatten(),
                     XY_are_list=True)
@@ -422,8 +423,16 @@ def _undul_phot(E_ENERGY,INTENSITY, LAMBDAU, NPERIODS, K, EMIN, EMAX, NG_E, MAXA
 
             print("Done calculating radiation...")
             ca = EFIELD_X
+            do_concatenate = 0
         else:
+            print("Re using radiation...", POL_DEG.shape, theta.shape, phi.shape)
             ca = out['e_amplitude_sigma']
+            do_concatenate = 1
+            # reusing xx, yy
+
+
+
+
         # x_in = input_wavefront.get_coordinate_x()
         # y_in = input_wavefront.get_coordinate_y()
         # print(x_in.min(), x_in.max(), y_in.min(), y_in.max())
@@ -438,10 +447,16 @@ def _undul_phot(E_ENERGY,INTENSITY, LAMBDAU, NPERIODS, K, EMIN, EMAX, NG_E, MAXA
         # backpropagated_efield_sigma = numpy.zeros((omega_array.size, theta.size, phi.size), dtype=complex)
         CART_BACKPROPAGATED_radiation= numpy.zeros((omega_array.size, x_axis.size), dtype=float)
 
-        print(">>>>>ca: ", ca.shape, E.shape)
         for ie, e in enumerate(E):
+            ca_fla = ca[ie].flatten()
+
+            if do_concatenate: # copy data from first quadrant to the others
+                ca_fla = numpy.concatenate((ca_fla,  ca_fla,  ca_fla,  ca_fla))
+                xx_fla = numpy.concatenate((xx_fla, -xx_fla, -xx_fla,  xx_fla))
+                yy_fla = numpy.concatenate((yy_fla,  yy_fla, -yy_fla, -yy_fla))
+
             fla_complex_amplitude_propagated_x_axis = _propagate_complex_amplitude_from_arrays(
-                ca[ie].flatten(),
+                ca_fla,
                 xx_fla,
                 yy_fla,
                 det_X_flatten=x_axis,
@@ -450,7 +465,7 @@ def _undul_phot(E_ENERGY,INTENSITY, LAMBDAU, NPERIODS, K, EMIN, EMAX, NG_E, MAXA
                 propagation_distance=-distance)
 
             fla_complex_amplitude_propagated_y_axis = _propagate_complex_amplitude_from_arrays(
-                ca[ie].flatten(),
+                ca_fla,
                 xx_fla,
                 yy_fla,
                 det_X_flatten=x_axis * 0,
@@ -541,62 +556,62 @@ def calculate_undulator_emission(electron_energy              = 6.0,
                        magnification=magnification,
                        )
 
+# #
+# # undul_cdf
+# #
+# def undul_cdf(undul_phot_dict, method='trapz'):
+#     #
+#     # takes the output of undul_phot and calculate cumulative distribution functions
+#     #
+#     RN0     = undul_phot_dict['radiation']
+#     POL_DEG = undul_phot_dict['polarization']
+#     E       = undul_phot_dict['photon_energy']
+#     T       = undul_phot_dict['theta']
+#     P       = undul_phot_dict['phi']
 #
-# undul_cdf
+#     NG_E,NG_T,NG_P = RN0.shape
+#     print("undul_cdf: _NG_E,_NG_T,_NG_P, %d  %d %d \n"%(NG_E,NG_T,NG_P))
 #
-def undul_cdf(undul_phot_dict, method='trapz'):
-    #
-    # takes the output of undul_phot and calculate cumulative distribution functions
-    #
-    RN0     = undul_phot_dict['radiation']
-    POL_DEG = undul_phot_dict['polarization']
-    E       = undul_phot_dict['photon_energy']
-    T       = undul_phot_dict['theta']
-    P       = undul_phot_dict['phi']
-
-    NG_E,NG_T,NG_P = RN0.shape
-    print("undul_cdf: _NG_E,_NG_T,_NG_P, %d  %d %d \n"%(NG_E,NG_T,NG_P))
-
-    # coordinates are polar: multiply by sin(theta) to allow dS= r^2 sin(Theta) dTheta dPhi
-    YRN0 = numpy.zeros_like(RN0)
-    for e in numpy.arange(NG_E):
-        for t in numpy.arange(NG_T):
-            for p in numpy.arange(NG_P):
-                YRN0[e,t,p] = RN0[e,t,p] * numpy.sin(T[t])
-
-    if method == "sum":
-        RN1 = YRN0.sum(axis=2) * (P[1] - P[0])             # RN1(e,t)
-        RN2 = RN1.sum(axis=1)  * (T[1] - T[0])             # RN2(e)
-        ZERO  = numpy.cumsum(RN0,axis=2) * (P[1] - P[0])   # CDF(e,t,p)
-        ONE   = numpy.cumsum(RN1,axis=1) * (T[1] - T[0])   # CDF(e,t)
-        if NG_E > 1:
-            TWO = numpy.cumsum(RN2)      * (E[1] - E[0]) # CDF(e)
-        else:
-            TWO = numpy.array([0.0])
-    else:
-        RN1 = numpy.trapz(YRN0,axis=2) * (P[1]-P[0])                            # RN1(e,t)
-        RN2 = numpy.trapz(RN1,axis=1)  * (T[1]-T[0])                            # RN2(e)
-        ZERO  = scipy.integrate.cumtrapz(RN0,initial=0,axis=2)  * (P[1] - P[0]) # CDF(e,t,p)
-        ONE   = scipy.integrate.cumtrapz(RN1,initial=0,axis=1)  * (T[1] - T[0]) # CDF(e,t)
-        if NG_E > 1:
-            TWO = scipy.integrate.cumtrapz(RN2,initial=0)       * (E[1] - E[0]) # CDF(e)
-        else:
-            TWO = numpy.array([0.0])
-
-    print("undul_cdf: Shadow ZERO,ONE,TWO: ",ZERO.shape,ONE.shape,TWO.shape)
-
-    if NG_E > 1:
-        print("undul_cdf: Total Power emitted in the specified angles is: %g Watts."%( (RN2*E).sum()*(E[1]-E[0])*codata.e) )
-    else:
-        print("undul_cdf: Total Power emitted in the specified angles is: %g Watts."%( (RN2*E)*codata.e) )
-
-    return {'cdf_EnergyThetaPhi':TWO,
-            'cdf_EnergyTheta':ONE,
-            'cdf_Energy':ZERO,
-            'energy':E,
-            'theta':T,
-            'phi':P,
-            'polarization':POL_DEG}
+#     # coordinates are polar: multiply by sin(theta) to allow dS= r^2 sin(Theta) dTheta dPhi
+#     YRN0 = numpy.zeros_like(RN0)
+#     for e in numpy.arange(NG_E):
+#         for t in numpy.arange(NG_T):
+#             for p in numpy.arange(NG_P):
+#                 YRN0[e,t,p] = RN0[e,t,p] * numpy.sin(T[t])
+#
+#     if method == "sum":
+#         RN1 = YRN0.sum(axis=2) * (P[1] - P[0])             # RN1(e,t)
+#         RN2 = RN1.sum(axis=1)  * (T[1] - T[0])             # RN2(e)
+#         ZERO  = numpy.cumsum(RN0,axis=2) * (P[1] - P[0])   # CDF(e,t,p)
+#         ONE   = numpy.cumsum(RN1,axis=1) * (T[1] - T[0])   # CDF(e,t)
+#         if NG_E > 1:
+#             TWO = numpy.cumsum(RN2)      * (E[1] - E[0]) # CDF(e)
+#         else:
+#             TWO = numpy.array([0.0])
+#     else:
+#         RN1 = numpy.trapz(YRN0,axis=2) * (P[1]-P[0])                            # RN1(e,t)
+#         RN2 = numpy.trapz(RN1,axis=1)  * (T[1]-T[0])                            # RN2(e)
+#         ZERO  = scipy.integrate.cumtrapz(RN0,initial=0,axis=2)  * (P[1] - P[0]) # CDF(e,t,p)
+#         ONE   = scipy.integrate.cumtrapz(RN1,initial=0,axis=1)  * (T[1] - T[0]) # CDF(e,t)
+#         if NG_E > 1:
+#             TWO = scipy.integrate.cumtrapz(RN2,initial=0)       * (E[1] - E[0]) # CDF(e)
+#         else:
+#             TWO = numpy.array([0.0])
+#
+#     print("undul_cdf: Shadow ZERO,ONE,TWO: ",ZERO.shape,ONE.shape,TWO.shape)
+#
+#     if NG_E > 1:
+#         print("undul_cdf: Total Power emitted in the specified angles is: %g Watts."%( (RN2*E).sum()*(E[1]-E[0])*codata.e) )
+#     else:
+#         print("undul_cdf: Total Power emitted in the specified angles is: %g Watts."%( (RN2*E)*codata.e) )
+#
+#     return {'cdf_EnergyThetaPhi':TWO,
+#             'cdf_EnergyTheta':ONE,
+#             'cdf_Energy':ZERO,
+#             'energy':E,
+#             'theta':T,
+#             'phi':P,
+#             'polarization':POL_DEG}
 
 if __name__ == "__main__":
 
@@ -620,6 +635,7 @@ if __name__ == "__main__":
 
     from srxraylib.plot.gol import plot_image, plot
     # plot_image(dict1['radiation'][0], dict1['theta'], dict1['phi'], aspect='auto',  title="first", show=0)
+
     plot_image(dict1['radiation'][-1], dict1['theta'], numpy.degrees(dict1['phi']), aspect='auto',
                title="last", xtitle="theta", ytitle="phi [deg]", show=0)
 
@@ -638,12 +654,13 @@ if __name__ == "__main__":
     plot_image(ii[-1], dict1['theta'], numpy.degrees(dict1['phi']), aspect='auto',
                title="last (from amplitudes)", xtitle="theta", ytitle="phi [deg]", show=1)
 
-    if True:
+    if False:
         plot_image(dict1['CART_radiation'][0],
-                   100 * 1e6 * dict1['CART_x'], 100 * 1e6 * dict1['CART_y'], aspect='auto', title="first", show=0)
+                   1e6 * dict1['CART_x'], 1e6 * dict1['CART_y'], aspect='auto', title="first",
+                   xtitle="theta_x [um]", ytitle="theta_y [um]", show=0)
         plot_image(dict1['CART_radiation'][-1],
-                   100 * 1e6 * dict1['CART_x'], 100 * 1e6 * dict1['CART_y'], aspect='auto', title="last", show=1)
-
+                   1e6 * dict1['CART_x'], 1e6 * dict1['CART_y'], aspect='auto', title="last",
+                   xtitle="theta_x [um]", ytitle="theta_y [um]", show=1)
 
     # BACK...
 

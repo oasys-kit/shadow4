@@ -1,21 +1,15 @@
-#
-# SHADOW3 Undulator preprocessors implemented in python
-#
-# this code replaces SHADOW3's undul_phot
-#
-# It calculates the undulator radiation as a function of energy, theta and phi. Phi is the polar angle.
-#
-# It uses SRW
-#
-# Available public functions:
-#
-#     undul_phot()   : like undul_phot of SHADOW but using SRW
-#
-#
+"""
+Calculation of undulator far field and backpropagation to the center of the undulator
+SRW implementation
 
-# needed by srw
 
-from copy import deepcopy
+
+Available public functions:
+
+    calculate_undulator_emission_srw()
+
+
+"""
 
 try:
     import oasys_srw.srwlib as sl
@@ -25,11 +19,10 @@ except:
     except:
         raise ImportError("SRW not imported")
 
-
+from copy import deepcopy
 import numpy
 import sys
 from scipy import interpolate
-
 
 def _srw_stokes0_to_arrays(stk):
   Shape = (4,stk.mesh.ny,stk.mesh.nx,stk.mesh.ne)
@@ -78,7 +71,6 @@ def _SRWEFieldAsNumpy(srwwf):
     :param srw_wavefront: SRWWavefront to extract electrical field from.
     :return: 4D numpy array: [energy, horizontal, vertical, polarisation={0:horizontal, 1: vertical}]
     """
-
     dim_x = srwwf.mesh.nx
     dim_y = srwwf.mesh.ny
     number_energies = srwwf.mesh.ne
@@ -86,7 +78,6 @@ def _SRWEFieldAsNumpy(srwwf):
     x_polarization = _SRWArrayToNumpyComplexArray(srwwf.arEx, dim_x, dim_y, number_energies)
     y_polarization = _SRWArrayToNumpyComplexArray(srwwf.arEy, dim_x, dim_y, number_energies)
 
-    # print(">>>>>>>> x_polarization", x_polarization.shape, x_polarization[:,50,50,0])
     return [x_polarization, y_polarization]
 
 def _SRWArrayToNumpyComplexArray(srw_array, dim_x, dim_y, number_energies, polarized=True):
@@ -148,21 +139,20 @@ def _undul_phot_SRW(E_ENERGY, INTENSITY, LAMBDAU, NPERIODS, K, EMIN, EMAX, NG_E,
     intensity = INTENSITY
     maxangle = MAXANGLE
 
-
-    nx = NG_T # 2 * NG_T - 1 # TODO: CHANGE?
+    nx = NG_T
     nz = nx
 
     ne = NG_E
     u_length = nperiods * lambdau
 
-    print ("lambdau = ",lambdau)
-    print ("k = ",k)
-    print ("e_energy = ",e_energy)
-    print ("nperiods = ",nperiods)
-    print ("intensity = ",intensity)
-    print ("maxangle=%g rad, (%d x %d points) "%(maxangle,nx,nz))
-    print ("emin =%g, emax=%g, ne=%d "%(emin,emax,ne))
-    print("UNDULATOR LENGTH: = ", u_length, -0.5 * lambdau * (nperiods + 4))
+    print("SRW calculation: lambdau = ",lambdau)
+    print("SRW calculation: k = ",k)
+    print("SRW calculation: e_energy = ",e_energy)
+    print("SRW calculation: nperiods = ",nperiods)
+    print("SRW calculation: intensity = ",intensity)
+    print("SRW calculation: maxangle=%g rad, (%d x %d points) "%(maxangle, nx, nz))
+    print("SRW calculation: emin =%g, emax=%g, ne=%d "%(emin,emax,ne))
+    print("SRW calculation: UNDULATOR LENGTH: = ", u_length, -0.5 * lambdau * (nperiods + 4))
 
     #
     # define additional parameters needed by SRW
@@ -172,16 +162,15 @@ def _undul_phot_SRW(E_ENERGY, INTENSITY, LAMBDAU, NPERIODS, K, EMIN, EMAX, NG_E,
     #
     # prepare inputs
     #
-
     slit_xmin = -maxangle * distance
     slit_xmax =  maxangle * distance
     slit_zmin = -maxangle * distance
     slit_zmax =  maxangle * distance
 
-    print("H slit: %f, %f, %f" % (slit_xmin, slit_xmax, nx))
-    print("V slit: %f, %f, %f" % (slit_zmin, slit_zmax, nz))
-    print("nperiods: %d, lambdau: %f, B: %f)" % (nperiods, lambdau, B))
-    print("e=%f, Iavg=%f " % (e_energy, intensity) )
+    print("SRW calculation: H slit: %f, %f, %f" % (slit_xmin, slit_xmax, nx))
+    print("SRW calculation: V slit: %f, %f, %f" % (slit_zmin, slit_zmax, nz))
+    print("SRW calculation: nperiods: %d, lambdau: %f, B: %f)" % (nperiods, lambdau, B))
+    print("SRW calculation: e=%f, Iavg=%f " % (e_energy, intensity) )
 
     #
     # calculations
@@ -244,7 +233,6 @@ def _undul_phot_SRW(E_ENERGY, INTENSITY, LAMBDAU, NPERIODS, K, EMIN, EMAX, NG_E,
     wfr.partBeam = part_beam # part_beam
     wfr.unitElFld = 1 #Electric field units: 0- arbitrary, 1- sqrt(Phot/s/0.1%bw/mm^2), 2- sqrt(J/eV/mm^2) or sqrt(W/mm^2), depending on representation (freq. or time)
 
-
     sl.srwl.CalcElecFieldSR(wfr, 0, magnetic_field_container, [1, 0.01, 0, 0, number_of_trajectory_points * nperiods, 1, 0])
     ###
     # part_beam = _srw_drift_electron_beam(part_beam, -part_beam.moved)
@@ -257,40 +245,38 @@ def _undul_phot_SRW(E_ENERGY, INTENSITY, LAMBDAU, NPERIODS, K, EMIN, EMAX, NG_E,
     # use wavefront
     #
 
-    if False:
-        stk = sl.SRWLStokes()
-        stk.mesh = mesh
-        stk.allocate(mesh.ne, mesh.nx, mesh.ny)
-        wfr.calc_stokes(stk)
+    # stk = sl.SRWLStokes()
+    # stk.mesh = mesh
+    # stk.allocate(mesh.ne, mesh.nx, mesh.ny)
+    # wfr.calc_stokes(stk)
+    #
+    # radiation, pol_deg, e, x, y = _srw_stokes0_to_arrays(stk)
+    wSigma, wPi = _SRWEFieldAsNumpy(wfr)
+    wModSigma = numpy.abs(wSigma[:, :, :, 0])
+    wModPi = numpy.abs(wPi[:, :, :, 0])
+    wAngleSigma = numpy.angle(wSigma[:, :, :, 0])
+    wAnglePi = numpy.angle(wPi[:, :, :, 0])
 
-        radiation, pol_deg, e, x, y = _srw_stokes0_to_arrays(stk)
-    else:
-        wSigma, wPi = _SRWEFieldAsNumpy(wfr)
-        wModSigma = numpy.abs(wSigma[:, :, :, 0])
-        wModPi = numpy.abs(wPi[:, :, :, 0])
-        wAngleSigma = numpy.angle(wSigma[:, :, :, 0])
-        wAnglePi = numpy.angle(wPi[:, :, :, 0])
-
-        radiation = wModSigma**2 + wModPi**2
-        # !C SHADOW defines the degree of polarization by |E| instead of |E|^2
-        # !C i.e.  P = |Ex|/(|Ex|+|Ey|)   instead of   |Ex|^2/(|Ex|^2+|Ey|^2)
-        pol_deg = wModSigma / (wModSigma + wModPi)
-        x = numpy.linspace(mesh.xStart, mesh.xFin, mesh.nx)
-        y = numpy.linspace(mesh.yStart, mesh.yFin, mesh.ny)
-        e = numpy.linspace(mesh.eStart, mesh.eFin, mesh.ne)
+    radiation = wModSigma**2 + wModPi**2
+    # !C SHADOW defines the degree of polarization by |E| instead of |E|^2
+    # !C i.e.  P = |Ex|/(|Ex|+|Ey|)   instead of   |Ex|^2/(|Ex|^2+|Ey|^2)
+    pol_deg = wModSigma / (wModSigma + wModPi)
+    x = numpy.linspace(mesh.xStart, mesh.xFin, mesh.nx)
+    y = numpy.linspace(mesh.yStart, mesh.yFin, mesh.ny)
+    e = numpy.linspace(mesh.eStart, mesh.eFin, mesh.ne)
 
     #
     # interpolate for polar grid
     #
 
     # polar grid
-    theta = numpy.linspace(0, MAXANGLE, NG_T)
-    phi = numpy.linspace(0, numpy.pi / 2, NG_P)
-    Z2 = numpy.zeros((NG_E, NG_T, NG_P))
-    POL_DEG = numpy.zeros((NG_E, NG_T, NG_P))
-    efield_s_mod = numpy.zeros_like(Z2)
+    theta          = numpy.linspace(0, MAXANGLE, NG_T)
+    phi            = numpy.linspace(0, numpy.pi / 2, NG_P)
+    Z2             = numpy.zeros((NG_E, NG_T, NG_P))
+    POL_DEG        = numpy.zeros((NG_E, NG_T, NG_P))
+    efield_s_mod   = numpy.zeros_like(Z2)
     efield_s_angle = numpy.zeros_like(Z2)
-    efield_p_mod = numpy.zeros_like(Z2)
+    efield_p_mod   = numpy.zeros_like(Z2)
     efield_p_angle = numpy.zeros_like(Z2)
 
     for ie in range(e.size):
@@ -319,20 +305,20 @@ def _undul_phot_SRW(E_ENERGY, INTENSITY, LAMBDAU, NPERIODS, K, EMIN, EMAX, NG_E,
           efield_p_mod[ie, itheta, iphi] = tck_efield_p_mod(X, Y)
           efield_p_angle[ie, itheta, iphi] = tck_efield_p_angle(X, Y)
 
-    out = {'radiation':Z2,
-            'polarization':POL_DEG,
-            'photon_energy':e,
-            'theta':theta,
-            'phi':phi,
-            'trajectory':None,
-            'e_amplitude_sigma': efield_s_mod * numpy.exp(1j * efield_s_angle),
-            'e_amplitude_pi': efield_p_mod * numpy.exp(1j * efield_p_angle),
-            'CART_radiation': radiation,
-            'CART_polarizartion': pol_deg,
-            'CART_x': x / distance, # angle in rad
-            'CART_y': y / distance, # angle in rad
+    out = { 'radiation'             : Z2,
+            'polarization'          : POL_DEG,
+            'photon_energy'         : e,
+            'theta'                 : theta,
+            'phi'                   : phi,
+            'trajectory'            : None,
+            'e_amplitude_sigma'     : efield_s_mod * numpy.exp(1j * efield_s_angle),
+            'e_amplitude_pi'        : efield_p_mod * numpy.exp(1j * efield_p_angle),
+            'CART_radiation'        : radiation,
+            'CART_polarizartion'    : pol_deg,
+            'CART_x'                : x / distance, # angle in rad
+            'CART_y'                : y / distance, # angle in rad
             'CART_e_amplitude_sigma': wSigma[:, :, :, 0],
-            'CART_e_amplitude_pi': wPi[:, :, :, 0],
+            'CART_e_amplitude_pi'   : wPi[:, :, :, 0],
             }
 
     #
@@ -375,22 +361,12 @@ def _undul_phot_SRW(E_ENERGY, INTENSITY, LAMBDAU, NPERIODS, K, EMIN, EMAX, NG_E,
         print("Backpropagating source (SRW)...")
         sl.srwl.PropagElecField(wfr, optBL)
 
-
         BPwSigma, BPwPi = _SRWEFieldAsNumpy(wfr)
 
         mesh1 = deepcopy(wfr.mesh)
         print("Backpropagated mesh...", mesh1.ne, mesh1.eStart, mesh1.eFin, mesh1.ne, mesh1.xStart, mesh1.xFin, mesh1.nx, mesh1.yStart, mesh1.yFin, mesh1.ny)
         BPx = numpy.linspace(mesh1.xStart, mesh1.xFin, mesh1.nx)
         BPy = numpy.linspace(mesh1.yStart, mesh1.yFin, mesh1.ny)
-
-        # print(">>>>>>>>>>>>>>>>>>", BPwSigma.shape,  BPwSigma)
-        #
-        # BPwModSigma = numpy.abs(BPwSigma[:, :, :, 0])
-        # BPwModPi = numpy.abs(BPwPi[:, :, :, 0])
-        # BPradiation = BPwModSigma ** 2 + BPwModPi ** 2
-        # from srxraylib.plot.gol import plot_image
-        # plot_image(BPradiation, aspect='auto')
-
 
         out['CART_BACKPROPAGATED_e_amplitude_sigma']= BPwSigma[:, :, :, 0]
         out['CART_BACKPROPAGATED_e_amplitude_pi']= BPwPi[:, :, :, 0]
@@ -400,7 +376,7 @@ def _undul_phot_SRW(E_ENERGY, INTENSITY, LAMBDAU, NPERIODS, K, EMIN, EMAX, NG_E,
 
     return out
 
-def calculate_undulator_emission_SRW(
+def calculate_undulator_emission_srw(
                      electron_energy              = 6.0,
                      electron_current             = 0.2,
                      undulator_period             = 0.018,
@@ -419,6 +395,53 @@ def calculate_undulator_emission_SRW(
                      srw_resolution               = 50.0,
                      srw_semianalytical           = 0,
                      ):
+    """
+    Calculate undulator emission (far field) and backpropagation to the center of the undulator using srw.
+
+    Parameters
+    ----------
+    electron_energy: float, optional
+        The electron energy in GeV.
+    electron_current: float, optional
+        The electron beam current in A.
+    undulator_period: float, optional
+        The undulator period in m.
+    undulator_nperiods: float, optional
+        The undulator number of periods.
+    K: float, optional
+        The undulator K factor (vertical).
+    photon_energy: float, optional
+        The photon energy (or starting energy for arrays) in eV.
+    EMAX: float, optional
+        The end photon energy (for arrays).
+    NG_E: int, optional
+        The number of points in photon energy (>1 for array).
+    MAXANGLE: float, optional
+        The maximum half-angle for delimiting the calculation in rad.
+    number_of_points: int, optional
+        The number of points in theta (elevation angle) or x and y.
+    NG_P: int, optional
+        The number of points in psi (azimuthal angle).
+    number_of_trajectory_points: int, optional
+        The number of trajectory points (per period).
+    flag_size: int, optional
+        A flag to control the model used for sampling the radiation size at the center of the undulator:
+        0=point, 1=Gaussian, 2=backpropagated the far field.
+    distance: float, optional
+        The distance to place the image plane where far field is calculated in m.
+    srw_range: float, optional
+        The SRW range factor (affecting both the H and V directions).
+    srw_resolution: float, optional
+        The SRW resolution factor (affecting both the H and V directions).
+    srw_semianalytical: int, optional
+        A flag to indicate if SRW uses the semianalytical treatment of the phases (0=No, 1=Yes).
+
+    Returns
+    -------
+    dict
+        A dictionary with calculated values and arrays.
+
+    """
     return _undul_phot_SRW(
                         electron_energy,
                         electron_current,
@@ -438,9 +461,11 @@ def calculate_undulator_emission_SRW(
                         srw_resolution=srw_resolution,
                         srw_semianalytical=srw_semianalytical,
                         )
-
+#
+#
+#
 if __name__ == "__main__":
-    dict1 = calculate_undulator_emission_SRW(
+    dict1 = calculate_undulator_emission_srw(
                      electron_energy              = 6.0,
                      electron_current             = 0.2,
                      undulator_period             = 0.025,

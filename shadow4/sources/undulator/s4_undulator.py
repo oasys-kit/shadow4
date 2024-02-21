@@ -199,6 +199,19 @@ class S4Undulator(Undulator):
         """
         return self._FLAG_EMITTANCE
 
+    def get_number_of_energy_points(self):
+        """
+        Returns the number of photon energy points.
+
+        Returns
+        -------
+        int
+        """
+        if self.is_monochromatic():
+            return 1
+        else:
+            return self._NG_E
+
     def set_energy_monochromatic(self, emin):
         """
         Sets a single energy line for the source (monochromatic).

@@ -1,23 +1,14 @@
-#
-# SHADOW3 Undulator preprocessors implemented in python
-#
-# this code replaces SHADOW3's undul_phot
-#
-# It calculates the undulator radiation as a function of energy, theta and phi. Phi is the polar angle.
-#
-# It uses pySRU
-#
-# Available public function:
-#
-#     calculate_undulator_emission_pySRU: interface to _undul_phot_pysru (like undul_phot of SHADOW3 but using pySRU).
-#
-#
+"""
+Calculation of undulator far field and backpropagation to the center of the undulator
+Implementation using ppySRU for source simulation and Wofry2D for backpropagation.
 
 
+Available public functions:
 
-import numpy as np
-import numpy
-from scipy import interpolate
+    calculate_undulator_emission_pysru()
+
+
+"""
 
 try:
     from pySRU.ElectronBeam import ElectronBeam as PysruElectronBeam
@@ -28,6 +19,9 @@ try:
 except:
     raise ImportError("pySRU not imported")
 
+import numpy as np
+import numpy
+from scipy import interpolate
 
 def _pysru_wofry_2D_run(photon_energy,
                         energy_in_GeV=6,
@@ -179,41 +173,34 @@ def _pysru_wofry_2D_run(photon_energy,
             print(bl.to_python_code())
             print("\n################## END PYTHON CODE #########################\n")
 
-        return CART_e_amplitude_sigma, CART_e_amplitude_pi, CART_BACKPROPAGATED_radiation, CART_BACKPROPAGATED_x, CART_BACKPROPAGATED_y
+        return CART_e_amplitude_sigma, CART_e_amplitude_pi, CART_BACKPROPAGATED_radiation,\
+               CART_BACKPROPAGATED_x, CART_BACKPROPAGATED_y
 
 def _get_radiation_interpolated_cartesian(radiation, photon_energy, thetabm, phi,
-                                          npointsx=100, npointsz=100, thetamax=None): # todo: import from source_undulator_factory.py
-    """
-    Interpolates the radiation array (in polar coordinates) to cartesian coordinates.
-
-    Parameters
-    ----------
-    npointsx : int, optional
-        The number of points in X.
-    npointsz : int, optional
-        The number of points in Z.
-    thetamax : None or float, optional
-        Maximum value of theta. By default (None) it uses the maximum theta.
-
-    Returns
-    -------
-    tuple
-        (radiation, array_x, array_y) in units of W/rad^2.
-    """
-
-    # radiation, photon_energy, thetabm, phi = self.get_result_radiation_polar()
-
+                                          npointsx=100, npointsz=100, thetamax=None,
+                                          distance=100):
     if thetamax is None:
         thetamax = thetabm.max()
 
-    vx = numpy.linspace(-1.1 * thetamax, 1.1 * thetamax, npointsx)
-    vz = numpy.linspace(-1.1 * thetamax, 1.1 * thetamax, npointsz)
+    distancemax = 1.0 * thetamax * distance
+
+    #v are coordinates at the image plane
+    vx = numpy.linspace(-distancemax, distancemax, npointsx)
+    vz = numpy.linspace(-distancemax, distancemax, npointsz)
     VX = numpy.outer(vx, numpy.ones_like(vz))
     VZ = numpy.outer(numpy.ones_like(vx), vz)
-    VY = numpy.sqrt(1 - VX**2 - VZ**2)
+    VY = numpy.sqrt(distance ** 2 +  VX ** 2 + VZ ** 2)
 
-    THETA = numpy.abs(numpy.arctan(numpy.sqrt(VX**2 + VZ**2) / VY))
+    THETA = numpy.arctan(numpy.sqrt(VX ** 2 + VZ ** 2) / VY)
+    # abs to be sure that PHI is in [0,90] deg (like the polar data)
     PHI = numpy.arctan2(numpy.abs(VZ), numpy.abs(VX))
+
+
+    # from srxraylib.plot.gol import plot_scatter
+    # plot_scatter(THETA, PHI, xtitle="THETA", ytitle="PHI", show=0)
+    # plot_scatter(numpy.outer(thetabm, numpy.ones_like(phi)),
+    #              numpy.outer(numpy.ones_like(thetabm), phi ),
+    #              xtitle="thetabm", ytitle="phi", show=1)
 
     radiation_interpolated = numpy.zeros((radiation.shape[0], npointsx, npointsz))
 
@@ -225,11 +212,10 @@ def _get_radiation_interpolated_cartesian(radiation, photon_energy, thetabm, phi
 
 def _undul_phot_pySRU(E_ENERGY, INTENSITY, LAMBDAU, NPERIODS, K, EMIN, EMAX, NG_E, MAXANGLE, NG_T, NG_P,
                       number_of_trajectory_points=20, flag_size=2,
-                      distance=100.0, # placed far away (100 m))
+                      distance=100.0,
                       magnification=0.05,
                       pysru_source=0, # 0=interpolate, 1=recalculate
                       ):
-    import numpy
     myelectronbeam = PysruElectronBeam(Electron_energy=E_ENERGY, I_current=INTENSITY)
     myundulator = PysruUndulator(K=K, period_length=LAMBDAU, length=LAMBDAU*NPERIODS)
     D = distance
@@ -245,7 +231,6 @@ def _undul_phot_pySRU(E_ENERGY, INTENSITY, LAMBDAU, NPERIODS, K, EMIN, EMAX, NG_
     efield_x = np.zeros_like(intens, dtype=complex)
     efield_y = np.zeros_like(intens, dtype=complex)
     efield_z = np.zeros_like(intens, dtype=complex)
-
 
 
     THETA = np.outer(theta, np.ones_like(phi))
@@ -300,45 +285,46 @@ def _undul_phot_pySRU(E_ENERGY, INTENSITY, LAMBDAU, NPERIODS, K, EMIN, EMAX, NG_
     T0 = simulation_test.trajectory
     T = np.vstack((T0.t, T0.x, T0.y, T0.z, T0.v_x, T0.v_y, T0.v_z, T0.a_x, T0.a_y, T0.a_z))
 
-
     # interpolate to cartesian grid
-    npointsx = theta.size
-    npointsz = theta.size
-    thetamax = None
-    print("Interpolating to cartesian grid (%d x %d points)" % (npointsx, npointsz))
+    print("Interpolating to cartesian grid (%d x %d points)" % (theta.size, theta.size))
     # interpolate intensity
     radiation_interpolated, photon_energy, vx, vz = _get_radiation_interpolated_cartesian(
-        intens, photon_energy, theta, phi, npointsx=npointsx, npointsz=npointsz, thetamax=thetamax)
+        intens, photon_energy, theta, phi, npointsx=theta.size, npointsz=theta.size, thetamax=None,
+        distance=distance)
 
-    out = {'radiation':intens,
-            'polarization':pol_deg,
-            'photon_energy':photon_energy,
-            'theta':theta,
-            'phi':phi,
-            'trajectory':T,
+    out = {'radiation'         : intens,
+            'polarization'     : pol_deg,
+            'photon_energy'    : photon_energy,
+            'theta'            : theta,
+            'phi'              : phi,
+            'trajectory'       : T,
             'e_amplitude_sigma': efield_x,  # todo: verify!
-            'e_amplitude_pi':    efield_y,  # todo: verify!
-
-           'CART_radiation': radiation_interpolated,
-           # 'CART_polarizartion': pol_deg,
-           'CART_x': vx,  # angle in rad
-           'CART_y': vz,  # angle in rad
+            'e_amplitude_pi'   : efield_y,  # todo: verify!
+            'CART_radiation'   : radiation_interpolated,
+            'CART_x'           : vx / distance,  # angle in rad
+            'CART_y'           : vz / distance,  # angle in rad
             }
 
-    # for backpropagation we need the interpolated electric field
+    # for backpropagation we need the electric field (interpolated or recalculated)
     # efield_method = 'recalculate' # 'interpolate' # 'recalculate'
     if flag_size == 2:
+        npointsx = theta.size
+        npointsz = npointsx
+        thetamax = None
         if pysru_source == 0: # 'interpolate'
+
             efield_x_mod_interpolated, photon_energy, vx, vz = _get_radiation_interpolated_cartesian(
-                numpy.abs(efield_x), photon_energy, theta, phi, npointsx=npointsx, npointsz=npointsz, thetamax=thetamax)
+                numpy.abs(efield_x), photon_energy, theta, phi, npointsx=npointsx, npointsz=npointsz,
+                thetamax=thetamax, distance=distance)
             efield_x_angle_interpolated, photon_energy, vx, vz = _get_radiation_interpolated_cartesian(
                 numpy.angle(efield_x), photon_energy, theta, phi, npointsx=npointsx, npointsz=npointsz,
-                thetamax=thetamax)
+                thetamax=thetamax, distance=distance)
             efield_y_mod_interpolated, photon_energy, vx, vz = _get_radiation_interpolated_cartesian(
-                numpy.abs(efield_y), photon_energy, theta, phi, npointsx=npointsx, npointsz=npointsz, thetamax=thetamax)
+                numpy.abs(efield_y), photon_energy, theta, phi, npointsx=npointsx, npointsz=npointsz,
+                thetamax=thetamax, distance=distance)
             efield_y_angle_interpolated, photon_energy, vx, vz = _get_radiation_interpolated_cartesian(
                 numpy.angle(efield_y), photon_energy, theta, phi, npointsx=npointsx, npointsz=npointsz,
-                thetamax=thetamax)
+                thetamax=thetamax, distance=distance)
             efield_x_interpolated = efield_x_mod_interpolated * numpy.exp(1j * efield_x_angle_interpolated)
             efield_y_interpolated = efield_y_mod_interpolated * numpy.exp(1j * efield_y_angle_interpolated)
             out['CART_e_amplitude_sigma'] = efield_x_interpolated
@@ -362,7 +348,7 @@ def _undul_phot_pySRU(E_ENERGY, INTENSITY, LAMBDAU, NPERIODS, K, EMIN, EMAX, NG_
                 print("wavelength: ", codata.h * codata.c / codata.e / e)
 
                 input_wavefront = GenericWavefront2D.initialize_wavefront_from_arrays(
-                    vx * D, vz * D, efield_x_interpolated[ie],
+                    vx, vz, efield_x_interpolated[ie],
                     z_array_pi=efield_y_interpolated[ie],
                     wavelength=codata.h * codata.c / codata.e / e)
 
@@ -406,10 +392,6 @@ def _undul_phot_pySRU(E_ENERGY, INTENSITY, LAMBDAU, NPERIODS, K, EMIN, EMAX, NG_
 
 
         elif pysru_source == 1: # 'recalculate':
-            # E_ENERGY, INTENSITY, LAMBDAU, NPERIODS, K, EMIN, EMAX, NG_E, MAXANGLE, NG_T, NG_P,
-            #           number_of_trajectory_points=20, flag_size=2,
-            #           distance=100.0, # placed far away (100 m))
-            #           magnification=0.05,
             CART_e_amplitude_sigma, CART_e_amplitude_pi, CART_BACKPROPAGATED_radiation,\
                 CART_BACKPROPAGATED_x, CART_BACKPROPAGATED_y = _pysru_wofry_2D_run(photon_energy,
                                                                                    energy_in_GeV=E_ENERGY,
@@ -428,20 +410,19 @@ def _undul_phot_pySRU(E_ENERGY, INTENSITY, LAMBDAU, NPERIODS, K, EMIN, EMAX, NG_
                                                                                    rad_method=2,
                                                                                    magnification=magnification,
                                                                                    )
-            out['CART_e_amplitude_sigma'] = CART_e_amplitude_sigma
-            out['CART_e_amplitude_pi'] = CART_e_amplitude_pi
+            out['CART_e_amplitude_sigma']        = CART_e_amplitude_sigma
+            out['CART_e_amplitude_pi']           = CART_e_amplitude_pi
             out['CART_BACKPROPAGATED_radiation'] = CART_BACKPROPAGATED_radiation
-            out['CART_BACKPROPAGATED_x'] = CART_BACKPROPAGATED_x  # length in m
-            out['CART_BACKPROPAGATED_y'] = CART_BACKPROPAGATED_y  # length in m
+            out['CART_BACKPROPAGATED_x']         = CART_BACKPROPAGATED_x  # length in m
+            out['CART_BACKPROPAGATED_y']         = CART_BACKPROPAGATED_y  # length in m
 
         else:
             raise Exception("Invalid pysru_source: %f" % pysru_source)
 
-
     return out
 
 
-def calculate_undulator_emission_pySRU(
+def calculate_undulator_emission_pysru(
                      electron_energy              = 6.0,
                      electron_current             = 0.2,
                      undulator_period             = 0.018,
@@ -459,6 +440,52 @@ def calculate_undulator_emission_pySRU(
                      magnification                = 0.05,
                      pysru_source                 = 0,
                      ):
+    """
+    Calculate undulator emission (far field) and backpropagation to the center of the undulator using srw.
+
+    Parameters
+    ----------
+    electron_energy: float, optional
+        The electron energy in GeV.
+    electron_current: float, optional
+        The electron beam current in A.
+    undulator_period: float, optional
+        The undulator period in m.
+    undulator_nperiods: float, optional
+        The undulator number of periods.
+    K: float, optional
+        The undulator K factor (vertical).
+    photon_energy: float, optional
+        The photon energy (or starting energy for arrays) in eV.
+    EMAX: float, optional
+        The end photon energy (for arrays).
+    NG_E: int, optional
+        The number of points in photon energy (>1 for array).
+    MAXANGLE: float, optional
+        The maximum half-angle for delimiting the calculation in rad.
+    number_of_points: int, optional
+        The number of points in theta (elevation angle) or x and y.
+    NG_P: int, optional
+        The number of points in psi (azimuthal angle).
+    number_of_trajectory_points: int, optional
+        The number of trajectory points (per period).
+    flag_size: int, optional
+        A flag to control the model used for sampling the radiation size at the center of the undulator:
+        0=point, 1=Gaussian, 2=backpropagated the far field.
+    distance: float, optional
+        The distance to place the image plane where far field is calculated in m.
+    magnification: float, optional
+        The magnification for backpropagation.
+    pysru_source: int, optional
+        A flag to indicate if the source in cartesian coordinates used for backpropagation is
+        (0) interpolated or (1) recalculated.
+
+    Returns
+    -------
+    dict
+        A dictionary with calculated values and arrays.
+
+    """
     return _undul_phot_pySRU(
                         electron_energy,
                         electron_current,
@@ -480,7 +507,7 @@ def calculate_undulator_emission_pySRU(
 
 if __name__ == "__main__":
     import numpy
-    dict1 = calculate_undulator_emission_pySRU(
+    dict1 = calculate_undulator_emission_pysru(
                      electron_energy              = 6.0,
                      electron_current             = 0.2,
                      undulator_period             = 0.025,
@@ -490,13 +517,13 @@ if __name__ == "__main__":
                      EMAX                         = 5700.0,
                      NG_E                         = 1,
                      MAXANGLE                     = 30e-6,
-                     number_of_points             = 51,
+                     number_of_points             = 31,
                      NG_P                         = 11,
                      number_of_trajectory_points  = 20,
                      flag_size                    = 2,
                      distance                     = 100.0,
                      magnification                = 0.05,
-                     pysru_source                 = 0,
+                     pysru_source                 = 1,
     )
     from srxraylib.plot.gol import plot_image, plot
     if True:

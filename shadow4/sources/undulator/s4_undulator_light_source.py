@@ -17,9 +17,9 @@ from syned.storage_ring.light_source import LightSource
 
 from shadow4.sources.s4_electron_beam import S4ElectronBeam
 from shadow4.beam.s4_beam import S4Beam
-from shadow4.sources.undulator.source_undulator_factory import calculate_undulator_emission # SourceUndulatorFactory
-from shadow4.sources.undulator.source_undulator_factory_srw import calculate_undulator_emission_SRW # SourceUndulatorFactorySrw
-from shadow4.sources.undulator.source_undulator_factory_pysru import calculate_undulator_emission_pySRU # SourceUndulatorFactoryPysru
+from shadow4.sources.undulator.calculate_undulator_emission import calculate_undulator_emission # SourceUndulatorFactory
+from shadow4.sources.undulator.calculate_undulator_emission_srw import calculate_undulator_emission_srw # SourceUndulatorFactorySrw
+from shadow4.sources.undulator.calculate_undulator_emission_pysru import calculate_undulator_emission_pysru # SourceUndulatorFactoryPysru
 from shadow4.sources.undulator.s4_undulator import S4Undulator
 from shadow4.sources.s4_light_source import S4LightSource
 from shadow4.sources.source_geometrical.source_gaussian import SourceGaussian
@@ -185,82 +185,82 @@ class S4UndulatorLightSource(S4LightSource):
         if self.__result_radiation is None: self.__calculate_radiation()
         return self.__result_radiation
 
-    def get_result_radiation(self):
-        """
-        Returns the array with the radiation (intensity vs angles).
-
-        Returns
-        -------
-        numpy array
-            (1, ng_t, ng_p) shape 1 x  Number of points in angle theta x points in angle phi.
-        """
-        return self.get_result_dictionary()["radiation"]
-
-    def get_result_polarization(self):
-        """
-        Returns the array with the polarization degree vs angles.
-
-        Returns
-        -------
-        numpy array
-            (1, ng_t, ng_p) shape 1 x  Number of points in angle theta x points in angle phi.
-        """
-        return self.get_result_dictionary()["polarization"]
-
-    def get_result_polarisation(self):
-        """
-        Returns the array with the polarization degree vs angles.
-
-        Returns
-        -------
-        numpy array
-            (1, ng_t, ng_p) shape 1 x  Number of points in angle theta x points in angle phi.
-        """
-        return self.get_result_dictionary()["polarization"]
-
-    def get_result_theta(self):
-        """
-        Returns the array with the theta angle.
-
-        Returns
-        -------
-        numpy array
-            (ng_t) size number of points in angle theta.
-        """
-        return self.get_result_dictionary()["theta"]
-
-    def get_result_phi(self):
-        """
-        Returns the array with the phi angle.
-
-        Returns
-        -------
-        numpy array
-            (ng_p) size number of points in angle phi.
-        """
-        return self.get_result_dictionary()["phi"]
-
-    def get_result_e_amplitudes(self):
-        """
-        Returns the arrays with the electric field amplitudes.
-
-        Returns
-        -------
-        numpy array
-            (ng_e) size number of points in photon energy.
-        """
-        return self.get_result_dictionary()["e_amplitude_sigma"], self.get_result_dictionary()["e_amplitude_pi"]
-
-    def get_result_photon_energy(self):
-        """
-        Returns the array with the photon energy.
-
-        Returns
-        -------
-        numpy array
-            (ng_e) size number of points in photon energy.
-        """
-        return self.get_result_dictionary()["photon_energy"]
+    # def get_result_radiation(self):
+    #     """
+    #     Returns the array with the radiation (intensity vs angles).
+    #
+    #     Returns
+    #     -------
+    #     numpy array
+    #         (1, ng_t, ng_p) shape 1 x  Number of points in angle theta x points in angle phi.
+    #     """
+    #     return self.get_result_dictionary()["radiation"]
+    #
+    # def get_result_polarization(self):
+    #     """
+    #     Returns the array with the polarization degree vs angles.
+    #
+    #     Returns
+    #     -------
+    #     numpy array
+    #         (1, ng_t, ng_p) shape 1 x  Number of points in angle theta x points in angle phi.
+    #     """
+    #     return self.get_result_dictionary()["polarization"]
+    #
+    # def get_result_polarisation(self):
+    #     """
+    #     Returns the array with the polarization degree vs angles.
+    #
+    #     Returns
+    #     -------
+    #     numpy array
+    #         (1, ng_t, ng_p) shape 1 x  Number of points in angle theta x points in angle phi.
+    #     """
+    #     return self.get_result_dictionary()["polarization"]
+    #
+    # def get_result_theta(self):
+    #     """
+    #     Returns the array with the theta angle.
+    #
+    #     Returns
+    #     -------
+    #     numpy array
+    #         (ng_t) size number of points in angle theta.
+    #     """
+    #     return self.get_result_dictionary()["theta"]
+    #
+    # def get_result_phi(self):
+    #     """
+    #     Returns the array with the phi angle.
+    #
+    #     Returns
+    #     -------
+    #     numpy array
+    #         (ng_p) size number of points in angle phi.
+    #     """
+    #     return self.get_result_dictionary()["phi"]
+    #
+    # def get_result_e_amplitudes(self):
+    #     """
+    #     Returns the arrays with the electric field amplitudes.
+    #
+    #     Returns
+    #     -------
+    #     numpy array
+    #         (ng_e) size number of points in photon energy.
+    #     """
+    #     return self.get_result_dictionary()["e_amplitude_sigma"], self.get_result_dictionary()["e_amplitude_pi"]
+    #
+    # def get_result_photon_energy(self):
+    #     """
+    #     Returns the array with the photon energy.
+    #
+    #     Returns
+    #     -------
+    #     numpy array
+    #         (ng_e) size number of points in photon energy.
+    #     """
+    #     return self.get_result_dictionary()["photon_energy"]
 
     def get_result_trajectory(self):
         """
@@ -277,71 +277,86 @@ class S4UndulatorLightSource(S4LightSource):
         beta_x = traj[4].copy()
         return y, x, beta_x
 
-    def get_result_radiation_polar(self):
-        """
-        Returns all radiation arrays.
+    # def get_result_radiation_polar(self):
+    #     """
+    #     Returns all radiation arrays.
+    #
+    #     Returns
+    #     -------
+    #     tuple
+    #         (radiation, photon_energy, theta, phi)
+    #     """
+    #     return self.get_result_radiation(),\
+    #            self.get_result_photon_energy(),\
+    #            self.get_result_theta(),\
+    #            self.get_result_phi()
+    #
+    # def get_radiation(self):
+    #     """
+    #     Returns all radiation arrays (the same as get_result_radiation_polar() ).
+    #
+    #     Returns
+    #     -------
+    #     tuple
+    #         (radiation, photon_energy, theta, phi)
+    #     """
+    #     return self.get_result_radiation_polar()
 
-        Returns
-        -------
-        tuple
-            (radiation, photon_energy, theta, phi)
-        """
-        return self.get_result_radiation(),\
-               self.get_result_photon_energy(),\
-               self.get_result_theta(),\
-               self.get_result_phi()
 
-    def get_radiation(self):
-        """
-        Returns all radiation arrays (the same as get_result_radiation_polar() ).
-
-        Returns
-        -------
-        tuple
-            (radiation, photon_energy, theta, phi)
-        """
-        return self.get_result_radiation_polar()
-
-    def get_radiation_interpolated_cartesian(self, npointsx=100, npointsz=100, thetamax=None):
-        """
-        Interpolates the radiation array (in polar coordinates) to cartesian coordinates.
-
-        Parameters
-        ----------
-        npointsx : int, optional
-            The number of points in X.
-        npointsz : int, optional
-            The number of points in Z.
-        thetamax : None or float, optional
-            Maximum value of theta. By default (None) it uses the maximum theta.
-
-        Returns
-        -------
-        tuple
-            (radiation, array_x, array_y) in units of W/rad^2.
-        """
-
-        radiation, photon_energy, thetabm,phi = self.get_result_radiation_polar()
-
-        if thetamax is None:
-            thetamax = thetabm.max()
-
-        vx = numpy.linspace(-1.1 * thetamax, 1.1 * thetamax, npointsx)
-        vz = numpy.linspace(-1.1 * thetamax, 1.1 * thetamax, npointsz)
-        VX = numpy.outer(vx, numpy.ones_like(vz))
-        VZ = numpy.outer(numpy.ones_like(vx), vz)
-        VY = numpy.sqrt(1 - VX**2 - VZ**2)
-
-        THETA = numpy.abs(numpy.arctan(numpy.sqrt(VX**2 + VZ**2) / VY))
-        PHI = numpy.arctan2(numpy.abs(VZ), numpy.abs(VX))
-
-        radiation_interpolated = numpy.zeros((radiation.shape[0], npointsx, npointsz))
-
-        for i in range(radiation.shape[0]):
-            interpolator_value = interpolate.RectBivariateSpline(thetabm, phi, radiation[i])
-            radiation_interpolated[i] = interpolator_value.ev(THETA, PHI)
-
-        return radiation_interpolated, photon_energy, vx, vz
+    # @classmethod
+    # def _interpolate_polar_to_cartesian(cls, radiation, photon_energy, thetabm, phi,
+    #                                    npointsx=100, npointsz=100, thetamax=None):
+    #
+    #     if thetamax is None:
+    #         thetamax = thetabm.max()
+    #
+    #     vx = numpy.linspace(-1.1 * thetamax, 1.1 * thetamax, npointsx)
+    #     vz = numpy.linspace(-1.1 * thetamax, 1.1 * thetamax, npointsz)
+    #     VX = numpy.outer(vx, numpy.ones_like(vz))
+    #     VZ = numpy.outer(numpy.ones_like(vx), vz)
+    #     VY = numpy.sqrt(1 - VX ** 2 - VZ ** 2)
+    #
+    #     THETA = numpy.abs(numpy.arctan(numpy.sqrt(VX ** 2 + VZ ** 2) / VY))
+    #     PHI = numpy.arctan2(numpy.abs(VZ), numpy.abs(VX))
+    #
+    #     radiation_interpolated = numpy.zeros((radiation.shape[0], npointsx, npointsz))
+    #
+    #     for i in range(radiation.shape[0]):
+    #         interpolator_value = interpolate.RectBivariateSpline(thetabm, phi, radiation[i])
+    #         radiation_interpolated[i] = interpolator_value.ev(THETA, PHI)
+    #
+    #     return radiation_interpolated, photon_energy, vx, vz
+    #
+    # def get_radiation_interpolated_cartesian(self, npointsx=100, npointsz=100, thetamax=None): # todo remove (in factory now)
+    #     """
+    #     Interpolates the radiation array (in polar coordinates) to cartesian coordinates.
+    #
+    #     Parameters
+    #     ----------
+    #     npointsx : int, optional
+    #         The number of points in X.
+    #     npointsz : int, optional
+    #         The number of points in Z.
+    #     thetamax : None or float, optional
+    #         Maximum value of theta. By default (None) it uses the maximum theta.
+    #
+    #     Returns
+    #     -------
+    #     tuple
+    #         (radiation, array_x, array_y) in units of W/rad^2.
+    #     """
+    #
+    #     # radiation, photon_energy, thetabm,phi = self.get_result_radiation_polar()
+    #     # radiation
+    #     # radiation, photon_energy, theta, phi = self.lightsource.get_result_radiation_polar()
+    #     dict_results = self.get_result_dictionary()
+    #     radiation = dict_results['radiation']
+    #     photon_energy = dict_results['photon_energy']
+    #     thetabm = dict_results['theta']
+    #     phi = dict_results['phi']
+    #
+    #     return self._interpolate_polar_to_cartesian(radiation, photon_energy, thetabm, phi,
+    #                                                 npointsx=npointsx, npointsz=npointsz, thetamax=thetamax)
 
     def get_power_density(self):
         """
@@ -352,10 +367,21 @@ class S4UndulatorLightSource(S4LightSource):
         tuple
             (power_density, theta, phi).
         """
-        radiation = self.get_result_radiation().copy()
-        theta = self.get_result_theta()
-        phi = self.get_result_phi()
-        photon_energy = self.get_result_photon_energy()
+
+        dict_results = self.get_result_dictionary()
+        radiation = dict_results['radiation'].copy()
+        photon_energy = dict_results['photon_energy']
+        theta = dict_results['theta']
+        phi = dict_results['phi']
+        # radiation
+        # radiation, photon_energy, theta, phi = self.lightsource.get_result_radiation_polar()
+        # radiation = self.get_result_radiation().copy()
+        # theta = self.get_result_theta()
+        # phi = self.get_result_phi()
+        # photon_energy = self.get_result_photon_energy()
+
+
+
 
         if self.get_magnetic_structure().is_monochromatic():
             step_e = 1.0
@@ -422,11 +448,19 @@ class S4UndulatorLightSource(S4LightSource):
         tuple
             (flux, spectral_power, photon_energy).
         """
-        radiation2 = self.get_result_radiation().copy()
-        theta = self.get_result_theta()
-        phi = self.get_result_phi()
-        photon_energy = self.get_result_photon_energy()
+        # radiation2 = self.get_result_radiation().copy()
+        # theta = self.get_result_theta()
+        # phi = self.get_result_phi()
+        # photon_energy = self.get_result_photon_energy()
+
+        dict_results = self.get_result_dictionary()
+        radiation2 = dict_results['radiation'].copy()
+        theta = dict_results['theta']
+        phi = dict_results['phi']
+        photon_energy = dict_results['photon_energy']
+
         THETA = numpy.outer(theta, numpy.ones_like(phi))
+
         for i in range(radiation2.shape[0]):
             radiation2[i] *= THETA
 
@@ -437,7 +471,7 @@ class S4UndulatorLightSource(S4LightSource):
             flux = 4 * numpy.trapz(numpy.trapz(radiation2, phi, axis=2), theta, axis=1) * (1e-3 * photon_energy) # photons/eV -> photons/0.1%bw
 
 
-        spectral_power = flux*codata.e*1e3
+        spectral_power = flux * codata.e * 1e3
 
         return flux, spectral_power, photon_energy
 
@@ -477,19 +511,19 @@ class S4UndulatorLightSource(S4LightSource):
         flux, spectral_power, photon_energy = self.get_flux_and_spectral_power()
         return spectral_power, photon_energy
 
-    def get_photon_size_distribution(self):
-        """
-        Returns the arrays of 1D photon size distribution.
-
-        Returns
-        -------
-        tuple
-            (array_x, array_z).
-        """
-        if self.__result_photon_size_distribution is None:
-            raise Exception("Not yet calculated...")
-
-        return self.__result_photon_size_distribution["x"], self.__result_photon_size_distribution["y"]
+    # def get_photon_size_distribution(self):
+    #     """
+    #     Returns the arrays of 1D photon size distribution.
+    #
+    #     Returns
+    #     -------
+    #     tuple
+    #         (array_x, array_z).
+    #     """
+    #     if self.__result_photon_size_distribution is None:
+    #         raise Exception("Not yet calculated...")
+    #
+    #     return self.__result_photon_size_distribution["x"], self.__result_photon_size_distribution["y"]
 
     # def get_photon_size_farfield(self):
     #     """
@@ -509,7 +543,6 @@ class S4UndulatorLightSource(S4LightSource):
     #            self.__result_photon_size_farfield["mean_photon_energy"], \
     #            self.__result_photon_size_farfield["distance"], \
     #            self.__result_photon_size_farfield["magnification"]
-
 
     def get_beam_in_gaussian_approximation(self):
         """
@@ -836,7 +869,7 @@ class S4UndulatorLightSource(S4LightSource):
                 )
 
         elif undulator.code_undul_phot == 'pysru' or  undulator.code_undul_phot == 'pySRU':
-            undul_phot_dict = calculate_undulator_emission_pySRU(
+            undul_phot_dict = calculate_undulator_emission_pysru(
                 electron_energy            = syned_electron_beam.energy(),
                 electron_current           = syned_electron_beam.current(),
                 undulator_period           = undulator.period_length(),
@@ -855,7 +888,7 @@ class S4UndulatorLightSource(S4LightSource):
                 pysru_source               = undulator._pysru_source,
                 )
         elif undulator.code_undul_phot == 'srw' or  undulator.code_undul_phot == 'SRW':
-            undul_phot_dict = calculate_undulator_emission_SRW(
+            undul_phot_dict = calculate_undulator_emission_srw(
                 electron_energy             = syned_electron_beam.energy(),
                 electron_current            = syned_electron_beam.current(),
                 undulator_period            = undulator.period_length(),
@@ -893,6 +926,7 @@ class S4UndulatorLightSource(S4LightSource):
         lambda1 = codata.h * codata.c / codata.e / numpy.array(sampled_photon_energy).mean()
         s_phot = 2.740 / (4e0 * numpy.pi) * numpy.sqrt(undulator.length() * lambda1)
 
+        dict_results = self.get_result_dictionary()
 
         if undulator._FLAG_SIZE == 0:
             x_photon = 0.0
@@ -902,7 +936,13 @@ class S4UndulatorLightSource(S4LightSource):
             x = numpy.linspace(-1e-6, 1e-6, 101)
             y = numpy.zeros_like(x)
             y[y.size // 2] = 1.0
-            self.__result_photon_size_distribution = {"x":x, "y":y}
+
+            # for plots, keep this result
+            dict_results['BACKPROPAGATED_r']         = x
+            dict_results['BACKPROPAGATED_radiation'] = numpy.outer(
+                numpy.ones(undulator.get_number_of_energy_points()), y
+                )
+
 
         elif undulator._FLAG_SIZE == 1:
             # TODO: I added this correction to obtain the sigma in the RADIAL coordinate, not in x and z.
@@ -922,13 +962,27 @@ class S4UndulatorLightSource(S4LightSource):
             # for plot, a Gaussian
             x = numpy.linspace(-5 * s_phot, 5 * s_phot, 101)
             y = numpy.exp(-x**2 / 2 / s_phot**2)
-            self.__result_photon_size_distribution = {"x":x, "y":y}
+
+
+            # for plots, keep this result
+            dict_results['BACKPROPAGATED_r']         = x
+            dict_results['BACKPROPAGATED_radiation'] = numpy.outer(
+                numpy.ones(undulator.get_number_of_energy_points()), y
+                )
 
         elif undulator._FLAG_SIZE == 2:
             # we need to retrieve the emission as a function of the angle
-            radiation, photon_energy, theta, phi = self.get_result_radiation_polar()
-            e_amplitude_sigma, e_amplitude_pi = self.get_result_e_amplitudes()
+            # radiation, photon_energy, theta, phi = self.get_result_radiation_polar()
+            # e_amplitude_sigma, e_amplitude_pi = self.get_result_e_amplitudes()
 
+            # radiation
+            # radiation, photon_energy, theta, phi = self.lightsource.get_result_radiation_polar()
+            radiation         = dict_results['radiation']
+            photon_energy     = dict_results['photon_energy']
+            theta             = dict_results['theta']
+            phi               = dict_results['phi']
+            e_amplitude_sigma = dict_results['e_amplitude_sigma']
+            e_amplitude_pi    = dict_results['e_amplitude_pi']
 
             #
             # we propagate the emission at a long distance (fat field) to sample angles
@@ -1201,59 +1255,6 @@ class S4UndulatorLightSource(S4LightSource):
         rays[:, 12] = 0.0
 
         return rays
-
-
-    # def _back_propagation_for_size_calculation_wofry(self):
-    #     """
-    #     Calculate the radiation_flux vs theta at a "distance"
-    #     Back propagate to -distance
-    #     The result is the size distrubution
-    #
-    #     :return: None; stores results in self._photon_size_distribution
-    #     """
-    #
-    #     from wofry.propagator.wavefront1D.generic_wavefront import GenericWavefront1D
-    #     from wofry.propagator.propagator import PropagationManager, PropagationElements, PropagationParameters
-    #     from syned.beamline.beamline_element import BeamlineElement
-    #     from syned.beamline.element_coordinates import ElementCoordinates
-    #     from wofryimpl.propagator.propagators1D.fresnel_zoom import FresnelZoom1D
-    #     from wofryimpl.beamline.optical_elements.ideal_elements.screen import WOScreen1D
-    #
-    #     theta          = self.__result_photon_size_farfield["theta"]
-    #     photon_energy  = self.__result_photon_size_farfield["mean_photon_energy"]
-    #     distance       = self.__result_photon_size_farfield["distance"]
-    #     magnification  = self.__result_photon_size_farfield["magnification"]
-    #     radial_e_amplitude = self.__result_photon_size_farfield["radial_e_amplitude"] # numpy.sqrt(self.__result_photon_size_farfield["radial_flux"]) + 0j
-    #
-    #     input_wavefront = GenericWavefront1D().initialize_wavefront_from_arrays(theta * distance, radial_e_amplitude)
-    #     input_wavefront.set_photon_energy(photon_energy)
-    #     # input_wavefront.set_spherical_wave(radius=distance, complex_amplitude=radial_e_amplitude)
-    #     # input_wavefront.save_h5_file("tmp2.h5","wfr")
-    #
-    #     optical_element = WOScreen1D()
-    #     #
-    #     # propagating
-    #     #
-    #     #
-    #     propagation_elements = PropagationElements()
-    #     beamline_element = BeamlineElement(optical_element=optical_element,
-    #                     coordinates=ElementCoordinates(p=0.0,q=-distance,
-    #                     angle_radial=numpy.radians(0.000000),
-    #                     angle_azimuthal=numpy.radians(0.000000)))
-    #     propagation_elements.add_beamline_element(beamline_element)
-    #     propagation_parameters = PropagationParameters(wavefront=input_wavefront.duplicate(),propagation_elements = propagation_elements)
-    #     propagation_parameters.set_additional_parameters('magnification_x', magnification)
-    #
-    #     #
-    #     propagator = PropagationManager.Instance()
-    #     try:
-    #         propagator.add_propagator(FresnelZoom1D())
-    #     except:
-    #         pass
-    #     output_wavefront = propagator.do_propagation(propagation_parameters=propagation_parameters,handler_name='FRESNEL_ZOOM_1D')
-    #
-    #     self.__result_photon_size_distribution = {"x":output_wavefront.get_abscissas(),
-    #                                               "y":output_wavefront.get_intensity()}
 
 #     def _back_propagation_for_size_calculation_hankel(self):
 #         """
