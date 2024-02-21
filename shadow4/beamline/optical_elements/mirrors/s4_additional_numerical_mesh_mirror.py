@@ -46,8 +46,6 @@ class S4AdditionalNumericalMeshMirror(S4NumericalMeshMirror):
     def ideal_mirror(self): return self.__ideal_mirror
 
     def to_python_code(self, **kwargs):
-
-
         txt = self.__ideal_mirror.to_python_code()
         txt += "ideal_mirror = optical_element"
         txt += self.__numerical_mesh_mirror.to_python_code()
