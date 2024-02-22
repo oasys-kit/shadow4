@@ -185,83 +185,6 @@ class S4UndulatorLightSource(S4LightSource):
         if self.__result_radiation is None: self.__calculate_radiation()
         return self.__result_radiation
 
-    # def get_result_radiation(self):
-    #     """
-    #     Returns the array with the radiation (intensity vs angles).
-    #
-    #     Returns
-    #     -------
-    #     numpy array
-    #         (1, ng_t, ng_p) shape 1 x  Number of points in angle theta x points in angle phi.
-    #     """
-    #     return self.get_result_dictionary()["radiation"]
-    #
-    # def get_result_polarization(self):
-    #     """
-    #     Returns the array with the polarization degree vs angles.
-    #
-    #     Returns
-    #     -------
-    #     numpy array
-    #         (1, ng_t, ng_p) shape 1 x  Number of points in angle theta x points in angle phi.
-    #     """
-    #     return self.get_result_dictionary()["polarization"]
-    #
-    # def get_result_polarisation(self):
-    #     """
-    #     Returns the array with the polarization degree vs angles.
-    #
-    #     Returns
-    #     -------
-    #     numpy array
-    #         (1, ng_t, ng_p) shape 1 x  Number of points in angle theta x points in angle phi.
-    #     """
-    #     return self.get_result_dictionary()["polarization"]
-    #
-    # def get_result_theta(self):
-    #     """
-    #     Returns the array with the theta angle.
-    #
-    #     Returns
-    #     -------
-    #     numpy array
-    #         (ng_t) size number of points in angle theta.
-    #     """
-    #     return self.get_result_dictionary()["theta"]
-    #
-    # def get_result_phi(self):
-    #     """
-    #     Returns the array with the phi angle.
-    #
-    #     Returns
-    #     -------
-    #     numpy array
-    #         (ng_p) size number of points in angle phi.
-    #     """
-    #     return self.get_result_dictionary()["phi"]
-    #
-    # def get_result_e_amplitudes(self):
-    #     """
-    #     Returns the arrays with the electric field amplitudes.
-    #
-    #     Returns
-    #     -------
-    #     numpy array
-    #         (ng_e) size number of points in photon energy.
-    #     """
-    #     return self.get_result_dictionary()["e_amplitude_sigma"], self.get_result_dictionary()["e_amplitude_pi"]
-    #
-    # def get_result_photon_energy(self):
-    #     """
-    #     Returns the array with the photon energy.
-    #
-    #     Returns
-    #     -------
-    #     numpy array
-    #         (ng_e) size number of points in photon energy.
-    #     """
-    #     return self.get_result_dictionary()["photon_energy"]
-
     def get_result_trajectory(self):
         """
         Returns the trajectory arrays y, x, beta_x [in SHADOW frame].
@@ -276,31 +199,6 @@ class S4UndulatorLightSource(S4LightSource):
         x = traj[1].copy() * codata.c
         beta_x = traj[4].copy()
         return y, x, beta_x
-
-    # def get_result_radiation_polar(self):
-    #     """
-    #     Returns all radiation arrays.
-    #
-    #     Returns
-    #     -------
-    #     tuple
-    #         (radiation, photon_energy, theta, phi)
-    #     """
-    #     return self.get_result_radiation(),\
-    #            self.get_result_photon_energy(),\
-    #            self.get_result_theta(),\
-    #            self.get_result_phi()
-    #
-    # def get_radiation(self):
-    #     """
-    #     Returns all radiation arrays (the same as get_result_radiation_polar() ).
-    #
-    #     Returns
-    #     -------
-    #     tuple
-    #         (radiation, photon_energy, theta, phi)
-    #     """
-    #     return self.get_result_radiation_polar()
 
 
     # @classmethod
@@ -373,15 +271,6 @@ class S4UndulatorLightSource(S4LightSource):
         photon_energy = dict_results['photon_energy']
         theta = dict_results['theta']
         phi = dict_results['phi']
-        # radiation
-        # radiation, photon_energy, theta, phi = self.lightsource.get_result_radiation_polar()
-        # radiation = self.get_result_radiation().copy()
-        # theta = self.get_result_theta()
-        # phi = self.get_result_phi()
-        # photon_energy = self.get_result_photon_energy()
-
-
-
 
         if self.get_magnetic_structure().is_monochromatic():
             step_e = 1.0
@@ -448,11 +337,6 @@ class S4UndulatorLightSource(S4LightSource):
         tuple
             (flux, spectral_power, photon_energy).
         """
-        # radiation2 = self.get_result_radiation().copy()
-        # theta = self.get_result_theta()
-        # phi = self.get_result_phi()
-        # photon_energy = self.get_result_photon_energy()
-
         dict_results = self.get_result_dictionary()
         radiation2 = dict_results['radiation'].copy()
         theta = dict_results['theta']
@@ -511,39 +395,6 @@ class S4UndulatorLightSource(S4LightSource):
         flux, spectral_power, photon_energy = self.get_flux_and_spectral_power()
         return spectral_power, photon_energy
 
-    # def get_photon_size_distribution(self):
-    #     """
-    #     Returns the arrays of 1D photon size distribution.
-    #
-    #     Returns
-    #     -------
-    #     tuple
-    #         (array_x, array_z).
-    #     """
-    #     if self.__result_photon_size_distribution is None:
-    #         raise Exception("Not yet calculated...")
-    #
-    #     return self.__result_photon_size_distribution["x"], self.__result_photon_size_distribution["y"]
-
-    # def get_photon_size_farfield(self):
-    #     """
-    #     Returns the arrays of far field distribution.
-    #
-    #     Returns
-    #     -------
-    #     tuple
-    #         (array_x, array_z).
-    #     """
-    #     if self.__result_photon_size_distribution is None:
-    #         raise Exception("Not yet calculated...")
-    #
-    #     # theta, radial_flux, mean_photon_energy, distance, magnification
-    #     return self.__result_photon_size_farfield["theta"],\
-    #            self.__result_photon_size_farfield["radial_e_amplitude"], \
-    #            self.__result_photon_size_farfield["mean_photon_energy"], \
-    #            self.__result_photon_size_farfield["distance"], \
-    #            self.__result_photon_size_farfield["magnification"]
-
     def get_beam_in_gaussian_approximation(self):
         """
         Returns the beam with the sampled rays using for an undulator modelled with the Gaussian approximation.
@@ -552,9 +403,7 @@ class S4UndulatorLightSource(S4LightSource):
         -------
         instance of S4Beam.
         """
-
         emin, emax, npoints = self.get_magnetic_structure().get_energy_box()
-
         NRAYS = self.get_nrays()
 
         if self.get_magnetic_structure().get_flag_emittance():
@@ -702,7 +551,6 @@ class S4UndulatorLightSource(S4LightSource):
         -------
         str
         """
-
         syned_electron_beam = self.get_electron_beam()
         undulator = self.get_magnetic_structure()
 
@@ -765,8 +613,6 @@ class S4UndulatorLightSource(S4LightSource):
         txt += "        maximum elevation angle: %f urad\n"%(1e6*undulator._MAXANGLE)
         txt += "        number of angular elevation points: %d\n"%(undulator._NG_T)
         txt += "        number of angular azimuthal points: %d\n"%(undulator._NG_P)
-        # txt += "        number of rays: %d\n"%(self.NRAYS)
-        # txt += "        random seed: %d\n"%(self.SEED)
         txt += "-----------------------------------------------------\n"
 
         txt += "calculation code: %s\n"%undulator.code_undul_phot
@@ -783,10 +629,6 @@ class S4UndulatorLightSource(S4LightSource):
             flag = "Far field backpropagated"
 
         txt += "        Photon source size sampling flag: %d (%s)\n"%(undulator._FLAG_SIZE,flag)
-        # if undulator._FLAG_SIZE == 1:
-        #     if lightdource.get_result_photon_size_sigma() is not None:
-        #         txt += "        Photon source size sigma (Gaussian): %6.3f um \n"%(1e6 * self.__result_photon_size_sigma)
-
         txt += "-----------------------------------------------------\n"
         return txt
 
@@ -815,12 +657,9 @@ class S4UndulatorLightSource(S4LightSource):
         script += "\nlight_source = S4UndulatorLightSource(name='%s', electron_beam=electron_beam, magnetic_structure=source,nrays=%s,seed=%s)" % \
                                                           (self.get_name(),self.get_nrays(),self.get_seed())
 
-        # script += "\n\n\n#beamline\nfrom shadow4.beamline.s4_beamline import S4Beamline"
-        # script += "\nbeamline = S4Beamline(light_source=light_source)"
         script += "\nbeam = light_source.get_beam()"
 
         return script
-
 
     #
     # internal functions
@@ -830,25 +669,14 @@ class S4UndulatorLightSource(S4LightSource):
         Calculates the radiation (emission) as a function of theta (elevation angle) and phi (azimuthal angle)
         This radiation will be sampled to create the source
 
-        It calls undul_phot* in SourceUndulatorFactory
+        It calls calculate_undulator_emission*
 
-        :param code_undul_phot: 'internal' (calls undul_phot), 'pysru' (calls undul_phot_pysru) or
-                'srw' (calls undul_phot_srw)
-        :return: a dictionary (the output from undul_phot*)
+        Sets the results in self.__result_radiation dictionary.
         """
-
-        # h = self.to_dictionary()
-        # print(self.info())
-        # os.system("rm -f xshundul.plt xshundul.par xshundul.traj xshundul.info xshundul.sha")
-
-        # if code_undul_phot != "internal" or code_undul_phot != "srw":
-        #     dump_uphot_dot_dat = True
-
         syned_electron_beam = self.get_electron_beam()
         undulator = self.get_magnetic_structure()
 
         self.__result_radiation = None
-        # undul_phot
         if undulator.code_undul_phot == 'internal':
             undul_phot_dict = calculate_undulator_emission(
                 electron_energy                  = syned_electron_beam.energy(),
@@ -867,8 +695,9 @@ class S4UndulatorLightSource(S4LightSource):
                 distance                         = undulator._distance,
                 magnification                    = undulator._magnification,
                 flag_backprop_recalculate_source = undulator._flag_backprop_recalculate_source,
-                )
-
+                flag_backprop_weight             = undulator._flag_backprop_weight,
+                weight_ratio                     = undulator._weight_ratio,
+            )
         elif undulator.code_undul_phot == 'pysru' or  undulator.code_undul_phot == 'pySRU':
             undul_phot_dict = calculate_undulator_emission_pysru(
                 electron_energy                  = syned_electron_beam.energy(),
@@ -887,6 +716,8 @@ class S4UndulatorLightSource(S4LightSource):
                 distance                         = undulator._distance,
                 magnification                    = undulator._magnification,
                 flag_backprop_recalculate_source = undulator._flag_backprop_recalculate_source,
+                flag_backprop_weight             = undulator._flag_backprop_weight,
+                weight_ratio                     = undulator._weight_ratio,
                 )
         elif undulator.code_undul_phot == 'srw' or  undulator.code_undul_phot == 'SRW':
             undul_phot_dict = calculate_undulator_emission_srw(
@@ -943,12 +774,9 @@ class S4UndulatorLightSource(S4LightSource):
             dict_results['BACKPROPAGATED_radiation'] = numpy.outer(
                 numpy.ones(undulator.get_number_of_energy_points()), y
                 )
-
-
         elif undulator._FLAG_SIZE == 1:
-            # TODO: I added this correction to obtain the sigma in the RADIAL coordinate, not in x and z.
-            # TODO: TO be verified!
-
+            # I added this correction to obtain the sigma in the RADIAL coordinate, not in x and z.
+            # TODO: To be verified!
             self.__result_photon_size_sigma = s_phot
             s_phot_corrected = s_phot / numpy.sqrt(2)
 
@@ -973,11 +801,7 @@ class S4UndulatorLightSource(S4LightSource):
 
         elif undulator._FLAG_SIZE == 2:
             # we need to retrieve the emission as a function of the angle
-            # radiation, photon_energy, theta, phi = self.get_result_radiation_polar()
-            # e_amplitude_sigma, e_amplitude_pi = self.get_result_e_amplitudes()
-
-            # radiation
-            # radiation, photon_energy, theta, phi = self.lightsource.get_result_radiation_polar()
+            # radiation, photon_energy, theta, phi
             radiation         = dict_results['radiation']
             photon_energy     = dict_results['photon_energy']
             theta             = dict_results['theta']
@@ -986,7 +810,7 @@ class S4UndulatorLightSource(S4LightSource):
             e_amplitude_pi    = dict_results['e_amplitude_pi']
 
             #
-            # we propagate the emission at a long distance (fat field) to sample angles
+            # we propagated the emission at a long distance (fat field) to sample angles
             # Then it was propagated back to the source plane to sample the size.
             #
             if undulator.code_undul_phot == 'internal': # wofry1D
@@ -1016,13 +840,9 @@ class S4UndulatorLightSource(S4LightSource):
                 s2d = Sampler2D(i_prop, x, y)
                 sampled_x, sampled_z = s2d.get_n_sampled_points(NRAYS)
 
-                # from srxraylib.plot.gol import plot_scatter
-                # plot_scatter(1e6 * sampled_x, 1e6 * sampled_z, title='>>>>>>>>>> SAMPLED (X,Z) in microns')
-
                 x_photon = sampled_x
                 y_photon = 0.0
                 z_photon = sampled_z
-
             elif undulator.code_undul_phot == 'srw':
                 dict1 = self.__result_radiation
                 if self.get_magnetic_structure().is_monochromatic():
@@ -1032,15 +852,9 @@ class S4UndulatorLightSource(S4LightSource):
                 x = dict1['CART_BACKPROPAGATED_x']
                 y = dict1['CART_BACKPROPAGATED_y']
 
-                # from srxraylib.plot.gol import plot_image
-                # plot_image(i_prop, x, y, title='backpropagated')
-                # plot_image(tmp_theta,theta,phi,aspect='auto')
-
                 s2d = Sampler2D(i_prop, x, y)
                 sampled_x, sampled_z = s2d.get_n_sampled_points(NRAYS)
 
-                # from srxraylib.plot.gol import plot_scatter
-                # plot_scatter(1e6 * sampled_x, 1e6 * sampled_z, title='>>>>>>>>>> SAMPLED (X,Z) in microns')
                 x_photon = sampled_x
                 y_photon = 0.0
                 z_photon = sampled_z
@@ -1051,11 +865,20 @@ class S4UndulatorLightSource(S4LightSource):
     def __calculate_rays(self, user_unit_to_m=1.0, F_COHER=0, verbose=1):
         """
         compute the rays in SHADOW matrix (shape (npoints,18) )
-        :param F_COHER: set this flag for coherent beam
-        :param user_unit_to_m: default 1.0 (m)
-        :return: rays, a numpy.array((npoits,18))
-        """
 
+        Parameters
+        ----------
+        user_unit_to_m
+        F_COHER: float, optional
+            set this flag for coherent beam.
+        verbose: float, optional
+            user_unit_to_m: default 1.0 (m).
+
+        Returns
+        -------
+        numpy array
+            rays matrix, a numpy.array((npoits,18))
+        """
         if self.__result_radiation is None:
             self.__calculate_radiation()
 
@@ -1134,12 +957,9 @@ class S4UndulatorLightSource(S4LightSource):
         rays[:,4] = VY
         rays[:,5] = VZ
 
-
         #
         # electric field vectors (cols 7-9, 16-18) and phases (cols 14-15)
         #
-
-        # beam.rays[:,6] =  1.0
 
         # ! C
         # ! C  ---------------------------------------------------------------------
@@ -1151,10 +971,7 @@ class S4UndulatorLightSource(S4LightSource):
         # ! C   direction.
         # ! C
         # ! C
-        # A_VEC(1) = 1.0D0
-        # A_VEC(2) = 0.0D0
-        # A_VEC(3) = 0.0D0
-
+        # A_VEC = [1,0,0]
         DIREC = rays[:, 3:6].copy()
         A_VEC = numpy.zeros_like(DIREC)
         A_VEC[:, 0] = 1.0
@@ -1163,15 +980,10 @@ class S4UndulatorLightSource(S4LightSource):
         # ! C   Rotate A_VEC so that it will be perpendicular to DIREC and with the
         # ! C   right components on the plane.
         # ! C
-        # CALL CROSS (A_VEC,DIREC,A_TEMP)
         A_TEMP = vector_cross(A_VEC, DIREC)
-        # CALL CROSS (DIREC,A_TEMP,A_VEC)
         A_VEC = vector_cross(DIREC, A_TEMP)
-        # CALL NORM (A_VEC,A_VEC)
         A_VEC = vector_norm(A_VEC)
-        # CALL CROSS (A_VEC,DIREC,AP_VEC)
         AP_VEC = vector_cross(A_VEC, DIREC)
-        # CALL NORM (AP_VEC,AP_VEC)
         AP_VEC = vector_norm(AP_VEC)
 
         #
@@ -1200,14 +1012,6 @@ class S4UndulatorLightSource(S4LightSource):
         #     ! C
         #     ! C   WaNT A**2 = AX**2 + AZ**2 = 1 , instead of A_VEC**2 = 1 .
         #     ! C
-        #     DENOM = SQRT(1.0D0 - 2.0D0*POL_DEG + 2.0D0*POL_DEG**2)
-        #     AX = POL_DEG/DENOM
-        #     CALL SCALAR (A_VEC,AX,A_VEC)
-        #     ! C
-        #     ! C   Same procedure for AP_VEC
-        #     ! C
-        #     AZ = (1-POL_DEG)/DENOM
-        #     CALL SCALAR  (AP_VEC,AZ,AP_VEC)
 
         DENOM = numpy.sqrt(1.0 - 2.0 * POL_DEG + 2.0 * POL_DEG**2)
         AX = POL_DEG/DENOM
@@ -1221,17 +1025,10 @@ class S4UndulatorLightSource(S4LightSource):
         rays[:, 6:9] =  A_VEC
         rays[:, 15:18] = AP_VEC
 
-        #
         # ! C
         # ! C Now the phases of A_VEC and AP_VEC.
         # ! C
-        # IF (F_COHER.EQ.1) THEN
-        #     PHASEX = 0.0D0
-        # ELSE
-        #     PHASEX = WRAN(ISTAR1) * TWOPI
-        # END IF
-        # PHASEZ = PHASEX + POL_ANGLE*I_CHANGE
-        #
+
         POL_ANGLE = 0.5 * numpy.pi
 
         if F_COHER == 1:
@@ -1256,102 +1053,6 @@ class S4UndulatorLightSource(S4LightSource):
         rays[:, 12] = 0.0
 
         return rays
-
-#     def _back_propagation_for_size_calculation_hankel(self):
-#         """
-#         Calculate the radiation_flux vs theta at a "distance"
-#         Back propagate to -distance
-#         The result is the size distrubution
-#
-#         :return: None; stores results in self._photon_size_distribution
-#         """
-#
-#         theta          = self.__result_photon_size_farfield["theta"]
-#         photon_energy  = self.__result_photon_size_farfield["mean_photon_energy"]
-#         distance       = self.__result_photon_size_farfield["distance"]
-#         magnification  = self.__result_photon_size_farfield["magnification"]
-#         radial_e_amplitude = self.__result_photon_size_farfield["radial_e_amplitude"] # numpy.sqrt(self.__result_photon_size_farfield["radial_flux"]) + 0j
-#
-#         n2 = theta.size
-# ###############################################################################
-#         from pyhank import HankelTransform
-#         from srxraylib.plot.gol import plot, plot_image
-#         do_plot = 1
-#
-#         r = theta * distance
-#         nr = r.size
-#
-#         print(">>>>>>>> rminmax: ", r[0], r[-1], r.min(), r.max())
-#         lambda_ = codata.h * codata.c / codata.e / photon_energy #  1.5e-10  # 488e-9  # wavelength 488nm
-#         k0 = 2 * numpy.pi / lambda_  # Vacuum k vector
-#
-#         # Set up a :class:`.HankelTransform` object, telling it the order (``0``) and
-#         # the radial grid.
-#         # def __init__(self, order: int, max_radius: float = None, n_points: int = None,
-#         #              radial_grid: np.ndarray = None, k_grid: np.ndarray = None):
-#         H = HankelTransform(order=0, radial_grid=r)
-#
-#         # Set up the electric field profile at :math:`z = 0`, and resample onto the correct radial grid
-#         # (``transformer.r``) as required for the QDHT.
-#         Er = (radial_e_amplitude)     # Initial field
-#         ErH = H.to_transform_r(Er)  # Resampled field
-#
-#         # # Now plot an image showing the intensity as a function of radius and propagation distance.
-#
-#         if do_plot:
-#             plot(r   * 1e6, numpy.abs(Er) ** 2,
-#                  H.r * 1e6, numpy.abs(ErH) ** 2,
-#                  # xrange=[0, 1], yrange=[0, 1],
-#                  xtitle="r [um]", ytitle="Field intensity /arb", title="Initial electric field distribution",
-#                  legend=['$|E(r)|^2$', '$|E(H.r)|^2$', ],
-#                  marker=[None, None,], linestyle=[None, None,],
-#                  )
-#
-#             plot(
-#                  r   * 1e6, numpy.unwrap(numpy.angle(Er)),
-#                  H.r * 1e6, numpy.unwrap(numpy.angle(ErH)),
-#                  # xrange=[0, 1], yrange=[0, 1],
-#                  xtitle="r [um]", ytitle="Phase /arb", title="Initial electric field distribution",
-#                  legend=['$\\phi(r)$', '$\\phi(H.r)$'],
-#                  marker=[None, '+'], linestyle=[None, ''],
-#                  )
-#
-#         # Perform Hankel Transform
-#         # ------------------------
-#         # Convert from physical field to physical wavevector
-#         EkrH = H.qdht(ErH)
-#
-#         if do_plot:
-#             plot(H.kr, numpy.abs(EkrH) ** 2,
-#                  # xrange=[0,1], yrange=[0,1],
-#                  xtitle=r'Radial wave-vector ($k_r$) /rad $m^{-1}$', ytitle='Field intensity /arb.',
-#                  title="Radial wave-vector distribution",
-#                  )
-#
-#
-#         # Propagate the beam - loop
-#         # -------------------------
-#         # Do the propagation in a loop over :math:`z`
-#
-#         # Pre-allocate an array for field as a function of r and z
-#         # Erz = numpy.zeros((nr, Nz), dtype=complex)
-#         kz = numpy.sqrt(k0 ** 2 - H.kr ** 2)
-#         print(">>>>>000 kz", kz.shape)
-#
-#         phi_z = kz * distance  # Propagation phase
-#         EkrHz = EkrH * numpy.exp(1j * phi_z)  # Apply propagation
-#         print("   >>>>", EkrHz.shape)
-#         ErHz = H.iqdht(EkrHz)  # iQDHT
-#         Erz = H.to_original_r(ErHz)  # Interpolate output
-#         Irz = numpy.abs(Erz) ** 2
-#
-# ###############################################################################
-#
-#
-#         self.__result_photon_size_distribution = {"x":r,
-#                                                   "y":numpy.abs(Erz) ** 2}
-
-
 
     def _sample_photon_energy_theta_and_phi(self, NRAYS):
 

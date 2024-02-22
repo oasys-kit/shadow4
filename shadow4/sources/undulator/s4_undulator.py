@@ -5,7 +5,6 @@ S4 Undulator magnetic structure.
 from syned.storage_ring.magnetic_structures.undulator import Undulator
 
 
-
 class S4Undulator(Undulator):
     """
     Defines a shadow4 undulator magnetic structure.
@@ -25,44 +24,61 @@ class S4Undulator(Undulator):
     ng_e : int, optional
         Number of points in energy. This is used for the calculation of the spectrum, and also for
         sampling rays if flag_interpolation=1.
-    maxangle
+    maxangle: float, optional
+        Maximum radiation semiaperture in RADIANS.
     ng_t : int, optional
         the number of points for angle theta.
     ng_p : int, optional
         the number of points for angle phi.
     ng_j : int, optional
-        Number of points per period in calculating the electron trajectory.
+        Number of points PER PERIOD in calculating the electron trajectory.
     code_undul_phot : str, optional
         code to be used for calculating the emission vs angle: internal, pysru, SRW
     flag_emittance : int, optional
         Flag: 0=Zero emittance (filament beam), 1=Use emittance.
     flag_size : int, optional
         Method used for sampling the source size:
-        0=point, 1=Gaussian, 2=FT(Divergences).
+        0=point, 1=Gaussian, 2=Backpropagated far field.
     use_gaussian_approximation : int, optional
         0=No, 1=Yes.
+    srw_range: float, optional
+        for code_undul_phot="srw" the range factor.
+    srw_resolution: float, optional
+        for code_undul_phot="srw" the resolution factor.
+    srw_semianalytical: int, optional
+        for code_undul_phot="srw" flag to apply the semianalytical phase treatement (0=No, 1=Yes).
+    magnification: float, optional
+        for code_undul_phot in ["internal", "pysru"]: the magnification factor.
+    flag_backprop_recalculate_source: int, optional
+        for code_undul_phot in ["internal", "pysru"] and flag_size=2: apply Gaussian weight to backprop amplitudes (0=No, 1=Yes).
+    flag_backprop_weight: int, optional
+        for code_undul_phot in ["internal", "pysru"] and flag_size=2: apply Gaussian weight to backprop amplitudes.
+    weight_ratio: float, optional
+        for flag_backprop_weight=1: the Gaussian sigma in units of r.max().
     """
     def __init__(self,
-                 K_vertical=1.0,               # syned Undulator parameter
-                 period_length=0.01,           # syned Undulator parameter
-                 number_of_periods=100,        # syned Undulator parameter
-                 emin=10000.0,                 # Photon energy scan from energy (in eV)
-                 emax=11000.0,                 # Photon energy scan to energy (in eV)
-                 ng_e=11,                      # Photon energy scan number of points
-                 maxangle=50e-6,               # Maximum radiation semiaperture in RADIANS
-                 ng_t=31,                      # Number of points in angle theta
-                 ng_p=21,                      # Number of points in angle phi
-                 ng_j=20,                      # Number of points in electron trajectory (per period) for internal calculation only
-                 code_undul_phot="internal",   # internal, pysru, srw # todo: remove
-                 flag_emittance=0,             # when sampling rays: Use emittance (0=No, 1=Yes)
-                 flag_size=0,                  # when sampling rays: 0=point,1=Gaussian,2=FT(Divergences)
-                 use_gaussian_approximation=0, # use Gaussian approximation for generating simplified beam
-                 distance=100,
-                 srw_range=0.05,
-                 srw_resolution=50.0,
-                 srw_semianalytical=0,
-                 magnification=0.01,
-                 flag_backprop_recalculate_source=0, # for internal and pysru/wofry backpropagation: source reused (0) or recalculated (1)
+                 K_vertical=1.0,                     # syned Undulator parameter
+                 period_length=0.01,                 # syned Undulator parameter
+                 number_of_periods=100,              # syned Undulator parameter
+                 emin=10000.0,                       # Photon energy scan from energy (in eV)
+                 emax=11000.0,                       # Photon energy scan to energy (in eV)
+                 ng_e=11,                            # Photon energy scan number of points
+                 maxangle=50e-6,                     # Maximum radiation semiaperture in RADIANS
+                 ng_t=31,                            # Number of points in angle theta
+                 ng_p=21,                            # Number of points in angle phi
+                 ng_j=20,                            # Number of points in electron trajectory (per period)
+                 code_undul_phot="internal",         # code used for far field and backpropagation: internal, pysru, srw
+                 flag_emittance=0,                   # when sampling rays: Use emittance (0=No, 1=Yes)
+                 flag_size=0,                        # when sampling rays: 0=point,1=Gaussian, 2=Backpropagation (Divergences)
+                 use_gaussian_approximation=0,       # use Gaussian approximation for generating simplified beam
+                 distance=100,                       # distance to the image plane (for far field calculation)
+                 srw_range=0.05,                     # for code_undul_phot="srw" the range factor.
+                 srw_resolution=50.0,                # for code_undul_phot="srw" the resolution factor.
+                 srw_semianalytical=0,               # for code_undul_phot="srw" flag to apply the semianalytical phase treatement
+                 magnification=0.01,                 # for code_undul_phot in ["internal", "pysru"]: the magnification factor
+                 flag_backprop_recalculate_source=0, # for code_undul_phot in ["internal", "pysru"] and flag_size=2: source reused (0) or recalculated (1)
+                 flag_backprop_weight=0,             # for code_undul_phot in ["internal", "pysru"] and flag_size=2: apply Gaussian weight to backprop amplitudes
+                 weight_ratio=0.5,                   # for flag_backprop_weight=1: the Gaussian sigma in units of r.max()
                  ):
         super().__init__(K_vertical=K_vertical,
                  K_horizontal = 0.0,
@@ -70,54 +86,58 @@ class S4Undulator(Undulator):
                  number_of_periods = number_of_periods)
 
         # Photon energy scan
-        self._EMIN            = emin   # Photon energy scan from energy (in eV)
-        self._EMAX            = emax   # Photon energy scan to energy (in eV)
+        self._EMIN = emin   # Photon energy scan from energy (in eV)
+        self._EMAX = emax   # Photon energy scan to energy (in eV)
         # Photon energy scan number of points
         if emin == emax: self._NG_E = 1
-        else:            self._NG_E            = ng_e
+        else:            self._NG_E = ng_e
 
         # Geometry
-        self._MAXANGLE        = maxangle   # Maximum radiation semiaperture in RADIANS
-        self._NG_T            = ng_t       # Number of points in angle theta
-        self._NG_P            = ng_p       # Number of points in angle phi
-        self._NG_J            = ng_j       # Number of points in electron trajectory (per period)
+        self._MAXANGLE = maxangle   # Maximum radiation semiaperture in RADIANS
+        self._NG_T = ng_t       # Number of points in angle theta
+        self._NG_P = ng_p       # Number of points in angle phi
+        self._NG_J = ng_j       # Number of points in electron trajectory (per period)
 
 
         self.code_undul_phot = code_undul_phot
 
-        self._FLAG_EMITTANCE  =  flag_emittance # Yes  # Use emittance (0=No, 1=Yes)
-        self._FLAG_SIZE  =  flag_size # 0=point,1=Gaussian,2=backpropagate Divergences
+        self._FLAG_EMITTANCE             =  flag_emittance # Yes  # Use emittance (0=No, 1=Yes)
+        self._FLAG_SIZE                  =  flag_size # 0=point,1=Gaussian,2=backpropagate Divergences
         self._use_gaussian_approximation = use_gaussian_approximation
 
         # specific parameters
-        self._distance = distance
-        self._srw_range = srw_range
-        self._srw_resolution = srw_resolution
-        self._srw_semianalytical = srw_semianalytical
-        self._magnification = magnification
+        self._distance                         = distance
+        self._srw_range                        = srw_range
+        self._srw_resolution                   = srw_resolution
+        self._srw_semianalytical               = srw_semianalytical
+        self._magnification                    = magnification
+
         self._flag_backprop_recalculate_source = flag_backprop_recalculate_source
+        self._flag_backprop_weight             = flag_backprop_weight
+        self._weight_ratio                     = weight_ratio
 
 
         # support text containg name of variable, help text and unit. Will be stored in self._support_dictionary
         self._add_support_text([
-                    ("EMIN", "minimum photon energy", "eV" ),
-                    ("EMAX", "maximum photon energy", "eV"),
-                    ("NG_E", "number of energy points", ""),
-                    ("MAXANGLE", "Maximum radiation semiaperture", "rad"),
-                    ("NG_T", "Number of points in angle theta", ""),
-                    ("NG_P", "Number of points in angle phi", ""),
-                    ("NG_J", "number of points of the electron trajectory", ""),
-                    ("FLAG_EMITTANCE", "Use emittance (0=No, 1=Yes)", ""),
-                    ("FLAG_SIZE", "Size philament beam 0=point,1=Gaussian,2=backpropagate Divergences", ""),
-                    ("use_gaussian_approximation", "0=No, 1=Yes", ""),
-            ("distance", "Distance to far field plane", "m"),
-            ("srw_range", "for SRW (range magnification)", ""),
-            ("srw_resolution", "for SRW (resolution factor)", ""),
-            ("srw_semianalytical", "for SRW (semianalytical treatment of phase)", ""),
-            ("magnification", "for internal/wofry magnification in propagation", ""),
-            ("flag_backprop_recalculate_source", "for internal or pysru/wofry backpropagation: source reused (0) or recalculated (1)", ""),
+            ("EMIN",                             "minimum photon energy",                                                                        "eV" ),
+            ("EMAX",                             "maximum photon energy",                                                                        "eV"),
+            ("NG_E",                             "number of energy points",                                                                      ""),
+            ("MAXANGLE",                         "Maximum radiation semiaperture",                                                               "rad"),
+            ("NG_T",                             "Number of points in angle theta",                                                              ""),
+            ("NG_P",                             "Number of points in angle phi",                                                                ""),
+            ("NG_J",                             "number of points of the electron trajectory",                                                  ""),
+            ("FLAG_EMITTANCE",                   "Use emittance (0=No, 1=Yes)",                                                                  ""),
+            ("FLAG_SIZE",                        "Size philament beam 0=point,1=Gaussian,2=backpropagate Divergences",                           ""),
+            ("use_gaussian_approximation",       "0=No, 1=Yes",                                                                                  ""),
+            ("distance",                         "Distance to far field plane",                                                                  "m"),
+            ("srw_range",                        "for SRW (range magnification)",                                                                ""),
+            ("srw_resolution",                   "for SRW (resolution factor)",                                                                  ""),
+            ("srw_semianalytical",               "for SRW (semianalytical treatment of phase)",                                                  ""),
+            ("magnification",                    "for internal/wofry magnification in propagation",                                              ""),
+            ("flag_backprop_recalculate_source", "for internal or pysru/wofry backpropagation: source reused (0) or recalculated (1)",           ""),
+            ("flag_backprop_weight",             "for internal or pysru/wofry backpropagation: apply Gaussian weight to amplitudes 0=No, 1=Yes", ""),
+            ("weight_ratio",                     "for flag_backprop_recalculate_source=1, the ratio value sigma/window halfwidth",               ""),
             ] )
-
 
     def use_gaussian_approximation(self):
         """
@@ -181,6 +201,9 @@ class S4Undulator(Undulator):
                 flag = "Far field backpropagated"
 
             txt += "        Photon source size sampling flag: %d (%s)\n"%(self._FLAG_SIZE,flag)
+
+            #todo add backpropagation stuff....
+
             # if self._FLAG_SIZE == 1:
             #     if self._result_photon_size_sigma is not None:
             #         txt += "        Photon source size sigma (Gaussian): %6.3f um \n"%(1e6*self._result_photon_size_sigma)
@@ -312,8 +335,9 @@ source = S4Undulator(
     srw_semianalytical= {srw_semianalytical}, # for SRW backpropagation, use semianalytical treatement of phase
     magnification     = {magnification}, # for internal/wofry backpropagation, the magnification factor
     flag_backprop_recalculate_source      = {flag_backprop_recalculate_source}, # for internal or pysru/wofry backpropagation: source reused (0) or recalculated (1)
+    flag_backprop_weight = {flag_backprop_weight}, # for internal or pysru/wofry backpropagation: apply Gaussian weight to amplitudes
+    weight_ratio         = {weight_ratio}, # for flag_backprop_recalculate_source=1, the ratio value sigma/window halfwidth
     )"""
-
 
         script_dict = {
             "K_vertical"                       : self.K_vertical(),
@@ -336,6 +360,8 @@ source = S4Undulator(
             "srw_semianalytical"               : self._srw_semianalytical,
             "magnification"                    : self._magnification,
             "flag_backprop_recalculate_source" : self._flag_backprop_recalculate_source,
+            "flag_backprop_weight"             : self._flag_backprop_weight,
+            "weight_ratio"                     : self._weight_ratio,
         }
 
         script = script_template.format_map(script_dict)

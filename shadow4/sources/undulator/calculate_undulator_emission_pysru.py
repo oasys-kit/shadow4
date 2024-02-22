@@ -19,9 +19,10 @@ try:
 except:
     raise ImportError("pySRU not imported")
 
-import numpy as np
+import numpy as np # todo replave np. by numpy.
 import numpy
 from scipy import interpolate
+from shadow4.sources.undulator.calculate_undulator_emission import _get_radiation_interpolated_cartesian
 
 def _pysru_wofry_2D_run(photon_energy,
                         energy_in_GeV=6,
@@ -32,7 +33,6 @@ def _pysru_wofry_2D_run(photon_energy,
                         distance=100,
                         gapH=0.006,
                         gapV=0.006,
-                        # photon_energy=photon_energy[i],
                         h_slit_points=51,
                         v_slit_points=51,
                         number_of_trajectory_points=5000,
@@ -150,8 +150,6 @@ def _pysru_wofry_2D_run(photon_energy,
             tmp_p = output_wavefront.get_complex_amplitude(polarization=1).copy()
             CART_BACKPROPAGATED_radiation[i, :, :] = numpy.abs(tmp_s)**2 + numpy.abs(tmp_p)**2
 
-        # CART_e_amplitude_sigma, CART_e_amplitude_pi, CART_BACKPROPAGATED_radiation, \
-        # CART_BACKPROPAGATED_x, CART_BACKPROPAGATED_y
         #
         # ---- plots -----
         #
@@ -176,45 +174,13 @@ def _pysru_wofry_2D_run(photon_energy,
         return CART_e_amplitude_sigma, CART_e_amplitude_pi, CART_BACKPROPAGATED_radiation,\
                CART_BACKPROPAGATED_x, CART_BACKPROPAGATED_y
 
-def _get_radiation_interpolated_cartesian(radiation, photon_energy, thetabm, phi,
-                                          npointsx=100, npointsz=100, thetamax=None,
-                                          distance=100):
-    if thetamax is None:
-        thetamax = thetabm.max()
-
-    distancemax = 1.0 * thetamax * distance
-
-    #v are coordinates at the image plane
-    vx = numpy.linspace(-distancemax, distancemax, npointsx)
-    vz = numpy.linspace(-distancemax, distancemax, npointsz)
-    VX = numpy.outer(vx, numpy.ones_like(vz))
-    VZ = numpy.outer(numpy.ones_like(vx), vz)
-    VY = numpy.sqrt(distance ** 2 +  VX ** 2 + VZ ** 2)
-
-    THETA = numpy.arctan(numpy.sqrt(VX ** 2 + VZ ** 2) / VY)
-    # abs to be sure that PHI is in [0,90] deg (like the polar data)
-    PHI = numpy.arctan2(numpy.abs(VZ), numpy.abs(VX))
-
-
-    # from srxraylib.plot.gol import plot_scatter
-    # plot_scatter(THETA, PHI, xtitle="THETA", ytitle="PHI", show=0)
-    # plot_scatter(numpy.outer(thetabm, numpy.ones_like(phi)),
-    #              numpy.outer(numpy.ones_like(thetabm), phi ),
-    #              xtitle="thetabm", ytitle="phi", show=1)
-
-    radiation_interpolated = numpy.zeros((radiation.shape[0], npointsx, npointsz))
-
-    for i in range(radiation.shape[0]):
-        interpolator_value = interpolate.RectBivariateSpline(thetabm, phi, radiation[i])
-        radiation_interpolated[i] = interpolator_value.ev(THETA, PHI)
-
-    return radiation_interpolated, photon_energy, vx, vz
-
 def _undul_phot_pySRU(E_ENERGY, INTENSITY, LAMBDAU, NPERIODS, K, EMIN, EMAX, NG_E, MAXANGLE, NG_T, NG_P,
                       number_of_trajectory_points=20, flag_size=2,
                       distance=100.0,
                       magnification=0.05,
                       flag_backprop_recalculate_source=0, # 0=interpolate, 1=recalculate
+                      flag_backprop_weight=0,
+                      weight_ratio=0.5,
                       ):
     myelectronbeam = PysruElectronBeam(Electron_energy=E_ENERGY, I_current=INTENSITY)
     myundulator = PysruUndulator(K=K, period_length=LAMBDAU, length=LAMBDAU*NPERIODS)
@@ -412,6 +378,22 @@ def _undul_phot_pySRU(E_ENERGY, INTENSITY, LAMBDAU, NPERIODS, K, EMIN, EMAX, NG_
                                                                                    )
             out['CART_e_amplitude_sigma']        = CART_e_amplitude_sigma
             out['CART_e_amplitude_pi']           = CART_e_amplitude_pi
+
+            #
+            # add a Gaussian weight (the Gaussian affects the amplitude, thus squared for intensities)
+            #
+            if flag_backprop_weight:
+                x_axis = CART_BACKPROPAGATED_x
+                y_axis = CART_BACKPROPAGATED_y
+                xmax = x_axis.max()
+                sigma = weight_ratio * xmax
+                weight = numpy.exp(-(x_axis - x_axis.mean()) ** 2 / (2 * sigma ** 2))
+                weight = weight**2
+                WEIGHT = numpy.outer(weight, weight)
+                ne = CART_BACKPROPAGATED_radiation.shape[0]
+                for i in range(ne):
+                    CART_BACKPROPAGATED_radiation[i, :, :] = CART_BACKPROPAGATED_radiation[i, :, :] * WEIGHT
+
             out['CART_BACKPROPAGATED_radiation'] = CART_BACKPROPAGATED_radiation
             out['CART_BACKPROPAGATED_x']         = CART_BACKPROPAGATED_x  # length in m
             out['CART_BACKPROPAGATED_y']         = CART_BACKPROPAGATED_y  # length in m
@@ -439,9 +421,11 @@ def calculate_undulator_emission_pysru(
                      distance                         = 100.0,
                      magnification                    = 0.05,
                      flag_backprop_recalculate_source = 0,
+                     flag_backprop_weight             = 0,
+                     weight_ratio                     = 0.5,
                      ):
     """
-    Calculate undulator emission (far field) and backpropagation to the center of the undulator using srw.
+    Calculate undulator emission (far field) and backpropagation to the center of the undulator using pysru+wofry.
 
     Parameters
     ----------
@@ -477,8 +461,11 @@ def calculate_undulator_emission_pysru(
     magnification: float, optional
         The magnification for backpropagation.
     flag_backprop_recalculate_source: int, optional
-        A flag to indicate if the source in cartesian coordinates used for backpropagation is
-        (0) interpolated or (1) recalculated.
+        for code_undul_phot in ["internal", "pysru"] and flag_size=2: apply Gaussian weight to backprop amplitudes (0=No, 1=Yes).
+    flag_backprop_weight: int, optional
+        for code_undul_phot in ["internal", "pysru"] and flag_size=2: apply Gaussian weight to backprop amplitudes.
+    weight_ratio: float, optional
+        for flag_backprop_weight=1: the Gaussian sigma in units of r.max().
 
     Returns
     -------
@@ -503,6 +490,8 @@ def calculate_undulator_emission_pysru(
                         distance=distance,
                         magnification=magnification,
                         flag_backprop_recalculate_source=flag_backprop_recalculate_source,
+                        flag_backprop_weight=flag_backprop_weight,
+                        weight_ratio=weight_ratio,
                         )
 
 if __name__ == "__main__":
@@ -524,6 +513,8 @@ if __name__ == "__main__":
                      distance                         = 100.0,
                      magnification                    = 0.05,
                      flag_backprop_recalculate_source = 1,
+                     flag_backprop_weight             = 1,
+                     weight_ratio                     = 0.5,
     )
     from srxraylib.plot.gol import plot_image, plot
     if True:
