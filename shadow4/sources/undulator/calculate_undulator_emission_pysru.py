@@ -214,7 +214,7 @@ def _undul_phot_pySRU(E_ENERGY, INTENSITY, LAMBDAU, NPERIODS, K, EMIN, EMAX, NG_
                       number_of_trajectory_points=20, flag_size=2,
                       distance=100.0,
                       magnification=0.05,
-                      pysru_source=0, # 0=interpolate, 1=recalculate
+                      flag_backprop_recalculate_source=0, # 0=interpolate, 1=recalculate
                       ):
     myelectronbeam = PysruElectronBeam(Electron_energy=E_ENERGY, I_current=INTENSITY)
     myundulator = PysruUndulator(K=K, period_length=LAMBDAU, length=LAMBDAU*NPERIODS)
@@ -311,7 +311,7 @@ def _undul_phot_pySRU(E_ENERGY, INTENSITY, LAMBDAU, NPERIODS, K, EMIN, EMAX, NG_
         npointsx = theta.size
         npointsz = npointsx
         thetamax = None
-        if pysru_source == 0: # 'interpolate'
+        if flag_backprop_recalculate_source == 0: # 'interpolate'
 
             efield_x_mod_interpolated, photon_energy, vx, vz = _get_radiation_interpolated_cartesian(
                 numpy.abs(efield_x), photon_energy, theta, phi, npointsx=npointsx, npointsz=npointsz,
@@ -391,7 +391,7 @@ def _undul_phot_pySRU(E_ENERGY, INTENSITY, LAMBDAU, NPERIODS, K, EMIN, EMAX, NG_
             out['CART_BACKPROPAGATED_y'] = output_wavefront.get_coordinate_y()  # length in m
 
 
-        elif pysru_source == 1: # 'recalculate':
+        elif flag_backprop_recalculate_source == 1: # 'recalculate':
             CART_e_amplitude_sigma, CART_e_amplitude_pi, CART_BACKPROPAGATED_radiation,\
                 CART_BACKPROPAGATED_x, CART_BACKPROPAGATED_y = _pysru_wofry_2D_run(photon_energy,
                                                                                    energy_in_GeV=E_ENERGY,
@@ -417,28 +417,28 @@ def _undul_phot_pySRU(E_ENERGY, INTENSITY, LAMBDAU, NPERIODS, K, EMIN, EMAX, NG_
             out['CART_BACKPROPAGATED_y']         = CART_BACKPROPAGATED_y  # length in m
 
         else:
-            raise Exception("Invalid pysru_source: %f" % pysru_source)
+            raise Exception("Invalid flag_backprop_recalculate_source: %d" % flag_backprop_recalculate_source)
 
     return out
 
 
 def calculate_undulator_emission_pysru(
-                     electron_energy              = 6.0,
-                     electron_current             = 0.2,
-                     undulator_period             = 0.018,
-                     undulator_nperiods           = 100,
-                     K                            = 1.0,
-                     photon_energy                = 2000.0,
-                     EMAX                         = 20000.0,
-                     NG_E                         = 10,
-                     MAXANGLE                     = 0.1,
-                     number_of_points             = 100,
-                     NG_P                         = 100,
-                     number_of_trajectory_points  = 100,
-                     flag_size                    = 2,
-                     distance                     = 100.0,
-                     magnification                = 0.05,
-                     pysru_source                 = 0,
+                     electron_energy                  = 6.0,
+                     electron_current                 = 0.2,
+                     undulator_period                 = 0.018,
+                     undulator_nperiods               = 100,
+                     K                                = 1.0,
+                     photon_energy                    = 2000.0,
+                     EMAX                             = 20000.0,
+                     NG_E                             = 10,
+                     MAXANGLE                         = 0.1,
+                     number_of_points                 = 100,
+                     NG_P                             = 100,
+                     number_of_trajectory_points      = 100,
+                     flag_size                        = 2,
+                     distance                         = 100.0,
+                     magnification                    = 0.05,
+                     flag_backprop_recalculate_source = 0,
                      ):
     """
     Calculate undulator emission (far field) and backpropagation to the center of the undulator using srw.
@@ -476,7 +476,7 @@ def calculate_undulator_emission_pysru(
         The distance to place the image plane where far field is calculated in m.
     magnification: float, optional
         The magnification for backpropagation.
-    pysru_source: int, optional
+    flag_backprop_recalculate_source: int, optional
         A flag to indicate if the source in cartesian coordinates used for backpropagation is
         (0) interpolated or (1) recalculated.
 
@@ -502,28 +502,28 @@ def calculate_undulator_emission_pysru(
                         flag_size=flag_size,
                         distance=distance,
                         magnification=magnification,
-                        pysru_source=pysru_source,
+                        flag_backprop_recalculate_source=flag_backprop_recalculate_source,
                         )
 
 if __name__ == "__main__":
     import numpy
     dict1 = calculate_undulator_emission_pysru(
-                     electron_energy              = 6.0,
-                     electron_current             = 0.2,
-                     undulator_period             = 0.025,
-                     undulator_nperiods           = 188.0,
-                     K                            = 1.681183,
-                     photon_energy                = 5591.0,
-                     EMAX                         = 5700.0,
-                     NG_E                         = 1,
-                     MAXANGLE                     = 30e-6,
-                     number_of_points             = 31,
-                     NG_P                         = 11,
-                     number_of_trajectory_points  = 20,
-                     flag_size                    = 2,
-                     distance                     = 100.0,
-                     magnification                = 0.05,
-                     pysru_source                 = 1,
+                     electron_energy                  = 6.0,
+                     electron_current                 = 0.2,
+                     undulator_period                 = 0.025,
+                     undulator_nperiods               = 188.0,
+                     K                                = 1.681183,
+                     photon_energy                    = 5591.0,
+                     EMAX                             = 5700.0,
+                     NG_E                             = 1,
+                     MAXANGLE                         = 30e-6,
+                     number_of_points                 = 31,
+                     NG_P                             = 11,
+                     number_of_trajectory_points      = 20,
+                     flag_size                        = 2,
+                     distance                         = 100.0,
+                     magnification                    = 0.05,
+                     flag_backprop_recalculate_source = 1,
     )
     from srxraylib.plot.gol import plot_image, plot
     if True:

@@ -62,7 +62,7 @@ class S4Undulator(Undulator):
                  srw_resolution=50.0,
                  srw_semianalytical=0,
                  magnification=0.01,
-                 pysru_source=0, # for pysru/wofry backpropagation: source interpolated from polar (0) or recalculated (1)
+                 flag_backprop_recalculate_source=0, # for internal and pysru/wofry backpropagation: source reused (0) or recalculated (1)
                  ):
         super().__init__(K_vertical=K_vertical,
                  K_horizontal = 0.0,
@@ -95,7 +95,7 @@ class S4Undulator(Undulator):
         self._srw_resolution = srw_resolution
         self._srw_semianalytical = srw_semianalytical
         self._magnification = magnification
-        self._pysru_source = pysru_source
+        self._flag_backprop_recalculate_source = flag_backprop_recalculate_source
 
 
         # support text containg name of variable, help text and unit. Will be stored in self._support_dictionary
@@ -115,7 +115,7 @@ class S4Undulator(Undulator):
             ("srw_resolution", "for SRW (resolution factor)", ""),
             ("srw_semianalytical", "for SRW (semianalytical treatment of phase)", ""),
             ("magnification", "for internal/wofry magnification in propagation", ""),
-            ("pysru_source", "for pysru/wofry backpropagation: source interpolated from polar (0) or recalculated (1)", ""),
+            ("flag_backprop_recalculate_source", "for internal or pysru/wofry backpropagation: source reused (0) or recalculated (1)", ""),
             ] )
 
 
@@ -311,31 +311,31 @@ source = S4Undulator(
     srw_resolution    = {srw_resolution}, # for SRW backpropagation, the resolution factor
     srw_semianalytical= {srw_semianalytical}, # for SRW backpropagation, use semianalytical treatement of phase
     magnification     = {magnification}, # for internal/wofry backpropagation, the magnification factor
-    pysru_source      = {pysru_source}, # for pysru/wofry backpropagation: source interpolated from polar (0) or recalculated (1)
+    flag_backprop_recalculate_source      = {flag_backprop_recalculate_source}, # for internal or pysru/wofry backpropagation: source reused (0) or recalculated (1)
     )"""
 
 
         script_dict = {
-            "K_vertical"                 : self.K_vertical(),
-            "period_length"              : self.period_length(),
-            "number_of_periods"          : self.number_of_periods(),
-            "emin"                       : self._EMIN            ,
-            "emax"                       : self._EMAX            ,
-            "ng_e"                       : self._NG_E            ,
-            "maxangle"                   : self._MAXANGLE,
-            "ng_t"                       : self._NG_T,
-            "ng_p"                       : self._NG_P,
-            "ng_j"                       : self._NG_J,
-            "code_undul_phot"            : self.code_undul_phot,
-            "flag_emittance"             : self._FLAG_EMITTANCE  ,
-            "flag_size"                  : self._FLAG_SIZE,
-            "use_gaussian_approximation" : self._use_gaussian_approximation,
-            "distance"                   : self._distance,
-            "srw_range"                  : self._srw_range,
-            "srw_resolution"             : self._srw_resolution,
-            "srw_semianalytical"         : self._srw_semianalytical,
-            "magnification"              : self._magnification,
-            "pysru_source"               : self._pysru_source,
+            "K_vertical"                       : self.K_vertical(),
+            "period_length"                    : self.period_length(),
+            "number_of_periods"                : self.number_of_periods(),
+            "emin"                             : self._EMIN            ,
+            "emax"                             : self._EMAX            ,
+            "ng_e"                             : self._NG_E            ,
+            "maxangle"                         : self._MAXANGLE,
+            "ng_t"                             : self._NG_T,
+            "ng_p"                             : self._NG_P,
+            "ng_j"                             : self._NG_J,
+            "code_undul_phot"                  : self.code_undul_phot,
+            "flag_emittance"                   : self._FLAG_EMITTANCE  ,
+            "flag_size"                        : self._FLAG_SIZE,
+            "use_gaussian_approximation"       : self._use_gaussian_approximation,
+            "distance"                         : self._distance,
+            "srw_range"                        : self._srw_range,
+            "srw_resolution"                   : self._srw_resolution,
+            "srw_semianalytical"               : self._srw_semianalytical,
+            "magnification"                    : self._magnification,
+            "flag_backprop_recalculate_source" : self._flag_backprop_recalculate_source,
         }
 
         script = script_template.format_map(script_dict)

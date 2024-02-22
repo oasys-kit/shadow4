@@ -14,6 +14,7 @@ Available public functions:
 import numpy
 import numpy as np
 from scipy import interpolate
+import time
 
 import scipy.constants as codata
 import scipy.integrate
@@ -168,6 +169,7 @@ def _pysru_energy_radiated_approximation_and_farfield(omega=2.53465927101e17, el
 #
 #     return radiation_interpolated, photon_energy, vx, vz
 
+# hacked from Wofry (2D propagator integral)
 def _propagate_complex_amplitude_from_arrays(
                                             amplitude_flatten,
                                             X_flatten,
@@ -208,7 +210,8 @@ def _propagate_complex_amplitude_from_arrays(
 
 # now, undul_phot
 def _undul_phot(E_ENERGY,INTENSITY, LAMBDAU, NPERIODS, K, EMIN, EMAX, NG_E, MAXANGLE, NG_T, NG_P,
-               number_of_trajectory_points=20, flag_size=0, distance=100.0, magnification=0.01, ):
+               number_of_trajectory_points=20, flag_size=0, distance=100.0, magnification=0.01,
+                flag_backprop_recalculate_source=0):
     #
     # calculate trajectory
     #
@@ -225,10 +228,9 @@ def _undul_phot(E_ENERGY,INTENSITY, LAMBDAU, NPERIODS, K, EMIN, EMAX, NG_E, MAXA
     #
     # calculate source in polar coordinates
     #
-    Nb_pts_trajectory = int(number_of_trajectory_points * NPERIODS)
     print("Calculating trajectory...")
     T = _pysru_analytical_trajectory_plane_undulator(K=K, gamma=gamma, lambda_u=LAMBDAU, Nb_period=NPERIODS,
-                                        Nb_point=Nb_pts_trajectory,
+                                        Nb_point=number_of_trajectory_points,
                                         Beta_et=Beta_et)
     print("Done calculating trajectory...")
 
@@ -255,82 +257,82 @@ def _undul_phot(E_ENERGY,INTENSITY, LAMBDAU, NPERIODS, K, EMIN, EMAX, NG_E, MAXA
     EFIELD_X = np.zeros_like(POL_DEG, dtype=complex)
     EFIELD_Y = np.zeros_like(POL_DEG, dtype=complex)
 
+    t0 = time.time()
     print("Calculating radiation...", POL_DEG.shape, theta.shape, phi.shape)
-    # for o in range(omega_array.size):
-    #     print("Calculating energy %8.3f eV (%d of %d)"%(E[o],o+1,omega_array.size))
-    #     for t in range(theta.size):
-    #         for p in range(phi.size):
-    #             R = D / np.cos(theta[t])
-    #             r = R * np.sin(theta[t])
-    #             X = r * np.cos(phi[p])
-    #             Y = r * np.sin(phi[p])
-    #             ElecField = _pysru_energy_radiated_approximation_and_farfield(omega=omega_array[o],
-    #                                                                           electron_current=INTENSITY,
-    #                                                                           trajectory=T ,
-    #                                                                           x=X ,
-    #                                                                           y=Y,
-    #                                                                           D=D)
-    #
-    #             # if numpy.abs(phi[p]) > numpy.pi / 3: ElecField *= 0
-    #
-    #             pol_deg = np.abs(ElecField[0]) / (np.abs(ElecField[0]) + np.abs(ElecField[1])) # SHADOW definition
-    #             intensity =  (np.abs(ElecField[0]) ** 2 + np.abs(ElecField[1])** 2 + np.abs(ElecField[2])** 2)
-    #
-    #             #  Conversion from pySRU units (photons/mm^2/0.1%bw) to SHADOW units (photons/rad^2/eV)
-    #             coeff = (D * 1e3) ** 2  # photons/mm^2 -> photons/rad^2
-    #             coeff /= 1e-3 * E[o]  # photons/o.1%bw -> photons/eV
-    #             intensity *= coeff
-    #
-    #             Z2[o, t, p] = intensity
-    #             POL_DEG[o, t, p] = pol_deg
-    #             EFIELD_X[o, t, p] = ElecField[0] * numpy.sqrt(coeff)
-    #             EFIELD_Y[o, t, p] = ElecField[1] * numpy.sqrt(coeff)
-    #             EFIELD_Z[o, t, p] = ElecField[2] * numpy.sqrt(coeff)
+
+    Nb_pts_trajectory = T.shape[1]
+
+    use_pysru = 0 # todo: delete pysru code...
+
+    if use_pysru:
+        from pySRU.Simulation import create_simulation
+        from pySRU.ElectronBeam import ElectronBeam as PysruElectronBeam
+        from pySRU.MagneticStructureUndulatorPlane import MagneticStructureUndulatorPlane as PysruUndulator
+        from pySRU.TrajectoryFactory import TRAJECTORY_METHOD_ANALYTIC
+        from pySRU.RadiationFactory import RADIATION_METHOD_APPROX_FARFIELD
+
+        for ie, e in enumerate(E):
+            print("   Calculating undulator source at energy %g eV (%d of %d) (%d x %d points) %d traj."%(e,
+                                                ie+1, E.size, NG_T, NG_P, Nb_pts_trajectory))
+            simulation_test = create_simulation(magnetic_structure=PysruUndulator(
+                                                                            K=K,
+                                                                            period_length=LAMBDAU,
+                                                                            length=LAMBDAU*NPERIODS),
+                                                electron_beam=PysruElectronBeam(
+                                                                            Electron_energy=E_ENERGY,
+                                                                            I_current=INTENSITY),
+                                                magnetic_field=None,
+                                                photon_energy=e,
+                                                traj_method=TRAJECTORY_METHOD_ANALYTIC,
+                                                Nb_pts_trajectory=Nb_pts_trajectory, #None,
+                                                rad_method=RADIATION_METHOD_APPROX_FARFIELD,
+                                                initial_condition=None,
+                                                distance=distance,
+                                                X=xx.flatten(),
+                                                Y=yy.flatten(),
+                                                XY_are_list=True)
+
+            Efield = simulation_test.electric_field._electrical_field
+
+            # Conversion from pySRU units (photons/mm^2/0.1%bw) to SHADOW units (photons/rad^2/eV)
+            coeff = (distance * 1e3) ** 2  # photons/mm^2 -> photons/rad^2
+            coeff /= 1e-3 * e  # photons/o.1%bw -> photons/eV
+
+            tmp_x = Efield[:, 0].copy()
+            tmp_y = Efield[:, 1].copy()
+            tmp_x.shape = (theta.size, phi.size)
+            tmp_y.shape = (theta.size, phi.size)
+
+            EFIELD_X[ie, :, :] = tmp_x * numpy.sqrt(coeff)
+            EFIELD_Y[ie, :, :] = tmp_y * numpy.sqrt(coeff)
+
+            POL_DEG[ie, :, :] = numpy.abs(tmp_x) / (numpy.abs(tmp_x) + numpy.abs(tmp_y))  # SHADOW definition
+    else:
+        for o in range(omega_array.size):
+            print("   Calculating energy %8.3f eV (%d of %d)"%(E[o],o+1,omega_array.size))
+            for t in range(theta.size):
+                for p in range(phi.size):
+                    R = distance / np.cos(theta[t])
+                    r = R * np.sin(theta[t])
+                    X = r * np.cos(phi[p])
+                    Y = r * np.sin(phi[p])
+                    Efield = _pysru_energy_radiated_approximation_and_farfield(omega=omega_array[o],
+                                                                                  electron_current=INTENSITY,
+                                                                                  trajectory=T,
+                                                                                  x=X ,
+                                                                                  y=Y,
+                                                                                  D=distance)
+
+                    # Conversion from pySRU units (photons/mm^2/0.1%bw) to SHADOW units (photons/rad^2/eV)
+                    coeff = (distance * 1e3) ** 2  # photons/mm^2 -> photons/rad^2
+                    coeff /= 1e-3 * E[o]  # photons/o.1%bw -> photons/eV
+
+                    EFIELD_X[o, t, p] = Efield[0] * numpy.sqrt(coeff)
+                    EFIELD_Y[o, t, p] = Efield[1] * numpy.sqrt(coeff)
+                    POL_DEG [o, t, p] = numpy.abs(Efield[0]) / (numpy.abs(Efield[0]) + numpy.abs(Efield[1]))  # SHADOW definition
 
 
-    from pySRU.Simulation import create_simulation
-    from pySRU.ElectronBeam import ElectronBeam as PysruElectronBeam
-    from pySRU.MagneticStructureUndulatorPlane import MagneticStructureUndulatorPlane as PysruUndulator
-    from pySRU.TrajectoryFactory import TRAJECTORY_METHOD_ANALYTIC
-    from pySRU.RadiationFactory import RADIATION_METHOD_APPROX_FARFIELD
-
-    for ie, e in enumerate(E):
-        print("Calculating undulator source at energy %g eV (%d of %d) (%d x %d points) %d traj."%(e,
-                                            ie+1, E.size, NG_T, NG_P, Nb_pts_trajectory))
-        simulation_test = create_simulation(magnetic_structure=PysruUndulator(
-                                                                        K=K,
-                                                                        period_length=LAMBDAU,
-                                                                        length=LAMBDAU*NPERIODS),
-                                            electron_beam=PysruElectronBeam(
-                                                                        Electron_energy=E_ENERGY,
-                                                                        I_current=INTENSITY),
-                                            magnetic_field=None,
-                                            photon_energy=e,
-                                            traj_method=TRAJECTORY_METHOD_ANALYTIC,
-                                            Nb_pts_trajectory=Nb_pts_trajectory, #None,
-                                            rad_method=RADIATION_METHOD_APPROX_FARFIELD,
-                                            initial_condition=None,
-                                            distance=distance,
-                                            X=xx.flatten(),
-                                            Y=yy.flatten(),
-                                            XY_are_list=True)
-
-        Efield = simulation_test.electric_field._electrical_field
-
-        #  Conversion from pySRU units (photons/mm^2/0.1%bw) to SHADOW units (photons/rad^2/eV)
-        coeff = (distance * 1e3)**2 # photons/mm^2 -> photons/rad^2
-        coeff /= 1e-3 * e # photons/o.1%bw -> photons/eV
-
-        tmp_x = Efield[:, 0].copy()
-        tmp_y = Efield[:, 1].copy()
-        tmp_x.shape = (theta.size, phi.size)
-        tmp_y.shape = (theta.size, phi.size)
-
-        EFIELD_X[ie, :, :] = tmp_x * numpy.sqrt(coeff)
-        EFIELD_Y[ie, :, :] = tmp_y * numpy.sqrt(coeff)
-
-        POL_DEG[ie, :, :] = numpy.abs(tmp_x) / (numpy.abs(tmp_x) + numpy.abs(tmp_y)) # SHADOW definition
-    print("Done calculating radiation...")
+    print("Done calculating radiation... (%f s)" % (time.time() - t0))
 
     radiation = numpy.abs(EFIELD_X)**2 + numpy.abs(EFIELD_Y)**2
     out = {'radiation'         : radiation,
@@ -366,16 +368,18 @@ def _undul_phot(E_ENERGY,INTENSITY, LAMBDAU, NPERIODS, K, EMIN, EMAX, NG_E, MAXA
     #
     # back propagation
     #
+
+    # todo: p=polarization
     if flag_size == 2:
         #
         # recalculate or reuse the radiation....
         #
-        if True:
+        if flag_backprop_recalculate_source:
             #
+            # Redefine grids
             # for sizes sample angle in [-MAXANGLE,MAXANGLE]
             #
             theta = np.linspace(-MAXANGLE, MAXANGLE, NG_T, dtype=float)
-            # NG_P *= 2
             phi = (numpy.arange(NG_P) / NG_P - 0.5) * numpy.pi # np.linspace(-numpy.pi/2, numpy.pi/2, NG_P, dtype=float)
             THETA = numpy.outer(theta, numpy.ones_like(phi))
             PHI = numpy.outer(numpy.ones_like(theta), phi)
@@ -384,59 +388,74 @@ def _undul_phot(E_ENERGY,INTENSITY, LAMBDAU, NPERIODS, K, EMIN, EMAX, NG_E, MAXA
             yy = r * numpy.sin(PHI)
 
             EFIELD_X = np.zeros((omega_array.size, theta.size, phi.size), dtype=complex)
+            t0 = time.time()
+            print("RE-Calculating radiation... ", POL_DEG.shape, theta.shape, phi.shape)
 
-            print("RE-Calculating radiation...", POL_DEG.shape, theta.shape, phi.shape)
+            if use_pysru:
+                from pySRU.Simulation import create_simulation
+                from pySRU.ElectronBeam import ElectronBeam as PysruElectronBeam
+                from pySRU.MagneticStructureUndulatorPlane import MagneticStructureUndulatorPlane as PysruUndulator
+                from pySRU.TrajectoryFactory import TRAJECTORY_METHOD_ANALYTIC
+                from pySRU.RadiationFactory import RADIATION_METHOD_APPROX_FARFIELD
 
-            from pySRU.Simulation import create_simulation
-            from pySRU.ElectronBeam import ElectronBeam as PysruElectronBeam
-            from pySRU.MagneticStructureUndulatorPlane import MagneticStructureUndulatorPlane as PysruUndulator
-            from pySRU.TrajectoryFactory import TRAJECTORY_METHOD_ANALYTIC
-            from pySRU.RadiationFactory import RADIATION_METHOD_APPROX_FARFIELD
+                for ie, e in enumerate(E):
+                    print("  Calculating undulator source at energy %g eV (%d of %d) (%d x %d points) %d traj." % (e,
+                                                                                                                 ie + 1, E.size,
+                                                                                                                 NG_T, NG_P,
+                                                                                                                 Nb_pts_trajectory))
+                    simulation_test = create_simulation(magnetic_structure=PysruUndulator(
+                        K=K,
+                        period_length=LAMBDAU,
+                        length=LAMBDAU * NPERIODS),
+                        electron_beam=PysruElectronBeam(
+                            Electron_energy=E_ENERGY,
+                            I_current=INTENSITY),
+                        magnetic_field=None,
+                        photon_energy=e,
+                        traj_method=TRAJECTORY_METHOD_ANALYTIC,
+                        Nb_pts_trajectory=Nb_pts_trajectory,  # None,
+                        rad_method=RADIATION_METHOD_APPROX_FARFIELD,
+                        initial_condition=None,
+                        distance=distance,
+                        X=xx.flatten(),
+                        Y=yy.flatten(),
+                        XY_are_list=True)
 
-            for ie, e in enumerate(E):
-                print("Calculating undulator source at energy %g eV (%d of %d) (%d x %d points) %d traj." % (e,
-                                                                                                             ie + 1, E.size,
-                                                                                                             NG_T, NG_P,
-                                                                                                             Nb_pts_trajectory))
-                simulation_test = create_simulation(magnetic_structure=PysruUndulator(
-                    K=K,
-                    period_length=LAMBDAU,
-                    length=LAMBDAU * NPERIODS),
-                    electron_beam=PysruElectronBeam(
-                        Electron_energy=E_ENERGY,
-                        I_current=INTENSITY),
-                    magnetic_field=None,
-                    photon_energy=e,
-                    traj_method=TRAJECTORY_METHOD_ANALYTIC,
-                    Nb_pts_trajectory=Nb_pts_trajectory,  # None,
-                    rad_method=RADIATION_METHOD_APPROX_FARFIELD,
-                    initial_condition=None,
-                    distance=distance,
-                    X=xx.flatten(),
-                    Y=yy.flatten(),
-                    XY_are_list=True)
+                    Efield = simulation_test.electric_field._electrical_field
+                    tmp_x = Efield[:, 0].copy()
+                    tmp_x.shape = (theta.size, phi.size)
+                    EFIELD_X[ie, :, :] = tmp_x
+            else:
+                for o in range(omega_array.size):
+                    print("   Calculating energy %8.3f eV (%d of %d)" % (E[o], o + 1, omega_array.size))
+                    for t in range(theta.size):
+                        for p in range(phi.size):
+                            R = distance / np.cos(theta[t])
+                            r = R * np.sin(theta[t])
+                            X = r * np.cos(phi[p])
+                            Y = r * np.sin(phi[p])
+                            Efield = _pysru_energy_radiated_approximation_and_farfield(omega=omega_array[o],
+                                                                                       electron_current=INTENSITY,
+                                                                                       trajectory=T,
+                                                                                       x=X,
+                                                                                       y=Y,
+                                                                                       D=distance)
 
-                Efield = simulation_test.electric_field._electrical_field
-                tmp_x = Efield[:, 0].copy()
-                tmp_x.shape = (theta.size, phi.size)
-                EFIELD_X[ie, :, :] = tmp_x
+                            # Conversion from pySRU units (photons/mm^2/0.1%bw) to SHADOW units (photons/rad^2/eV)
+                            coeff = (distance * 1e3) ** 2  # photons/mm^2 -> photons/rad^2
+                            coeff /= 1e-3 * E[o]  # photons/o.1%bw -> photons/eV
 
-            print("Done calculating radiation...")
+                            EFIELD_X[o, t, p] = Efield[0] * numpy.sqrt(coeff)
+
+            print("Done re-calculating radiation... (%f s)" % (time.time() - t0))
             ca = EFIELD_X
             do_concatenate = 0
-        else:
+        else: # reusing xx, yy
             print("Re using radiation...", POL_DEG.shape, theta.shape, phi.shape)
             ca = out['e_amplitude_sigma']
             do_concatenate = 1
-            # reusing xx, yy
 
-
-
-
-        # x_in = input_wavefront.get_coordinate_x()
-        # y_in = input_wavefront.get_coordinate_y()
-        # print(x_in.min(), x_in.max(), y_in.min(), y_in.max())
-
+        # detector grid (calculate only the X axis)
         det_half = MAXANGLE * distance * magnification
         x_axis = numpy.linspace(-det_half, det_half, 1000)
         y_axis = numpy.linspace(-det_half, det_half, 1000)
@@ -444,7 +463,6 @@ def _undul_phot(E_ENERGY,INTENSITY, LAMBDAU, NPERIODS, K, EMIN, EMAX, NG_E, MAXA
         xx_fla = xx.flatten()
         yy_fla = yy.flatten()
 
-        # backpropagated_efield_sigma = numpy.zeros((omega_array.size, theta.size, phi.size), dtype=complex)
         CART_BACKPROPAGATED_radiation= numpy.zeros((omega_array.size, x_axis.size), dtype=float)
 
         for ie, e in enumerate(E):
@@ -460,84 +478,54 @@ def _undul_phot(E_ENERGY,INTENSITY, LAMBDAU, NPERIODS, K, EMIN, EMAX, NG_E, MAXA
                 xx_fla,
                 yy_fla,
                 det_X_flatten=x_axis,
-                det_Y_flatten=y_axis * 0,
+                det_Y_flatten=numpy.zeros_like(y_axis),
                 wavelength=wavelength_array_in_A[ie] * 1e-10,
                 propagation_distance=-distance)
-
-            fla_complex_amplitude_propagated_y_axis = _propagate_complex_amplitude_from_arrays(
-                ca_fla,
-                xx_fla,
-                yy_fla,
-                det_X_flatten=x_axis * 0,
-                det_Y_flatten=y_axis,
-                wavelength=wavelength_array_in_A[ie] * 1e-10,
-                propagation_distance=-distance)
-
-            # area = (x_axis[1] - x_axis[0]) * numpy.abs(x_axis) * 2 * numpy.pi
-            # x_norm = 1.0 / (0.025**2 * area)
-            # print(x_norm)
-            # plot(x_axis * 0.025, x_norm)
             ii_x = numpy.abs(fla_complex_amplitude_propagated_x_axis) ** 2
-            ii_y = numpy.abs(fla_complex_amplitude_propagated_y_axis) ** 2
             ii_x /= ii_x.max()
-            ii_y /= ii_y.max()
-            # from srxraylib.plot.gol import plot
-            # if ie < 4:
-            #     plot(x_axis, ii_x,
-            #          y_axis, ii_y,
-            #          legend=['x axis', 'y axis'])
+
+            if False:
+                fla_complex_amplitude_propagated_y_axis = _propagate_complex_amplitude_from_arrays(
+                    ca_fla,
+                    xx_fla,
+                    yy_fla,
+                    det_X_flatten=numpy.zeros_like(x_axis),
+                    det_Y_flatten=y_axis,
+                    wavelength=wavelength_array_in_A[ie] * 1e-10,
+                    propagation_distance=-distance)
+
+                ii_y = numpy.abs(fla_complex_amplitude_propagated_y_axis) ** 2
+                ii_y /= ii_y.max()
+                from srxraylib.plot.gol import plot
+                if ie < 4:
+                    plot(x_axis, ii_x,
+                         y_axis, ii_y,
+                         legend=['x axis', 'y axis'])
 
             CART_BACKPROPAGATED_radiation[ie, :] = ii_x
 
         out['BACKPROPAGATED_radiation'] = CART_BACKPROPAGATED_radiation
         out['BACKPROPAGATED_r'] = x_axis  # size in m
 
-
-        #
-        # plot(x_axis * 0.025, numpy.abs(fla_complex_amplitude_propagated) ** 2,
-        #      y_axis * 0.025, numpy.abs(fla_complex_amplitude_propagated) ** 2,
-        #      legend=['x', 'y'])
-        #
-
-        #
-        # tmp = numpy.zeros((x.size, y.size), dtype=complex)
-        # tmp[:, y.size // 2] = fla_complex_amplitude_propagated[0:x.size]
-        # tmp[x.size // 2, :] = fla_complex_amplitude_propagated[x.size:]
-        # output_wavefront = GenericWavefront2D.initialize_wavefront_from_arrays(x * 0.025, y * 0.025,
-        #                                                                        tmp,
-        #                                                                        wavelength=wavelength)
-
-
-
-
-
-
-
-
-        # out['CART_BACKPROPAGATED_radiation'] = radiation_interpolated
-        # out['CART_BACKPROPAGATED_x'] = vx * D  # size in m
-        # out['CART_BACKPROPAGATED_y'] = vz * D  # size in m
-
-
-    #####################################################
     return out
 
 
-def calculate_undulator_emission(electron_energy              = 6.0,
-                                 electron_current             = 0.2,
-                                 undulator_period             = 0.018,
-                                 undulator_nperiods           = 100,
-                                 K                            = 1.0,
-                                 photon_energy                = 2000.0,
-                                 EMAX                         = 20000.0,
-                                 NG_E                         = 10,
-                                 MAXANGLE                     = 0.1,
-                                 number_of_points             = 100,
-                                 NG_P                         = 100,
-                                 number_of_trajectory_points  = 100,
-                                 flag_size                    = 2,
-                                 distance                     = 100.0,
-                                 magnification                = 0.01,
+def calculate_undulator_emission(electron_energy                  = 6.0,
+                                 electron_current                 = 0.2,
+                                 undulator_period                 = 0.018,
+                                 undulator_nperiods               = 100,
+                                 K                                = 1.0,
+                                 photon_energy                    = 2000.0,
+                                 EMAX                             = 20000.0,
+                                 NG_E                             = 10,
+                                 MAXANGLE                         = 0.1,
+                                 number_of_points                 = 100,
+                                 NG_P                             = 100,
+                                 number_of_trajectory_points      = 100,
+                                 flag_size                        = 2,
+                                 distance                         = 100.0,
+                                 magnification                    = 0.01,
+                                 flag_backprop_recalculate_source = 0,
                                  ):
     return _undul_phot(electron_energy,
                        electron_current,
@@ -554,6 +542,7 @@ def calculate_undulator_emission(electron_energy              = 6.0,
                        flag_size=flag_size,
                        distance=distance,
                        magnification=magnification,
+                       flag_backprop_recalculate_source=flag_backprop_recalculate_source,
                        )
 
 # #
@@ -616,21 +605,22 @@ def calculate_undulator_emission(electron_energy              = 6.0,
 if __name__ == "__main__":
 
     dict1 = calculate_undulator_emission(
-                     electron_energy              = 6.0,
-                     electron_current             = 0.2,
-                     undulator_period             = 0.025,
-                     undulator_nperiods           = 188.0,
-                     K                            = 1.681183,
-                     photon_energy                = 5591.0,
-                     EMAX                         = 5700.0,
-                     NG_E                         = 1,
-                     MAXANGLE                     = 30e-6,
-                     number_of_points             = 151,
-                     NG_P                         = 11,
-                     number_of_trajectory_points  = 20,
-                     flag_size                    = 2,
-                     distance                     = 100.0,
-                     magnification                = 0.0125,
+                     electron_energy                  = 6.0,
+                     electron_current                 = 0.2,
+                     undulator_period                 = 0.025,
+                     undulator_nperiods               = 188.0,
+                     K                                = 1.681183,
+                     photon_energy                    = 5591.0,
+                     EMAX                             = 5700.0,
+                     NG_E                             = 1,
+                     MAXANGLE                         = 30e-6,
+                     number_of_points                 = 151,
+                     NG_P                             = 11,
+                     number_of_trajectory_points      = 20,
+                     flag_size                        = 2,
+                     distance                         = 100.0,
+                     magnification                    = 0.0125,
+                     flag_backprop_recalculate_source = 1,
     )
 
     from srxraylib.plot.gol import plot_image, plot
