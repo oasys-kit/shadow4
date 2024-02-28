@@ -101,7 +101,7 @@ class S4Undulator(Undulator):
 
         self.code_undul_phot = code_undul_phot
 
-        self._FLAG_EMITTANCE             =  flag_emittance # Yes  # Use emittance (0=No, 1=Yes)
+        self._flag_emittance             =  flag_emittance # Yes  # Use emittance (0=No, 1=Yes)
         self._FLAG_SIZE                  =  flag_size # 0=point,1=Gaussian,2=backpropagate Divergences
         self._use_gaussian_approximation = use_gaussian_approximation
 
@@ -220,7 +220,7 @@ class S4Undulator(Undulator):
         int
             0=No, 1=Yes.
         """
-        return self._FLAG_EMITTANCE
+        return self._flag_emittance
 
     def get_number_of_energy_points(self):
         """
@@ -287,7 +287,10 @@ class S4Undulator(Undulator):
         tuple
             (emin, emax, npoints)
         """
-        return self._EMIN, self._EMAX, self._NG_E
+        if self.is_monochromatic():
+            return self._EMIN, self._EMIN, 1
+        else:
+            return self._EMIN, self._EMAX, self._NG_E
 
     def is_monochromatic(self):
         """
@@ -351,7 +354,7 @@ source = S4Undulator(
             "ng_p"                             : self._NG_P,
             "ng_j"                             : self._NG_J,
             "code_undul_phot"                  : self.code_undul_phot,
-            "flag_emittance"                   : self._FLAG_EMITTANCE  ,
+            "flag_emittance"                   : self.get_flag_emittance()  ,
             "flag_size"                        : self._FLAG_SIZE,
             "use_gaussian_approximation"       : self._use_gaussian_approximation,
             "distance"                         : self._distance,

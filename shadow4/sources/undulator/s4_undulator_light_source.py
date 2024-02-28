@@ -371,6 +371,17 @@ class S4UndulatorLightSource(S4LightSource):
         flux, spectral_power, photon_energy = self.get_flux_and_spectral_power()
         return photon_energy, flux, spectral_power
 
+    def get_flux_and_spectral_power(self):
+        """
+        Return the integrated flux (photons/s/0.1%bw) and spectral power (W/eV) versus photon energy.
+
+        Returns
+        -------
+        tuple
+            (flux, spectral_power, photon_energy).
+        """
+        return self.calculate_spectrum()
+
     def get_flux(self):
         """
         Return the integrated flux (photons/s/0.1%bw) versus photon energy.
@@ -380,7 +391,7 @@ class S4UndulatorLightSource(S4LightSource):
         tuple
             (flux, photon_energy).
         """
-        flux, spectral_power, photon_energy = self.get_flux_and_spectral_power()
+        flux, spectral_power, photon_energy = self.calculate_spectrum()
         return flux, photon_energy
 
     def get_spectral_power(self):
@@ -392,7 +403,7 @@ class S4UndulatorLightSource(S4LightSource):
         tuple
             (spectral_power, photon_energy).
         """
-        flux, spectral_power, photon_energy = self.get_flux_and_spectral_power()
+        flux, spectral_power, photon_energy = self.calculate_spectrum()
         return spectral_power, photon_energy
 
     def get_beam_in_gaussian_approximation(self):
@@ -560,7 +571,7 @@ class S4UndulatorLightSource(S4LightSource):
         txt += "Input Electron parameters: \n"
         txt += "        Electron energy: %f geV\n"%syned_electron_beam._energy_in_GeV
         txt += "        Electron current: %f A\n"%syned_electron_beam._current
-        if undulator._FLAG_EMITTANCE:
+        if undulator.get_flag_emittance():
             sigmas = syned_electron_beam.get_sigmas_all()
             txt += "        Electron sigmaX: %g [um]\n"%(1e6*sigmas[0])
             txt += "        Electron sigmaZ: %g [um]\n"%(1e6*sigmas[2])
@@ -901,7 +912,7 @@ class S4UndulatorLightSource(S4LightSource):
         #
         # sample sizes (cols 1-3)
         #
-        if undulator._FLAG_EMITTANCE:
+        if undulator.get_flag_emittance():
             x_electron = numpy.random.normal(loc=0.0, scale=sigmas[0], size=NRAYS)
             y_electron = 0.0
             z_electron = numpy.random.normal(loc=0.0, scale=sigmas[2], size=NRAYS)
@@ -936,7 +947,7 @@ class S4UndulatorLightSource(S4LightSource):
         myrand = numpy.random.random(NRAYS)
         PHI[numpy.where(myrand < 0.5)] *= -1.0
 
-        if undulator._FLAG_EMITTANCE:
+        if undulator.get_flag_emittance():
             EBEAM1 = numpy.random.normal(loc=0.0, scale=sigmas[1], size=NRAYS)
             EBEAM3 = numpy.random.normal(loc=0.0, scale=sigmas[3], size=NRAYS)
             ANGLEX = EBEAM1 + PHI
