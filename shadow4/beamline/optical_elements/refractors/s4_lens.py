@@ -234,7 +234,7 @@ class S4LensElement(S4BeamlineElement):
         oe         = self.get_optical_element()
 
         half_lens_1, half_lens_2 = oe.get_lens_interfaces()
-        print(half_lens_1.inputs)
+        #print(half_lens_1.inputs)
 
         p, q, angle_radial, angle_radial_out, angle_azimuthal = self.get_coordinates().get_positions()
 

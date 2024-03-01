@@ -182,7 +182,7 @@ class S4CRLElement(S4BeamlineElement):
 
             if lens_index < n_lens-1: input_beam = beam2.duplicate()
 
-            print(beamline_element_2.info())
+            #print(beamline_element_2.info())
 
         return beam2, [footprint1, footprint2]
 

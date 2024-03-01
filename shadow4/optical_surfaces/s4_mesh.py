@@ -58,7 +58,7 @@ class S4Mesh(S4OpticalSurface):
         return self._surface(x, y)
 
     def add_to_mesh(self, z1: Union[int, float, numpy.ndarray]):
-        print(">>>>>>>>>>>>>>ADDING TO MESH", z1.shape, self._mesh_z.shape, z1, self._mesh_z)
+        #print(">>>>>>>>>>>>>>ADDING TO MESH", z1.shape, self._mesh_z.shape, z1, self._mesh_z)
         if self._mesh_z is None: raise ValueError("Cannot add to None")
 
         if isinstance(z1, float) or isinstance(z1, int):  self._mesh_z += z1
@@ -178,7 +178,6 @@ class S4Mesh(S4OpticalSurface):
     def calculate_intercept(self, XIN: numpy.ndarray, VIN: numpy.ndarray, keep=0):
         npoints = XIN.shape[1]
 
-        print("\n\n>>>>> main loop to find solutions (slow...)")
         t0 = time.time()
 
         self.__x0 = XIN
@@ -189,7 +188,7 @@ class S4Mesh(S4OpticalSurface):
         i_flag[numpy.where(success == False)] = -1
 
         t1 = time.time()
-        print(">>>>> done main loop to find solutions, spent: %g s for %d rays (%g ms/ray)\n\n" % (t1 - t0, npoints, 1000 * (t1 - t0) / npoints))
+        print(">>>>> find solutions, spent: %g s for %d rays (%g ms/ray)\n\n" % (t1 - t0, npoints, 1000 * (t1 - t0) / npoints))
 
         return answer, i_flag
 
@@ -465,7 +464,6 @@ if __name__ == "__main__":
     from srxraylib.plot.gol import set_qt
     set_qt()
 
-
     def sphere(x, y, radius=5.0):
         return radius - numpy.sqrt(radius ** 2 - x ** 2 - y ** 2)
 
@@ -473,8 +471,6 @@ if __name__ == "__main__":
     y = numpy.linspace(-0.5,0.5,100)
     X = numpy.outer(x,numpy.ones_like(y))
     Y = numpy.outer(numpy.ones_like(x),y)
-
-
 
     Z = sphere(X,Y)
 
