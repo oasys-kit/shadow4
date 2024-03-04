@@ -371,17 +371,6 @@ class S4UndulatorLightSource(S4LightSource):
         flux, spectral_power, photon_energy = self.get_flux_and_spectral_power()
         return photon_energy, flux, spectral_power
 
-    def get_flux_and_spectral_power(self):
-        """
-        Return the integrated flux (photons/s/0.1%bw) and spectral power (W/eV) versus photon energy.
-
-        Returns
-        -------
-        tuple
-            (flux, spectral_power, photon_energy).
-        """
-        return self.calculate_spectrum()
-
     def get_flux(self):
         """
         Return the integrated flux (photons/s/0.1%bw) versus photon energy.
