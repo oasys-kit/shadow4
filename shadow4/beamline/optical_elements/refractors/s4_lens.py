@@ -1,3 +1,5 @@
+import numpy
+
 from syned.beamline.element_coordinates import ElementCoordinates
 from syned.beamline.optical_elements.refractors.lens import Lens
 from syned.beamline.shape import Rectangle, Ellipse, Circle
