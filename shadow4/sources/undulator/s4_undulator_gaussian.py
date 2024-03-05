@@ -26,6 +26,15 @@ class S4UndulatorGaussian(Undulator):
         sampling rays if flag_interpolation=1.
     flag_emittance : int, optional
         Flag: 0=Zero emittance (filament beam), 1=Use emittance.
+    flag_energy_spread : int, optional
+        Flag: 0=do not include energy spread effects, 1=do include energy spread effects
+        (the value will be available from the electron beam).
+    harmonic_number : int, optional
+        The harmonic in use (used if flag_energy_spread=1).
+    flag_autoset_flux_central_cone : int, optional
+        Autocalculate the flux in central cone (to be used for calculating the spectrum).
+    flux_central_cone : float, optional
+        The value of the flux in the central cone in photons/s/0.1%bw (overwritten if flag_autoset_flux_central_cone=1).
     """
     def __init__(self,
                  period_length=0.01,                 # syned Undulator parameter
@@ -37,7 +46,8 @@ class S4UndulatorGaussian(Undulator):
                  flag_emittance=0,  # when sampling rays: Use emittance (0=No, 1=Yes)
                  flag_energy_spread=0,
                  harmonic_number=1,
-                 flux_peak=1.0,
+                 flag_autoset_flux_central_cone=0, # 0=No, 1=Yes
+                 flux_central_cone=1e10,
                  ):
         super().__init__(K_vertical=None,
                          K_horizontal=None,
@@ -49,24 +59,26 @@ class S4UndulatorGaussian(Undulator):
         self._photon_energy = photon_energy
         self._delta_e = delta_e
         # Photon energy scan number of points
-        if delta_e == 0: self._NG_E = 1
-        else:            self._NG_E = ng_e
+        self._NG_E = ng_e
 
         self._flag_emittance =  flag_emittance # Yes  # Use emittance (0=No, 1=Yes)
         self._flag_energy_spread =  flag_energy_spread # Yes  # Use energy spread (0=No, 1=Yes)
         self._harmonic_number = harmonic_number
-        self._flux_peak = flux_peak
+        self._flag_autoset_flux_central_cone = flag_autoset_flux_central_cone
+        self._flux_central_cone = flux_central_cone
 
 
         # support text containg name of variable, help text and unit. Will be stored in self._support_dictionary
         self._add_support_text([
-            ("photon_energy",                    "photon energy in eV",                                                                        "eV" ),
-            ("delta_e",                          "photon energy width",                                                                        "eV"),
-            ("NG_E",                             "number of energy points",                                                                      ""),
-            ("FLAG_EMITTANCE",                   "Use emittance (0=No, 1=Yes)",                                                                  ""),
-            ("FLAG_ENERGY_SPREAD",               "Use energy spread (0=No,1=Yes)",                                                                 ""),
-            ("harmonic_number",                  "Number of harmonic",                                                                           ""),
-            ("flux_peak",                        "Value to set flux peak",                                                                       ""),
+            ("photon_energy",                    "photon energy in eV",                    "eV" ),
+            ("delta_e",                          "photon energy width",                    "eV"),
+            ("NG_E",                             "number of energy points",                ""),
+            ("flag_emittance",                   "Use emittance (0=No, 1=Yes)",            ""),
+            ("flag_energy_spread",               "Use energy spread (0=No,1=Yes)",         ""),
+            ("harmonic_number",                  "Number of harmonic",                     ""),
+            ("flux_central_cone",                "Value to set flux in central cone",      ""),
+            ("flag_autoset_flux_central_cone",   "Automatic set flux in central cone",     ""),
+
         ] )
 
         self.__script_dict = {
@@ -79,7 +91,8 @@ class S4UndulatorGaussian(Undulator):
             "flag_emittance"                   : self._flag_emittance  ,
             "flag_energy_spread"               : self._flag_energy_spread,
             "harmonic_number"                  : self._harmonic_number,
-            "flux_peak"                        : self._flux_peak,
+            "flux_central_cone"                : self._flux_central_cone,
+            "flag_autoset_flux_central_cone"   : self._flag_autoset_flux_central_cone,
         }
 
 
@@ -141,10 +154,8 @@ class S4UndulatorGaussian(Undulator):
         -------
         int
         """
-        if self.is_monochromatic():
-            return 1
-        else:
-            return self._NG_E
+
+        return self._NG_E
 
     def set_energy_monochromatic(self, photon_energy):
         """
@@ -157,28 +168,21 @@ class S4UndulatorGaussian(Undulator):
         """
         self._photon_energy = photon_energy
         self._delta_e = 0.0
-        self._NG_E = 1
 
 
-    def set_energy_box(self, photon_energy, delta_e=0.0, npoints=1):
+    def set_energy_box(self, photon_energy, delta_e=0.0):
         """
         Sets a box for photon energy distribution for the source.
 
         Parameters
         ----------
-        emin : float
-            minimum photon energy in eV.
-        emax : float
-            maximum photon energy in eV.
-        npoints : int or None, optional
-            Number of points in energy. If None, it does not modify the number of points already stored.
+        photon_energy : float
+            photon energy in eV.
+        delta_e : float, optional
+            interval for photon energy in eV.
         """
         self._photon_energy = photon_energy
         self._delta_e = delta_e
-        if delta_e == 0:
-            self._NG_E = 1
-        else:
-            self._NG_E = npoints
 
     def get_energy_box(self):
         """
@@ -187,12 +191,9 @@ class S4UndulatorGaussian(Undulator):
         Returns
         -------
         tuple
-            (emin, emax, npoints)
+            (photon_energy, delta_e, self._NG_E)
         """
-        if self.is_monochromatic():
-            return self._photon_energy, 0.0, 1
-        else:
-            return self._photon_energy, self._delta_e, self._NG_E
+        return self._photon_energy, self._delta_e, self._NG_E
 
     def is_monochromatic(self):
         """
@@ -202,7 +203,6 @@ class S4UndulatorGaussian(Undulator):
         -------
         boolean
         """
-        if self._NG_E == 1: return True
         if self._delta_e == 0.0: return True
         return False
 
@@ -228,7 +228,8 @@ source = S4UndulatorGaussian(
     flag_emittance    = {flag_emittance}, # when sampling rays: Use emittance (0=No, 1=Yes)
     flag_energy_spread = {flag_energy_spread}, # when sampling rays: Use e- energy spread (0=No, 1=Yes)
     harmonic_number    = {harmonic_number}, # harmonic number
-    flux_peak          = {flux_peak}, # value to set the flux peak
+    flag_autoset_flux_central_cone  = {flag_autoset_flux_central_cone}, # value to set the flux peak
+    flux_central_cone  = {flux_central_cone}, # value to set the flux peak
     )"""
 
 
