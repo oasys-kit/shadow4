@@ -415,8 +415,7 @@ class S4UndulatorGaussianLightSource(S4LightSource):
         Tanaka, T. & Kitamura, H. (2009). Journal of Synchrotron Radiation, 16(3), 380–386
 
         """
-        """ Tanaka & Kitamura 2009 Normalized energy spread
-        equation (13)"""
+        # Tanaka & Kitamura 2009 Normalized energy spread equation (13)
         u = self.get_magnetic_structure()
         if harmonic_number is None: harmonic_number = u._harmonic_number
 
@@ -468,13 +467,15 @@ class S4UndulatorGaussianLightSource(S4LightSource):
                 print("Warning: impossible to get K")
                 K = 0.0
 
-        out = 1.431e14 * u.number_of_periods() * current * self.Qn(K, u._harmonic_number)
+
+        out = (numpy.pi * codata.alpha * 1e-3 / codata.e * u.number_of_periods() * current * self.Qn(K, u._harmonic_number) )
 
         if verbose:
             print("*** Flux Calculation ***")
             print("  Using target E=%f eV; n=%f periods, current=%f => K=%f" % (u._photon_energy, u._harmonic_number, current, K))
             print("  Calculated Flux: %g photons/s/0.1%%bw" % (out))
-            print("  Another way to get Flux: %g photons/s" % (numpy.pi * codata.alpha * 1e-3 / codata.e * u.number_of_periods() * current * self.Qn(K, u._harmonic_number) ))
+            # out2 = 1.431e14 * u.number_of_periods() * current * self.Qn(K, u._harmonic_number)
+            # print("  Another way to get Flux: %g photons/s" % out2)
 
         return out
 
@@ -644,7 +645,7 @@ if __name__ == "__main__":
         delta_e=0.0,
         ng_e=100,  # Photon energy scan number of points
         flag_emittance=1,  # when sampling rays: Use emittance (0=No, 1=Yes)
-        flag_energy_spread=0,
+        flag_energy_spread=1,
         harmonic_number=1,
         flag_autoset_flux_central_cone=1,
         flux_central_cone=1e10,
@@ -689,6 +690,15 @@ if __name__ == "__main__":
              Energies[6, :], SizeH[6, :],
              legend=Labels, title="Size H", show=0)
 
+        plot(Energies[0, :], SizeV[0, :],
+             Energies[1, :], SizeV[1, :],
+             Energies[2, :], SizeV[2, :],
+             Energies[3, :], SizeV[3, :],
+             Energies[4, :], SizeV[4, :],
+             Energies[5, :], SizeV[5, :],
+             Energies[6, :], SizeV[6, :],
+             legend=Labels, title="Size V", show=0)
+
         plot(Energies[0, :], DivergenceH[0, :],
              Energies[1, :], DivergenceH[1, :],
              Energies[2, :], DivergenceH[2, :],
@@ -696,7 +706,16 @@ if __name__ == "__main__":
              Energies[4, :], DivergenceH[4, :],
              Energies[5, :], DivergenceH[5, :],
              Energies[6, :], DivergenceH[6, :],
-             legend=Labels, title="Divergence H")
+             legend=Labels, title="Divergence H", show=0)
+
+        plot(Energies[0, :], DivergenceV[0, :],
+             Energies[1, :], DivergenceV[1, :],
+             Energies[2, :], DivergenceV[2, :],
+             Energies[3, :], DivergenceV[3, :],
+             Energies[4, :], DivergenceV[4, :],
+             Energies[5, :], DivergenceV[5, :],
+             Energies[6, :], DivergenceV[6, :],
+             legend=Labels, title="Divergence V")
 
 
     if True:
