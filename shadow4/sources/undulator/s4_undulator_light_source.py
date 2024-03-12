@@ -22,7 +22,6 @@ from shadow4.sources.undulator.calculate_undulator_emission_srw import calculate
 from shadow4.sources.undulator.calculate_undulator_emission_pysru import calculate_undulator_emission_pysru # SourceUndulatorFactoryPysru
 from shadow4.sources.undulator.s4_undulator import S4Undulator
 from shadow4.sources.s4_light_source import S4LightSource
-from shadow4.sources.source_geometrical.source_gaussian import SourceGaussian
 from shadow4.tools.arrayofvectors import vector_cross, vector_norm
 
 INTEGRATION_METHOD = 1 # 0=sum, 1=trapz
@@ -82,11 +81,9 @@ class S4UndulatorLightSource(S4LightSource):
         -------
         instance of S4Beam
         """
-        if self.get_magnetic_structure().use_gaussian_approximation():
-            return self.get_beam_in_gaussian_approximation()
-        else:
-            return S4Beam.initialize_from_array(self.__calculate_rays(
-                user_unit_to_m=1.0, F_COHER=F_COHER, verbose=verbose))
+
+        return S4Beam.initialize_from_array(self.__calculate_rays(
+            user_unit_to_m=1.0, F_COHER=F_COHER, verbose=verbose))
 
 
     def get_resonance_ring(self, harmonic_number=1, ring_order=1):
@@ -158,22 +155,6 @@ class S4UndulatorLightSource(S4LightSource):
         s_phot = 2.740 / (4e0 * numpy.pi) * numpy.sqrt(u.length() * lambda1)
         self.__result_photon_size_sigma = s_phot
 
-    def get_result_photon_size_sigma(self, photon_energy=None):
-        """
-        Returns the photon size in meters using Gaussian approximation at photon energy emin.
-
-        Parameters
-        ----------
-        photon_energy : None or float, optional
-            The phoron energy. If None it uses undulator emin.
-
-        Returns
-        -------
-        float
-        """
-        if self.__result_photon_size_sigma is None: self.__calculate_photon_size_sigma(photon_energy=photon_energy)
-        return self.__result_photon_size_sigma
-
     def get_result_dictionary(self):
         """
         Returns a dictionary with plenty of parameters.
@@ -199,62 +180,6 @@ class S4UndulatorLightSource(S4LightSource):
         x = traj[1].copy() * codata.c
         beta_x = traj[4].copy()
         return y, x, beta_x
-
-
-    # @classmethod
-    # def _interpolate_polar_to_cartesian(cls, radiation, photon_energy, thetabm, phi,
-    #                                    npointsx=100, npointsz=100, thetamax=None):
-    #
-    #     if thetamax is None:
-    #         thetamax = thetabm.max()
-    #
-    #     vx = numpy.linspace(-1.1 * thetamax, 1.1 * thetamax, npointsx)
-    #     vz = numpy.linspace(-1.1 * thetamax, 1.1 * thetamax, npointsz)
-    #     VX = numpy.outer(vx, numpy.ones_like(vz))
-    #     VZ = numpy.outer(numpy.ones_like(vx), vz)
-    #     VY = numpy.sqrt(1 - VX ** 2 - VZ ** 2)
-    #
-    #     THETA = numpy.abs(numpy.arctan(numpy.sqrt(VX ** 2 + VZ ** 2) / VY))
-    #     PHI = numpy.arctan2(numpy.abs(VZ), numpy.abs(VX))
-    #
-    #     radiation_interpolated = numpy.zeros((radiation.shape[0], npointsx, npointsz))
-    #
-    #     for i in range(radiation.shape[0]):
-    #         interpolator_value = interpolate.RectBivariateSpline(thetabm, phi, radiation[i])
-    #         radiation_interpolated[i] = interpolator_value.ev(THETA, PHI)
-    #
-    #     return radiation_interpolated, photon_energy, vx, vz
-    #
-    # def get_radiation_interpolated_cartesian(self, npointsx=100, npointsz=100, thetamax=None): # todo remove (in factory now)
-    #     """
-    #     Interpolates the radiation array (in polar coordinates) to cartesian coordinates.
-    #
-    #     Parameters
-    #     ----------
-    #     npointsx : int, optional
-    #         The number of points in X.
-    #     npointsz : int, optional
-    #         The number of points in Z.
-    #     thetamax : None or float, optional
-    #         Maximum value of theta. By default (None) it uses the maximum theta.
-    #
-    #     Returns
-    #     -------
-    #     tuple
-    #         (radiation, array_x, array_y) in units of W/rad^2.
-    #     """
-    #
-    #     # radiation, photon_energy, thetabm,phi = self.get_result_radiation_polar()
-    #     # radiation
-    #     # radiation, photon_energy, theta, phi = self.lightsource.get_result_radiation_polar()
-    #     dict_results = self.get_result_dictionary()
-    #     radiation = dict_results['radiation']
-    #     photon_energy = dict_results['photon_energy']
-    #     thetabm = dict_results['theta']
-    #     phi = dict_results['phi']
-    #
-    #     return self._interpolate_polar_to_cartesian(radiation, photon_energy, thetabm, phi,
-    #                                                 npointsx=npointsx, npointsz=npointsz, thetamax=thetamax)
 
     def get_power_density(self):
         """
@@ -394,154 +319,6 @@ class S4UndulatorLightSource(S4LightSource):
         """
         flux, spectral_power, photon_energy = self.calculate_spectrum()
         return spectral_power, photon_energy
-
-    def get_beam_in_gaussian_approximation(self):
-        """
-        Returns the beam with the sampled rays using for an undulator modelled with the Gaussian approximation.
-
-        Returns
-        -------
-        instance of S4Beam.
-        """
-        emin, emax, npoints = self.get_magnetic_structure().get_energy_box()
-        NRAYS = self.get_nrays()
-
-        if self.get_magnetic_structure().get_flag_emittance():
-            sigma_x, sigdi_x, sigma_z, sigdi_z = self.get_electron_beam().get_sigmas_all()
-            Sx, Sz, Spx, Spz = self.get_undulator_photon_beam_sizes_by_convolution(
-                sigma_x=sigma_x,
-                sigma_z=sigma_z,
-                sigdi_x=sigdi_x,
-                sigdi_z=sigdi_z,
-                undulator_E0=0.5*(emin+emax),
-                undulator_length=self.get_magnetic_structure().length(),
-                )
-            a = SourceGaussian.initialize_from_keywords(
-                                                        sigmaX=Sx,
-                                                        sigmaY=0,
-                                                        sigmaZ=Sz,
-                                                        sigmaXprime=Spx,
-                                                        sigmaZprime=Spz,
-                                                        real_space_center=[0.0, 0.0, 0.0],
-                                                        direction_space_center=[0.0, 0.0],
-                                                        nrays=NRAYS,
-                                                        seed=self.get_seed()
-                                                        )
-        else:
-            s, sp = self.get_undulator_photon_beam_sizes(
-                                                        undulator_E0=0.5*(emin+emax),
-                                                        undulator_length=self.get_magnetic_structure().length(),
-                                                        )
-            a = SourceGaussian.initialize_from_keywords(
-                                                        sigmaX=s,
-                                                        sigmaY=0,
-                                                        sigmaZ=s,
-                                                        sigmaXprime=sp,
-                                                        sigmaZprime=sp,
-                                                        real_space_center=[0.0, 0.0, 0.0],
-                                                        direction_space_center=[0.0, 0.0],
-                                                        nrays=NRAYS,
-                                                        seed=self.get_seed()
-                                                        )
-
-        beam = a.get_beam()
-        if emax == emin:
-            e = numpy.zeros(NRAYS) + emin
-        else:
-            e = numpy.random.random(NRAYS) * (emax - emin) + emin
-
-        beam.set_photon_energy_eV(e)
-
-        return beam
-
-    @classmethod
-    def get_undulator_photon_beam_sizes(cls,
-                                        undulator_E0=15000.0,
-                                        undulator_length=4.0):
-        """
-        Returns the filament beam undulator size and divergence at resonance using Gaussian approximation.
-
-        Parameters
-        ----------
-        undulator_E0 : float, optional
-            The undulator resonance energy in eV.
-        undulator_length : float, optional
-            The undulator length in meters.
-
-        Returns
-        -------
-        tuple
-            (sigma, sigma').
-        """
-        m2ev = codata.c * codata.h / codata.e
-        lambda1 = m2ev / undulator_E0
-        # calculate sizes of the photon undulator beam
-        # see formulas 25 & 30 in Elleaume (Onaki & Elleaume)
-        s_phot = 2.740 / (4e0 * numpy.pi) * numpy.sqrt(undulator_length * lambda1)
-        sp_phot = 0.69 * numpy.sqrt(lambda1 / undulator_length)
-        return s_phot, sp_phot
-
-    @classmethod
-    def get_undulator_photon_beam_sizes_by_convolution(cls,
-                                                       sigma_x=1e-4,
-                                                       sigma_z=1e-4,
-                                                       sigdi_x=1e-6,
-                                                       sigdi_z=1e-6,
-                                                       undulator_E0=15000.0,
-                                                       undulator_length=4.0):
-        """
-        Return the photon beam sizes by convolution of the electron sizes and radiation sizes.
-
-        Parameters
-        ----------
-        sigma_x : float, optional
-            The sigma for X.
-        sigma_z : float, optional
-            The sigma for Z.
-        sigdi_x : float, optional
-            The sigma for X'.
-        sigdi_z : float, optional
-            The sigma for Z'.
-        undulator_E0 : float, optional
-            The undulator resonance energy in eV.
-        undulator_length : float, optional
-            The undulator length in meters.
-
-        Returns
-        -------
-        tuple
-            (SigmaX, SigmaZ, SigmaX', SigmaZ')
-        """
-
-        user_unit_to_m = 1.0
-
-        s_phot, sp_phot = cls.get_undulator_photon_beam_sizes(undulator_E0=undulator_E0, undulator_length=undulator_length)
-
-        photon_h = numpy.sqrt(numpy.power(sigma_x * user_unit_to_m, 2) + numpy.power(s_phot, 2) )
-        photon_v = numpy.sqrt(numpy.power(sigma_z * user_unit_to_m, 2) + numpy.power(s_phot, 2) )
-        photon_hp = numpy.sqrt(numpy.power(sigdi_x, 2) + numpy.power(sp_phot, 2) )
-        photon_vp = numpy.sqrt(numpy.power(sigdi_z, 2) + numpy.power(sp_phot, 2) )
-
-        m2ev = codata.c * codata.h / codata.e
-        lambda1 = m2ev / undulator_E0
-        txt = ""
-        txt += "Photon single electron emission at wavelength %f A: \n" % (lambda1 * 1e10)
-        txt += "    sigma_u:      %g um \n" % (1e6 * s_phot)
-        txt += "    sigma_uprime: %g urad \n" % (1e6 * sp_phot)
-        txt += "Electron sizes: \n"
-        txt += "    sigma_x: %g um \n" % (1e6 * sigma_x * user_unit_to_m)
-        txt += "    sigma_z: %g um \n" % (1e6 * sigma_z * user_unit_to_m)
-        txt += "    sigma_x': %g urad \n" % (1e6 * sigdi_x)
-        txt += "    sigma_z': %g urad \n" % (1e6 * sigdi_z)
-        txt += "Photon source sizes (convolution): \n"
-        txt += "    Sigma_x: %g um \n" % (1e6 * photon_h)
-        txt += "    Sigma_z: %g um \n" % (1e6 * photon_v)
-        txt += "    Sigma_x': %g urad \n" % (1e6 * photon_hp)
-        txt += "    Sigma_z': %g urad \n" % (1e6 * photon_vp)
-
-        print(txt)
-
-        return (photon_h/user_unit_to_m, photon_v/user_unit_to_m, photon_hp, photon_vp)
 
     def get_info(self, debug=False):
         """
@@ -879,12 +656,19 @@ class S4UndulatorLightSource(S4LightSource):
         numpy array
             rays matrix, a numpy.array((npoits,18))
         """
+
         if self.__result_radiation is None:
             self.__calculate_radiation()
 
         syned_electron_beam = self.get_electron_beam()
         undulator = self.get_magnetic_structure()
         sigmas = syned_electron_beam.get_sigmas_all()
+
+        if undulator._flag_energy_spread:
+            if not undulator.is_monochromatic():
+                print("**Warning** ignored flag_energy_spread for a white (polychromatic) source.")
+
+            raise NotImplementedError("please implement...")
 
         NRAYS = self.get_nrays()
         rays = numpy.zeros((NRAYS, 18))
@@ -1103,9 +887,9 @@ if __name__ == "__main__":
                      period_length=0.032,
                      number_of_periods=50,
                      code_undul_phot='internal',
-                     use_gaussian_approximation=1,
                      emin=10000.0,
                      emax=15000.0,
+                     flag_energy_spread=0,
                      )
 
     ebeam = S4ElectronBeam(energy_in_GeV=6.04,
@@ -1121,14 +905,13 @@ if __name__ == "__main__":
 
     ls = S4UndulatorLightSource(name="", electron_beam=ebeam, magnetic_structure=su)
 
-    # # beam =  ls.get_beam()
+    beam =  ls.get_beam()
     #
     # print(ls.info())
     # # print(ls.to_python_code())
     #
     ls.set_energy_monochromatic_at_resonance(harmonic_number=1)
     # print(ls.info())
-    # print("source size: ", ls.get_result_photon_size_sigma())
 
     print("dict: ")
     d = ls.get_result_dictionary()

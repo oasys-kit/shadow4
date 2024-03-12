@@ -55,6 +55,9 @@ class S4Undulator(Undulator):
         for code_undul_phot in ["internal", "pysru"] and flag_size=2: apply Gaussian weight to backprop amplitudes.
     weight_ratio: float, optional
         for flag_backprop_weight=1: the Gaussian sigma in units of r.max().
+    flag_energy_spread : int, optional
+        Flag: 0=do not include energy spread effects, 1=do include energy spread effects
+        (the value will be available from the electron beam).
     """
     def __init__(self,
                  K_vertical=1.0,                     # syned Undulator parameter
@@ -70,7 +73,6 @@ class S4Undulator(Undulator):
                  code_undul_phot="internal",         # code used for far field and backpropagation: internal, pysru, srw
                  flag_emittance=0,                   # when sampling rays: Use emittance (0=No, 1=Yes)
                  flag_size=0,                        # when sampling rays: 0=point,1=Gaussian, 2=Backpropagation (Divergences)
-                 use_gaussian_approximation=0,       # use Gaussian approximation for generating simplified beam
                  distance=100,                       # distance to the image plane (for far field calculation)
                  srw_range=0.05,                     # for code_undul_phot="srw" the range factor.
                  srw_resolution=50.0,                # for code_undul_phot="srw" the resolution factor.
@@ -79,6 +81,7 @@ class S4Undulator(Undulator):
                  flag_backprop_recalculate_source=0, # for code_undul_phot in ["internal", "pysru"] and flag_size=2: source reused (0) or recalculated (1)
                  flag_backprop_weight=0,             # for code_undul_phot in ["internal", "pysru"] and flag_size=2: apply Gaussian weight to backprop amplitudes
                  weight_ratio=0.5,                   # for flag_backprop_weight=1: the Gaussian sigma in units of r.max()
+                 flag_energy_spread=0,               # include (1) or not (0) energy spread effects. Only valid for monochromatoc simulations.
                  ):
         super().__init__(K_vertical=K_vertical,
                  K_horizontal = 0.0,
@@ -103,7 +106,6 @@ class S4Undulator(Undulator):
 
         self._flag_emittance             =  flag_emittance # Yes  # Use emittance (0=No, 1=Yes)
         self._FLAG_SIZE                  =  flag_size # 0=point,1=Gaussian,2=backpropagate Divergences
-        self._use_gaussian_approximation = use_gaussian_approximation
 
         # specific parameters
         self._distance                         = distance
@@ -115,6 +117,8 @@ class S4Undulator(Undulator):
         self._flag_backprop_recalculate_source = flag_backprop_recalculate_source
         self._flag_backprop_weight             = flag_backprop_weight
         self._weight_ratio                     = weight_ratio
+
+        self._flag_energy_spread               = flag_energy_spread
 
 
         # support text containg name of variable, help text and unit. Will be stored in self._support_dictionary
@@ -128,7 +132,6 @@ class S4Undulator(Undulator):
             ("NG_J",                             "number of points of the electron trajectory",                                                  ""),
             ("FLAG_EMITTANCE",                   "Use emittance (0=No, 1=Yes)",                                                                  ""),
             ("FLAG_SIZE",                        "Size philament beam 0=point,1=Gaussian,2=backpropagate Divergences",                           ""),
-            ("use_gaussian_approximation",       "0=No, 1=Yes",                                                                                  ""),
             ("distance",                         "Distance to far field plane",                                                                  "m"),
             ("srw_range",                        "for SRW (range magnification)",                                                                ""),
             ("srw_resolution",                   "for SRW (resolution factor)",                                                                  ""),
@@ -137,18 +140,33 @@ class S4Undulator(Undulator):
             ("flag_backprop_recalculate_source", "for internal or pysru/wofry backpropagation: source reused (0) or recalculated (1)",           ""),
             ("flag_backprop_weight",             "for internal or pysru/wofry backpropagation: apply Gaussian weight to amplitudes 0=No, 1=Yes", ""),
             ("weight_ratio",                     "for flag_backprop_recalculate_source=1, the ratio value sigma/window halfwidth",               ""),
-            ] )
+            ("flag_energy_spread",               "for monochromatod sources, apply (1) or not (0) electron energy spread correction", ""),
+        ] )
 
-    def use_gaussian_approximation(self):
-        """
-        Returns a flag to indicate if the computations use the Gaussian approximation.
-
-        Returns
-        -------
-        int
-            0=No, 1=Yes.
-        """
-        return self._use_gaussian_approximation
+        self.__script_dict = {
+            "K_vertical"                       : self.K_vertical(),
+            "period_length"                    : self.period_length(),
+            "number_of_periods"                : self.number_of_periods(),
+            "emin"                             : self._EMIN            ,
+            "emax"                             : self._EMAX            ,
+            "ng_e"                             : self._NG_E            ,
+            "maxangle"                         : self._MAXANGLE,
+            "ng_t"                             : self._NG_T,
+            "ng_p"                             : self._NG_P,
+            "ng_j"                             : self._NG_J,
+            "code_undul_phot"                  : self.code_undul_phot,
+            "flag_emittance"                   : self.get_flag_emittance()  ,
+            "flag_size"                        : self._FLAG_SIZE,
+            "distance"                         : self._distance,
+            "srw_range"                        : self._srw_range,
+            "srw_resolution"                   : self._srw_resolution,
+            "srw_semianalytical"               : self._srw_semianalytical,
+            "magnification"                    : self._magnification,
+            "flag_backprop_recalculate_source" : self._flag_backprop_recalculate_source,
+            "flag_backprop_weight"             : self._flag_backprop_weight,
+            "weight_ratio"                     : self._weight_ratio,
+            "flag_energy_spread"               : self._flag_energy_spread,
+        }
 
     def get_info(self):
         """
@@ -174,41 +192,39 @@ class S4Undulator(Undulator):
             txt += "        photon energy from %10.3f eV to %10.3f eV\n" % (self._EMIN, self._EMAX)
 
 
-        if self.use_gaussian_approximation():
-            txt += "\nUsing Gaussian Approximation!!!\n"
-        else:
-            txt += "\nOther Grids: \n"
-            txt += "        number of points for the trajectory: %d\n"%(self._NG_J)
-            txt += "        number of energy points: %d\n"%(self._NG_E)
-            txt += "        maximum elevation angle: %f urad\n"%(1e6*self._MAXANGLE)
-            txt += "        number of angular elevation points: %d\n"%(self._NG_T)
-            txt += "        number of angular azimuthal points: %d\n"%(self._NG_P)
-            # txt += "        number of rays: %d\n"%(self.NRAYS)
-            # txt += "        random seed: %d\n"%(self.SEED)
-            txt += "-----------------------------------------------------\n"
+        txt += "\nOther Grids: \n"
+        txt += "        number of points for the trajectory: %d\n"%(self._NG_J)
+        txt += "        number of energy points: %d\n"%(self._NG_E)
+        txt += "        maximum elevation angle: %f urad\n"%(1e6*self._MAXANGLE)
+        txt += "        number of angular elevation points: %d\n"%(self._NG_T)
+        txt += "        number of angular azimuthal points: %d\n"%(self._NG_P)
+        # txt += "        number of rays: %d\n"%(self.NRAYS)
+        # txt += "        random seed: %d\n"%(self.SEED)
+        txt += "-----------------------------------------------------\n"
 
-            txt += "calculation code: %s\n"%self.code_undul_phot
-            # if self._result_radiation is None:
-            #     txt += "radiation: NOT YET CALCULATED\n"
-            # else:
-            #     txt += "radiation: CALCULATED\n"
-            txt += "Sampling: \n"
-            if self._FLAG_SIZE == 0:
-                flag = "point"
-            elif self._FLAG_SIZE == 1:
-                flag = "Gaussian"
-            elif self._FLAG_SIZE == 2:
-                flag = "Far field backpropagated"
+        txt += "calculation code: %s\n"%self.code_undul_phot
+        # if self._result_radiation is None:
+        #     txt += "radiation: NOT YET CALCULATED\n"
+        # else:
+        #     txt += "radiation: CALCULATED\n"
+        txt += "Sampling: \n"
+        if self._FLAG_SIZE == 0:
+            flag = "point"
+        elif self._FLAG_SIZE == 1:
+            flag = "Gaussian"
+        elif self._FLAG_SIZE == 2:
+            flag = "Far field backpropagated"
 
-            txt += "        Photon source size sampling flag: %d (%s)\n"%(self._FLAG_SIZE,flag)
+        txt += "        Photon source size sampling flag: %d (%s)\n"%(self._FLAG_SIZE,flag)
 
-            #todo add backpropagation stuff....
+        #todo add backpropagation stuff.... add energy spread info....
 
-            # if self._FLAG_SIZE == 1:
-            #     if self._result_photon_size_sigma is not None:
-            #         txt += "        Photon source size sigma (Gaussian): %6.3f um \n"%(1e6*self._result_photon_size_sigma)
+        # if self._FLAG_SIZE == 1:
+        #     if self._result_photon_size_sigma is not None:
+        #         txt += "        Photon source size sigma (Gaussian): %6.3f um \n"%(1e6*self._result_photon_size_sigma)
 
-            # txt += "-----------------------------------------------------\n"
+        # txt += "-----------------------------------------------------\n"
+
         return txt
 
     def get_flag_emittance(self):
@@ -331,7 +347,6 @@ source = S4Undulator(
     code_undul_phot   = '{code_undul_phot}', # internal, pysru, srw
     flag_emittance    = {flag_emittance}, # when sampling rays: Use emittance (0=No, 1=Yes)
     flag_size         = {flag_size}, # when sampling rays: 0=point,1=Gaussian,2=FT(Divergences)
-    use_gaussian_approximation = {use_gaussian_approximation}, # use Gaussian approximation for generating simplified beam
     distance          = {distance}, # distance to far field plane
     srw_range         = {srw_range}, # for SRW backpropagation, the range factor
     srw_resolution    = {srw_resolution}, # for SRW backpropagation, the resolution factor
@@ -340,39 +355,15 @@ source = S4Undulator(
     flag_backprop_recalculate_source      = {flag_backprop_recalculate_source}, # for internal or pysru/wofry backpropagation: source reused (0) or recalculated (1)
     flag_backprop_weight = {flag_backprop_weight}, # for internal or pysru/wofry backpropagation: apply Gaussian weight to amplitudes
     weight_ratio         = {weight_ratio}, # for flag_backprop_recalculate_source=1, the ratio value sigma/window halfwidth
+    flag_energy_spread   = {flag_energy_spread}, # for monochromatod sources, apply (1) or not (0) electron energy spread correction
     )"""
 
-        script_dict = {
-            "K_vertical"                       : self.K_vertical(),
-            "period_length"                    : self.period_length(),
-            "number_of_periods"                : self.number_of_periods(),
-            "emin"                             : self._EMIN            ,
-            "emax"                             : self._EMAX            ,
-            "ng_e"                             : self._NG_E            ,
-            "maxangle"                         : self._MAXANGLE,
-            "ng_t"                             : self._NG_T,
-            "ng_p"                             : self._NG_P,
-            "ng_j"                             : self._NG_J,
-            "code_undul_phot"                  : self.code_undul_phot,
-            "flag_emittance"                   : self.get_flag_emittance()  ,
-            "flag_size"                        : self._FLAG_SIZE,
-            "use_gaussian_approximation"       : self._use_gaussian_approximation,
-            "distance"                         : self._distance,
-            "srw_range"                        : self._srw_range,
-            "srw_resolution"                   : self._srw_resolution,
-            "srw_semianalytical"               : self._srw_semianalytical,
-            "magnification"                    : self._magnification,
-            "flag_backprop_recalculate_source" : self._flag_backprop_recalculate_source,
-            "flag_backprop_weight"             : self._flag_backprop_weight,
-            "weight_ratio"                     : self._weight_ratio,
-        }
-
-        script = script_template.format_map(script_dict)
+        script = script_template.format_map(self.__script_dict)
 
         return script
 
 if __name__ == "__main__":
-    u = S4Undulator(use_gaussian_approximation=1)
+    u = S4Undulator()
     print(u.info())
     print(u.get_info())
     print(u.to_python_code())
