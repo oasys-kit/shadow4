@@ -89,23 +89,23 @@ class S4Undulator(Undulator):
                  number_of_periods = number_of_periods)
 
         # Photon energy scan
-        self._EMIN = emin   # Photon energy scan from energy (in eV)
-        self._EMAX = emax   # Photon energy scan to energy (in eV)
+        self._emin = emin   # Photon energy scan from energy (in eV)
+        self._emax = emax   # Photon energy scan to energy (in eV)
         # Photon energy scan number of points
-        if emin == emax: self._NG_E = 1
-        else:            self._NG_E = ng_e
+        if emin == emax: self._ng_e = 1
+        else:            self._ng_e = ng_e
 
         # Geometry
-        self._MAXANGLE = maxangle   # Maximum radiation semiaperture in RADIANS
-        self._NG_T = ng_t       # Number of points in angle theta
-        self._NG_P = ng_p       # Number of points in angle phi
-        self._NG_J = ng_j       # Number of points in electron trajectory (per period)
+        self._maxangle = maxangle   # Maximum radiation semiaperture in RADIANS
+        self._ng_t = ng_t       # Number of points in angle theta
+        self._ng_p = ng_p       # Number of points in angle phi
+        self._ng_j = ng_j       # Number of points in electron trajectory (per period)
 
 
         self.code_undul_phot = code_undul_phot
 
         self._flag_emittance             =  flag_emittance # Yes  # Use emittance (0=No, 1=Yes)
-        self._FLAG_SIZE                  =  flag_size # 0=point,1=Gaussian,2=backpropagate Divergences
+        self._flag_size                  =  flag_size # 0=point,1=Gaussian,2=backpropagate Divergences
 
         # specific parameters
         self._distance                         = distance
@@ -123,15 +123,15 @@ class S4Undulator(Undulator):
 
         # support text containg name of variable, help text and unit. Will be stored in self._support_dictionary
         self._add_support_text([
-            ("EMIN",                             "minimum photon energy",                                                                        "eV" ),
-            ("EMAX",                             "maximum photon energy",                                                                        "eV"),
-            ("NG_E",                             "number of energy points",                                                                      ""),
-            ("MAXANGLE",                         "Maximum radiation semiaperture",                                                               "rad"),
-            ("NG_T",                             "Number of points in angle theta",                                                              ""),
-            ("NG_P",                             "Number of points in angle phi",                                                                ""),
-            ("NG_J",                             "number of points of the electron trajectory",                                                  ""),
-            ("FLAG_EMITTANCE",                   "Use emittance (0=No, 1=Yes)",                                                                  ""),
-            ("FLAG_SIZE",                        "Size philament beam 0=point,1=Gaussian,2=backpropagate Divergences",                           ""),
+            ("emin",                             "minimum photon energy",                                                                        "eV" ),
+            ("emax",                             "maximum photon energy",                                                                        "eV"),
+            ("ng_e",                             "number of energy points",                                                                      ""),
+            ("maxangle",                         "Maximum radiation semiaperture",                                                               "rad"),
+            ("ng_t",                             "Number of points in angle theta",                                                              ""),
+            ("ng_p",                             "Number of points in angle phi",                                                                ""),
+            ("ng_j",                             "number of points of the electron trajectory",                                                  ""),
+            ("flag_emittance",                   "Use emittance (0=No, 1=Yes)",                                                                  ""),
+            ("flag_size",                        "Size philament beam 0=point,1=Gaussian,2=backpropagate Divergences",                           ""),
             ("distance",                         "Distance to far field plane",                                                                  "m"),
             ("srw_range",                        "for SRW (range magnification)",                                                                ""),
             ("srw_resolution",                   "for SRW (resolution factor)",                                                                  ""),
@@ -143,20 +143,22 @@ class S4Undulator(Undulator):
             ("flag_energy_spread",               "for monochromatod sources, apply (1) or not (0) electron energy spread correction", ""),
         ] )
 
-        self.__script_dict = {
+
+    def __script_dict(self):
+        return {
             "K_vertical"                       : self.K_vertical(),
             "period_length"                    : self.period_length(),
             "number_of_periods"                : self.number_of_periods(),
-            "emin"                             : self._EMIN            ,
-            "emax"                             : self._EMAX            ,
-            "ng_e"                             : self._NG_E            ,
-            "maxangle"                         : self._MAXANGLE,
-            "ng_t"                             : self._NG_T,
-            "ng_p"                             : self._NG_P,
-            "ng_j"                             : self._NG_J,
+            "emin"                             : self._emin,
+            "emax"                             : self._emax,
+            "ng_e"                             : self._ng_e,
+            "maxangle"                         : self._maxangle,
+            "ng_t"                             : self._ng_t,
+            "ng_p"                             : self._ng_p,
+            "ng_j"                             : self._ng_j,
             "code_undul_phot"                  : self.code_undul_phot,
             "flag_emittance"                   : self.get_flag_emittance()  ,
-            "flag_size"                        : self._FLAG_SIZE,
+            "flag_size"                        : self._flag_size,
             "distance"                         : self._distance,
             "srw_range"                        : self._srw_range,
             "srw_resolution"                   : self._srw_resolution,
@@ -186,18 +188,18 @@ class S4Undulator(Undulator):
         # txt += "-----------------------------------------------------\n"
 
         txt += "\nEnergy Grid: \n"
-        if self._NG_E == 1:
-            txt += "        photon energy %f eV\n" % (self._EMIN)
+        if self._ng_e == 1:
+            txt += "        photon energy %f eV\n" % (self._emin)
         else:
-            txt += "        photon energy from %10.3f eV to %10.3f eV\n" % (self._EMIN, self._EMAX)
+            txt += "        photon energy from %10.3f eV to %10.3f eV\n" % (self._emin, self._emax)
 
 
         txt += "\nOther Grids: \n"
-        txt += "        number of points for the trajectory: %d\n"%(self._NG_J)
-        txt += "        number of energy points: %d\n"%(self._NG_E)
-        txt += "        maximum elevation angle: %f urad\n"%(1e6*self._MAXANGLE)
-        txt += "        number of angular elevation points: %d\n"%(self._NG_T)
-        txt += "        number of angular azimuthal points: %d\n"%(self._NG_P)
+        txt += "        number of points for the trajectory: %d\n"%(self._ng_j)
+        txt += "        number of energy points: %d\n"%(self._ng_e)
+        txt += "        maximum elevation angle: %f urad\n"%(1e6*self._maxangle)
+        txt += "        number of angular elevation points: %d\n"%(self._ng_t)
+        txt += "        number of angular azimuthal points: %d\n"%(self._ng_p)
         # txt += "        number of rays: %d\n"%(self.NRAYS)
         # txt += "        random seed: %d\n"%(self.SEED)
         txt += "-----------------------------------------------------\n"
@@ -208,18 +210,18 @@ class S4Undulator(Undulator):
         # else:
         #     txt += "radiation: CALCULATED\n"
         txt += "Sampling: \n"
-        if self._FLAG_SIZE == 0:
+        if self._flag_size == 0:
             flag = "point"
-        elif self._FLAG_SIZE == 1:
+        elif self._flag_size == 1:
             flag = "Gaussian"
-        elif self._FLAG_SIZE == 2:
+        elif self._flag_size == 2:
             flag = "Far field backpropagated"
 
-        txt += "        Photon source size sampling flag: %d (%s)\n"%(self._FLAG_SIZE,flag)
+        txt += "        Photon source size sampling flag: %d (%s)\n"%(self._flag_size, flag)
 
         #todo add backpropagation stuff.... add energy spread info....
 
-        # if self._FLAG_SIZE == 1:
+        # if self._flag_size == 1:
         #     if self._result_photon_size_sigma is not None:
         #         txt += "        Photon source size sigma (Gaussian): %6.3f um \n"%(1e6*self._result_photon_size_sigma)
 
@@ -249,7 +251,7 @@ class S4Undulator(Undulator):
         if self.is_monochromatic():
             return 1
         else:
-            return self._NG_E
+            return self._ng_e
 
     def set_energy_monochromatic(self, emin):
         """
@@ -260,9 +262,9 @@ class S4Undulator(Undulator):
         emin : float
             photon energy in eV.
         """
-        self._EMIN = emin
-        self._EMAX = emin
-        self._NG_E = 1
+        self._emin = emin
+        self._emax = emin
+        self._ng_e = 1
 
 
     def set_energy_box(self, emin, emax, npoints=None):
@@ -278,10 +280,10 @@ class S4Undulator(Undulator):
         npoints : int or None, optional
             Number of points in energy. If None, it does not modify the number of points already stored.
         """
-        self._EMIN = emin
-        self._EMAX = emax
+        self._emin = emin
+        self._emax = emax
         if npoints != None:
-            self._NG_E = npoints
+            self._ng_e = npoints
 
     def set_maxangle(self, maxangle):
         """
@@ -292,7 +294,7 @@ class S4Undulator(Undulator):
         maxangle : float
             The angle in rads.
         """
-        self._MAXANGLE = maxangle
+        self._maxangle = maxangle
 
     def get_energy_box(self):
         """
@@ -304,9 +306,9 @@ class S4Undulator(Undulator):
             (emin, emax, npoints)
         """
         if self.is_monochromatic():
-            return self._EMIN, self._EMIN, 1
+            return self._emin, self._emin, 1
         else:
-            return self._EMIN, self._EMAX, self._NG_E
+            return self._emin, self._emax, self._ng_e
 
     def is_monochromatic(self):
         """
@@ -316,8 +318,8 @@ class S4Undulator(Undulator):
         -------
         boolean
         """
-        if self._NG_E == 1: return True
-        if self._EMAX == self._EMIN: return True
+        if self._ng_e == 1: return True
+        if self._emax == self._emin: return True
         return False
 
     def to_python_code(self):
@@ -358,7 +360,7 @@ source = S4Undulator(
     flag_energy_spread   = {flag_energy_spread}, # for monochromatod sources, apply (1) or not (0) electron energy spread correction
     )"""
 
-        script = script_template.format_map(self.__script_dict)
+        script = script_template.format_map(self.__script_dict())
 
         return script
 

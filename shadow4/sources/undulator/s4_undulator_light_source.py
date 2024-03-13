@@ -24,6 +24,8 @@ from shadow4.sources.undulator.s4_undulator import S4Undulator
 from shadow4.sources.s4_light_source import S4LightSource
 from shadow4.tools.arrayofvectors import vector_cross, vector_norm
 
+from shadow4.sources.undulator.s4_undulator_gaussian_light_source import S4UndulatorGaussianLightSource # to get q_a and q_s
+
 INTEGRATION_METHOD = 1 # 0=sum, 1=trapz
 
 class S4UndulatorLightSource(S4LightSource):
@@ -104,7 +106,7 @@ class S4UndulatorLightSource(S4LightSource):
         return 1.0 / self.get_electron_beam().gamma() * numpy.sqrt(
             ring_order / harmonic_number * (1 + 0.5 * self.get_magnetic_structure().K_vertical()**2))
 
-    def set_energy_monochromatic_at_resonance(self, harmonic_number=1):
+    def set_energy_monochromatic_at_resonance(self, harmonic_number=1, verbose=1):
         """
         Sets the undulator to a resonance photon energy.
 
@@ -117,13 +119,17 @@ class S4UndulatorLightSource(S4LightSource):
         """
         e = self.get_electron_beam()
         u = self.get_magnetic_structure()
-        u.set_energy_monochromatic(
-            u.resonance_energy(e.gamma(), harmonic=harmonic_number)
-        )
-        # take 3*sigma - _MAXANGLE is in RAD  TODO: why 0.69??
-        u.set_maxangle(3 * 0.69 * u.gaussian_central_cone_aperture(e.gamma(), harmonic_number))
 
-    def set_energy_at_resonance(self, harmonic_number=1, delta_e=0.0):
+        e_res = u.resonance_energy(e.gamma(), harmonic=harmonic_number)
+        maxangle = 3 * 0.69 * u.gaussian_central_cone_aperture(e.gamma(), harmonic_number) # take 3*sigma - _MAXANGLE is in RAD  TODO: why 0.69??
+
+        if verbose:
+            print(">>> Setting monochromatic: n=%d, e0=%f eV, maxangle=%f urad" % (harmonic_number, e_res, 1e6 * maxangle))
+
+        u.set_energy_monochromatic(e_res)
+        u.set_maxangle(maxangle)
+
+    def set_energy_at_resonance(self, harmonic_number=1, delta_e=0.0, verbose=1):
         """
         Sets the undulator to a resonance photon energy.
 
@@ -138,10 +144,16 @@ class S4UndulatorLightSource(S4LightSource):
         """
         e = self.get_electron_beam()
         u = self.get_magnetic_structure()
+
+
         e0 = u.resonance_energy(e.gamma(), harmonic=harmonic_number)
+        maxangle = 3 * 0.69 * u.gaussian_central_cone_aperture(e.gamma(), harmonic_number) # take 3*sigma - _MAXANGLE is in RAD  TODO: why 0.69??
+
+        if verbose:
+            print(">>> Setting monochromatic: n=%d, e0=%f eV, maxangle=%f urad" % (harmonic_number, e0, 1e6 * maxangle))
+
         u.set_energy_box(e0 - delta_e / 2, e0 + delta_e / 2)
-        # take 3*sigma - _MAXANGLE is in RAD  TODO: why 0.69??
-        u.set_maxangle(3 * 0.69 * u.gaussian_central_cone_aperture(e.gamma(), harmonic_number))
+        u.set_maxangle(3 * 0.69 * u.gaussian_central_cone_aperture(e.gamma(), harmonic_number)) # take 3*sigma - _MAXANGLE is in RAD  TODO: why 0.69??
 
 
 
@@ -320,7 +332,7 @@ class S4UndulatorLightSource(S4LightSource):
         flux, spectral_power, photon_energy = self.calculate_spectrum()
         return spectral_power, photon_energy
 
-    def get_info(self, debug=False):
+    def get_info(self, debug=False): # todo: clean and merge with S4Undulator.get_info()
         """
         Returns the specific information for the wiggler light source.
 
@@ -343,6 +355,7 @@ class S4UndulatorLightSource(S4LightSource):
             txt += "        Electron sigmaZ: %g [um]\n"%(1e6*sigmas[2])
             txt += "        Electron sigmaX': %f urad\n"%(1e6*sigmas[1])
             txt += "        Electron sigmaZ': %f urad\n"%(1e6*sigmas[3])
+
         txt += "Input Undulator parameters: \n"
         txt += "        period: %f m\n"%undulator.period_length()
         txt += "        number of periods: %d\n"%undulator.number_of_periods()
@@ -381,15 +394,15 @@ class S4UndulatorLightSource(S4LightSource):
 
         txt += "-----------------------------------------------------\n"
         txt += "Grids: \n"
-        if undulator._NG_E == 1:
-            txt += "        photon energy %f eV\n"%(undulator._EMIN)
+        if undulator.is_monochromatic():
+            txt += "        photon energy %f eV\n"%(undulator._emin)
         else:
-            txt += "        photon energy from %10.3f eV to %10.3f eV\n"%(undulator._EMIN,undulator._EMAX)
-        txt += "        number of points for the trajectory: %d\n"%(undulator._NG_J)
-        txt += "        number of energy points: %d\n"%(undulator._NG_E)
-        txt += "        maximum elevation angle: %f urad\n"%(1e6*undulator._MAXANGLE)
-        txt += "        number of angular elevation points: %d\n"%(undulator._NG_T)
-        txt += "        number of angular azimuthal points: %d\n"%(undulator._NG_P)
+            txt += "        photon energy from %10.3f eV to %10.3f eV\n"%(undulator._emin,undulator._emax)
+        txt += "        number of points for the trajectory: %d\n"%(undulator._ng_j)
+        txt += "        number of energy points: %d\n"%(undulator._ng_e)
+        txt += "        maximum elevation angle: %f urad\n"%(1e6*undulator._maxangle)
+        txt += "        number of angular elevation points: %d\n"%(undulator._ng_t)
+        txt += "        number of angular azimuthal points: %d\n"%(undulator._ng_p)
         txt += "-----------------------------------------------------\n"
 
         txt += "calculation code: %s\n"%undulator.code_undul_phot
@@ -398,14 +411,14 @@ class S4UndulatorLightSource(S4LightSource):
         else:
             txt += "radiation: CALCULATED\n"
         txt += "Sampling: \n"
-        if undulator._FLAG_SIZE == 0:
+        if undulator._flag_size == 0:
             flag = "point"
-        elif undulator._FLAG_SIZE == 1:
+        elif undulator._flag_size == 1:
             flag = "Gaussian"
-        elif undulator._FLAG_SIZE == 2:
+        elif undulator._flag_size == 2:
             flag = "Far field backpropagated"
 
-        txt += "        Photon source size sampling flag: %d (%s)\n"%(undulator._FLAG_SIZE,flag)
+        txt += "        Photon source size sampling flag: %d (%s)\n"%(undulator._flag_size, flag)
         txt += "-----------------------------------------------------\n"
         return txt
 
@@ -461,14 +474,14 @@ class S4UndulatorLightSource(S4LightSource):
                 undulator_period                 = undulator.period_length(),
                 undulator_nperiods               = undulator.number_of_periods(),
                 K                                = undulator.K(),
-                photon_energy                    = undulator._EMIN,
-                EMAX                             = undulator._EMAX,
-                NG_E                             = undulator._NG_E,
-                MAXANGLE                         = undulator._MAXANGLE,
-                number_of_points                 = undulator._NG_T,
-                NG_P                             = undulator._NG_P,
-                number_of_trajectory_points      = undulator._NG_J,
-                flag_size                        = undulator._FLAG_SIZE,
+                photon_energy                    = undulator._emin,
+                EMAX                             = undulator._emax,
+                NG_E                             = undulator._ng_e,
+                MAXANGLE                         = undulator._maxangle,
+                number_of_points                 = undulator._ng_t,
+                NG_P                             = undulator._ng_p,
+                number_of_trajectory_points      = undulator._ng_j,
+                flag_size                        = undulator._flag_size,
                 distance                         = undulator._distance,
                 magnification                    = undulator._magnification,
                 flag_backprop_recalculate_source = undulator._flag_backprop_recalculate_source,
@@ -482,14 +495,14 @@ class S4UndulatorLightSource(S4LightSource):
                 undulator_period                 = undulator.period_length(),
                 undulator_nperiods               = undulator.number_of_periods(),
                 K                                = undulator.K(),
-                photon_energy                    = undulator._EMIN,
-                EMAX                             = undulator._EMAX,
-                NG_E                             = undulator._NG_E,
-                MAXANGLE                         = undulator._MAXANGLE,
-                number_of_points                 = undulator._NG_T,
-                NG_P                             = undulator._NG_P,
-                number_of_trajectory_points      = int(undulator._NG_J),
-                flag_size                        = undulator._FLAG_SIZE,
+                photon_energy                    = undulator._emin,
+                EMAX                             = undulator._emax,
+                NG_E                             = undulator._ng_e,
+                MAXANGLE                         = undulator._maxangle,
+                number_of_points                 = undulator._ng_t,
+                NG_P                             = undulator._ng_p,
+                number_of_trajectory_points      = int(undulator._ng_j),
+                flag_size                        = undulator._flag_size,
                 distance                         = undulator._distance,
                 magnification                    = undulator._magnification,
                 flag_backprop_recalculate_source = undulator._flag_backprop_recalculate_source,
@@ -503,14 +516,14 @@ class S4UndulatorLightSource(S4LightSource):
                 undulator_period            = undulator.period_length(),
                 undulator_nperiods          = undulator.number_of_periods(),
                 K                           = undulator.K(),
-                photon_energy               = undulator._EMIN,
-                EMAX                        = undulator._EMAX,
-                NG_E                        = undulator._NG_E,
-                MAXANGLE                    = undulator._MAXANGLE,
-                number_of_points            = undulator._NG_T,
-                NG_P                        = undulator._NG_P,
-                number_of_trajectory_points = undulator._NG_J,
-                flag_size                   = undulator._FLAG_SIZE,
+                photon_energy               = undulator._emin,
+                EMAX                        = undulator._emax,
+                NG_E                        = undulator._ng_e,
+                MAXANGLE                    = undulator._maxangle,
+                number_of_points            = undulator._ng_t,
+                NG_P                        = undulator._ng_p,
+                number_of_trajectory_points = undulator._ng_j,
+                flag_size                   = undulator._flag_size,
                 distance                    = undulator._distance,
                 srw_range                   = undulator._srw_range,
                 srw_resolution              = undulator._srw_resolution,
@@ -537,7 +550,21 @@ class S4UndulatorLightSource(S4LightSource):
 
         dict_results = self.get_result_dictionary()
 
-        if undulator._FLAG_SIZE == 0:
+        # electron spread correction
+        if undulator._flag_energy_spread and undulator._flag_size > 0:
+            e = self.get_electron_beam()
+            harmonic_number = int(sampled_photon_energy.mean() / undulator.resonance_energy(e.gamma(), harmonic=1))
+            x = 2 * numpy.pi * harmonic_number * undulator.number_of_periods() * e._energy_spread
+            q_s = S4UndulatorGaussianLightSource.q_s(x, factor=0.5)
+            print(">>>>> energy spread correction x: %f; Qs(x)=%f" % (x, q_s))
+            print("      n=%d, N=%f, sigma_delta=%g; Normalized energy spread = %g" %
+                  (harmonic_number, undulator.number_of_periods(), e._energy_spread, x))
+        else:
+            q_s = 1.0
+            print(">>>>> NO energy spread correction")
+
+
+        if undulator._flag_size == 0:
             x_photon = 0.0
             y_photon = 0.0
             z_photon = 0.0
@@ -551,11 +578,14 @@ class S4UndulatorLightSource(S4LightSource):
             dict_results['BACKPROPAGATED_radiation'] = numpy.outer(
                 numpy.ones(undulator.get_number_of_energy_points()), y
                 )
-        elif undulator._FLAG_SIZE == 1:
+        elif undulator._flag_size == 1:
             # I added this correction to obtain the sigma in the RADIAL coordinate, not in x and z.
             # TODO: To be verified!
             self.__result_photon_size_sigma = s_phot
             s_phot_corrected = s_phot / numpy.sqrt(2)
+
+            # now apply the electron spread correction
+            s_phot_corrected *= q_s
 
             cov = [[s_phot_corrected**2, 0], [0, s_phot_corrected**2]]
             mean = [0.0,0.0]
@@ -576,7 +606,7 @@ class S4UndulatorLightSource(S4LightSource):
                 numpy.ones(undulator.get_number_of_energy_points()), y
                 )
 
-        elif undulator._FLAG_SIZE == 2:
+        elif undulator._flag_size == 2:
             # we need to retrieve the emission as a function of the angle
             # radiation, photon_energy, theta, phi
             radiation         = dict_results['radiation']
@@ -593,6 +623,10 @@ class S4UndulatorLightSource(S4LightSource):
             if undulator.code_undul_phot == 'internal': # wofry1D
                 dict1 = self.__result_radiation
                 xx = dict1['BACKPROPAGATED_r']
+
+                # now apply the electron spread correction
+                xx *= q_s
+
                 if self.get_magnetic_structure().is_monochromatic():
                     yy = dict1['BACKPROPAGATED_radiation'][0]  # todo something
                 else:
@@ -614,6 +648,10 @@ class S4UndulatorLightSource(S4LightSource):
                 x = dict1['CART_BACKPROPAGATED_x']
                 y = dict1['CART_BACKPROPAGATED_y']
 
+                # now apply the electron spread correction
+                x *= q_s / numpy.sqrt(2)
+                y *= q_s / numpy.sqrt(2)
+
                 s2d = Sampler2D(i_prop, x, y)
                 sampled_x, sampled_z = s2d.get_n_sampled_points(NRAYS)
 
@@ -628,6 +666,10 @@ class S4UndulatorLightSource(S4LightSource):
                     i_prop = dict1['CART_BACKPROPAGATED_radiation'].sum(axis=0) # todo something
                 x = dict1['CART_BACKPROPAGATED_x']
                 y = dict1['CART_BACKPROPAGATED_y']
+
+                # now apply the electron spread correction
+                x *= q_s / numpy.sqrt(2)
+                y *= q_s / numpy.sqrt(2)
 
                 s2d = Sampler2D(i_prop, x, y)
                 sampled_x, sampled_z = s2d.get_n_sampled_points(NRAYS)
@@ -663,12 +705,6 @@ class S4UndulatorLightSource(S4LightSource):
         syned_electron_beam = self.get_electron_beam()
         undulator = self.get_magnetic_structure()
         sigmas = syned_electron_beam.get_sigmas_all()
-
-        if undulator._flag_energy_spread:
-            if not undulator.is_monochromatic():
-                print("**Warning** ignored flag_energy_spread for a white (polychromatic) source.")
-
-            raise NotImplementedError("please implement...")
 
         NRAYS = self.get_nrays()
         rays = numpy.zeros((NRAYS, 18))
@@ -773,7 +809,7 @@ class S4UndulatorLightSource(S4LightSource):
         #
         # obtain polarization for each ray (interpolation)
         #
-        if undulator._NG_E == 1: # 2D interpolation
+        if undulator._ng_e == 1: # 2D interpolation
             sampled_photon_energy = numpy.array(sampled_photon_energy) # be sure is an array
             fn = interpolate.RegularGridInterpolator(
                 (self.__result_radiation["theta"], self.__result_radiation["phi"]),
@@ -847,7 +883,25 @@ class S4UndulatorLightSource(S4LightSource):
         phi           = self.__result_radiation["phi"]
         photon_energy = self.__result_radiation["photon_energy"]
 
-        if self.get_magnetic_structure().is_monochromatic():
+        undulator = self.get_magnetic_structure()
+
+
+
+
+        if undulator.is_monochromatic():
+            # energy spread correction factor (for the moment for monochromatic only)
+            if undulator._flag_energy_spread:
+                e = self.get_electron_beam()
+                harmonic_number = int(photon_energy.mean() / undulator.resonance_energy(e.gamma(), harmonic=1))
+                x = 2 * numpy.pi * harmonic_number * undulator.number_of_periods() * e._energy_spread
+                q_a = S4UndulatorGaussianLightSource.q_a(x)
+                print(">>>>> energy spread correction x: %f; Qa(x)=%f" % (x, q_a))
+                print("      n=%d, N=%f, sigma_delta=%g; Normalized energy spread = %g" %
+                      (harmonic_number, undulator.number_of_periods(), e._energy_spread, x))
+            else:
+                q_a = 1.0
+                print(">>>>> NO energy spread correction")
+
             #2D case
             tmp = self.__result_radiation["radiation"][0, :, :].copy()
             tmp /= tmp.max()
@@ -857,10 +911,17 @@ class S4UndulatorLightSource(S4LightSource):
             tmp_theta += 1e-6 # to avoid zeros
             tmp *= tmp_theta
             # plot_image(tmp_theta,theta,phi,aspect='auto')
+
+            theta *= q_a # apply energy spread correction
+
             s2d = Sampler2D(tmp, theta, phi)
-            sampled_theta,sampled_phi = s2d.get_n_sampled_points(NRAYS)
-            sampled_photon_energy = self.get_magnetic_structure()._EMIN
+            sampled_theta, sampled_phi = s2d.get_n_sampled_points(NRAYS)
+            sampled_photon_energy = numpy.ones(NRAYS) * self.get_magnetic_structure()._emin
         else:
+            # energy spread correction factor (for the moment for monochromatic only)
+            if undulator._flag_energy_spread:
+                raise Exception("** Error ** Energy spread cannot be calculated for polychromatic sources")
+
             #3D case
             tmp = self.__result_radiation["radiation"].copy()
             tmp /= tmp.max()

@@ -81,8 +81,8 @@ class S4UndulatorGaussian(Undulator):
 
         ] )
 
-        self.__script_dict = {
-            # "K_vertical"                       : self.K_vertical(),
+    def __script_dict(self):
+        return {
             "period_length"                    : self.period_length(),
             "number_of_periods"                : self.number_of_periods(),
             "photon_energy"                    : self._photon_energy,
@@ -233,7 +233,7 @@ source = S4UndulatorGaussian(
     )"""
 
 
-        script = script_template.format_map(self.__script_dict)
+        script = script_template.format_map(self.__script_dict())
 
         return script
 
