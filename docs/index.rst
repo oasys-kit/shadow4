@@ -20,5 +20,6 @@ shadow4. Ray tracing for x-ray ans sysnchrotron optcal systems.
    :includehidden:
 
    installation
+   api
    examples
    indicesandtables
