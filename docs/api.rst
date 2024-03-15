@@ -99,15 +99,16 @@ optical elements
 .. autosummary::
    :toctree: generated/
 
+   shadow4.beamline.optical_elements.crystals
    shadow4.beamline.optical_elements.crystals.s4_crystal
    shadow4.beamline.optical_elements.crystals.s4_plane_crystal
    shadow4.beamline.optical_elements.crystals.s4_sphere_crystal
    shadow4.beamline.optical_elements.crystals.s4_toroid_crystal
    shadow4.beamline.optical_elements.crystals.s4_conic_crystal
-   shadow4.beamline.optical_elements.crystals.s4_elipsoid_crystal
+   shadow4.beamline.optical_elements.crystals.s4_ellipsoid_crystal
    shadow4.beamline.optical_elements.crystals.s4_hyperboloid_crystal
    shadow4.beamline.optical_elements.crystals.s4_paraboloid_crystal
-   shadow4.beamline.optical_elements.crystals.s4_numarical_mesh_crystal
+   shadow4.beamline.optical_elements.crystals.s4_numerical_mesh_crystal
    shadow4.beamline.optical_elements.crystals.s4_additional_numerical_mesh_crystal
 
 
@@ -116,15 +117,16 @@ optical elements
 .. autosummary::
    :toctree: generated/
 
+   shadow4.beamline.optical_elements.gratings
    shadow4.beamline.optical_elements.gratings.s4_grating
    shadow4.beamline.optical_elements.gratings.s4_plane_grating
    shadow4.beamline.optical_elements.gratings.s4_sphere_grating
    shadow4.beamline.optical_elements.gratings.s4_toroid_grating
    shadow4.beamline.optical_elements.gratings.s4_conic_grating
-   shadow4.beamline.optical_elements.gratings.s4_elipsoid_grating
+   shadow4.beamline.optical_elements.gratings.s4_ellipsoid_grating
    shadow4.beamline.optical_elements.gratings.s4_hyperboloid_grating
    shadow4.beamline.optical_elements.gratings.s4_paraboloid_grating
-   shadow4.beamline.optical_elements.gratings.s4_numarical_mesh_grating
+   shadow4.beamline.optical_elements.gratings.s4_numerical_mesh_grating
    shadow4.beamline.optical_elements.gratings.s4_additional_numerical_mesh_grating
 
 * ``shadow4.beamline.optical_elements.mirrors`` mirrors
@@ -132,35 +134,38 @@ optical elements
 .. autosummary::
    :toctree: generated/
 
-   shadow4.beamline.optical_elements.s4_mirrors.mirror
-   shadow4.beamline.optical_elements.s4_mirrors.s4_plane_mirror
-   shadow4.beamline.optical_elements.s4_mirrors.s4_sphere_mirror
-   shadow4.beamline.optical_elements.s4_mirrors.s4_toroid_mirror
-   shadow4.beamline.optical_elements.s4_mirrors.s4_conic_mirror
-   shadow4.beamline.optical_elements.s4_mirrors.s4_elipsoid_mirror
-   shadow4.beamline.optical_elements.s4_mirrors.s4_hyperboloid_mirror
-   shadow4.beamline.optical_elements.s4_mirrors.s4_paraboloid_mirror
-   shadow4.beamline.optical_elements.s4_mirrors.s4_numarical_mesh_mirror
-   shadow4.beamline.optical_elements.s4_mirrors.s4_additional_numerical_mesh_mirror
+   shadow4.beamline.optical_elements.mirrors
+   shadow4.beamline.optical_elements.mirrors.s4_mirror
+   shadow4.beamline.optical_elements.mirrors.s4_plane_mirror
+   shadow4.beamline.optical_elements.mirrors.s4_sphere_mirror
+   shadow4.beamline.optical_elements.mirrors.s4_toroid_mirror
+   shadow4.beamline.optical_elements.mirrors.s4_conic_mirror
+   shadow4.beamline.optical_elements.mirrors.s4_ellipsoid_mirror
+   shadow4.beamline.optical_elements.mirrors.s4_hyperboloid_mirror
+   shadow4.beamline.optical_elements.mirrors.s4_paraboloid_mirror
+   shadow4.beamline.optical_elements.mirrors.s4_numerical_mesh_mirror
+   shadow4.beamline.optical_elements.mirrors.s4_additional_numerical_mesh_mirror
 
 * ``shadow4.beamline.optical_elements.refractors`` interface, lens, crl
 
 .. autosummary::
    :toctree: generated/
 
-   shadow4.beamline.optical_elements.s4_refractors.s4_interface
-   shadow4.beamline.optical_elements.s4_refractors.s4_conic_interface
-   shadow4.beamline.optical_elements.s4_refractors.s4_lens
-   shadow4.beamline.optical_elements.s4_refractors.s4_crl
+   shadow4.beamline.optical_elements.refractors
+   shadow4.beamline.optical_elements.refractors.s4_interface
+   shadow4.beamline.optical_elements.refractors.s4_conic_interface
+   shadow4.beamline.optical_elements.refractors.s4_lens
+   shadow4.beamline.optical_elements.refractors.s4_crl
 
 * ``shadow4.beamline.optical_elements.ideal_elements`` empty, ideal_lens, beam_movement
 
 .. autosummary::
    :toctree: generated/
 
-   shadow4.beamline.optical_elements.s4_ideal_elements.s4_beam_movement
-   shadow4.beamline.optical_elements.s4_ideal_elements.s4_empty
-   shadow4.beamline.optical_elements.s4_ideal_elements.s4_ideal_lens
+   shadow4.beamline.optical_elements.ideal_elements
+   shadow4.beamline.optical_elements.ideal_elements.s4_beam_movement
+   shadow4.beamline.optical_elements.ideal_elements.s4_empty
+   shadow4.beamline.optical_elements.ideal_elements.s4_ideal_lens
 
 optical surfaces
 ----------------
@@ -213,24 +218,3 @@ physical models
 
       shadow4.physical_models.prerefl
 
-tools
------
-``shadow4.tools`` Mathematical and miscellaneous tools
-
-``shadow4.tools.arrayofvectors`` Vector calculus
-   .. autosummary::
-      :toctree: generated/
-
-      shadow4.tools.arrayofvectors
-
-``shadow4.tools.graphics`` Graphics
-   .. autosummary::
-      :toctree: generated/
-
-      shadow4.tools.graphics
-
-``shadow4.tools.sync_f_sigma_and_pi`` Synchroytron functions
-   .. autosummary::
-      :toctree: generated/
-
-      shadow4.tools.sync_f_sigma_and_pi
