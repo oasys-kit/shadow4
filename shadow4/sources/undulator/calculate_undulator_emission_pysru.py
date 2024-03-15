@@ -19,7 +19,41 @@ try:
 except:
     raise ImportError("pySRU not imported")
 
-import numpy as np # todo replave np. by numpy.
+# for propagation, etc.
+from syned.beamline.beamline_element import BeamlineElement
+from syned.beamline.element_coordinates import ElementCoordinates
+
+import scipy.constants as codata
+from srxraylib.plot.gol import plot, plot_image
+
+try:
+
+    from wofry.propagator.propagator import PropagationManager, PropagationElements, PropagationParameters
+
+    from wofry.propagator.wavefront2D.generic_wavefront import GenericWavefront2D
+
+    from wofryimpl.propagator.propagators2D.fresnel_zoom_xy import FresnelZoomXY2D
+    from wofryimpl.propagator.propagators2D.fresnel import Fresnel2D
+    from wofryimpl.propagator.propagators2D.fresnel_convolution import FresnelConvolution2D
+    from wofryimpl.propagator.propagators2D.fraunhofer import Fraunhofer2D
+    from wofryimpl.propagator.propagators2D.integral import Integral2D
+    from wofryimpl.propagator.propagators2D.fresnel_zoom_xy import FresnelZoomXY2D
+
+    # from orangecontrib.esrf.wofry.util.light_source import WOPySRULightSource  # TODO: from wofryimpl...
+    from wofryimpl.propagator.light_source_pysru import WOPySRULightSource
+    from wofryimpl.beamline.beamline import WOBeamline
+    from wofryimpl.beamline.optical_elements.ideal_elements.screen import WOScreen
+
+    from wofry.propagator.propagator import PropagationManager, PropagationElements, PropagationParameters
+
+    from wofry.propagator.wavefront2D.generic_wavefront import GenericWavefront2D
+    from wofryimpl.beamline.optical_elements.ideal_elements.screen import WOScreen
+
+    from wofryimpl.propagator.propagators2D.fresnel_zoom_xy import FresnelZoomXY2D
+
+except:
+    raise ImportError("wofry or wofryimpl not imported")
+
 import numpy
 from scipy import interpolate
 from shadow4.sources.undulator.calculate_undulator_emission import _get_radiation_interpolated_cartesian
@@ -43,22 +77,22 @@ def _pysru_wofry_2D_run(photon_energy,
     #
     # Import section
     #
-    import numpy
+    # import numpy
 
-    from syned.beamline.beamline_element import BeamlineElement
-    from syned.beamline.element_coordinates import ElementCoordinates
-    from wofry.propagator.propagator import PropagationManager, PropagationElements, PropagationParameters
-
-    from wofry.propagator.wavefront2D.generic_wavefront import GenericWavefront2D
-
-    from wofryimpl.propagator.propagators2D.fresnel_zoom_xy import FresnelZoomXY2D
-    from wofryimpl.propagator.propagators2D.fresnel import Fresnel2D
-    from wofryimpl.propagator.propagators2D.fresnel_convolution import FresnelConvolution2D
-    from wofryimpl.propagator.propagators2D.fraunhofer import Fraunhofer2D
-    from wofryimpl.propagator.propagators2D.integral import Integral2D
-    from wofryimpl.propagator.propagators2D.fresnel_zoom_xy import FresnelZoomXY2D
-
-    from srxraylib.plot.gol import plot, plot_image
+    # from syned.beamline.beamline_element import BeamlineElement
+    # from syned.beamline.element_coordinates import ElementCoordinates
+    # from wofry.propagator.propagator import PropagationManager, PropagationElements, PropagationParameters
+    #
+    # from wofry.propagator.wavefront2D.generic_wavefront import GenericWavefront2D
+    #
+    # from wofryimpl.propagator.propagators2D.fresnel_zoom_xy import FresnelZoomXY2D
+    # from wofryimpl.propagator.propagators2D.fresnel import Fresnel2D
+    # from wofryimpl.propagator.propagators2D.fresnel_convolution import FresnelConvolution2D
+    # from wofryimpl.propagator.propagators2D.fraunhofer import Fraunhofer2D
+    # from wofryimpl.propagator.propagators2D.integral import Integral2D
+    # from wofryimpl.propagator.propagators2D.fresnel_zoom_xy import FresnelZoomXY2D
+    #
+    # from srxraylib.plot.gol import plot, plot_image
     plot_from_oe = 1000  # set to a large number to avoid plots
 
     for i in range(photon_energy.size):
@@ -68,7 +102,7 @@ def _pysru_wofry_2D_run(photon_energy,
         # create output_wavefront
         #
         #
-        from orangecontrib.esrf.wofry.util.light_source import WOPySRULightSource  # TODO: from wofryimpl...
+        # from orangecontrib.esrf.wofry.util.light_source import WOPySRULightSource  # TODO: from wofryimpl...
         light_source = WOPySRULightSource.initialize_from_keywords(
             energy_in_GeV=energy_in_GeV,
             current=current,
@@ -107,7 +141,7 @@ def _pysru_wofry_2D_run(photon_energy,
         ##########  OPTICAL ELEMENT NUMBER 1 ##########
 
         input_wavefront = output_wavefront.duplicate()
-        from wofryimpl.beamline.optical_elements.ideal_elements.screen import WOScreen
+        # from wofryimpl.beamline.optical_elements.ideal_elements.screen import WOScreen
 
         optical_element = WOScreen()
 
@@ -158,7 +192,7 @@ def _pysru_wofry_2D_run(photon_energy,
 
         # for completeness, define python code
         if i == 0:
-            from wofryimpl.beamline.beamline import WOBeamline
+            # from wofryimpl.beamline.beamline import WOBeamline
             bl = WOBeamline(light_source=light_source)
             propagator_info = {
                 "propagator_class_name": "FresnelZoomXY2D",
@@ -188,22 +222,22 @@ def _undul_phot_pySRU(E_ENERGY, INTENSITY, LAMBDAU, NPERIODS, K, EMIN, EMAX, NG_
     #
     # polar grid matrix
     #
-    photon_energy = np.linspace(EMIN, EMAX, NG_E, dtype=float)
+    photon_energy = numpy.linspace(EMIN, EMAX, NG_E, dtype=float)
 
-    intens = np.zeros((NG_E, NG_T, NG_P))
-    pol_deg = np.zeros_like(intens)
-    theta = np.linspace(0, MAXANGLE, NG_T, dtype=float)
-    phi = np.linspace(0, np.pi / 2, NG_P, dtype=float)
-    efield_x = np.zeros_like(intens, dtype=complex)
-    efield_y = np.zeros_like(intens, dtype=complex)
-    efield_z = np.zeros_like(intens, dtype=complex)
+    intens = numpy.zeros((NG_E, NG_T, NG_P))
+    pol_deg = numpy.zeros_like(intens)
+    theta = numpy.linspace(0, MAXANGLE, NG_T, dtype=float)
+    phi = numpy.linspace(0, numpy.pi / 2, NG_P, dtype=float)
+    efield_x = numpy.zeros_like(intens, dtype=complex)
+    efield_y = numpy.zeros_like(intens, dtype=complex)
+    efield_z = numpy.zeros_like(intens, dtype=complex)
 
 
-    THETA = np.outer(theta, np.ones_like(phi))
-    PHI = np.outer(np.ones_like(theta), phi)
+    THETA = numpy.outer(theta, numpy.ones_like(phi))
+    PHI = numpy.outer(numpy.ones_like(theta), phi)
 
-    X = (D / np.cos(THETA)) * np.sin(THETA) * np.cos(PHI)
-    Y = (D / np.cos(THETA)) * np.sin(THETA) * np.sin(PHI)
+    X = (D / numpy.cos(THETA)) * numpy.sin(THETA) * numpy.cos(PHI)
+    Y = (D / numpy.cos(THETA)) * numpy.sin(THETA) * numpy.sin(PHI)
     Nb_pts_trajectory = int(number_of_trajectory_points * NPERIODS)
 
     for ie, e in enumerate(photon_energy):
@@ -230,8 +264,8 @@ def _undul_phot_pySRU(E_ENERGY, INTENSITY, LAMBDAU, NPERIODS, K, EMIN, EMAX, NG_
         EEy.shape = (theta.size, phi.size)
         EEz.shape = (theta.size, phi.size)
 
-        # pol_deg1 = (np.abs(E[:,0])**2 / (np.abs(E[:,0])**2 + np.abs(E[:,1])**2)).flatten()
-        pol_deg1 = (np.abs(E[:, 0]) / (np.abs(E[:, 0]) + np.abs(E[:, 1]))).flatten() # SHADOW definition!!
+        # pol_deg1 = (numpy.abs(E[:,0])**2 / (numpy.abs(E[:,0])**2 + numpy.abs(E[:,1])**2)).flatten()
+        pol_deg1 = (numpy.abs(E[:, 0]) / (numpy.abs(E[:, 0]) + numpy.abs(E[:, 1]))).flatten() # SHADOW definition!!
         pol_deg1.shape = (theta.size, phi.size)
 
         intens1 = simulation_test.radiation.intensity.copy()
@@ -249,7 +283,7 @@ def _undul_phot_pySRU(E_ENERGY, INTENSITY, LAMBDAU, NPERIODS, K, EMIN, EMAX, NG_
         efield_z[ie] = EEz * numpy.sqrt(coeff)
 
     T0 = simulation_test.trajectory
-    T = np.vstack((T0.t, T0.x, T0.y, T0.z, T0.v_x, T0.v_y, T0.v_z, T0.a_x, T0.a_y, T0.a_z))
+    T = numpy.vstack((T0.t, T0.x, T0.y, T0.z, T0.v_x, T0.v_y, T0.v_z, T0.a_x, T0.a_y, T0.a_z))
 
     # interpolate to cartesian grid
     print("Interpolating to cartesian grid (%d x %d points)" % (theta.size, theta.size))
@@ -298,15 +332,15 @@ def _undul_phot_pySRU(E_ENERGY, INTENSITY, LAMBDAU, NPERIODS, K, EMIN, EMAX, NG_
             ############################################################################################################
             ##########  OPTICAL ELEMENT NUMBER 1 ##########
 
-            from syned.beamline.beamline_element import BeamlineElement
-            from syned.beamline.element_coordinates import ElementCoordinates
-            from wofry.propagator.propagator import PropagationManager, PropagationElements, PropagationParameters
-
-            from wofry.propagator.wavefront2D.generic_wavefront import GenericWavefront2D
-            from wofryimpl.beamline.optical_elements.ideal_elements.screen import WOScreen
-
-            from wofryimpl.propagator.propagators2D.fresnel_zoom_xy import FresnelZoomXY2D
-            import scipy.constants as codata
+            # from syned.beamline.beamline_element import BeamlineElement
+            # from syned.beamline.element_coordinates import ElementCoordinates
+            # from wofry.propagator.propagator import PropagationManager, PropagationElements, PropagationParameters
+            #
+            # from wofry.propagator.wavefront2D.generic_wavefront import GenericWavefront2D
+            # from wofryimpl.beamline.optical_elements.ideal_elements.screen import WOScreen
+            #
+            # from wofryimpl.propagator.propagators2D.fresnel_zoom_xy import FresnelZoomXY2D
+            # import scipy.constants as codata
 
             backpropagated_intensity = numpy.zeros((photon_energy.size, npointsx, npointsz))
             for ie, e in enumerate(photon_energy):

@@ -24,10 +24,10 @@ sources
    .. autosummary::
       :toctree: generated/
 
-      shadow4.sources.source_geometrical.s4_source_geometrical
-      shadow4.sources.source_geometrical.s4_source_grid_cartesian
-      shadow4.sources.source_geometrical.s4_source_grid_polar
-      shadow4.sources.source_geometrical.s4_source_gaussian
+      shadow4.sources.source_geometrical.source_geometrical
+      shadow4.sources.source_geometrical.source_grid_cartesian
+      shadow4.sources.source_geometrical.source_grid_polar
+      shadow4.sources.source_geometrical.source_gaussian
 
 * ``shadow4.sources.bending_magnet`` The S4 bending magnet
 
@@ -64,7 +64,7 @@ beamline optical elements
    .. autosummary::
       :toctree: generated/
 
-      shadow4.beamline.optical_elements.absorbers.s4_screens
+      shadow4.beamline.optical_elements.absorbers.s4_screen
 
 * ``shadow4.sources.optical_elements.mirrors`` The mirrors
 
