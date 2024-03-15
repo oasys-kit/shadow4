@@ -1,6 +1,6 @@
 # Defining the exact version will make sure things don't break
 numpy==1.22.4
-scipy==1.11.1
+scipy==1.9.1
 syned
 srxraylib
 dabax
