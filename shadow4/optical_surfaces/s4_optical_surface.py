@@ -29,6 +29,9 @@ class S4OpticalSurface(object):
     def calculate_intercept(self, XIN, VIN, **kwargs): # todo: remove?
         raise NotImplementedError("Subclasses should implement this!")
 
+    def choose_solution(self, TPAR1, TPAR2, **kwargs):
+        raise NotImplementedError("Subclasses should implement this!")
+
     def calculate_intercept_and_choose_solution(self, XIN, VIN, **kwargs): # todo: common implementation it here
         raise NotImplementedError("Subclasses should implement this!")
 

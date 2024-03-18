@@ -224,7 +224,7 @@ class S4SphereOpticalElementDecorator(S4CurvedOpticalElementDecorator):
             cylangle    = 0.0
 
         print(">>>>> S4SphereOpticalElement.get_optical_surface_instance(): R, cyl, cyl_angle, optical element, ", radius, cylindrical, cylangle, surface_shape)
-        out = S4Conic.initialize_as_sphere_from_curvature_radius(radius, cylindrical=cylindrical, cylangle=cylangle, switch_convexity=switch_convexity)
+        out = S4Conic.initialize_as_sphere_from_external_parameters(radius, cylindrical=cylindrical, cylangle=cylangle, switch_convexity=switch_convexity)
         print(">>>>> Sphere ccc", out.ccc)
         return out
 

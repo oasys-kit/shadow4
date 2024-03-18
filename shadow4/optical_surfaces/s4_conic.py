@@ -1,5 +1,4 @@
 """
-
 Defines the shadow4 Conic class to deal with conic surfaces (plane, sphere, ellipsoid, paraboloid and hyperboloid).
 
 The conic surface is expressed as F(x,y,z)=0, with F a quadratic finction of x, y, and z. In other words
@@ -8,8 +7,6 @@ The conic surface is expressed as F(x,y,z)=0, with F a quadratic finction of x, 
       ccc[0]*X^2 + ccc[1]*Y^2 + ccc[2]*Z^2 +
       ccc[3]*X*Y + ccc[4]*Y*Z + ccc[5]*X*Z  +
       ccc[6]*X   + ccc[7]*Y   + ccc[8]*Z + ccc[9] = 0
-
-
 
 """
 import numpy
@@ -22,25 +19,60 @@ from shadow4.tools.arrayofvectors import vector_modulus_square, vector_modulus, 
 from shadow4.tools.arrayofvectors import vector_reflection
 
 class S4Conic(S4OpticalSurface):
+    """
+    Class to manage conic optical surfaces [expressed as a quadratic polynomial].
+
+    Parameters
+    ----------
+    ccc : None, list or numpy array.
+        Input for the 10 conic coefficients.
+
+    """
+
     def __init__(self, ccc=None):
         self.set_coefficients(ccc)
 
     @classmethod
     def initialize_from_coefficients(cls, ccc):
-        return S4Conic(ccc=ccc) # errors are taken care in set_coefficients
+        """
+        Create an instance of S4Conic from the coefficients.
 
-    @classmethod
-    def initialize_as_plane(cls):
-        return S4Conic([0, 0, 0, 0, 0, 0, 0, 0, -1., 0])
+        Parameters
+        ----------
+        ccc : None, list or numpy array.
+            Input for the 10 conic coefficients.
+
+        Returns
+        -------
+        instance of S4Conic
+        """
+        return S4Conic(ccc=ccc) # errors are taken care in set_coefficients
 
     #
     # getters / setters
     #
 
     def get_coefficients(self):
+        """
+        Returns the conic coefficients.
+
+        Returns
+        -------
+        numpy array:
+            the conic coefficients (copy).
+        """
         return self.ccc.copy()
 
     def set_coefficients(self, ccc):
+        """
+        Sets the conic coefficients.
+
+        Parameters
+        ----------
+        ccc : None, list or numpy array.
+            Input for the 10 conic coefficients.
+
+        """
         if ccc is not None:
             if isinstance(ccc, list): ccc = numpy.array(ccc)
             self.ccc = ccc.copy()
@@ -50,16 +82,140 @@ class S4Conic(S4OpticalSurface):
     #
     # initializers from surface external parameters
     #
+
     @classmethod
-    def initialize_as_sphere_from_curvature_radius(cls, radius, cylindrical=0, cylangle=0.0, switch_convexity=0):
+    def initialize_as_plane(cls):
+        """
+        Create an instance of S4Conic representing a plane.
+
+        Returns
+        -------
+        instance of S4Conic
+        """
+        return S4Conic([0, 0, 0, 0, 0, 0, 0, 0, -1., 0])
+
+    @classmethod
+    def initialize_as_sphere_from_external_parameters(cls, radius, cylindrical=0, cylangle=0.0, switch_convexity=0):
+        """
+        Create an instance of S4Conic representing a sphere (defined from external parameters, i.e. the radius).
+
+        Parameters
+        ----------
+        radius : float
+            The sphere radius in m.
+        cylindrical : int, optional
+            Flag:  0=the surface is curved in both directions. 1=the surface is flat in one direction.
+        cylangle : float, optional
+            For cylindrical=1, the angle of the cylinder axis with the X axis (CCW).
+        switch_convexity : int, optional
+            Flag to indicate that the convexity os inverted.
+
+        Returns
+        -------
+        instance of S4Conic
+        """
         conic = S4Conic()
-        conic.set_sphere_from_curvature_radius(radius)
+        conic.set_sphere_from_external_parameters(radius)
         return cls._transform_conic(conic, cylindrical, cylangle, switch_convexity)
+
+    @classmethod
+    def initialize_as_ellipsoid_from_external_parameters(cls, AXMAJ, AXMIN, ELL_THE,
+                                                         cylindrical=0, cylangle=0.0, switch_convexity=0):
+        """
+        Create an instance of S4Conic representing a ellipsoid from external parameters.
+
+        Parameters
+        ----------
+        AXMAJ : float
+            The major axis of the ellipsoid in m (a).
+        AXMIN : float
+            The minor axis of the ellipsoid in m (b).
+        ELL_THE : float
+            The angle from the line joining the center of the ellipsoid with the mirror pole to the major axis (CCW).
+        cylindrical : int, optional
+            Flag:  0=the surface is curved in both directions. 1=the surface is flat in one direction.
+        cylangle : float, optional
+            For cylindrical=1, the angle of the cylinder axis with the X axis (CCW).
+        switch_convexity : int, optional
+            Flag to indicate that the convexity os inverted.
+
+        Returns
+        -------
+        instance of S4Conic
+        """
+        conic = S4Conic()
+        conic.set_ellipsoid_from_external_parameters(AXMAJ, AXMIN, ELL_THE)
+        return cls._transform_conic(conic, cylindrical, cylangle, switch_convexity)
+
+    #todo: review
+    @classmethod
+    def initialize_as_hyperboloid_from_external_parameters(cls, AXMAJ, AXMIN, ELL_THE,
+                                                         cylindrical=0, cylangle=0.0, switch_convexity=0):
+        """
+        Create an instance of S4Conic representing a hyperboloid from external parameters.
+
+        Parameters
+        ----------
+        AXMAJ : float
+            The major axis of the ellipsoid in m (a).
+        AXMIN : float
+            The minor axis of the ellipsoid in m (b).
+        ELL_THE : float
+            The angle from the line joining the center of the ellipsoid with the mirror pole to the major axis (CCW).
+        cylindrical : int, optional
+            Flag:  0=the surface is curved in both directions. 1=the surface is flat in one direction.
+        cylangle : float, optional
+            For cylindrical=1, the angle of the cylinder axis with the X axis (CCW).
+        switch_convexity : int, optional
+            Flag to indicate that the convexity os inverted.
+
+        Returns
+        -------
+        instance of S4Conic
+        """
+        conic = S4Conic()
+        conic.set_hyperboloid_from_external_parameters(AXMAJ, AXMIN, ELL_THE)
+        return cls._transform_conic(conic, cylindrical, cylangle, switch_convexity)
+
+    # todo: review
+    @classmethod
+    def initialize_as_paraboloid_from_external_parameters(cls, parabola_parameter,
+                                                         cylindrical=0, cylangle=0.0, switch_convexity=0):
+        """
+        Create an instance of S4Conic representing a paraboloid from external parameters.
+
+        Parameters
+        ----------
+        parabola_parameters : float
+            The parabola parameter in m.
+        cylindrical : int, optional
+            Flag:  0=the surface is curved in both directions. 1=the surface is flat in one direction.
+        cylangle : float, optional
+            For cylindrical=1, the angle of the cylinder axis with the X axis (CCW).
+        switch_convexity : int, optional
+            Flag to indicate that the convexity os inverted.
+
+        Returns
+        -------
+        instance of S4Conic
+        """
+        conic = S4Conic()
+        conic.set_paraboloid_from_external_parameters(parabola_parameter)
+        return cls._transform_conic(conic, cylindrical, cylangle, switch_convexity)
+
 
     #
     # define coefficients from surface external parameters
     #
-    def set_sphere_from_curvature_radius(self, rmirr):
+    def set_sphere_from_external_parameters(self, rmirr):
+        """
+        Sets the conic coefficients for a sphere.
+
+        Parameters
+        ----------
+        rmirr : float
+            The radius of the sphere in m.
+        """
         self.ccc[0] =  1.0        # X^2  # = 0 in cylinder case
         self.ccc[1] =  1.0        # Y^2
         self.ccc[2] =  1.0        # Z^2
@@ -71,8 +227,26 @@ class S4Conic(S4OpticalSurface):
         self.ccc[8] = -2 * rmirr  # Z
         self.ccc[9] = 0.0         # G
 
-    # todo: change to new nomenclature.
-    def set_ellipsoid_from_external_parameters(self, AXMAJ, AXMIN, ELL_THE):
+
+    def set_ellipsoid_from_external_parameters(self, AXMAJ, AXMIN, ELL_THE): # todo: remove? or change to new nomenclature?
+        """
+        Sets the conic coefficients for an ellipsoid given the external parameters (as defined in SHADOW3).
+
+        Parameters
+        ----------
+        AXMAJ : float
+            The major axis of the ellipsoid in m (a).
+        AXMIN : float
+            The minor axis of the ellipsoid in m (b).
+        ELL_THE : float
+            The angle from the line joining the center of the ellipsoid with the mirror pole to the major axis (CCW).
+        """
+
+        # tan(ELL_THE) = ZCEN / YCEN
+        # therefore ZCEN = YCEN tan(ELL_THE)
+        # and using the ellipse equation (YCEN / a)**2 + (ZCEN / b)**2 = 1
+        # we obtain YCEN = a b / sqrt(b**2 + a**2 tan(ELL_THE)**2)
+        #
         YCEN  = AXMAJ * AXMIN
         YCEN  = YCEN / numpy.sqrt(AXMIN**2 + AXMAJ**2 * numpy.tan(ELL_THE)**2)
         ZCEN  = YCEN * numpy.tan(ELL_THE)
@@ -114,6 +288,11 @@ class S4Conic(S4OpticalSurface):
         self.ccc[9] = 0.0
 
 
+    def set_hyperboloid_from_external_parameters(self, AXMAJ, AXMIN, ELL_THE): # todo: change to new nomenclature.
+        raise NotImplementedError("To be implemented...") # todo
+
+    def set_paraboloid_from_external_parameters(self, parabola_parameter):
+        raise NotImplementedError("To be implemented...") # todo
 
     #
     # initializers from focal distances and angle (factory parameters)
@@ -121,6 +300,30 @@ class S4Conic(S4OpticalSurface):
     @classmethod
     def initialize_as_sphere_from_focal_distances(cls, p, q, theta_grazing,
                                                   cylindrical=0, cylangle=0.0, switch_convexity=0, verbose=1):
+        """
+        Creates an instance of S4Connic representing a sphere from dactory parameters (p, q, theta).
+
+        Parameters
+        ----------
+        p : float
+            The distance from the source to the mirror pole in m.
+        q : float
+            The distance from the mirror pole to the image in m.
+        theta_grazing : float
+            The grazing angle in deg.
+        cylindrical : int, optional
+            Flag:  0=the surface is curved in both directions. 1=the surface is flat in one direction.
+        cylangle : float, optional
+            For cylindrical=1, the angle of the cylinder axis with the X axis (CCW).
+        switch_convexity : int, optional
+            Flag to indicate that the convexity os inverted.
+        verbose : int, optional
+            Flag for verbose output.
+
+        Returns
+        -------
+        instance of S4Conic
+        """
         # todo: implement also sagittal bending?
 
         theta = (numpy.pi / 2) - theta_grazing
@@ -152,7 +355,39 @@ class S4Conic(S4OpticalSurface):
     def initialize_as_ellipsoid_from_focal_distances(cls, p, q, theta1,
                                                      cylindrical=0, cylangle=0.0, switch_convexity=0,
                                                      method=1, verbose=1):
-        if method == 0:
+        """
+        Creates an instance of S4Conic representing an ellipsoid from factory parameters (p, q, theta).
+
+        Parameters
+        ----------
+        p : float
+            The distance from the source to the mirror pole in m.
+        q : float
+            The distance from the mirror pole to the image in m.
+        theta_grazing : float
+            The grazing angle in deg.
+        cylindrical : int, optional
+            Flag:  0=the surface is curved in both directions. 1=the surface is flat in one direction.
+        cylangle : float, optional
+            For cylindrical=1, the angle of the cylinder axis with the X axis (CCW).
+        switch_convexity : int, optional
+            Flag to indicate that the convexity os inverted.
+        verbose : int, optional
+            Flag for verbose output.
+        method : int, optional
+            See reference, 0: use Table 5, 1: use table 4.
+
+        Returns
+        -------
+        Instance of S4Conic
+
+        References
+        ----------
+        "Conic Surfaces and Transformations for X-Ray Beamline Optics Modeling", M. Sanchez del Rio and K. Goldberg,
+        To be published (2024).
+
+        """
+        if method == 0: # See Table 5 in Sanchez del Rio and Goldberg
             ccc = [1,
                     numpy.sin(theta1) ** 2,
                     1 - (numpy.sin(theta1) * (p - q) / (p + q)) ** 2,
@@ -164,7 +399,7 @@ class S4Conic(S4OpticalSurface):
                     -4 * numpy.sin(theta1) * p * q / (p + q),
                     0,
                     ]
-        else:
+        else: # See Table 4 in Sanchez del Rio and Goldberg
             a = (p + q) / 2
             b = numpy.sqrt(p * q) * numpy.sin(theta1)
             c = numpy.sqrt(a ** 2 - b ** 2)
@@ -202,6 +437,38 @@ class S4Conic(S4OpticalSurface):
     def initialize_as_paraboloid_from_focal_distances(cls, p, q, theta1,
                                                       cylindrical=0, cylangle=0.0, switch_convexity=0,
                                                       method=1, verbose=1):
+        """
+        Creates an instance of S4Conic representing a paraboloid from factory parameters (p, q, theta).
+
+        Parameters
+        ----------
+        p : float
+            The distance from the source to the mirror pole in m.
+        q : float
+            The distance from the mirror pole to the image in m.
+        theta_grazing : float
+            The grazing angle in deg.
+        cylindrical : int, optional
+            Flag:  0=the surface is curved in both directions. 1=the surface is flat in one direction.
+        cylangle : float, optional
+            For cylindrical=1, the angle of the cylinder axis with the X axis (CCW).
+        switch_convexity : int, optional
+            Flag to indicate that the convexity os inverted.
+        verbose : int, optional
+            Flag for verbose output.
+        method : int, optional
+            See reference, 0: use Table 5, 1: use table 4.
+
+        Returns
+        -------
+        Instance of S4Conic
+
+        References
+        ----------
+        "Conic Surfaces and Transformations for X-Ray Beamline Optics Modeling", M. Sanchez del Rio and K. Goldberg,
+        To be published (2024).
+
+        """
         if method == 0:
             if p > q: # focusing
                 ccc = [1,
@@ -262,7 +529,38 @@ class S4Conic(S4OpticalSurface):
     def initialize_as_hyperboloid_from_focal_distances(cls, p, q, theta1,
                                                        cylindrical=0, cylangle=0.0, switch_convexity=0,
                                                        method=0, verbose=1):
+        """
+        Creates an instance of S4Conic representing a hyperboloid from factory parameters (p, q, theta).
 
+        Parameters
+        ----------
+        p : float
+            The distance from the source to the mirror pole in m.
+        q : float
+            The distance from the mirror pole to the image in m.
+        theta_grazing : float
+            The grazing angle in deg.
+        cylindrical : int, optional
+            Flag:  0=the surface is curved in both directions. 1=the surface is flat in one direction.
+        cylangle : float, optional
+            For cylindrical=1, the angle of the cylinder axis with the X axis (CCW).
+        switch_convexity : int, optional
+            Flag to indicate that the convexity os inverted.
+        verbose : int, optional
+            Flag for verbose output.
+        method : int, optional
+            See reference, 0: use Table 5, 1: use table 4.
+
+        Returns
+        -------
+        Instance of S4Conic
+
+        References
+        ----------
+        "Conic Surfaces and Transformations for X-Ray Beamline Optics Modeling", M. Sanchez del Rio and K. Goldberg,
+        To be published (2024).
+
+        """
         if method == 0:
             ccc = [1,
                     numpy.sin(theta1) ** 2,
@@ -312,11 +610,19 @@ class S4Conic(S4OpticalSurface):
         conic = S4Conic(ccc=numpy.array(ccc))
         return cls._transform_conic(conic, cylindrical, cylangle, switch_convexity)
 
+
     #
     # required methods
     #
 
     def info(self):
+        """
+        Creates an info text.
+
+        Returns
+        -------
+        str
+        """
         txt = ""
         txt += "++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++\n"
         txt += "OE surface in form of conic equation: \n"
@@ -338,21 +644,42 @@ class S4Conic(S4OpticalSurface):
         return txt
 
     def duplicate(self):
+        """
+        Duplicates an instance of S4Conic
+
+        Returns
+        -------
+        instance of S4Conic.
+        """
         return S4Conic.initialize_from_coefficients(self.ccc)
 
-    def surface_height(self,y=0,x=0,return_solution=0):
+    def surface_height(self, y=0, x=0, return_solution=0):
         """
+        Calculates a 2D mesh array with the surface heights.
 
-        :param y: a scalar, vector or mesh
-        :param x: a scalar, vector or mesh
-            y and x must be homogeneous, otherwise an error will occur:
+        Parameters
+        ----------
+        y : float (a scalar, vector or mesh)
+            The y coordinate(s).
+        x : float (a scalar, vector or mesh)
+            The x coordinate(s).
+        return_solution : int, optional
+            Flag:
+            0 = guess the solution with zero at pole,
+            1 = get first solution,
+            2 = get second solution.
+
+        Returns
+        -------
+        2D numpy array
+            the height scalar/vector/mesh depending on inputs.
+        Notes
+        -----
+        y and x must be homogeneous, otherwise an error will occur:
              both scalars
              both mesh
              one scalar and another vector
-        :param return_solution: 0 = guess the solution with zero at pole,
-                                1 = get first solution
-                                2 = get second solution
-        :return: the height scalar/vector/mesh depending on inputs
+
         """
         aa = self.ccc[2]
         bb = self.ccc[4] * y + self.ccc[5] * x + self.ccc[8]
@@ -378,7 +705,21 @@ class S4Conic(S4OpticalSurface):
 
         return numpy.real(ss)
 
-    def get_normal(self,x2):
+    def get_normal(self, x2):
+        """
+        Calculates the normal vector (or stack of vectors) at a point on the surface.
+
+        Parameters
+        ----------
+        x2 : numpy array
+            The coordinates vector(s) of shape [3, NRAYS].
+
+        Returns
+        -------
+        numpy array
+            The normal vector(s) of shape [3, NRAYS].
+
+        """
         # ;
         # ; Calculates the normal at intercept points x2
         # ;
@@ -395,20 +736,57 @@ class S4Conic(S4OpticalSurface):
 
         return normal
 
-    # todo: return here the complex solutions and make the choice in _choose_solution
+
+    def calculate_intercept_and_choose_solution(self, x1, v1, reference_distance=10.0, method=0):
+        """
+
+        Calculates the intercept point (or stack of points) for a given ray or stack of rays,
+        given a point XIN and director vector VIN.
+
+        Parameters
+        ----------
+        XIN : numpy array
+            The coordinates of a point of origin of the ray: shape [3, NRAYS].
+        VIN : numpy array
+            The coordinates of a director vector the ray: shape [3, NRAYS].
+        reference_distance : float, optional
+            A reference distance. The selected solution will be the closest to this refecrence_distance.
+        method : int, optional
+            0: automatic selection (essentially the same as in shadow3 but replacing TSOURCE (unavailable here) by
+            reference_distance).
+            1: use first solution.
+            2: use second solution.
+
+        Returns
+        -------
+        tuple
+            The selected solution (time or flight path) as (t, iflag).
+
+        """
+        t1, t2, iflag = self.calculate_intercept(x1, v1)
+        t = self.choose_solution(t1, t2, reference_distance=reference_distance, method=method)
+        return t, iflag
+
+    # todo: vectorize?
     def calculate_intercept(self, XIN, VIN):
-        #   This function Calculates the intersection of a
-        #               conic (defined by its 10 coefficients in ccc)
-        #               with a straight line, defined by a point xIn and
-        #               an unitary direction vector vIn
-        # 	INPUTS:
-        #		ccc: the array with the 10 coefficients defining the
-        #                    conic.
-        #		xIn: a vector DblArr(3) or stack of vectors DblArr(3,nvectors)
-        #		vIn: a vector DblArr(3) or stack of vectors DblArr(3,nvectors)
-        #
-        #   OUTPUTS
-        #		t the "travelled" distance between xIn and the surface
+        """
+        Calculates the intercept point (or stack of points) for a given ray or stack of rays,
+        given a point XIN and director vector VIN.
+
+        Parameters
+        ----------
+        XIN : numpy array
+            The coordinates of a point of origin of the ray: shape [3, NRAYS].
+        VIN : numpy array
+            The coordinates of a director vector the ray: shape [3, NRAYS].
+
+        Returns
+        -------
+        tuple
+            The two solutions (time or flight path) as (TPAR1.real, TPAR2.real, IFLAG).
+
+
+        """
         CCC = self.ccc
 
         if XIN.shape == (3,):
@@ -475,12 +853,28 @@ class S4Conic(S4OpticalSurface):
         if TPAR2.size == 1:
             TPAR2 = numpy.asscalar(TPAR2)
 
-        return TPAR1.real, TPAR2.real, IFLAG  # todo: change to return the complex solutions?
+        # todo: return here the complex solutions and make the choice in choose_solution ?
+        return TPAR1.real, TPAR2.real, IFLAG
 
-    def calculate_intercept_and_choose_solution(self, x1, v1, reference_distance=10.0, method=0):
-        t1, t2, iflag = self.calculate_intercept(x1, v1)
-        t = self._choose_solution(t1, t2, reference_distance=reference_distance, method=method)
-        return t, iflag
+    def choose_solution(self, TPAR1, TPAR2, reference_distance=10.0, method=0):
+        # method = 0: new shadow4 way (essentially the same as in shadow3
+        #             but replacing TSOURCE (unavailable here) by reference_distance
+        # method = 1: use first solution
+        # method = 2: use second solution
+        TPAR = numpy.zeros(TPAR1.size)
+
+        if method == 0:
+            for i in range(TPAR1.size):
+                if ( numpy.abs(TPAR1[i]-reference_distance) <= numpy.abs(TPAR2[i]-reference_distance)):
+                   TPAR[i] = TPAR1[i]
+                else:
+                   TPAR[i] = TPAR2[i]
+        elif method == 1:
+            TPAR = TPAR1
+        elif method == 2:
+            TPAR = TPAR2
+
+        return TPAR
 
     # todo: move the apply_* methods to the parent class
     def apply_specular_reflection_on_beam(self, beam):
@@ -497,7 +891,7 @@ class S4Conic(S4OpticalSurface):
 
         t1, t2, iflag = self.calculate_intercept(x1, v1)
         reference_distance = -newbeam.get_column(2).mean() + newbeam.get_column(3).mean()
-        t = self._choose_solution(t1, t2, reference_distance=reference_distance)
+        t = self.choose_solution(t1, t2, reference_distance=reference_distance)
 
         x2 = x1 + v1 * t
         for i in range(flag.size):
@@ -552,7 +946,7 @@ class S4Conic(S4OpticalSurface):
 
         t1, t2, iflag = self.calculate_intercept(x1, v1)
         reference_distance = -newbeam.get_column(2).mean() + newbeam.get_column(3).mean()
-        t = self._choose_solution(t1, t2, reference_distance=reference_distance)
+        t = self.choose_solution(t1, t2, reference_distance=reference_distance)
 
         # for i in range(t.size):
         #     print(">>>> solutions: ",t1[i],t2[i],t[i])
@@ -621,7 +1015,7 @@ class S4Conic(S4OpticalSurface):
 
         t1, t2, iflag = self.calculate_intercept(x1, v1)
         reference_distance = -newbeam.get_column(2).mean() + newbeam.get_column(3).mean()
-        t = self._choose_solution(t1, t2, reference_distance=reference_distance)
+        t = self.choose_solution(t1, t2, reference_distance=reference_distance)
 
         x2 = x1 + v1 * t
         for i in range(flag.size):
@@ -735,7 +1129,6 @@ class S4Conic(S4OpticalSurface):
         A_9	 = self.ccc[8]
         A_10 = self.ccc[9]
 
-
         self.ccc[0] =  A_1 * SIN_CIL**4 + A_2 * COS_CIL**2 * SIN_CIL**2 - A_4 * COS_CIL * SIN_CIL**3
         self.ccc[1] =  A_2 * COS_CIL**4 + A_1 * COS_CIL**2 * SIN_CIL**2 - A_4 * COS_CIL**3 * SIN_CIL
         self.ccc[2] =  A_3						                     # Z^2
@@ -751,28 +1144,6 @@ class S4Conic(S4OpticalSurface):
         self.ccc[5-1]  = - self.ccc[5-1]
         self.ccc[6-1]  = - self.ccc[6-1]
         self.ccc[9-1]  = - self.ccc[9-1]
-
-
-    def _choose_solution(self, TPAR1, TPAR2, reference_distance=10.0, method=0):
-        # method = 0: new shadow4 way (essentially the same as in shadow3
-        #             but replacing TSOURCE (unavailable here) by reference_distance
-        # method = 1: use first solution
-        # method = 2: use second solution
-        TPAR = numpy.zeros(TPAR1.size)
-
-        if method == 0:
-            for i in range(TPAR1.size):
-                if ( numpy.abs(TPAR1[i]-reference_distance) <= numpy.abs(TPAR2[i]-reference_distance)):
-                   TPAR[i] = TPAR1[i]
-                else:
-                   TPAR[i] = TPAR2[i]
-        elif method == 1:
-            TPAR = TPAR1
-        elif method == 2:
-            TPAR = TPAR2
-
-        return TPAR
-
 
     def _rotation_surface_conic(self, alpha, axis ):
         if axis == 'x':
@@ -871,8 +1242,6 @@ class S4Conic(S4OpticalSurface):
         c9 = self.ccc[2] * z0**2 + self.ccc[9] - self.ccc[8] * z0
 
         self.ccc = numpy.array([self.ccc[0], self.ccc[1], self.ccc[2], self.ccc[3], self.ccc[4], self.ccc[5], c6, c7, c8, c9])
-
-
 
 
 
@@ -1204,7 +1573,7 @@ if __name__ == "__main__":
         x2 = numpy.zeros((3,10))
         print("plane: ", ccc.get_normal(x2))
 
-        ccc = S4Conic.initialize_as_sphere_from_curvature_radius(1000.0)
+        ccc = S4Conic.initialize_as_sphere_from_external_parameters(1000.0)
         x2 = numpy.zeros((3,10))
         print("R=1000: ", ccc.get_normal(x2))
 
@@ -1212,7 +1581,7 @@ if __name__ == "__main__":
         x2 = numpy.zeros((3,10))
         print("R from (p,q): ", ccc.get_normal(x2))
 
-        ccc = S4Conic.initialize_as_sphere_from_curvature_radius(-1000.0)
+        ccc = S4Conic.initialize_as_sphere_from_external_parameters(-1000.0)
         x2 = numpy.zeros((3,10))
         print("R=-1000: ", ccc.get_normal(x2))
     if True:
@@ -1278,7 +1647,7 @@ if __name__ == "__main__":
         ccc.write_mesh_h5file(x, y, filename="/tmp/mirror111.h5")
 
     if True:
-        a = S4Conic.initialize_as_sphere_from_curvature_radius(100)
+        a = S4Conic.initialize_as_sphere_from_external_parameters(100)
         print(a.info())
 
     if True:
