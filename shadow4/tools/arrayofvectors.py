@@ -69,7 +69,7 @@ def vector_diff(u, v):
         w[: ,i] = u[: ,i] - v[: ,i]
     return w
 
-def vector_reflection(v1,normal): # copied from s4_conic()
+def vector_reflection(v1, normal): # copied from s4_conic()
     # \vec{r} = \vec{i} - 2 (\vec{i} \vec{n}) \vec{n}
     normal_norm = vector_norm(normal)
     return v1 - 2 * vector_multiply_scalar( normal_norm, vector_dot(v1, normal_norm))
