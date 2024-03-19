@@ -1,4 +1,5 @@
 """
+
 Defines the shadow4 Conic class to deal with conic surfaces (plane, sphere, ellipsoid, paraboloid and hyperboloid).
 
 The conic surface is expressed as F(x,y,z)=0, with F a quadratic finction of x, y, and z. In other words
@@ -7,6 +8,8 @@ The conic surface is expressed as F(x,y,z)=0, with F a quadratic finction of x, 
       ccc[0]*X^2 + ccc[1]*Y^2 + ccc[2]*Z^2 +
       ccc[3]*X*Y + ccc[4]*Y*Z + ccc[5]*X*Z  +
       ccc[6]*X   + ccc[7]*Y   + ccc[8]*Z + ccc[9] = 0
+
+
 
 """
 import numpy
@@ -20,7 +23,7 @@ from shadow4.tools.arrayofvectors import vector_reflection
 
 class S4Conic(S4OpticalSurface):
     """
-    Class to manage conic optical surfaces [expressed as a quadratic polynomial].
+    Class to manage conic optical surfaces [expressed as a quadratoc polynomial].
 
     Parameters
     ----------
@@ -65,7 +68,7 @@ class S4Conic(S4OpticalSurface):
 
     def set_coefficients(self, ccc):
         """
-        Sets the conic coefficients.
+        Sets the connic coefficients.
 
         Parameters
         ----------
@@ -147,7 +150,6 @@ class S4Conic(S4OpticalSurface):
         conic.set_ellipsoid_from_external_parameters(AXMAJ, AXMIN, ELL_THE)
         return cls._transform_conic(conic, cylindrical, cylangle, switch_convexity)
 
-    #todo: review
     @classmethod
     def initialize_as_hyperboloid_from_external_parameters(cls, AXMAJ, AXMIN, ELL_THE,
                                                          cylindrical=0, cylangle=0.0, switch_convexity=0):
@@ -177,7 +179,6 @@ class S4Conic(S4OpticalSurface):
         conic.set_hyperboloid_from_external_parameters(AXMAJ, AXMIN, ELL_THE)
         return cls._transform_conic(conic, cylindrical, cylangle, switch_convexity)
 
-    # todo: review
     @classmethod
     def initialize_as_paraboloid_from_external_parameters(cls, parabola_parameter,
                                                          cylindrical=0, cylangle=0.0, switch_convexity=0):
@@ -653,58 +654,6 @@ class S4Conic(S4OpticalSurface):
         """
         return S4Conic.initialize_from_coefficients(self.ccc)
 
-    def surface_height(self, y=0, x=0, return_solution=0):
-        """
-        Calculates a 2D mesh array with the surface heights.
-
-        Parameters
-        ----------
-        y : float (a scalar, vector or mesh)
-            The y coordinate(s).
-        x : float (a scalar, vector or mesh)
-            The x coordinate(s).
-        return_solution : int, optional
-            Flag:
-            0 = guess the solution with zero at pole,
-            1 = get first solution,
-            2 = get second solution.
-
-        Returns
-        -------
-        2D numpy array
-            the height scalar/vector/mesh depending on inputs.
-        Notes
-        -----
-        y and x must be homogeneous, otherwise an error will occur:
-             both scalars
-             both mesh
-             one scalar and another vector
-
-        """
-        aa = self.ccc[2]
-        bb = self.ccc[4] * y + self.ccc[5] * x + self.ccc[8]
-        cc = self.ccc[0] * x**2 + self.ccc[1] * y**2 + self.ccc[3] * x * y + \
-            self.ccc[6] * x + self.ccc[7] * y + self.ccc[9]
-
-        if aa != 0:
-            discr = bb**2 - 4 * aa * cc + 0j
-            s1 = (-bb + numpy.sqrt(discr)) / 2 / aa
-            s2 = (-bb - numpy.sqrt(discr)) / 2 / aa
-
-            if return_solution == 0: # select the solution close to zero at pole
-                if numpy.abs(s1).min() < numpy.abs(s2).min():
-                    ss = s1
-                else:
-                    ss = s2
-            elif return_solution == 1:
-                ss = s1
-            else:
-                ss = s2
-        else:
-            ss = -cc / bb
-
-        return numpy.real(ss)
-
     def get_normal(self, x2):
         """
         Calculates the normal vector (or stack of vectors) at a point on the surface.
@@ -875,6 +824,90 @@ class S4Conic(S4OpticalSurface):
             TPAR = TPAR2
 
         return TPAR
+
+    def surface_height(self, x, y, return_solution=0):
+        """
+         Calculates a 2D mesh array with the surface heights.
+
+         Parameters
+         ----------
+         x : float (a scalar, vector or mesh)
+             The x coordinate(s).
+         y : float (a scalar, vector or mesh)
+             The y coordinate(s).
+
+         return_solution : int, optional
+             Flag:
+             0 = guess the solution with zero at pole,
+             1 = get first solution,
+             2 = get second solution.
+
+         Returns
+         -------
+         2D numpy array
+             the height scalar/vector/mesh depending on inputs.
+         Notes
+         -----
+         x and y must be homogeneous, otherwise an error will occur:
+              - both scalars
+              - both mesh
+              - one scalar and another vector
+         """
+        return self.height(y, x, return_solution=return_solution)
+
+    def height(self, y=0, x=0, return_solution=0):
+        """
+         Calculates a 2D mesh array with the surface heights.
+         (The same as surface_height but x,y interchanged!).
+
+         Parameters
+         ----------
+         y : float (a scalar, vector or mesh), optional
+             The y coordinate(s).
+         x : float (a scalar, vector or mesh)
+             The x coordinate(s).
+
+
+         return_solution : int, optional
+             Flag:
+             0 = guess the solution with zero at pole,
+             1 = get first solution,
+             2 = get second solution.
+
+         Returns
+         -------
+         2D numpy array
+             the height scalar/vector/mesh depending on inputs.
+         Notes
+         -----
+         y and x must be homogeneous, otherwise an error will occur:
+              - both scalars
+              - both mesh
+              - one scalar and another vector
+         """
+        aa = self.ccc[2]
+        bb = self.ccc[4] * y + self.ccc[5] * x + self.ccc[8]
+        cc = self.ccc[0] * x**2 + self.ccc[1] * y**2 + self.ccc[3] * x * y + \
+            self.ccc[6] * x + self.ccc[7] * y + self.ccc[9]
+
+        if aa != 0:
+            discr = bb**2 - 4 * aa * cc + 0j
+            s1 = (-bb + numpy.sqrt(discr)) / 2 / aa
+            s2 = (-bb - numpy.sqrt(discr)) / 2 / aa
+
+            if return_solution == 0: # select the solution close to zero at pole
+                if numpy.abs(s1).min() < numpy.abs(s2).min():
+                    ss = s1
+                else:
+                    ss = s2
+            elif return_solution == 1:
+                ss = s1
+            else:
+                ss = s2
+        else:
+            ss = -cc / bb
+
+        return numpy.real(ss)
 
     # todo: move the apply_* methods to the parent class
     def apply_specular_reflection_on_beam(self, beam):
