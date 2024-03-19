@@ -58,7 +58,7 @@ class S4Mesh(S4OpticalSurface):
         return self._surface(x, y)
 
     def add_to_mesh(self, z1: Union[int, float, numpy.ndarray]):
-        print(">>>>>>>>>>>>>>ADDING TO MESH", z1.shape, self._mesh_z.shape, z1, self._mesh_z)
+        #print(">>>>>>>>>>>>>>ADDING TO MESH", z1.shape, self._mesh_z.shape, z1, self._mesh_z)
         if self._mesh_z is None: raise ValueError("Cannot add to None")
 
         if isinstance(z1, float) or isinstance(z1, int):  self._mesh_z += z1
@@ -187,6 +187,7 @@ class S4Mesh(S4OpticalSurface):
 
         i_flag = numpy.ones(npoints)
         answer, success = self._solve(x_start=numpy.zeros(npoints))
+
         i_flag[numpy.where(success == False)] = -1
 
         t1 = time.time()
@@ -295,7 +296,7 @@ class S4Mesh(S4OpticalSurface):
     #
 
     def _calculate_surface_from_mesh(self):
-        self.__interpolating_agent = interpolate.RectBivariateSpline(self._mesh_x, self._mesh_y, self._mesh_z, kx=1, ky=3)
+        self.__interpolating_agent = interpolate.RectBivariateSpline(self._mesh_x, self._mesh_y, self._mesh_z, kx=3, ky=3)
 
         self._surface = lambda x, y: self.__interpolating_agent.ev(x, y)
 
