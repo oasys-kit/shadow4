@@ -47,6 +47,7 @@ __authors__ = ["M Sanchez del Rio, Luca Rebuffi"]
 __license__ = "MIT"
 __date__ = "2016-now"
 
+import os
 from setuptools import setup
 
 PACKAGES = [
@@ -82,13 +83,18 @@ INSTALL_REQUIRES = (
     'crystalpy>=0.0.20',
 )
 
+README_FILE = os.path.join(os.path.dirname(__file__), 'README.rst')
+LONG_DESCRIPTION = open(README_FILE).read()
 
 setup(name='shadow4',
-      version='0.1.28',
+      version='0.1.29',
       description='shadow implementation in python',
+      long_description=LONG_DESCRIPTION,
+      long_description_content_type='text/x-rst',
       author='Manuel Sanchez del Rio, Luca Rebuffi',
       author_email='srio@esrf.eu',
       url='https://github.com/oasys-kit/shadow4/',
+      download_url='https://github.com/oasys-kit/shadow4/',
       packages=PACKAGES,
       install_requires=INSTALL_REQUIRES,
      )
