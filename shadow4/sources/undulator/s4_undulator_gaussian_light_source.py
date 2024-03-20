@@ -276,7 +276,7 @@ class S4UndulatorGaussianLightSource(S4LightSource):
         if u.is_monochromatic():
             e = numpy.zeros(NRAYS) + E0
         else:
-            e = numpy.random.random(NRAYS) * (delta_e) + E0
+            e = (numpy.random.random(NRAYS) - 0.5) * delta_e + E0
 
         beam.set_photon_energy_eV(e)
 
