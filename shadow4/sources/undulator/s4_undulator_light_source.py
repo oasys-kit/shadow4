@@ -242,7 +242,7 @@ class S4UndulatorLightSource(S4LightSource):
         Returns
         -------
         tuple
-            (power density, array_x, array_y) in units W/m.
+            (power density, array_x, array_y) in units W/rad2.
 
         """
 

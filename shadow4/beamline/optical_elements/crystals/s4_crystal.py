@@ -801,21 +801,31 @@ class S4CrystalElement(S4BeamlineElement):
         )
 
         # Calculate outgoing Photon.
-        # apply_reflectivity = False  # todo set always  True
-        outgoing_complex_amplitude_photon = perfect_crystal._calculatePhotonOut(photons_in,
-                                                                                apply_reflectivity=True,
-                                                                                calculation_method=1,
-                                                                                is_thick=soe._is_thick,
-                                                                                use_transfer_matrix=0
-                                                                                )
+        apply_reflectivity = 1 # todo: set always  True
+        if apply_reflectivity:
+            # todo: rename to perfect_crystal.calculatePhotonOut [already in crystalpy, not yet released]
+            outgoing_complex_amplitude_photon = perfect_crystal._calculatePhotonOut(photons_in,
+                                                                                    apply_reflectivity=True,
+                                                                                    calculation_method=1,
+                                                                                    is_thick=soe._is_thick,
+                                                                                    use_transfer_matrix=0
+                                                                                    )
+        else: # in two steps: todo delete
+            # todo: rename to perfect_crystal.calculatePhotonOut [already in crystalpy, not yet released]
+            outgoing_complex_amplitude_photon = perfect_crystal._calculatePhotonOut(photons_in,
+                                                                                    apply_reflectivity=False,
+                                                                                    calculation_method=1,
+                                                                                    is_thick=soe._is_thick,
+                                                                                    use_transfer_matrix=0
+                                                                                    )
+            coeffs = perfect_crystal.calculateDiffraction(photons_in,
+                                                          calculation_method=1,
+                                                          is_thick=1, #soe._is_thick,
+                                                          use_transfer_matrix=0)
+            print(coeffs["S"])
+            outgoing_complex_amplitude_photon.rescaleEsigma(coeffs["S"])
+            outgoing_complex_amplitude_photon.rescaleEpi(coeffs["P"])
 
-        # if not apply_reflectivity:  # todo delete
-        #     coeffs = perfect_crystal.calculateDiffraction(photons_in,
-        #                                                   calculation_method=1,
-        #                                                   is_thick=0,
-        #                                                   use_transfer_matrix=0)
-        #     outgoing_complex_amplitude_photon.rescaleEsigma(coeffs["S"])
-        #     outgoing_complex_amplitude_photon.rescaleEpi(coeffs["P"])
 
         # copy/apply values from crystalpy photon stack to shadow4 beam
         footprint.apply_reflectivities(
