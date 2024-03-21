@@ -1,3 +1,8 @@
+"""
+
+Defines the shadow4 Toroid class to deal with a toroidal surface (Quartic equation).
+
+"""
 import numpy
 from shadow4.optical_surfaces.s4_optical_surface import S4OpticalSurface
 
@@ -7,6 +12,31 @@ from shadow4.tools.arrayofvectors import vector_reflection
 from shadow4.tools.arrayofvectors import vector_refraction, vector_scattering
 
 class S4Toroid(S4OpticalSurface):
+    """
+    Class to manage toroidal optical surfaces [expressed as a quartic polynomial].
+
+    Parameters
+    ----------
+    r_maj : float, optional
+        Toroid major radius in m. Note that this **is not** the tangential radius mut the radius of
+         the toroidal axis, therefore for the usual case of concave surface it is the
+         tangential radius minus the sagittal radius.
+    r_min : float, optional
+        Toroid minor radius (sagittal) in m.
+    f_torus : int, optional
+        A flag to indicate the mirror pole location within the toroid:
+        - (0): lower/outer (concave/concave),
+        - (1): lower/inner (concave/convex),
+        - (2): upper/inner (convex/concave),
+        - (3): upper/outer (convex/convex).
+
+    References
+    ----------
+    See a graphic in Pag 26 of
+    https://github.com/srio/shadow3-docs/blob/master/doc/shadow-trace.pdf
+
+    """
+
     def __init__(self,
                  r_maj=1e10,# initialize as plane  Nota bene: r_maj is not the tangential radius!!!
                  r_min=1e10,# initialize as plane
@@ -24,42 +54,127 @@ class S4Toroid(S4OpticalSurface):
     #
     # setters + getters
     #
-    def set_from_focal_distances(self, ssour, simag, theta_grazing):
+    def set_from_focal_distances(self, ssour, simag, theta_grazing, verbose=1):
+        """
+        Sets the toroid radii from factory parameters (p, q, theta).
 
+        Parameters
+        ----------
+        p : float
+            The distance from the source to the mirror pole in m.
+        q : float
+            The distance from the mirror pole to the image in m.
+        theta_grazing : float
+            The grazing angle in deg.
+        cylindrical : int, optional
+            Flag:  0=the surface is curved in both directions. 1=the surface is flat in one direction.
+        cylangle : float, optional
+            For cylindrical=1, the angle of the cylinder axis with the X axis (CCW).
+        switch_convexity : int, optional
+            Flag to indicate that the convexity os inverted.
+        verbose : int, optional
+            Flag for verbose output.
+
+        Returns
+        -------
+        instance of S4Conic
+        """
         theta = (numpy.pi/2) - theta_grazing
         R_TANGENTIAL = ssour * simag * 2 / numpy.cos(theta) / (ssour + simag)
         R_SAGITTAL  = ssour * simag * 2 * numpy.cos(theta) / (ssour + simag)
 
-        print(">>>>> RTAN, RSAG: ",R_TANGENTIAL,R_SAGITTAL)
         self.r_maj = R_TANGENTIAL - R_SAGITTAL
         self.r_min = R_SAGITTAL
 
+        if verbose:
+            print("R_TANGENTIAL, R_SAGITTAL: ", R_TANGENTIAL, R_SAGITTAL)
+            print("Toroid r_maj, r_min: ", self.r_maj, self.r_min)
+
     def set_toroid_radii(self, r_maj, r_min):
+        """
+        Sets the toroid radii.
+
+        Parameters
+        ----------
+        r_maj : float
+            The toroi major radius in m (This is **not* the tangential radius).
+        r_min : float
+            The toroi minur radius in m.
+        """
         self.r_maj = r_maj
         self.r_min = r_min
 
     def set_tangential_and_sagittal_radii(self, rtan, rsag):
+        """
+        Sets the toroid radii from the tangential and sagittal radius.
+
+        Parameters
+        ----------
+        rtan : float
+            The surface tangential radius in m.
+        rsag : float
+            The surface sagittal radius in m.
+        """
         self.r_min = rsag
         self.r_maj = rtan - rsag
 
     def set_f_torus(self, f_torus=0):
+        """
+        Sets the flag for the selected section of the toroid.
+
+        Parameters
+        ----------
+        f_torus : int, optional
+            A flag to indicate the mirror pole location within the toroid:
+            - (0): lower/outer (concave/concave),
+            - (1): lower/inner (concave/convex),
+            - (2): upper/inner (convex/concave),
+            - (3): upper/outer (convex/convex).
+        """
         self.f_torus = f_torus
+
+    def get_toroid_radii(self):
+        """
+        Gets the toroid radii r_maj, r_min.
+        Note that r_maj is **not** the tangential radius!
+
+        Returns
+        -------
+        tuple
+        (r_maj, r_min) Note that r_maj is not the tangential radius!
+        """
+        return self.r_maj, self.r_min
+
+    def get_tangential_and_sagittal_radii(self):
+        """
+        Gets the radii of the focusing surface.
+
+        Returns
+        -------
+        tuple
+        (r_rangential, r_sagittal) in m.
+        """
+        return self.r_maj + self.r_min, self.r_min
+
 
     def set_cylindrical(self, CIL_ANG):
         raise Exception("Cannot set_cylindrical() in a Toroid")
 
-    def get_toroid_radii(self):
-        return self.r_maj, self.r_min
-
-    def get_tangential_and_sagittal_radii(self):
-        return self.r_maj + self.r_min, self.r_min
-
+    def _set_cylindrical(self, CIL_ANG):
+        raise Exception("Cannot set_cylindrical() in a Toroid")
 
     #
     # overloaded methods
     #
 
     def info(self):
+        """
+        Creates an info text.
+
+        Returns
+        -------
+        str
+        """
         txt = ""
 
         txt += "++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++\n"
@@ -72,34 +187,31 @@ class S4Toroid(S4OpticalSurface):
         return txt
 
     def duplicate(self):
+        """
+        Duplicates an instance of S4Toroid
+
+        Returns
+        -------
+        instance of S4Toroid.
+        """
         return S4Toroid(r_maj=self.r_maj, r_min=self.r_min, f_torus=self.f_torus)
 
-    def surface_height(self, X, Y, solution_index=3, method=0):
-        if method == 0: # fast
-            Rt, Rs = self.get_tangential_and_sagittal_radii()
-            if solution_index == 0:
-                return Rt + Rs + numpy.sqrt(Rt ** 2 - Y ** 2) + numpy.sqrt(Rs ** 2 - X ** 2)
-            elif solution_index == 1:
-                return Rt + Rs + numpy.sqrt(Rt ** 2 - Y ** 2) - numpy.sqrt(Rs ** 2 - X ** 2)
-            elif solution_index == 2:
-                return Rt + Rs - numpy.sqrt(Rt ** 2 - Y ** 2) + numpy.sqrt(Rs ** 2 - X ** 2)
-            elif solution_index == 3:
-                return Rt + Rs - numpy.sqrt(Rt**2 - Y**2) - numpy.sqrt(Rs**2 - X**2)
-        else: # using calculate_intercept
-            xx = X.flatten()
-            yy = Y.flatten()
-            zz = numpy.zeros_like(xx)
+    def get_normal(self, x2):
+        """
+        Calculates the normal vector (or stack of vectors) at a point on the surface.
 
-            XIN = numpy.vstack((xx, yy, zz))
-            VIN = numpy.vstack((zz, zz, numpy.ones_like(xx)))
+        Parameters
+        ----------
+        x2 : numpy array
+            The coordinates vector(s) of shape [3, NRAYS].
 
-            HEIGHT, i_res = self.calculate_intercept_and_choose_solution(XIN, VIN, return_all_solutions=True)
+        Returns
+        -------
+        numpy array
+            The normal vector(s) of shape [3, NRAYS].
 
-            height = HEIGHT[solution_index,:]
-            height.shape = X.shape
-            return height
+        """
 
-    def get_normal(self,x2):
         # ;
         # ; Calculates the normal at intercept points x2 [see shadow's normal.F]
         # ;
@@ -119,21 +231,68 @@ class S4Toroid(S4OpticalSurface):
         elif self.f_torus == 3:
             Z_IN = Z_IN + self.r_maj + self.r_min
 
-        PART = X_IN**2 + Y_IN**2 + Z_IN**2
+        PART = X_IN ** 2 + Y_IN ** 2 + Z_IN ** 2
 
-        normal[0,:] = 4*X_IN*(PART +  self.r_maj**2 - self.r_min**2)
-        normal[1,:] = 4*Y_IN*(PART - (self.r_maj**2 + self.r_min**2))
-        normal[2,:] = 4*Z_IN*(PART - (self.r_maj**2 + self.r_min**2))
+        normal[0, :] = 4 * X_IN * (PART + self.r_maj ** 2 - self.r_min ** 2)
+        normal[1, :] = 4 * Y_IN * (PART - (self.r_maj ** 2 + self.r_min ** 2))
+        normal[2, :] = 4 * Z_IN * (PART - (self.r_maj ** 2 + self.r_min ** 2))
 
-        n2 = numpy.sqrt(normal[0,:]**2 + normal[1,:]**2 + normal[2,:]**2)
+        n2 = numpy.sqrt(normal[0, :] ** 2 + normal[1, :] ** 2 + normal[2, :] ** 2)
 
-        normal[0,:] /= n2
-        normal[1,:] /= n2
-        normal[2,:] /= n2
+        normal[0, :] /= n2
+        normal[1, :] /= n2
+        normal[2, :] /= n2
 
         return normal
 
+    def calculate_intercept_and_choose_solution(self, x1, v1, reference_distance=0.0):
+        """
+
+        Calculates the intercept point (or stack of points) for a given ray or stack of rays,
+        given a point XIN and director vector VIN.
+
+        Parameters
+        ----------
+        XIN : numpy array
+            The coordinates of a point of origin of the ray: shape [3, NRAYS].
+        VIN : numpy array
+            The coordinates of a director vector the ray: shape [3, NRAYS].
+        reference_distance : float, optional
+            A reference distance. The selected solution will be the closest to this refecrence_distance.
+        method : int, optional
+            0: automatic selection (essentially the same as in shadow3 but replacing TSOURCE (unavailable here) by
+            reference_distance).
+            1: use first solution.
+            2: use second solution.
+
+        Returns
+        -------
+        numpy array
+            The selected solution (time or flight path).
+
+        """
+        t0, t1, t2, t3 = self.calculate_intercept(x1, v1)
+        out = self.choose_solution(t0, t1, t2, t3)
+        return out
+
+
     def calculate_intercept(self, XIN, VIN, vectorize=1):
+        """
+        Calculates the intercept point (or stack of points) for a given ray or stack of rays,
+        given a point XIN and director vector VIN.
+
+        Parameters
+        ----------
+        XIN : numpy array
+            The coordinates of a point of origin of the ray: shape [3, NRAYS].
+        VIN : numpy array
+            The coordinates of a director vector the ray: shape [3, NRAYS].
+
+        Returns
+        -------
+        tuple
+            (t0, t1, t2, t3) The four solutions of the quartic equation (time or flight path).
+        """
 
         P1 = XIN[0,:]
         P2 = XIN[1,:]
@@ -268,6 +427,38 @@ class S4Toroid(S4OpticalSurface):
             return SOLUTION_T[0], SOLUTION_T[1], SOLUTION_T[2], SOLUTION_T[3]
 
     def choose_solution(self, t0, t1, t2, t3, vectorize=1, zero_below=1e-6):
+        """
+        Selects the wanted single solution from the total of solutions.
+
+        Parameters
+        ----------
+        t0 : numpy array
+            The array with the first solution.
+        t1 : numpy array
+            The array with the second solution.
+        t2 : numpy array
+            The array with the thirs solution.
+        t3 : numpy array
+            The array with the fourth solution.
+        reference_distance : float, optional
+            A reference distance. The selected solution is the closer to this reference distance.
+        vectorize : int, optional
+            0: iterative (loop) method,
+            1: use vectorized method.
+        zero_below : float, optional
+            A level of zero for intermediate step in finding the solutions using vectorized=1.
+
+        Returns
+        -------
+        numpy array
+            The chosen solution.
+
+        References
+        ----------
+        zero_below if used in the quartic equation solver:
+        https://github.com/oasys-kit/SR-xraylib/blob/master/srxraylib/profiles/diaboloid/fqs.py
+
+        """
         i_res  = numpy.ones( t0.size )
         answer = numpy.ones( t0.size )
 
@@ -345,11 +536,61 @@ class S4Toroid(S4OpticalSurface):
 
         return answer, i_res
 
-    def calculate_intercept_and_choose_solution(self, x1, v1, reference_distance=0.0):
 
-        t0, t1, t2, t3 = self.calculate_intercept(x1, v1)
-        out = self.choose_solution(t0, t1, t2, t3)
-        return out
+
+
+    def surface_height(self, X, Y, solution_index=3, method=0):
+        """
+        Calculates a 2D mesh array with the surface heights.
+
+        Parameters
+        ----------
+        X : numpy 2D array (mesh)
+            The x coordinate(s).
+        Y : numpy 2D array
+            The y coordinate(s).
+        solution_index : int, optional
+            The index of the solution used for creating the height map.
+        method : int, optional
+            0 = guess the solution with zero at pole,
+            1 = get first solution,
+            2 = get second solution.
+
+        return_solution : int, optional
+            Flag:
+            0 = guess the solution with zero at pole,
+            1 = get first solution,
+            2 = get second solution.
+
+        Returns
+        -------
+        2D numpy array
+            the height mesh.
+        """
+        if method == 0: # fast
+            Rt, Rs = self.get_tangential_and_sagittal_radii()
+            if solution_index == 0:
+                return Rt + Rs + numpy.sqrt(Rt ** 2 - Y ** 2) + numpy.sqrt(Rs ** 2 - X ** 2)
+            elif solution_index == 1:
+                return Rt + Rs + numpy.sqrt(Rt ** 2 - Y ** 2) - numpy.sqrt(Rs ** 2 - X ** 2)
+            elif solution_index == 2:
+                return Rt + Rs - numpy.sqrt(Rt ** 2 - Y ** 2) + numpy.sqrt(Rs ** 2 - X ** 2)
+            elif solution_index == 3:
+                return Rt + Rs - numpy.sqrt(Rt**2 - Y**2) - numpy.sqrt(Rs**2 - X**2)
+        else: # using calculate_intercept
+            xx = X.flatten()
+            yy = Y.flatten()
+            zz = numpy.zeros_like(xx)
+
+            XIN = numpy.vstack((xx, yy, zz))
+            VIN = numpy.vstack((zz, zz, numpy.ones_like(xx)))
+
+            HEIGHT, i_res = self.calculate_intercept_and_choose_solution(XIN, VIN, return_all_solutions=True)
+
+            height = HEIGHT[solution_index,:]
+            height.shape = X.shape
+            return height
+
 
     # todo: move the apply_* methods to the parent class
     def apply_specular_reflection_on_beam(self,newbeam):
@@ -513,23 +754,8 @@ class S4Toroid(S4OpticalSurface):
     # calculations
     #
 
-    # # todo reuse arrayofvectors...
-    # def vector_reflection(self, v1, normal):
-    #     tmp = v1 * normal
-    #     tmp2 = tmp[0,:] + tmp[1,:] + tmp[2,:]
-    #     tmp3 = normal.copy()
-    #
-    #     for jj in (0,1,2):
-    #         tmp3[jj,:] = tmp3[jj,:] * tmp2
-    #
-    #     v2 = v1 - 2 * tmp3
-    #     v2mod = numpy.sqrt(v2[0,:]**2 + v2[1,:]**2 + v2[2,:]**2)
-    #     v2 /= v2mod
-    #
-    #     return v2
-
     def switch_convexity(self):
-        raise Exception("Cannot switch_convexity() in a Toroid")
+        raise Exception("Cannot switch_convexity() in a Toroid. Select the adequated f_torus.")
 
 
 if __name__ == "__main__":

@@ -2,7 +2,7 @@
 
 Defines the shadow4 Conic class to deal with conic surfaces (plane, sphere, ellipsoid, paraboloid and hyperboloid).
 
-The conic surface is expressed as F(x,y,z)=0, with F a quadratic finction of x, y, and z. In other words
+The conic surface is expressed as F(x,y,z)=0, with F a quadratic function of x, y, and z. In other words
 
       F(x,y,z) =
       ccc[0]*X^2 + ccc[1]*Y^2 + ccc[2]*Z^2 +
@@ -68,7 +68,7 @@ class S4Conic(S4OpticalSurface):
 
     def set_coefficients(self, ccc):
         """
-        Sets the connic coefficients.
+        Sets the conic coefficients.
 
         Parameters
         ----------
@@ -302,7 +302,7 @@ class S4Conic(S4OpticalSurface):
     def initialize_as_sphere_from_focal_distances(cls, p, q, theta_grazing,
                                                   cylindrical=0, cylangle=0.0, switch_convexity=0, verbose=1):
         """
-        Creates an instance of S4Connic representing a sphere from dactory parameters (p, q, theta).
+        Creates an instance of S4Conic representing a sphere from factory parameters (p, q, theta).
 
         Parameters
         ----------
@@ -806,6 +806,27 @@ class S4Conic(S4OpticalSurface):
         return TPAR1.real, TPAR2.real, IFLAG
 
     def choose_solution(self, TPAR1, TPAR2, reference_distance=10.0, method=0):
+        """
+        Selects the wanted single solution from the total of solutions.
+
+        Parameters
+        ----------
+        TPAR1 : numpy array
+            The array with the first solution.
+        TPAR2 : numpy array
+            The array with the second solution.
+        reference_distance : float, optional
+            A reference distance. The selected solution is the closer to this reference distance.
+        method : int, optional
+            0: new shadow4 way (essentially the same as in shadow3 but replacing TSOURCE (unavailable here) by reference_distance,
+            1: use first solution,
+            2: use second solution.
+
+        Returns
+        -------
+        numpy array
+            The chosen solution.
+        """
         # method = 0: new shadow4 way (essentially the same as in shadow3
         #             but replacing TSOURCE (unavailable here) by reference_distance
         # method = 1: use first solution
