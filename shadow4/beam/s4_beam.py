@@ -884,7 +884,7 @@ class S4Beam(object):
             else:
                 weights = self.get_column(ref,nolost=nolost)
 
-            (hh,xx,yy) = numpy.histogram2d(col1, col2, bins=[nbins_h,nbins_v], range=[xrange,yrange], normed=False, weights=weights)
+            (hh,xx,yy) = numpy.histogram2d(col1, col2, bins=[nbins_h,nbins_v], range=[xrange,yrange], weights=weights)
 
             ticket['xrange'] = xrange
             ticket['yrange'] = yrange
