@@ -803,16 +803,14 @@ class S4CrystalElement(S4BeamlineElement):
         # Calculate outgoing Photon.
         apply_reflectivity = 1 # todo: set always  True
         if apply_reflectivity:
-            # todo: rename to perfect_crystal.calculatePhotonOut [already in crystalpy, not yet released]
-            outgoing_complex_amplitude_photon = perfect_crystal._calculatePhotonOut(photons_in,
+            outgoing_complex_amplitude_photon = perfect_crystal.calculatePhotonOut(photons_in,
                                                                                     apply_reflectivity=True,
                                                                                     calculation_method=1,
                                                                                     is_thick=soe._is_thick,
                                                                                     use_transfer_matrix=0
                                                                                     )
         else: # in two steps: todo delete
-            # todo: rename to perfect_crystal.calculatePhotonOut [already in crystalpy, not yet released]
-            outgoing_complex_amplitude_photon = perfect_crystal._calculatePhotonOut(photons_in,
+            outgoing_complex_amplitude_photon = perfect_crystal.calculatePhotonOut(photons_in,
                                                                                     apply_reflectivity=False,
                                                                                     calculation_method=1,
                                                                                     is_thick=soe._is_thick,

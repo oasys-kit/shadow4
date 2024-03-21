@@ -1,8 +1,10 @@
 import numpy
 from shadow4.optical_surfaces.s4_optical_surface import S4OpticalSurface
-from shadow4.tools.arrayofvectors import vector_refraction, vector_scattering
+
 from shadow4.tools.arrayofvectors import vector_cross, vector_dot, vector_multiply_scalar, vector_sum, vector_diff
 from shadow4.tools.arrayofvectors import vector_modulus_square, vector_modulus, vector_norm, vector_rotate_around_axis
+from shadow4.tools.arrayofvectors import vector_reflection
+from shadow4.tools.arrayofvectors import vector_refraction, vector_scattering
 
 class S4Toroid(S4OpticalSurface):
     def __init__(self,
@@ -19,6 +21,9 @@ class S4Toroid(S4OpticalSurface):
         self.r_min = r_min
         self.f_torus = f_torus
 
+    #
+    # setters + getters
+    #
     def set_from_focal_distances(self, ssour, simag, theta_grazing):
 
         theta = (numpy.pi/2) - theta_grazing
@@ -37,28 +42,62 @@ class S4Toroid(S4OpticalSurface):
         self.r_min = rsag
         self.r_maj = rtan - rsag
 
+    def set_f_torus(self, f_torus=0):
+        self.f_torus = f_torus
+
+    def set_cylindrical(self, CIL_ANG):
+        raise Exception("Cannot set_cylindrical() in a Toroid")
+
     def get_toroid_radii(self):
         return self.r_maj, self.r_min
 
     def get_tangential_and_sagittal_radii(self):
         return self.r_maj + self.r_min, self.r_min
 
-    def set_f_torus(self, f_torus=0):
-        self.f_torus = f_torus
 
-    def vector_reflection(self,v1,normal):
-        tmp = v1 * normal
-        tmp2 = tmp[0,:] + tmp[1,:] + tmp[2,:]
-        tmp3 = normal.copy()
+    #
+    # overloaded methods
+    #
 
-        for jj in (0,1,2):
-            tmp3[jj,:] = tmp3[jj,:] * tmp2
+    def info(self):
+        txt = ""
 
-        v2 = v1 - 2 * tmp3
-        v2mod = numpy.sqrt(v2[0,:]**2 + v2[1,:]**2 + v2[2,:]**2)
-        v2 /= v2mod
+        txt += "++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++\n"
+        txt += " Toroid major radius (tangential-sagittal) = %f \n"%(self.r_maj)
+        txt += " Toroid minor radius (sagittal) = %f \n\n"%(self.r_min)
+        txt += " Toroid tangential (Rmaj+Rmin) = %f \n"%(self.r_maj+self.r_min)
+        txt += " Toroid sagittal (Rmin) = %f \n\n"%(self.r_min)
+        txt += "++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++'n"
 
-        return v2
+        return txt
+
+    def duplicate(self):
+        return S4Toroid(r_maj=self.r_maj, r_min=self.r_min, f_torus=self.f_torus)
+
+    def surface_height(self, X, Y, solution_index=3, method=0):
+        if method == 0: # fast
+            Rt, Rs = self.get_tangential_and_sagittal_radii()
+            if solution_index == 0:
+                return Rt + Rs + numpy.sqrt(Rt ** 2 - Y ** 2) + numpy.sqrt(Rs ** 2 - X ** 2)
+            elif solution_index == 1:
+                return Rt + Rs + numpy.sqrt(Rt ** 2 - Y ** 2) - numpy.sqrt(Rs ** 2 - X ** 2)
+            elif solution_index == 2:
+                return Rt + Rs - numpy.sqrt(Rt ** 2 - Y ** 2) + numpy.sqrt(Rs ** 2 - X ** 2)
+            elif solution_index == 3:
+                return Rt + Rs - numpy.sqrt(Rt**2 - Y**2) - numpy.sqrt(Rs**2 - X**2)
+        else: # using calculate_intercept
+            xx = X.flatten()
+            yy = Y.flatten()
+            zz = numpy.zeros_like(xx)
+
+            XIN = numpy.vstack((xx, yy, zz))
+            VIN = numpy.vstack((zz, zz, numpy.ones_like(xx)))
+
+            HEIGHT, i_res = self.calculate_intercept_and_choose_solution(XIN, VIN, return_all_solutions=True)
+
+            height = HEIGHT[solution_index,:]
+            height.shape = X.shape
+            return height
 
     def get_normal(self,x2):
         # ;
@@ -94,34 +133,7 @@ class S4Toroid(S4OpticalSurface):
 
         return normal
 
-    def surface_height(self, X, Y, solution_index=3, method=0):
-
-        if method == 0: # fast
-            Rt, Rs = self.get_tangential_and_sagittal_radii()
-            if solution_index == 0:
-                return Rt + Rs + numpy.sqrt(Rt ** 2 - Y ** 2) + numpy.sqrt(Rs ** 2 - X ** 2)
-            elif solution_index == 1:
-                return Rt + Rs + numpy.sqrt(Rt ** 2 - Y ** 2) - numpy.sqrt(Rs ** 2 - X ** 2)
-            elif solution_index == 2:
-                return Rt + Rs - numpy.sqrt(Rt ** 2 - Y ** 2) + numpy.sqrt(Rs ** 2 - X ** 2)
-            elif solution_index == 3:
-                return Rt + Rs - numpy.sqrt(Rt**2 - Y**2) - numpy.sqrt(Rs**2 - X**2)
-        else: # using calculate_intercept
-            xx = X.flatten()
-            yy = Y.flatten()
-            zz = numpy.zeros_like(xx)
-
-            XIN = numpy.vstack((xx, yy, zz))
-            VIN = numpy.vstack((zz, zz, numpy.ones_like(xx)))
-
-            HEIGHT, i_res = self.calculate_intercept_and_choose_solution(XIN, VIN, return_all_solutions=True)
-
-            height = HEIGHT[solution_index,:]
-            height.shape = X.shape
-            return height
-
-
-    def calculate_intercept(self, XIN, VIN):
+    def calculate_intercept(self, XIN, VIN, vectorize=1):
 
         P1 = XIN[0,:]
         P2 = XIN[1,:]
@@ -147,8 +159,8 @@ class S4Toroid(S4OpticalSurface):
         elif self.f_torus == 3:
             P3 = P3 + r_maj + r_min
 
-
         #     ! ** Evaluates the quartic coefficients **
+        # z^4 + AA z^3 + BB z^2 + CC z + DD = 0
 
         A	=   r_maj**2 - r_min**2
         B	= -(r_maj**2 + r_min**2)
@@ -177,7 +189,6 @@ class S4Toroid(S4OpticalSurface):
             A * V1 * P1 + B * V2 * P2 + B * V3 * P3
         CC	= 4 * CC
 
-
         # TODO check DD that is the result of adding something like:
         # DD0 + A**2 = -3.16397160937e+23 + 3.16397160937e+23 = 23018340352.0
         # In fortran I get:
@@ -188,98 +199,157 @@ class S4Toroid(S4OpticalSurface):
             2 * A * P1**2 + 2 * B * P2**2 + 2 * B * P3**2 + \
             A**2
 
-
         AA.shape = -1
         BB.shape = -1
         CC.shape = -1
         DD.shape = -1
 
+        if vectorize==0: # traditional method (numpy)
 
-        t0 = numpy.zeros_like(AA, dtype=complex)
-        t1 = numpy.zeros_like(AA, dtype=complex)
-        t2 = numpy.zeros_like(AA, dtype=complex)
-        t3 = numpy.zeros_like(AA, dtype=complex)
-        for k in range(AA.size):
-            h_output2 = numpy.polynomial.polynomial.polyroots([DD[k], CC[k], BB[k], AA[k], 1.0])
-            t0[k] = h_output2[0]
-            t1[k] = h_output2[1]
-            t2[k] = h_output2[2]
-            t3[k] = h_output2[3]
-            # print(">>>> solutions: ", k, t0[k], t1[k], t2[k], t3[k])
+            t0 = numpy.zeros_like(AA, dtype=complex)
+            t1 = numpy.zeros_like(AA, dtype=complex)
+            t2 = numpy.zeros_like(AA, dtype=complex)
+            t3 = numpy.zeros_like(AA, dtype=complex)
+            for k in range(AA.size):
+                h_output2 = numpy.polynomial.polynomial.polyroots([DD[k], CC[k], BB[k], AA[k], 1.0])
+                t0[k] = h_output2[0]
+                t1[k] = h_output2[1]
+                t2[k] = h_output2[2]
+                t3[k] = h_output2[3]
 
-        return t0, t1, t2, t3
+            # for k in range(10):
+            #     print("\n>> coeffs DCBA1: ", [DD[k], CC[k], BB[k], AA[k], 1.0])
+            #     print(">>>> solutions0: ", h_output2)
+            #     z = t0[k]
+            #     print(">>>> result0: ", z ** 4 + AA[k] * z ** 3 + BB[k] * z ** 2 + CC[k] * z + DD[k], )
+            #     z = t1[k]
+            #     print(">>>> result0: ", z ** 4 + AA[k] * z ** 3 + BB[k] * z ** 2 + CC[k] * z + DD[k], )
+            #     z = t2[k]
+            #     print(">>>> result0: ", z ** 4 + AA[k] * z ** 3 + BB[k] * z ** 2 + CC[k] * z + DD[k], )
+            #     z = t3[k]
+            #     print(">>>> result0: ", z ** 4 + AA[k] * z ** 3 + BB[k] * z ** 2 + CC[k] * z + DD[k], )
+
+            return t0, t1, t2, t3
+
+        else:  # vectorised (fqs modified)
+
+            # calculate solutions array
+            #         Input data are coefficients of the Quartic polynomial of the form:
+            #
+            #             p[0]*x^4 + p[1]*x^3 + p[2]*x^2 + p[3]*x + p[4] = 0
+            P = numpy.zeros((AA.size, 5))
+            P[:, 0] = numpy.ones_like(AA)
+            P[:, 1] = AA.copy()
+            P[:, 2] = BB.copy()
+            P[:, 3] = CC.copy()
+            P[:, 4] = DD.copy()
+
+            from srxraylib.profiles.diaboloid.fqs import quartic_roots
+            SOLUTION = quartic_roots(P, modified=1, zero_below=1e-6)
+
+            # from srxraylib.profiles.diaboloid.fqs import multi_quartic_modified
+            # PT = P.T
+            # SOLUTION = multi_quartic_modified(PT[0], PT[1], PT[2], PT[3], PT[4], zero_below=1e-6)
+            # SOLUTION = numpy.array(SOLUTION).T
+
+            # print(">>>>", P.shape, SOLUTION.shape)
+            # for k in range(10): #AA.size):
+            #     print(">>>> solutions1: ", k, SOLUTION[k,:]) #, SOLUTION[k,1], SOLUTION[k,2], SOLUTION[k,3])
+            #     z = SOLUTION[k,0]
+            #     print(">>>> result1: ", P[k, 0] * z ** 4 + P[k, 1] * z ** 3 + P[k, 2] * z ** 2 + P[k, 3] * z + P[k, 4], )
+            #     z = SOLUTION[k,1]
+            #     print(">>>> result1: ", P[k, 0] * z ** 4 + P[k, 1] * z ** 3 + P[k, 2] * z ** 2 + P[k, 3] * z + P[k, 4], )
+            #     z = SOLUTION[k,2]
+            #     print(">>>> result1: ", P[k, 0] * z ** 4 + P[k, 1] * z ** 3 + P[k, 2] * z ** 2 + P[k, 3] * z + P[k, 4], )
+            #     z = SOLUTION[k,3]
+            #     print(">>>> result1: ", P[k, 0] * z ** 4 + P[k, 1] * z ** 3 + P[k, 2] * z ** 2 + P[k, 3] * z + P[k, 4], )
+
+            SOLUTION_T = SOLUTION.T
+            return SOLUTION_T[0], SOLUTION_T[1], SOLUTION_T[2], SOLUTION_T[3]
+
+    def choose_solution(self, t0, t1, t2, t3, vectorize=1, zero_below=1e-6):
+        i_res  = numpy.ones( t0.size )
+        answer = numpy.ones( t0.size )
+
+        if vectorize:
+            h_output = numpy.stack((t0, t1, t2, t3))
+
+            # set small imaginary part to zero (to be considered as real)
+            mask_precision = numpy.abs(h_output.imag) < zero_below
+            h_output[mask_precision] = numpy.real(h_output[mask_precision])
+
+            # create a list of solutions
+            ANSWERS = list(h_output[:, k] for k in range(t0.size))
+
+            # remove the imaginary solutions
+            ANSWERS = list(ANSWERS[k][ANSWERS[k].imag == 0] for k in range(t0.size))
+
+            # sort solutions
+            ANSWERS = list(numpy.sort(ANSWERS[k].real) for k in range(t0.size))
+
+            if self.f_torus == 0:
+                answer = [item[-1] for item in ANSWERS]
+            elif self.f_torus == 1:
+                answer = [item[-2] for item in ANSWERS]
+            elif self.f_torus == 2:
+                answer = [item[1] for item in ANSWERS]
+            elif self.f_torus == 3:
+                answer = [item[0] for item in ANSWERS]
+
+            # find and set the bad rays (all solutions are complex)
+            mask_all_imag = h_output.imag.prod(axis=0) > zero_below # != 0
+            if mask_all_imag.sum() > 0:
+                print("all the solutions are complex for %d rays: " % mask.sum())
+                i_res[mask_all_imag] = -1
+                answer[mask_all_imag] = 0.0
+        else:
+            for k in range(t0.size):
+
+                h_output = numpy.array([t0[k], t1[k], t2[k], t3[k]])
+                mask = numpy.abs(h_output.imag) < zero_below
+                h_output[mask] = numpy.real(h_output[mask])
+
+                if h_output.imag.prod() != 0:
+                    print("all the solutions are complex for ray index: ", k, h_output)
+                    i_res[k] = -1
+                    answer[k] = 0.0
+                else:
+                    Answers = []
+
+                    for i in range(4):
+                        if h_output[i].imag == 0:
+                            Answers.append(h_output[i].real)
+
+                    #! C
+                    #! C Sort the real intercept in ascending order.
+                    #! C
+                    Answers = numpy.sort(numpy.array(Answers))
+
+                    # ! C
+                    # ! C Pick the output according to F_TORUS.
+                    # ! C
+                    if self.f_torus == 0:
+                        answer[k] = Answers[-1]
+                    elif self.f_torus == 1:
+                        if len(Answers) > 1:
+                            answer[k] = Answers[-2]
+                        else:
+                            i_res[k] = -1
+                    elif self.f_torus == 2:
+                        if len(Answers) > 1:
+                            answer[k] = Answers[1]
+                        else:
+                            i_res[k] = -1
+                    elif self.f_torus == 3:
+                        answer[k] = Answers[0]
+
+        return answer, i_res
 
     def calculate_intercept_and_choose_solution(self, x1, v1, reference_distance=0.0):
 
         t0, t1, t2, t3 = self.calculate_intercept(x1, v1)
         out = self.choose_solution(t0, t1, t2, t3)
         return out
-
-
-    def choose_solution(self, t0, t1, t2, t3):
-        i_res  = numpy.ones( t0.size )
-        answer = numpy.ones( t0.size )
-
-        for k in range(t0.size):
-
-            h_output = numpy.array([t0[k], t1[k], t2[k], t3[k]])
-
-            if h_output.imag.prod() != 0:
-                print("all the solutions are complex")
-                i_res[k] = -1
-                answer[k] = 0.0
-            else:
-                Answers = []
-
-                for i in range(4):
-                    if h_output[i].imag == 0:
-                        Answers.append(h_output[i].real)
-
-                #! C
-                #! C Sort the real intercept in ascending order.
-                #! C
-                Answers = numpy.sort(numpy.array(Answers))
-
-                # ! C
-                # ! C Pick the output according to F_TORUS.
-                # ! C
-                if self.f_torus == 0:
-                    answer[k] = Answers[-1]
-                elif self.f_torus == 1:
-                    if len(Answers) > 1:
-                        answer[k] = Answers[-2]
-                    else:
-                        i_res[k] = -1
-                elif self.f_torus == 2:
-                    if len(Answers) > 1:
-                        answer[k] = Answers[1]
-                    else:
-                        i_res[k] = -1
-                elif self.f_torus == 3:
-                    answer[k] = Answers[0]
-        return answer, i_res
-
-    def set_cylindrical(self, CIL_ANG):
-        raise Exception("Cannot set_cylindrical() in a Toroid")
-
-    def switch_convexity(self):
-        raise Exception("Cannot switch_convexity() in a Toroid")
-
-
-    #
-    # info
-    #
-    def info(self):
-        txt = ""
-
-        txt += "++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++\n"
-        txt += " Toroid major radius (tangential-sagittal) = %f \n"%(self.r_maj)
-        txt += " Toroid minor radius (sagittal) = %f \n\n"%(self.r_min)
-        txt += " Toroid tangential (Rmaj+Rmin) = %f \n"%(self.r_maj+self.r_min)
-        txt += " Toroid sagittal (Rmin) = %f \n\n"%(self.r_min)
-        txt += "++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++'n"
-
-        return txt
 
     # todo: move the apply_* methods to the parent class
     def apply_specular_reflection_on_beam(self,newbeam):
@@ -314,7 +384,7 @@ class S4Toroid(S4OpticalSurface):
         # ;
         # ; reflection
         # ;
-        v2 = self.vector_reflection(v1,normal)
+        v2 = (vector_reflection(v1.T, normal.T)).T
 
         # ;
         # ; writes the mirr.XX file
@@ -331,9 +401,13 @@ class S4Toroid(S4OpticalSurface):
 
         return newbeam, normal
 
-    #
-    # grating routines
-    #
+
+    # todo: move the apply_* methods to the parent class
+    def apply_refraction_on_beam(self, beam, **kwargs):  # todo: common implementation it here?
+        raise NotImplementedError("please implement this!")
+
+
+    # todo: move the apply_* methods to the parent class
     def apply_grating_diffraction_on_beam(self, beam, ruling=[0.0], order=0, f_ruling=0):
 
         newbeam = beam.duplicate()
@@ -434,6 +508,29 @@ class S4Toroid(S4OpticalSurface):
         newbeam.set_column(13, optical_path + t)
 
         return newbeam, normal
+
+    #
+    # calculations
+    #
+
+    # # todo reuse arrayofvectors...
+    # def vector_reflection(self, v1, normal):
+    #     tmp = v1 * normal
+    #     tmp2 = tmp[0,:] + tmp[1,:] + tmp[2,:]
+    #     tmp3 = normal.copy()
+    #
+    #     for jj in (0,1,2):
+    #         tmp3[jj,:] = tmp3[jj,:] * tmp2
+    #
+    #     v2 = v1 - 2 * tmp3
+    #     v2mod = numpy.sqrt(v2[0,:]**2 + v2[1,:]**2 + v2[2,:]**2)
+    #     v2 /= v2mod
+    #
+    #     return v2
+
+    def switch_convexity(self):
+        raise Exception("Cannot switch_convexity() in a Toroid")
+
 
 if __name__ == "__main__":
 
