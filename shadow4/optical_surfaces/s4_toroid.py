@@ -258,7 +258,7 @@ class S4Toroid(S4OpticalSurface):
         VIN : numpy array
             The coordinates of a director vector the ray: shape [3, NRAYS].
         reference_distance : float, optional
-            A reference distance. The selected solution will be the closest to this refecrence_distance.
+            A reference distance. The selected solution will be the closest to this reference_distance.
         method : int, optional
             0: automatic selection (essentially the same as in shadow3 but replacing TSOURCE (unavailable here) by
             reference_distance).
