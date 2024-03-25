@@ -276,7 +276,7 @@ class S4Toroid(S4OpticalSurface):
         return out
 
 
-    def calculate_intercept(self, XIN, VIN, vectorize=1):
+    def calculate_intercept(self, XIN, VIN, vectorize=0): #todo vectorized=1 fails - search another solution...
         """
         Calculates the intercept point (or stack of points) for a given ray or stack of rays,
         given a point XIN and director vector VIN.
@@ -411,22 +411,22 @@ class S4Toroid(S4OpticalSurface):
             # SOLUTION = multi_quartic_modified(PT[0], PT[1], PT[2], PT[3], PT[4], zero_below=1e-6)
             # SOLUTION = numpy.array(SOLUTION).T
 
-            # print(">>>>", P.shape, SOLUTION.shape)
-            # for k in range(10): #AA.size):
-            #     print(">>>> solutions1: ", k, SOLUTION[k,:]) #, SOLUTION[k,1], SOLUTION[k,2], SOLUTION[k,3])
-            #     z = SOLUTION[k,0]
-            #     print(">>>> result1: ", P[k, 0] * z ** 4 + P[k, 1] * z ** 3 + P[k, 2] * z ** 2 + P[k, 3] * z + P[k, 4], )
-            #     z = SOLUTION[k,1]
-            #     print(">>>> result1: ", P[k, 0] * z ** 4 + P[k, 1] * z ** 3 + P[k, 2] * z ** 2 + P[k, 3] * z + P[k, 4], )
-            #     z = SOLUTION[k,2]
-            #     print(">>>> result1: ", P[k, 0] * z ** 4 + P[k, 1] * z ** 3 + P[k, 2] * z ** 2 + P[k, 3] * z + P[k, 4], )
-            #     z = SOLUTION[k,3]
-            #     print(">>>> result1: ", P[k, 0] * z ** 4 + P[k, 1] * z ** 3 + P[k, 2] * z ** 2 + P[k, 3] * z + P[k, 4], )
+            print(">>>>", P.shape, SOLUTION.shape)
+            for k in range(10): #AA.size):
+                print(">>>> solutions1: ", k, SOLUTION[k,:]) #, SOLUTION[k,1], SOLUTION[k,2], SOLUTION[k,3])
+                z = SOLUTION[k,0]
+                print(">>>> result1: ", P[k, 0] * z ** 4 + P[k, 1] * z ** 3 + P[k, 2] * z ** 2 + P[k, 3] * z + P[k, 4], )
+                z = SOLUTION[k,1]
+                print(">>>> result1: ", P[k, 0] * z ** 4 + P[k, 1] * z ** 3 + P[k, 2] * z ** 2 + P[k, 3] * z + P[k, 4], )
+                z = SOLUTION[k,2]
+                print(">>>> result1: ", P[k, 0] * z ** 4 + P[k, 1] * z ** 3 + P[k, 2] * z ** 2 + P[k, 3] * z + P[k, 4], )
+                z = SOLUTION[k,3]
+                print(">>>> result1: ", P[k, 0] * z ** 4 + P[k, 1] * z ** 3 + P[k, 2] * z ** 2 + P[k, 3] * z + P[k, 4], )
 
             SOLUTION_T = SOLUTION.T
             return SOLUTION_T[0], SOLUTION_T[1], SOLUTION_T[2], SOLUTION_T[3]
 
-    def choose_solution(self, t0, t1, t2, t3, vectorize=1, zero_below=1e-6):
+    def choose_solution(self, t0, t1, t2, t3, vectorize=0, zero_below=1e-6):
         """
         Selects the wanted single solution from the total of solutions.
 
