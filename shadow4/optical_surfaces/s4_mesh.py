@@ -155,7 +155,7 @@ class S4Mesh(S4OpticalSurface):
         return normal
 
     def calculate_intercept_and_choose_solution(self, x1: numpy.ndarray, v1: numpy.ndarray,
-                                                reference_distance: float = 10.0, method: int = 0, # todo: remove?
+                                                reference_distance: float = 10.0, method: int = 0, # required by upper class
                                                 ):
         """
 
@@ -169,7 +169,6 @@ class S4Mesh(S4OpticalSurface):
         VIN : numpy array
             The coordinates of a director vector the ray: shape [3, NRAYS].
         reference_distance : float, optional
-            A reference distance. The selected solution will be the closest to this reference_distance.
             Not used in S4Mesh.
         method : int, optional
             Not used in S4Mesh.
@@ -237,134 +236,6 @@ class S4Mesh(S4OpticalSurface):
             the height mesh.
         """
         return self._surface(x, y)
-
-    # todo: move the apply_* methods to the parent class
-    def apply_specular_reflection_on_beam(self, newbeam: S4Beam) -> Tuple[S4Beam,
-                                                                          numpy.ndarray,
-                                                                          numpy.ndarray,
-                                                                          numpy.ndarray,
-                                                                          numpy.ndarray,
-                                                                          numpy.ndarray,
-                                                                          numpy.ndarray ]:
-        # ;
-        # ; TRACING...
-        # ;
-        x1           = newbeam.get_columns([1,2,3])
-        v1           = newbeam.get_columns([4,5,6])
-        flag         = newbeam.get_column(10)
-        optical_path = newbeam.get_column(13)
-
-        t, iflag = self.calculate_intercept(x1, v1)
-
-        x2 = numpy.zeros_like(x1)
-        x2[0, :] = x1[0, :] + numpy.multiply(v1[0, :], t)
-        x2[1, :] = x1[1, :] + numpy.multiply(v1[1, :], t)
-        x2[2, :] = x1[2, :] + numpy.multiply(v1[2, :], t)
-
-        flag[numpy.where(iflag < 0)] = -100
-
-        # # ;
-        # # ; Calculates the normal at each intercept
-        # # ;
-        normal = self.get_normal(x2)
-
-        # ;
-        # ; reflection
-        # ;
-        # v2 = self.vector_reflection(v1, normal)
-        v2 = (vector_reflection(v1.T, normal.T)).T
-
-        newbeam.rays[:,1-1] = x2[0,:]
-        newbeam.rays[:,2-1] = x2[1,:]
-        newbeam.rays[:,3-1] = x2[2,:]
-        newbeam.rays[:,4-1] = v2[0,:]
-        newbeam.rays[:,5-1] = v2[1,:]
-        newbeam.rays[:,6-1] = v2[2,:]
-        newbeam.rays[:,10-1] = flag
-        newbeam.rays[:,13-1] = optical_path + t
-        #
-        return newbeam, normal, t, x1, v1, x2, v2
-
-    # todo: move the apply_* methods to the parent class
-    def apply_refraction_on_beam(self, beam, **kwargs):  # todo: common implementation it here?
-        raise NotImplementedError("please implement this!")
-
-    # todo: move the apply_* methods to the parent class
-    def apply_grating_diffraction_on_beam(self, beam, ruling=[0.0], order=0, f_ruling=0):
-        newbeam = beam.duplicate()
-
-        x1 = newbeam.get_columns([1, 2, 3])
-        v1 = newbeam.get_columns([4, 5, 6])
-        flag = newbeam.get_column(10)
-        kin = newbeam.get_column(11) * 1e2  # in m^-1
-        optical_path = newbeam.get_column(13)
-        nrays = flag.size
-
-        reference_distance = -newbeam.get_column(2).mean() + newbeam.get_column(3).mean()
-        t, iflag = self.calculate_intercept_and_choose_solution(x1, v1, reference_distance=reference_distance)
-
-        x2 = x1 + numpy.multiply(v1, t)
-        flag[numpy.where(iflag < 0)] = -100
-
-        # ;
-        # ; Calculates the normal at each intercept [see shadow's normal.F]
-        # ;
-        normal = self.get_normal(x2)
-
-        # ;
-        # ; grating scattering
-        # ;
-        if True:
-            DIST = x2[1]
-            RDENS = 0.0
-            for n in range(len(ruling)): RDENS += ruling[n] * DIST ** n
-
-            PHASE = optical_path + 2 * numpy.pi * order * DIST * RDENS / kin
-            G_MOD = 2 * numpy.pi * RDENS * order
-
-            # capilatized vectors are [:,3] as required for vector_* operations
-            VNOR = normal.T
-            VNOR = vector_multiply_scalar(VNOR, -1.0)  # outward normal
-
-            # versors
-            X_VRS = numpy.zeros((nrays, 3))
-            X_VRS[:, 0] = 1
-            Y_VRS = numpy.zeros((nrays, 3))
-            Y_VRS[:, 1] = 1
-
-            if f_ruling == 0:
-                G_FAC = vector_dot(VNOR, Y_VRS)
-                G_FAC = numpy.sqrt(1 - G_FAC ** 2)
-            elif f_ruling == 1:
-                G_FAC = 1.0
-            elif f_ruling == 5:
-                G_FAC = vector_dot(VNOR, Y_VRS)
-                G_FAC = numpy.sqrt(1 - G_FAC ** 2)
-
-            G_MODR = G_MOD * G_FAC
-
-            K_IN = vector_multiply_scalar(v1.T, kin)
-            K_IN_NOR = vector_multiply_scalar(VNOR, vector_dot(K_IN, VNOR))
-            K_IN_PAR = vector_diff(K_IN, K_IN_NOR)
-
-            VTAN = vector_cross(VNOR, X_VRS)
-            GSCATTER = vector_multiply_scalar(VTAN, G_MODR)
-
-            K_OUT_PAR = vector_sum(K_IN_PAR, GSCATTER)
-            K_OUT_NOR = vector_multiply_scalar(VNOR, numpy.sqrt(kin ** 2 - vector_modulus_square(K_OUT_PAR)))
-            K_OUT = vector_sum(K_OUT_PAR, K_OUT_NOR)
-            V_OUT = vector_norm(K_OUT)
-
-        newbeam.set_column(1, x2[0])
-        newbeam.set_column(2, x2[1])
-        newbeam.set_column(3, x2[2])
-        newbeam.set_column(4, V_OUT.T[0])
-        newbeam.set_column(5, V_OUT.T[1])
-        newbeam.set_column(6, V_OUT.T[2])
-        newbeam.set_column(10, flag)
-        newbeam.set_column(13, optical_path + t)
-
-        return newbeam, normal
 
     #
     # Other calculations

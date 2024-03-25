@@ -92,22 +92,8 @@ class S4Mirror(Mirror):
 
 
     def apply_mirror_reflection(self, beam):
-        # # todo? It could be replaced by this code, buy it is much less readable
-        # sur = self.get_optical_surface_instance()
-        # out = sur.apply_specular_reflection_on_beam(beam)
-        # return out[0], out[1]
-
         sur = self.get_optical_surface_instance()
-
-        if isinstance(sur, S4Conic):
-            footprint, normal = sur.apply_specular_reflection_on_beam(beam)
-        elif isinstance(sur, S4Toroid):
-            footprint, normal = sur.apply_specular_reflection_on_beam(beam)
-        elif isinstance(sur, S4Mesh):
-            footprint, normal, _, _, _, _, _ = sur.apply_specular_reflection_on_beam(beam)
-        else:
-            raise Exception("To be implemented in the children class")
-
+        footprint, normal, _, _, _, _, _ = sur.apply_specular_reflection_on_beam(beam)
         return footprint, normal
 
     def to_python_code_boundary_shape(self):

@@ -37,15 +37,6 @@ class S4OpticalSurface(object):
     def calculate_intercept_and_choose_solution(self, XIN, VIN, **kwargs): # todo: common implementation it here
         raise NotImplementedError("Subclasses should implement this!")
 
-    # def apply_specular_reflection_on_beam(self, beam, **kwargs):  # todo: common implementation it here?
-    #     raise NotImplementedError("Subclasses should implement this!")
-    #
-    # def apply_refraction_on_beam(self, beam, **kwargs):  # todo: common implementation it here?
-    #     raise NotImplementedError("Subclasses should implement this!")
-    #
-    # def apply_grating_diffraction_on_beam(self, beam, **kwargs):  # todo: common implementation it here?
-    #     raise NotImplementedError("Subclasses should implement this!")
-
     def apply_specular_reflection_on_beam(self, beam):
         newbeam = beam.duplicate()
 
@@ -58,8 +49,6 @@ class S4OpticalSurface(object):
         flag = newbeam.get_column(10)
         optical_path = newbeam.get_column(13)
 
-        # t1, t2, iflag = self.calculate_intercept(x1, v1)
-        # t = self.choose_solution(t1, t2, reference_distance=reference_distance)
         reference_distance = -newbeam.get_column(2).mean() + newbeam.get_column(3).mean()
         t, iflag = self.calculate_intercept_and_choose_solution(x1, v1, reference_distance=reference_distance, method=0)
 
@@ -89,7 +78,7 @@ class S4OpticalSurface(object):
         newbeam.set_column(10, flag)
         newbeam.set_column(13, optical_path + t)
 
-        return newbeam, normal
+        return newbeam, normal, t, x1, v1, x2, v2
 
     def apply_refraction_on_beam(self,
                                  beam,
@@ -104,8 +93,8 @@ class S4OpticalSurface(object):
         # ;
         newbeam = beam.duplicate()
 
-        x1 = newbeam.get_columns([1, 2, 3])  # numpy.array(3, npoints)
-        v1 = newbeam.get_columns([4, 5, 6])  # numpy.array(3, npoints)
+        x1 = newbeam.get_columns([1, 2, 3])
+        v1 = newbeam.get_columns([4, 5, 6])
         flag = newbeam.get_column(10)
         k_in_mod = newbeam.get_column(11)
         optical_path = newbeam.get_column(13)
@@ -132,7 +121,7 @@ class S4OpticalSurface(object):
         v2 = v2t.T
 
         # ;
-        # ; writes the mirr.XX file
+        # ; writes the beam arrays
         # ;
 
         newbeam.set_column(1, x2[0])
@@ -158,6 +147,7 @@ class S4OpticalSurface(object):
 
         return newbeam, normal
 
+
     def apply_grating_diffraction_on_beam(self, beam, ruling=[0.0], order=0, f_ruling=0):
 
         newbeam = beam.duplicate()
@@ -169,9 +159,7 @@ class S4OpticalSurface(object):
         optical_path = newbeam.get_column(13)
         nrays = flag.size
 
-        # t1, t2, iflag = self.calculate_intercept(x1, v1)
         reference_distance = -newbeam.get_column(2).mean() + newbeam.get_column(3).mean()
-        # t = self.choose_solution(t1, t2, reference_distance=reference_distance)
         t, iflag = self.calculate_intercept_and_choose_solution(x1, v1, reference_distance=reference_distance, method=0)
 
         x2 = x1 + v1 * t
@@ -202,9 +190,6 @@ class S4OpticalSurface(object):
             VNOR = vector_multiply_scalar(VNOR, -1.0) # outward normal
 
 
-            # print(">>>> VNOR: (%20.18g,%20.18g,%20.18f) mod: %20.18f" % (VNOR[-1, 0], VNOR[-1, 1], VNOR[-1, 2],
-            #                                          (VNOR[-1, 0]**2 + VNOR[-1, 1]**2 + VNOR[-1, 2]**2)))
-
             # versors
             X_VRS = numpy.zeros((nrays,3))
             X_VRS[:,0] = 1
@@ -222,15 +207,12 @@ class S4OpticalSurface(object):
 
             G_MODR = G_MOD * G_FAC
 
-
             K_IN = vector_multiply_scalar(v1.T, kin)
             K_IN_NOR = vector_multiply_scalar(VNOR, vector_dot(K_IN, VNOR) )
             K_IN_PAR = vector_diff(K_IN, K_IN_NOR)
 
-
             VTAN = vector_cross(VNOR, X_VRS)
             GSCATTER = vector_multiply_scalar(VTAN, G_MODR)
-
 
             K_OUT_PAR = vector_sum(K_IN_PAR, GSCATTER)
             K_OUT_NOR = vector_multiply_scalar(VNOR,  numpy.sqrt(kin**2 - vector_modulus_square(K_OUT_PAR)))
@@ -238,7 +220,7 @@ class S4OpticalSurface(object):
             V_OUT = vector_norm(K_OUT)
 
         # ;
-        # ; writes the mirr.XX file
+        # ; writes the beam arrays
         # ;
 
         newbeam.set_column(1, x2[0])

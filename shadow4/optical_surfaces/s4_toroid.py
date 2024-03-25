@@ -245,7 +245,7 @@ class S4Toroid(S4OpticalSurface):
 
         return normal
 
-    def calculate_intercept_and_choose_solution(self, x1, v1, reference_distance=0.0):
+    def calculate_intercept_and_choose_solution(self, x1, v1, reference_distance=0.0, method=0):
         """
 
         Calculates the intercept point (or stack of points) for a given ray or stack of rays,
@@ -258,12 +258,9 @@ class S4Toroid(S4OpticalSurface):
         VIN : numpy array
             The coordinates of a director vector the ray: shape [3, NRAYS].
         reference_distance : float, optional
-            A reference distance. The selected solution will be the closest to this reference_distance.
+            Not used in S4Toroid.
         method : int, optional
-            0: automatic selection (essentially the same as in shadow3 but replacing TSOURCE (unavailable here) by
-            reference_distance).
-            1: use first solution.
-            2: use second solution.
+            Not used in S4Toroid.
 
         Returns
         -------
@@ -411,22 +408,22 @@ class S4Toroid(S4OpticalSurface):
             # SOLUTION = multi_quartic_modified(PT[0], PT[1], PT[2], PT[3], PT[4], zero_below=1e-6)
             # SOLUTION = numpy.array(SOLUTION).T
 
-            print(">>>>", P.shape, SOLUTION.shape)
-            for k in range(10): #AA.size):
-                print(">>>> solutions1: ", k, SOLUTION[k,:]) #, SOLUTION[k,1], SOLUTION[k,2], SOLUTION[k,3])
-                z = SOLUTION[k,0]
-                print(">>>> result1: ", P[k, 0] * z ** 4 + P[k, 1] * z ** 3 + P[k, 2] * z ** 2 + P[k, 3] * z + P[k, 4], )
-                z = SOLUTION[k,1]
-                print(">>>> result1: ", P[k, 0] * z ** 4 + P[k, 1] * z ** 3 + P[k, 2] * z ** 2 + P[k, 3] * z + P[k, 4], )
-                z = SOLUTION[k,2]
-                print(">>>> result1: ", P[k, 0] * z ** 4 + P[k, 1] * z ** 3 + P[k, 2] * z ** 2 + P[k, 3] * z + P[k, 4], )
-                z = SOLUTION[k,3]
-                print(">>>> result1: ", P[k, 0] * z ** 4 + P[k, 1] * z ** 3 + P[k, 2] * z ** 2 + P[k, 3] * z + P[k, 4], )
+            # print(">>>>", P.shape, SOLUTION.shape)
+            # for k in range(10): #AA.size):
+            #     print(">>>> solutions1: ", k, SOLUTION[k,:]) #, SOLUTION[k,1], SOLUTION[k,2], SOLUTION[k,3])
+            #     z = SOLUTION[k,0]
+            #     print(">>>> result1: ", P[k, 0] * z ** 4 + P[k, 1] * z ** 3 + P[k, 2] * z ** 2 + P[k, 3] * z + P[k, 4], )
+            #     z = SOLUTION[k,1]
+            #     print(">>>> result1: ", P[k, 0] * z ** 4 + P[k, 1] * z ** 3 + P[k, 2] * z ** 2 + P[k, 3] * z + P[k, 4], )
+            #     z = SOLUTION[k,2]
+            #     print(">>>> result1: ", P[k, 0] * z ** 4 + P[k, 1] * z ** 3 + P[k, 2] * z ** 2 + P[k, 3] * z + P[k, 4], )
+            #     z = SOLUTION[k,3]
+            #     print(">>>> result1: ", P[k, 0] * z ** 4 + P[k, 1] * z ** 3 + P[k, 2] * z ** 2 + P[k, 3] * z + P[k, 4], )
 
             SOLUTION_T = SOLUTION.T
             return SOLUTION_T[0], SOLUTION_T[1], SOLUTION_T[2], SOLUTION_T[3]
 
-    def choose_solution(self, t0, t1, t2, t3, vectorize=0, zero_below=1e-6):
+    def choose_solution(self, t0, t1, t2, t3, vectorize=0, zero_below=1e-6): #todo vectorized=1 fails - search another solution...
         """
         Selects the wanted single solution from the total of solutions.
 
@@ -591,164 +588,6 @@ class S4Toroid(S4OpticalSurface):
             height.shape = X.shape
             return height
 
-
-    # todo: move the apply_* methods to the parent class
-    def apply_specular_reflection_on_beam(self,newbeam):
-        # ;
-        # ; TRACING...
-        # ;
-
-        x1 =   newbeam.get_columns([1,2,3]) # numpy.array(a3.getshcol([1,2,3]))
-        v1 =   newbeam.get_columns([4,5,6]) # numpy.array(a3.getshcol([4,5,6]))
-        flag = newbeam.get_column(10)        # numpy.array(a3.getshonecol(10))
-        optical_path = newbeam.get_column(13)
-
-        t, iflag = self.calculate_intercept_and_choose_solution(x1, v1)
-
-        # print(">>>>>",x1,t)
-        # for i in range(t.size):
-        #     print(">>>>",x1[0:3,i],t[i],iflag[i])
-
-        x2 = x1 + v1 * t
-        for i in range(flag.size):
-            if iflag[i] < 0: flag[i] = -100
-
-
-        # ;
-        # ; Calculates the normal at each intercept [see shadow's normal.F]
-        # ;
-        normal = self.get_normal(x2)
-
-        # for i in range(t.size):
-        #     print(">>>>",t[i],normal[:,i])
-
-        # ;
-        # ; reflection
-        # ;
-        v2 = (vector_reflection(v1.T, normal.T)).T
-
-        # ;
-        # ; writes the mirr.XX file
-        # ;
-
-        newbeam.set_column(1, x2[0])
-        newbeam.set_column(2, x2[1])
-        newbeam.set_column(3, x2[2])
-        newbeam.set_column(4, v2[0])
-        newbeam.set_column(5, v2[1])
-        newbeam.set_column(6, v2[2])
-        newbeam.set_column(10, flag )
-        newbeam.set_column(13, optical_path + t)
-
-        return newbeam, normal
-
-
-    # todo: move the apply_* methods to the parent class
-    def apply_refraction_on_beam(self, beam, **kwargs):  # todo: common implementation it here?
-        raise NotImplementedError("please implement this!")
-
-
-    # todo: move the apply_* methods to the parent class
-    def apply_grating_diffraction_on_beam(self, beam, ruling=[0.0], order=0, f_ruling=0):
-
-        newbeam = beam.duplicate()
-
-        x1 = newbeam.get_columns([1, 2, 3])  # numpy.array(a3.getshcol([1,2,3]))
-        v1 = newbeam.get_columns([4, 5, 6])  # numpy.array(a3.getshcol([4,5,6]))
-        flag = newbeam.get_column(10)  # numpy.array(a3.getshonecol(10))
-        kin = newbeam.get_column(11) * 1e2 # in m^-1
-        optical_path = newbeam.get_column(13)
-        nrays = flag.size
-
-        # t1, t2, iflag = self.calculate_intercept(x1, v1)
-        reference_distance = -newbeam.get_column(2).mean() + newbeam.get_column(3).mean()
-        # t = self.choose_solution(t1, t2, reference_distance=reference_distance)
-        t, iflag = self.calculate_intercept_and_choose_solution(x1, v1, reference_distance=reference_distance)
-
-        x2 = x1 + v1 * t
-        for i in range(flag.size):
-            if iflag[i] < 0: flag[i] = -100
-
-        # ;
-        # ; Calculates the normal at each intercept [see shadow's normal.F]
-        # ;
-
-        normal = self.get_normal(x2)
-
-        # ;
-        # ; reflection
-        # ;
-        # v2 =  v1.T - 2 * vector_multiply_scalar(normal.T, vector_dot(v1.T, normal.T))
-        # V_OUT = v2.copy()
-        # v2 = v2.T
-
-        # ;
-        # ; grating scattering
-        # ;
-        if True:
-            DIST = x2[1]
-            RDENS = 0.0
-            for n in range(len(ruling)):
-                RDENS += ruling[n] * DIST**n
-
-            PHASE = optical_path + 2 * numpy.pi * order * DIST * RDENS / kin
-            G_MOD = 2 * numpy.pi * RDENS * order
-
-
-            # capilatized vectors are [:,3] as required for vector_* operations
-            VNOR = normal.T
-            VNOR = vector_multiply_scalar(VNOR, -1.0) # outward normal
-
-
-            # print(">>>> VNOR: (%20.18g,%20.18g,%20.18f) mod: %20.18f" % (VNOR[-1, 0], VNOR[-1, 1], VNOR[-1, 2],
-            #                                          (VNOR[-1, 0]**2 + VNOR[-1, 1]**2 + VNOR[-1, 2]**2)))
-
-            # versors
-            X_VRS = numpy.zeros((nrays,3))
-            X_VRS[:,0] = 1
-            Y_VRS = numpy.zeros((nrays, 3))
-            Y_VRS[:,1] = 1
-
-            if f_ruling == 0:
-                G_FAC = vector_dot(VNOR, Y_VRS)
-                G_FAC = numpy.sqrt(1 - G_FAC**2)
-            elif f_ruling == 1:
-                G_FAC = 1.0
-            elif f_ruling == 5:
-                G_FAC = vector_dot(VNOR, Y_VRS)
-                G_FAC = numpy.sqrt(1 - G_FAC**2)
-
-            G_MODR = G_MOD * G_FAC
-
-
-            K_IN = vector_multiply_scalar(v1.T, kin)
-            K_IN_NOR = vector_multiply_scalar(VNOR, vector_dot(K_IN, VNOR) )
-            K_IN_PAR = vector_diff(K_IN, K_IN_NOR)
-
-
-            VTAN = vector_cross(VNOR, X_VRS)
-            GSCATTER = vector_multiply_scalar(VTAN, G_MODR)
-
-
-            K_OUT_PAR = vector_sum(K_IN_PAR, GSCATTER)
-            K_OUT_NOR = vector_multiply_scalar(VNOR,  numpy.sqrt(kin**2 - vector_modulus_square(K_OUT_PAR)))
-            K_OUT = vector_sum(K_OUT_PAR, K_OUT_NOR)
-            V_OUT = vector_norm(K_OUT)
-
-        # ;
-        # ; writes the mirr.XX file
-        # ;
-
-        newbeam.set_column(1, x2[0])
-        newbeam.set_column(2, x2[1])
-        newbeam.set_column(3, x2[2])
-        newbeam.set_column(4, V_OUT.T[0])
-        newbeam.set_column(5, V_OUT.T[1])
-        newbeam.set_column(6, V_OUT.T[2])
-        newbeam.set_column(10, flag)
-        newbeam.set_column(13, optical_path + t)
-
-        return newbeam, normal
 
     #
     # calculations
