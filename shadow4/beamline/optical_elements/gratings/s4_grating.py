@@ -81,6 +81,20 @@ class S4Grating(GratingVLS, S4OpticalElementDecorator):
             raise Exception("Not implemented grating with f_ruling=%d" % self._fruling)
 
 class S4GratingElement(S4BeamlineElement):
+    """
+    Constructor.
+
+    Parameters
+    ----------
+    optical_element : instance of OpticalElement, optional
+        The syned optical element.
+    coordinates : instance of ElementCoordinates, optional
+        The syned element coordinates.
+    movements : instance of S4BeamlineElementMovements, optional
+        The S4 element movements.
+    input_beam : instance of S4Beam, optional
+        The S4 incident beam.
+    """
     def __init__(self,
                  optical_element : S4Grating = None,
                  coordinates : ElementCoordinates = None,
@@ -92,6 +106,18 @@ class S4GratingElement(S4BeamlineElement):
                          input_beam=input_beam)
 
     def trace_beam(self, **params):
+        """
+        Runs (ray tracing) the input beam through the element.
+
+        Parameters
+        ----------
+        **params
+
+        Returns
+        -------
+        tuple
+            (output_beam, footprint) instances of S4Beam.
+        """
         flag_lost_value = params.get("flag_lost_value", -1)
 
         p = self.get_coordinates().p()

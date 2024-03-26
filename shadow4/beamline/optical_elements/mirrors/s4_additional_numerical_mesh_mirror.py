@@ -46,6 +46,17 @@ class S4AdditionalNumericalMeshMirror(S4NumericalMeshMirror):
     def ideal_mirror(self): return self.__ideal_mirror
 
     def to_python_code(self, **kwargs):
+        """
+        Creates the python code for defining the optical element.
+
+        Parameters
+        ----------
+        **kwargs
+
+        Returns
+        -------
+        str
+        """
         txt = self.__ideal_mirror.to_python_code()
         txt += "ideal_mirror = optical_element"
         txt += self.__numerical_mesh_mirror.to_python_code()
@@ -63,7 +74,7 @@ optical_element = S4AdditionalNumericalMeshMirror(name='{name:s}', ideal_mirror=
     #
     # overwrite this method combining ideal shape + error shape
     #
-    def apply_mirror_reflection(self, beam):
+    def _apply_mirror_reflection(self, beam):
         # numerical_mesh    = self.__numerical_mesh_mirror.get_optical_surface_instance()
         numerical_mesh = self.get_optical_surface_instance()
         ideal = self.__ideal_mirror.get_optical_surface_instance()
@@ -80,6 +91,20 @@ optical_element = S4AdditionalNumericalMeshMirror(name='{name:s}', ideal_mirror=
         return footprint, normal
 
 class S4AdditionalNumericalMeshMirrorElement(S4MirrorElement):
+    """
+    Constructor.
+
+    Parameters
+    ----------
+    optical_element : instance of OpticalElement, optional
+        The syned optical element.
+    coordinates : instance of ElementCoordinates, optional
+        The syned element coordinates.
+    movements : instance of S4BeamlineElementMovements, optional
+        The S4 element movements.
+    input_beam : instance of S4Beam, optional
+        The S4 incident beam.
+    """
     def __init__(self,
                  optical_element: S4AdditionalNumericalMeshMirror = None,
                  coordinates: ElementCoordinates = None,
@@ -93,6 +118,17 @@ class S4AdditionalNumericalMeshMirrorElement(S4MirrorElement):
             raise ValueError("Wrong Optical Element: only Surface Data shape is accepted")
 
     def to_python_code(self, **kwargs):
+        """
+        Creates the python code for defining the optical element.
+
+        Parameters
+        ----------
+        **kwargs
+
+        Returns
+        -------
+        str
+        """
         txt = "\n\n# optical element number XX"
         txt += self.get_optical_element().to_python_code()
         coordinates = self.get_coordinates()

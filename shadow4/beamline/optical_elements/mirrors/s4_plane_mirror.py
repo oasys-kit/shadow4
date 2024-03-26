@@ -54,6 +54,20 @@ optical_element = S4PlaneMirror(name='{name:s}',boundary_shape=boundary_shape,
 
 
 class S4PlaneMirrorElement(S4MirrorElement):
+    """
+    Constructor.
+
+    Parameters
+    ----------
+    optical_element : instance of OpticalElement, optional
+        The syned optical element.
+    coordinates : instance of ElementCoordinates, optional
+        The syned element coordinates.
+    movements : instance of S4BeamlineElementMovements, optional
+        The S4 element movements.
+    input_beam : instance of S4Beam, optional
+        The S4 incident beam.
+    """
     def __init__(self,
                  optical_element: S4PlaneMirror = None,
                  coordinates: ElementCoordinates = None,

@@ -73,6 +73,14 @@ class S4CRL(CRL, S4RefractiveLensOpticalElementDecorator):
         }
 
     def to_python_code_boundary_shape(self):
+        """
+        Creates a code block with information of boundary shape.
+
+        Returns
+        -------
+        str
+            The text with the code.
+        """
         txt = "" # "\nfrom shadow4.beamline.optical_elements.mirrors.s4_plane_mirror import S4PlaneMirror"
         bs = self._boundary_shape
         if bs is None:
@@ -89,6 +97,17 @@ class S4CRL(CRL, S4RefractiveLensOpticalElementDecorator):
         return txt
 
     def to_python_code(self, **kwargs):
+        """
+        Creates the python code for defining the optical element.
+
+        Parameters
+        ----------
+        **kwargs
+
+        Returns
+        -------
+        str
+        """
         txt = self.to_python_code_boundary_shape()
 
         txt_pre = """
@@ -135,6 +154,18 @@ optical_element = S4CRL(name='{name:s}',
 
 
 class S4CRLElement(S4BeamlineElement):
+    """
+    Constructor.
+
+    Parameters
+    ----------
+    optical_element : instance of OpticalElement, optional
+        The syned optical element.
+    coordinates : instance of ElementCoordinates, optional
+        The syned element coordinates.
+    input_beam : instance of S4Beam, optional
+        The S4 incident beam.
+    """
     def __init__(self,
                  optical_element: S4CRL = None,
                  coordinates: ElementCoordinates = None,
@@ -144,6 +175,17 @@ class S4CRLElement(S4BeamlineElement):
                          input_beam=input_beam)
 
     def to_python_code(self, **kwargs):
+        """
+        Creates the python code for defining the optical element.
+
+        Parameters
+        ----------
+        **kwargs
+
+        Returns
+        -------
+        str
+        """
         txt = "\n\n# optical element number XX"
         txt += self.get_optical_element().to_python_code()
         coordinates = self.get_coordinates()
@@ -157,6 +199,18 @@ class S4CRLElement(S4BeamlineElement):
         return txt
 
     def trace_beam(self, **params):
+        """
+        Runs (ray tracing) the input beam through the element.
+
+        Parameters
+        ----------
+        **params
+
+        Returns
+        -------
+        tuple
+            (output_beam, footprint) instances of S4Beam.
+        """
         input_beam = self.get_input_beam().duplicate()
         oe         = self.get_optical_element()
 

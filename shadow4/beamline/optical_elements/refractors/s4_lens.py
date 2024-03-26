@@ -66,6 +66,14 @@ class S4Lens(Lens, S4RefractiveLensOpticalElementDecorator):
         }
 
     def to_python_code_boundary_shape(self):
+        """
+        Creates a code block with information of boundary shape.
+
+        Returns
+        -------
+        str
+            The text with the code.
+        """
         txt = ""
         bs = self._boundary_shape
         if bs is None:
@@ -200,6 +208,20 @@ def _get_lens_interfaces(lens_optical_surfaces, boundary_shape, ri_calculation_m
 
 
 class S4LensElement(S4BeamlineElement):
+    """
+    Constructor.
+
+    Parameters
+    ----------
+    optical_element : instance of OpticalElement, optional
+        The syned optical element.
+    coordinates : instance of ElementCoordinates, optional
+        The syned element coordinates.
+    movements : instance of S4BeamlineElementMovements, optional
+        The S4 element movements.
+    input_beam : instance of S4Beam, optional
+        The S4 incident beam.
+    """
     def __init__(self,
                  optical_element : S4Lens = None,
                  coordinates : ElementCoordinates = None,
@@ -224,6 +246,18 @@ class S4LensElement(S4BeamlineElement):
     # def trace_beam(self, **params):
     #     # raise NotImplementedError()
     def trace_beam(self, **params):
+        """
+        Runs (ray tracing) the input beam through the element.
+
+        Parameters
+        ----------
+        **params
+
+        Returns
+        -------
+        tuple
+            (output_beam, footprint) instances of S4Beam.
+        """
 
         # p = self.get_coordinates().p()
         # q = self.get_coordinates().q()

@@ -65,9 +65,28 @@ class S4Interface(Interface):
         raise Exception("To be implemented in the children class")
 
     def to_python_code(self, **kwargs):
+        """
+        Creates the python code for defining the optical element.
+
+        Parameters
+        ----------
+        **kwargs
+
+        Returns
+        -------
+        str
+        """
         raise Exception("To be implemented in the children class")
 
     def to_python_code_boundary_shape(self):
+        """
+        Creates a code block with information of boundary shape.
+
+        Returns
+        -------
+        str
+            The text with the code.
+        """
         txt = "" # "\nfrom shadow4.beamline.optical_elements.mirrors.s4_plane_mirror import S4PlaneMirror"
         bs = self._boundary_shape
         if bs is None:
@@ -155,6 +174,18 @@ class S4Interface(Interface):
         return attenuation_coefficient_object, attenuation_coefficient_image
 
 class S4InterfaceElement(S4BeamlineElement):
+    """
+    Constructor.
+
+    Parameters
+    ----------
+    optical_element : instance of OpticalElement, optional
+        The syned optical element.
+    coordinates : instance of ElementCoordinates, optional
+        The syned element coordinates.
+    input_beam : instance of S4Beam, optional
+        The S4 incident beam.
+    """
     def __init__(self,
                  optical_element : S4Interface = None,
                  coordinates : ElementCoordinates = None,

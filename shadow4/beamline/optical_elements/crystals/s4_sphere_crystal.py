@@ -136,7 +136,7 @@ class S4SphereCrystal(S4Crystal, S4SphereOpticalElementDecorator):
 
     def to_python_code(self, **kwargs):
         """
-        Auxiliar method to automatically create python scripts.
+        Creates the python code for defining the optical element.
 
         Parameters
         ----------
@@ -145,8 +145,6 @@ class S4SphereCrystal(S4Crystal, S4SphereOpticalElementDecorator):
         Returns
         -------
         str
-            Python code.
-
         """
 
         txt = "\nfrom shadow4.beamline.optical_elements.crystals.s4_sphere_crystal import S4SphereCrystal"
@@ -175,12 +173,14 @@ class S4SphereCrystalElement(S4CrystalElement):
 
     Parameters
     ----------
-    optical_element : instance of S4SphereCrystal
-        The crystal data.
-    coordinates : instance of ElementCoordinates
-        The position data.
-    input_beam : instance of S4Beam
-        The input beam.
+    optical_element : instance of OpticalElement, optional
+        The syned optical element.
+    coordinates : instance of ElementCoordinates, optional
+        The syned element coordinates.
+    movements : instance of S4BeamlineElementMovements, optional
+        The S4 element movements.
+    input_beam : instance of S4Beam, optional
+        The S4 incident beam.
 
     """
     def __init__(self,
@@ -199,7 +199,7 @@ class S4SphereCrystalElement(S4CrystalElement):
 
     def to_python_code(self, **kwargs):
         """
-        Auxiliar method to automatically create python scripts.
+        Creates the python code for defining the optical element.
 
         Parameters
         ----------
@@ -208,8 +208,6 @@ class S4SphereCrystalElement(S4CrystalElement):
         Returns
         -------
         str
-            Python code.
-
         """
         txt = "\n\n# optical element number XX"
         txt += self.get_optical_element().to_python_code()

@@ -150,13 +150,12 @@ class S4Crystal(Crystal):
 
     def to_python_code_boundary_shape(self):
         """
-        Auxiliar method to automatically create python scripts.
+        Creates a code block with information of boundary shape.
 
         Returns
         -------
         str
-            Python code.
-
+            The text with the code.
         """
         txt = "" # "\nfrom shadow4.beamline.optical_elements.mirrors.s4_plane_mirror import S4PlaneMirror"
         bs = self._boundary_shape
@@ -181,12 +180,14 @@ class S4CrystalElement(S4BeamlineElement):
 
     Parameters
     ----------
-    optical_element : instance of S4Crystal
-        The crystal data.
-    coordinates : instance of ElementCoordinates
-        The position data.
-    input_beam : instance of S4Beam
-        The input beam.
+    optical_element : instance of OpticalElement, optional
+        The syned optical element.
+    coordinates : instance of ElementCoordinates, optional
+        The syned element coordinates.
+    movements : instance of S4BeamlineElementMovements, optional
+        The S4 element movements.
+    input_beam : instance of S4Beam, optional
+        The S4 incident beam.
 
     """
 
@@ -313,7 +314,7 @@ class S4CrystalElement(S4BeamlineElement):
 
     def trace_beam(self, **params):
         """
-        Main beam tracer.
+        Runs (ray tracing) the input beam through the element.
 
         Parameters
         ----------
@@ -322,8 +323,7 @@ class S4CrystalElement(S4BeamlineElement):
         Returns
         -------
         tuple
-            (output_beam, footprint), both instances of S4Beam.
-
+            (output_beam, footprint) instances of S4Beam.
         """
         flag_lost_value = params.get("flag_lost_value", -1)
 

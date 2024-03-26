@@ -68,6 +68,17 @@ class S4ParaboloidGrating(S4Grating, S4ParaboloidOpticalElementDecorator):
         }
 
     def to_python_code(self, **kwargs):
+        """
+        Creates the python code for defining the optical element.
+
+        Parameters
+        ----------
+        **kwargs
+
+        Returns
+        -------
+        str
+        """
         txt = "\nfrom shadow4.beamline.optical_elements.gratings.s4_paraboloid_grating import S4ParaboloidGrating"
 
         txt_pre = """\noptical_element = S4ParaboloidGrating(name='{name}',
@@ -83,6 +94,20 @@ class S4ParaboloidGrating(S4Grating, S4ParaboloidOpticalElementDecorator):
         return txt
 
 class S4ParaboloidGratingElement(S4GratingElement):
+    """
+    Constructor.
+
+    Parameters
+    ----------
+    optical_element : instance of OpticalElement, optional
+        The syned optical element.
+    coordinates : instance of ElementCoordinates, optional
+        The syned element coordinates.
+    movements : instance of S4BeamlineElementMovements, optional
+        The S4 element movements.
+    input_beam : instance of S4Beam, optional
+        The S4 incident beam.
+    """
     def __init__(self,
                  optical_element : S4ParaboloidGrating = None,
                  coordinates : ElementCoordinates = None,
@@ -94,6 +119,17 @@ class S4ParaboloidGratingElement(S4GratingElement):
                          input_beam=input_beam)
 
     def to_python_code(self, **kwargs):
+        """
+        Creates the python code for defining the optical element.
+
+        Parameters
+        ----------
+        **kwargs
+
+        Returns
+        -------
+        str
+        """
         txt = "\n\n# optical element number XX"
         txt += self.get_optical_element().to_python_code()
         coordinates = self.get_coordinates()

@@ -49,6 +49,17 @@ class S4NumericalMeshMirror(S4Mirror, S4NumericalMeshOpticalElementDecorator):
         }
 
     def to_python_code(self, **kwargs):
+        """
+        Creates the python code for defining the optical element.
+
+        Parameters
+        ----------
+        **kwargs
+
+        Returns
+        -------
+        str
+        """
         txt = self.to_python_code_boundary_shape()
         txt_pre = """
         
@@ -63,6 +74,20 @@ optical_element = S4NumericalMeshMirror(name='{name:s}',boundary_shape=boundary_
 
 
 class S4NumericalMeshMirrorElement(S4MirrorElement):
+    """
+    Constructor.
+
+    Parameters
+    ----------
+    optical_element : instance of OpticalElement, optional
+        The syned optical element.
+    coordinates : instance of ElementCoordinates, optional
+        The syned element coordinates.
+    movements : instance of S4BeamlineElementMovements, optional
+        The S4 element movements.
+    input_beam : instance of S4Beam, optional
+        The S4 incident beam.
+    """
     def __init__(self,
                  optical_element: S4NumericalMeshMirror = None,
                  coordinates: ElementCoordinates = None,
@@ -76,6 +101,17 @@ class S4NumericalMeshMirrorElement(S4MirrorElement):
             raise ValueError("Wrong Optical Element: only Surface Data shape is accepted")
 
     def to_python_code(self, **kwargs):
+        """
+        Creates the python code for defining the optical element.
+
+        Parameters
+        ----------
+        **kwargs
+
+        Returns
+        -------
+        str
+        """
         txt = "\n\n# optical element number XX"
         txt += self.get_optical_element().to_python_code()
         coordinates = self.get_coordinates()

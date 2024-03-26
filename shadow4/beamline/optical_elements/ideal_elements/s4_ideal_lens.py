@@ -13,6 +13,17 @@ class S4IdealLens(IdealLens, S4OpticalElementDecorator):
         super().__init__(name=name,focal_x=focal_x,focal_y=focal_y)
 
     def to_python_code(self, **kwargs):
+        """
+        Creates the python code for defining the optical element.
+
+        Parameters
+        ----------
+        **kwargs
+
+        Returns
+        -------
+        str
+        """
         txt_pre = """
 
 from shadow4.beamline.optical_elements.ideal_elements.s4_ideal_lens import S4IdealLens
@@ -22,6 +33,18 @@ optical_element = S4IdealLens(name='{name:s}', focal_x={focal_x:g},focal_y={foca
         return txt
 
 class S4IdealLensElement(S4BeamlineElement):
+    """
+    Constructor.
+
+    Parameters
+    ----------
+    optical_element : instance of OpticalElement, optional
+        The syned optical element.
+    coordinates : instance of ElementCoordinates, optional
+        The syned element coordinates.
+    input_beam : instance of S4Beam, optional
+        The S4 incident beam.
+    """
     def __init__(self,
                  optical_element : S4IdealLens = None,
                  coordinates : ElementCoordinates = None,
@@ -37,6 +60,18 @@ class S4IdealLensElement(S4BeamlineElement):
         return self.get_optical_element()._focal_y
 
     def trace_beam(self, **params):
+        """
+        Runs (ray tracing) the input beam through the element.
+
+        Parameters
+        ----------
+        **params
+
+        Returns
+        -------
+        tuple
+            (output_beam, footprint) instances of S4Beam.
+        """
         footprint = self.get_input_beam().duplicate()
 
         p, q = self.get_coordinates().get_p_and_q()
@@ -61,6 +96,17 @@ class S4IdealLensElement(S4BeamlineElement):
         return output_beam, footprint
 
     def to_python_code(self, **kwargs):
+        """
+        Creates the python code for defining the optical element.
+
+        Parameters
+        ----------
+        **kwargs
+
+        Returns
+        -------
+        str
+        """
         txt = "\n\n# optical element number XX"
         txt += self.get_optical_element().to_python_code()
         coordinates = self.get_coordinates()
@@ -91,6 +137,17 @@ class S4SuperIdealLens(IdealLens, S4OpticalElementDecorator):
         }
 
     def to_python_code(self, **kwargs):
+        """
+        Creates the python code for defining the optical element.
+
+        Parameters
+        ----------
+        **kwargs
+
+        Returns
+        -------
+        str
+        """
         txt_pre = """
 
 from shadow4.beamline.optical_elements.ideal_elements.s4_ideal_lens import S4SuperIdealLens
@@ -102,6 +159,18 @@ optical_element = S4SuperIdealLens(name='{name:s}',
         return txt
 
 class S4SuperIdealLensElement(S4BeamlineElement):
+    """
+    Constructor.
+
+    Parameters
+    ----------
+    optical_element : instance of OpticalElement, optional
+        The syned optical element.
+    coordinates : instance of ElementCoordinates, optional
+        The syned element coordinates.
+    input_beam : instance of S4Beam, optional
+        The S4 incident beam.
+    """
     def __init__(self,
                  optical_element : S4SuperIdealLens = None,
                  coordinates : ElementCoordinates = None,
@@ -111,6 +180,18 @@ class S4SuperIdealLensElement(S4BeamlineElement):
                          input_beam=input_beam)
 
     def trace_beam(self, **params):
+        """
+        Runs (ray tracing) the input beam through the element.
+
+        Parameters
+        ----------
+        **params
+
+        Returns
+        -------
+        tuple
+            (output_beam, footprint) instances of S4Beam.
+        """
         footprint = self.get_input_beam().duplicate()
 
         p, q = self.get_coordinates().get_p_and_q()
@@ -154,6 +235,17 @@ class S4SuperIdealLensElement(S4BeamlineElement):
         return output_beam, footprint
 
     def to_python_code(self, **kwargs):
+        """
+        Creates the python code for defining the optical element.
+
+        Parameters
+        ----------
+        **kwargs
+
+        Returns
+        -------
+        str
+        """
         txt = "\n\n# optical element number XX"
         txt += self.get_optical_element().to_python_code()
         coordinates = self.get_coordinates()

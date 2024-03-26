@@ -1,10 +1,11 @@
-#
-# the screen optical element:
-#       deals with screens, slits, beam-stoppers and absorbers (as in shadow3)
-#       it is a stand-alone optical element (contrary to shadow4)
-#
-#
-#
+"""
+
+The S4 screen optical element: it deals with screens, slits, beam-stoppers and absorbers (as in shadow3).
+
+Notes
+-----
+This is a stand-alone optical element (contrary to shadow3).
+"""
 import numpy
 
 from syned.beamline.optical_elements.absorbers.absorber import Absorber
@@ -30,6 +31,36 @@ class S4Screen(Absorber, S4OpticalElementDecorator):
                  material="",  # if i_abs=2,3, the material name
                  density=1.0,  # if i_abs=2,3, the material density in g/cm^3
                 ):
+        """
+        Constructor.
+
+        Parameters
+        ----------
+        name : str, optional
+            The name of the element.
+        boundary_shape : instance of syned Shape, optional
+            The boundary shape.
+        i_abs : int, optional
+            The flag to include absorption:
+            - 0=No,
+            - 1=using preprocessor file,
+            - 2=direct calculation using xraylib,
+            - 3=direct calculation using dabax.
+        i_stop : int, optional
+            Flag to select aperture (0) or stop (1).
+        thick : float, optional
+            The thickness of the filter (for i_abs>0).
+        file_abs : str, optional
+            The file name with material data from the prerefl preprocessor (for i_abs=1).
+        material : str, optional
+            The material identifier: symbol of element or formula (for i_abs>1).
+        density : float, optional
+            The material density (for i_abs>1).
+
+        Returns
+        -------
+        instance of S4Screen
+        """
         super().__init__(name=name, boundary_shape=boundary_shape)
         self._i_abs = i_abs
         self._i_stop = i_stop
@@ -50,6 +81,14 @@ class S4Screen(Absorber, S4OpticalElementDecorator):
         }
 
     def to_python_code_boundary_shape(self):
+        """
+        Creates a code block with information of boundary shape.
+
+        Returns
+        -------
+        str
+            The text with the code.
+        """
         txt = ""
         bs = self._boundary_shape
         if bs is None:
@@ -65,6 +104,17 @@ class S4Screen(Absorber, S4OpticalElementDecorator):
         return txt
 
     def to_python_code(self, **kwargs):
+        """
+        Creates the python code for defining the optical element.
+
+        Parameters
+        ----------
+        **kwargs
+
+        Returns
+        -------
+        str
+        """
         txt = self.to_python_code_boundary_shape()
         txt_pre = """
 
@@ -77,13 +127,36 @@ optical_element = S4Screen(name='{name:s}', boundary_shape=boundary_shape,
         return txt
 
 class S4ScreenElement(S4BeamlineElement):
+    """
+    Constructor. Defines the beamline element for the screen.
 
+    Parameters
+    ----------
+    optical_element : instance of S4Slit, optional
+        The optical element.
+    coordinates : instance of ElementCoordinates, optional
+        The element coordinates.
+    input_beam : instance of S4beam, optional
+        The incident beam.
+    """
     def __init__(self, optical_element : S4Screen = None, coordinates : ElementCoordinates = None, input_beam : S4Beam = None):
         super().__init__(optical_element=optical_element if optical_element is not None else S4Screen(),
                          coordinates=coordinates if coordinates is not None else ElementCoordinates(),
                          input_beam=input_beam)
 
     def trace_beam(self, **params):
+        """
+        Runs (ray tracing) the input beam through the element.
+
+        Parameters
+        ----------
+        **params
+
+        Returns
+        -------
+        tuple
+            (output_beam, footprint) instances of S4Beam.
+        """
         flag_lost_value = params.get("flag_lost_value", -1)
 
         footprint = self.get_input_beam().duplicate()
@@ -98,21 +171,6 @@ class S4ScreenElement(S4BeamlineElement):
 
         apply_crop = True
         negative = oe._i_stop
-
-        # if isinstance(self._beamline_element_syned._optical_element, SyScreen):
-        #     apply_crop = False
-        # elif isinstance(self._beamline_element_syned._optical_element, SySlit):
-        #     apply_crop = True
-        #     negative = False
-        # elif isinstance(self._beamline_element_syned._optical_element, SyBeamStopper):
-        #     apply_crop = True
-        #     negative = True
-        # elif isinstance(self._beamline_element_syned._optical_element, SyFilter):
-        #     apply_crop = True
-        #     negative = False
-        # elif isinstance(self._beamline_element_syned._optical_element, SyHoledFilter):
-        #     apply_crop = True
-        #     negative = True
 
         if apply_crop:
             shape = oe.get_boundary_shape()
@@ -181,6 +239,17 @@ class S4ScreenElement(S4BeamlineElement):
         return output_beam, footprint
 
     def to_python_code(self, **kwargs):
+        """
+        Creates the python code for defining the beamline element.
+
+        Parameters
+        ----------
+        **kwargs
+
+        Returns
+        -------
+        str
+        """
         txt = "\n\n# optical element number XX"
         txt += self.get_optical_element().to_python_code()
         coordinates = self.get_coordinates()

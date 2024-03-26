@@ -81,6 +81,20 @@ class S4EllipsoidGrating(S4Grating, S4EllipsoidOpticalElementDecorator):
         return txt
 
 class S4EllipsoidGratingElement(S4GratingElement):
+    """
+    Constructor.
+
+    Parameters
+    ----------
+    optical_element : instance of OpticalElement, optional
+        The syned optical element.
+    coordinates : instance of ElementCoordinates, optional
+        The syned element coordinates.
+    movements : instance of S4BeamlineElementMovements, optional
+        The S4 element movements.
+    input_beam : instance of S4Beam, optional
+        The S4 incident beam.
+    """
     def __init__(self,
                  optical_element : S4EllipsoidGrating = None,
                  coordinates : ElementCoordinates = None,

@@ -93,6 +93,20 @@ optical_element = S4ConicInterface(name='{name:s}', boundary_shape=boundary_shap
 
 
 class S4ConicInterfaceElement(S4InterfaceElement):
+    """
+    Constructor.
+
+    Parameters
+    ----------
+    optical_element : instance of OpticalElement, optional
+        The syned optical element.
+    coordinates : instance of ElementCoordinates, optional
+        The syned element coordinates.
+    movements : instance of S4BeamlineElementMovements, optional
+        The S4 element movements.
+    input_beam : instance of S4Beam, optional
+        The S4 incident beam.
+    """
     def __init__(self,
                  optical_element : S4ConicInterface = None,
                  coordinates : ElementCoordinates = None,

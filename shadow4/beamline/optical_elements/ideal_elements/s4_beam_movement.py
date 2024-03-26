@@ -48,6 +48,18 @@ optical_element = S4BeamMovement(name='{name:s}', apply_flag={apply_flag:d},
         return txt
 
 class S4BeamMovementElement(S4BeamlineElement):
+    """
+    Constructor.
+
+    Parameters
+    ----------
+    optical_element : instance of OpticalElement, optional
+        The syned optical element.
+    coordinates : instance of ElementCoordinates, optional
+        The syned element coordinates.
+    input_beam : instance of S4Beam, optional
+        The S4 incident beam.
+    """
     def __init__(self,
                  optical_element : S4BeamMovement = None,
                  coordinates : ElementCoordinates = None,
@@ -57,6 +69,18 @@ class S4BeamMovementElement(S4BeamlineElement):
                          input_beam=input_beam)
 
     def trace_beam(self, **params):
+        """
+        Runs (ray tracing) the input beam through the element.
+
+        Parameters
+        ----------
+        **params
+
+        Returns
+        -------
+        tuple
+            (output_beam, footprint) instances of S4Beam.
+        """
         verbose = 0
         #
         input_beam = self.get_input_beam().duplicate()

@@ -46,6 +46,17 @@ class S4AdditionalNumericalMeshGrating(S4NumericalMeshGrating):
     def ideal_grating(self): return self.__ideal_grating
 
     def to_python_code(self, **kwargs):
+        """
+        Creates the python code for defining the optical element.
+
+        Parameters
+        ----------
+        **kwargs
+
+        Returns
+        -------
+        str
+        """
         txt = self.__ideal_grating.to_python_code()
         txt += "ideal_grating = optical_element"
         txt += self.__numerical_mesh_grating.to_python_code()
@@ -61,6 +72,20 @@ optical_element = S4AdditionalNumericalMeshCrystal(name='{name:s}', ideal_crysta
         return txt
 
 class S4AdditionalNumericalMeshGratingElement(S4GratingElement):
+    """
+    Constructor.
+
+    Parameters
+    ----------
+    optical_element : instance of OpticalElement, optional
+        The syned optical element.
+    coordinates : instance of ElementCoordinates, optional
+        The syned element coordinates.
+    movements : instance of S4BeamlineElementMovements, optional
+        The S4 element movements.
+    input_beam : instance of S4Beam, optional
+        The S4 incident beam.
+    """
     def __init__(self,
                  optical_element: S4AdditionalNumericalMeshGrating = None,
                  coordinates: ElementCoordinates = None,
@@ -74,6 +99,17 @@ class S4AdditionalNumericalMeshGratingElement(S4GratingElement):
             raise ValueError("Wrong Optical Element: only Surface Data shape is accepted")
 
     def to_python_code(self, **kwargs):
+        """
+        Creates the python code for defining the optical element.
+
+        Parameters
+        ----------
+        **kwargs
+
+        Returns
+        -------
+        str
+        """
         txt = "\n\n# optical element number XX"
         txt += self.get_optical_element().to_python_code()
         coordinates = self.get_coordinates()

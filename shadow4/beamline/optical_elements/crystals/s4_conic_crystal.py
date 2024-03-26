@@ -152,20 +152,18 @@ class S4ConicCrystal(S4Crystal, S4ConicOpticalElementDecorator):
 
 class S4ConicCrystalElement(S4CrystalElement):
     """
-    The Shadow4 Conic crystal element.
-    It is made of a S4ConicCrystal and an ElementCoordinates instance. It also includes the input beam.
-
     Constructor.
 
     Parameters
     ----------
-    optical_element : instance of S4ConicCrystal
-        The crystal data.
-    coordinates : instance of ElementCoordinates
-        The position data.
-    input_beam : instance of S4Beam
-        The input beam.
-
+    optical_element : instance of OpticalElement, optional
+        The syned optical element.
+    coordinates : instance of ElementCoordinates, optional
+        The syned element coordinates.
+    movements : instance of S4BeamlineElementMovements, optional
+        The S4 element movements.
+    input_beam : instance of S4Beam, optional
+        The S4 incident beam.
     """
     def __init__(self,
                  optical_element : S4ConicCrystal = None,

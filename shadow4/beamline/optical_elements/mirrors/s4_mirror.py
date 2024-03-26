@@ -16,32 +16,39 @@ from shadow4.optical_surfaces.s4_mesh import S4Mesh
 
 class S4Mirror(Mirror):
     """
-    S4Mirror
-
     Constructor.
 
     Parameters
     ----------
-    name
-    boundary_shape
-    element_coordinates_syned
-    surface_shape
-    f_reflec
-            reflectivity of surface: 0=no reflectivity, 1=full polarization
-    f_refl
-            0=prerefl file
-            1=electric susceptibility
-            2=user defined file (1D angle in mrad, reflectivity)
-            3=user defined file (1D energy in eV, reflectivity)
-            4=user defined file (2D energy in eV, angle in mrad, reflectivity)
-    file_refl
-            name if user defined file
-    refraction_index
-            complex scalar with refraction index n (for f_refl=1)
-    material
+    name : str, optional
+        The name of the mirror.
+    boundary_shape : instance of BoundaryShape, optional
+        The boundary shape of the mirror.
+    surface_shape : instance of SurfaceShape, optional
+        The surface shape of the mirror.
+    f_reflec : int, optional
+         the reflectivity of surface:
+            - 0=no reflectivity,
+            - 1=full polarization.
+    f_refl : int, optional
+        A flag to indicate the source of reflectivities:
+            - 0=prerefl file
+            - 1=electric susceptibility
+            - 2=user defined file (1D angle in mrad, reflectivity)
+            - 3=user defined file (1D energy in eV, reflectivity)
+            - 4=user defined file (2D energy in eV, angle in mrad, reflectivity)
+    file_refl : str, optional
+            name of user defined file (for f_refl=0).
+    refraction_index : complex, optional
+            complex scalar with refraction index n (for f_refl=1).
+    material : str, optional
             string with material formula (for f_refl=5,6)
-    density
+    density : float, optional
             material density in g/cm^3 (for f_refl=5,6)
+
+    Returns
+    -------
+    instance of S4Mirror.
     """
     def __init__(self,
                  name="Undefined",
@@ -90,13 +97,15 @@ class S4Mirror(Mirror):
                     ("coating_roughness",  "S4: roughness of coating material",         "A"),
             ] )
 
-
-    def apply_mirror_reflection(self, beam):
-        sur = self.get_optical_surface_instance()
-        footprint, normal, _, _, _, _, _ = sur.apply_specular_reflection_on_beam(beam)
-        return footprint, normal
-
     def to_python_code_boundary_shape(self):
+        """
+        Creates a code block with information of boundary shape.
+
+        Returns
+        -------
+        str
+            The text with the code.
+        """
         txt = "" # "\nfrom shadow4.beamline.optical_elements.mirrors.s4_plane_mirror import S4PlaneMirror"
         bs = self._boundary_shape
         if bs is None:
@@ -109,8 +118,27 @@ class S4Mirror(Mirror):
             txt += "\nboundary_shape = Ellipse(a_axis_min=%g, a_axis_max=%g, b_axis_min=%g, b_axis_max=%g)" % bs.get_boundaries()
         return txt
 
+    def _apply_mirror_reflection(self, beam):
+        sur = self.get_optical_surface_instance()
+        footprint, normal, _, _, _, _, _ = sur.apply_specular_reflection_on_beam(beam)
+        return footprint, normal
+
+
 class S4MirrorElement(S4BeamlineElement):
-    
+    """
+    Constructor.
+
+    Parameters
+    ----------
+    optical_element : instance of OpticalElement, optional
+        The syned optical element.
+    coordinates : instance of ElementCoordinates, optional
+        The syned element coordinates.
+    movements : instance of S4BeamlineElementMovements, optional
+        The S4 element movements.
+    input_beam : instance of S4Beam, optional
+        The S4 incident beam.
+    """
     def __init__(self,
                  optical_element : S4Mirror = None,
                  coordinates : ElementCoordinates = None,
@@ -122,6 +150,18 @@ class S4MirrorElement(S4BeamlineElement):
                          input_beam=input_beam)
     
     def trace_beam(self, **params):
+        """
+        Runs (ray tracing) the input beam through the element.
+
+        Parameters
+        ----------
+        **params
+
+        Returns
+        -------
+        tuple
+            (output_beam, footprint) instances of S4Beam.
+        """
         flag_lost_value = params.get("flag_lost_value", -1)
 
         p = self.get_coordinates().p()
@@ -158,7 +198,7 @@ class S4MirrorElement(S4BeamlineElement):
         v_in = input_beam.get_columns([4,5,6])
 
         # footprint, normal = self.apply_local_reflection(input_beam)
-        footprint, normal = self.get_optical_element().apply_mirror_reflection(input_beam)
+        footprint, normal = self.get_optical_element()._apply_mirror_reflection(input_beam)
 
         if movements is not None:
             if movements.f_move:
@@ -343,12 +383,39 @@ class S4MirrorElement(S4BeamlineElement):
     # i/o utilities
     #
     def set_grazing_angle(self, theta_grazing, theta_azimuthal=None):
+        """
+        Sets the grazing angle.
+
+        Parameters
+        ----------
+        theta_grazing : float, optional
+            The grazing angle in rad.
+        theta_azimuthal : float, optional
+            The azimuthal angle in rad.
+        """
         self.get_coordinates()._angle_radial     = numpy.pi / 2 - theta_grazing
         self.get_coordinates()._angle_radial_out = numpy.pi / 2 - theta_grazing
         if theta_azimuthal is not None: self.get_coordinates()._angle_azimuthal = theta_azimuthal
 
     @classmethod
     def reflectivity_fresnel(cls, refraction_index, grazing_angle_mrad=3.0, debyewaller=1.0):
+        """
+        Calculates Fresnel reflectivity.
+
+        Parameters
+        ----------
+        refraction_index : complex, numpy array
+            The refraction index (complex number).
+        grazing_angle_mrad : float, numpy array
+            The grazing angle in mrad.
+        debyewaller : float, numpy array
+            The Debye-Waller factor.
+
+        Returns
+        -------
+        tuple
+            (rs, rp, runp) reflectivities [in intensity!] (sigma, pi and unpolarized).
+        """
         theta1 = grazing_angle_mrad * 1e-3     # in rad
 
         alpha = 2 * (1.0 - refraction_index.real)

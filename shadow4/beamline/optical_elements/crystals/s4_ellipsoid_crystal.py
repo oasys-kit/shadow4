@@ -185,12 +185,14 @@ class S4EllipsoidCrystalElement(S4CrystalElement):
 
     Parameters
     ----------
-    optical_element : instance of S4EllipsoidCrystal
-        The crystal data.
-    coordinates : instance of ElementCoordinates
-        The position data.
-    input_beam : instance of S4Beam
-        The input beam.
+    optical_element : instance of OpticalElement, optional
+        The syned optical element.
+    coordinates : instance of ElementCoordinates, optional
+        The syned element coordinates.
+    movements : instance of S4BeamlineElementMovements, optional
+        The S4 element movements.
+    input_beam : instance of S4Beam, optional
+        The S4 incident beam.
 
     """
     def __init__(self,

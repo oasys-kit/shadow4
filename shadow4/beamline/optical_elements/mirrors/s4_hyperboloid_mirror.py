@@ -63,6 +63,17 @@ class S4HyperboloidMirror(S4Mirror, S4HyperboloidOpticalElementDecorator):
         }
 
     def to_python_code(self, **kwargs):
+        """
+        Creates the python code for defining the optical element.
+
+        Parameters
+        ----------
+        **kwargs
+
+        Returns
+        -------
+        str
+        """
         txt = self.to_python_code_boundary_shape()
         txt_pre = """
         
@@ -79,6 +90,20 @@ optical_element = S4HyperboloidMirror(name='{name:s}', boundary_shape=boundary_s
         return txt
 
 class S4HyperboloidMirrorElement(S4MirrorElement):
+    """
+    Constructor.
+
+    Parameters
+    ----------
+    optical_element : instance of OpticalElement, optional
+        The syned optical element.
+    coordinates : instance of ElementCoordinates, optional
+        The syned element coordinates.
+    movements : instance of S4BeamlineElementMovements, optional
+        The S4 element movements.
+    input_beam : instance of S4Beam, optional
+        The S4 incident beam.
+    """
     def __init__(self,
                  optical_element : S4HyperboloidMirror = None,
                  coordinates : ElementCoordinates = None,
@@ -93,6 +118,17 @@ class S4HyperboloidMirrorElement(S4MirrorElement):
             raise ValueError("Wrong Optical Element: only Hyperboloid or Hyperbolic Cylinder shape is accepted")
 
     def to_python_code(self, **kwargs):
+        """
+        Creates the python code for defining the optical element.
+
+        Parameters
+        ----------
+        **kwargs
+
+        Returns
+        -------
+        str
+        """
         txt = "\n\n# optical element number XX"
         txt += self.get_optical_element().to_python_code()
         coordinates = self.get_coordinates()
