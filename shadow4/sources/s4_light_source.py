@@ -90,7 +90,7 @@ class S4LightSource(LightSource):
 
     def to_python_code(self, **kwargs):
         """
-        returns the puthon code to create the light source. To be fully defined in the derived classes.
+        Returns the python code to create the light source. To be fully defined in the derived classes.
 
         Parameters
         ----------
