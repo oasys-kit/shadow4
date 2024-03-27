@@ -12,6 +12,47 @@ from shadow4.beamline.s4_beamline_element_movements import S4BeamlineElementMove
 
 
 class S4Grating(GratingVLS, S4OpticalElementDecorator):
+    """
+    Shadow4 Grating Class
+    This is a base class for a grating.
+
+    Use derived classes for plane or other curved crystal surfaces.
+
+    Constructor.
+
+    Parameters
+    ----------
+    name :  str, optional
+        A name for the crystal
+    boundary_shape : instance of BoundaryShape, optional
+        The information on the crystal boundaries.
+    surface_shape : instance of SurfaceShape, optional
+        The information on crystal surface.
+    ruling : float, optional
+        The constant term of the ruling in lines/m.
+    ruling_coeff_linear : float, optional
+        The linear term of the ruling in lines/m^2.
+    ruling_coeff_quadratic : float, optional
+        The quadratic term of the ruling in lines/m^3.
+    ruling_coeff_cubic : float, optional
+        The cubic term of the ruling in lines/m^4.
+    ruling_coeff_quartic : float, optional
+        The quartic term of the ruling in lines/m^5.
+    coating : str, optional
+        The identified if the coating material (not used, passed to syned).
+    coating_thickness : float, optional
+        The thickness of the coating in m (not used, passed to syned).
+    order : int, optional
+        The diffraction order.
+    f_ruling : int, optional
+        A flag to define the type of ruling:
+            - (0) constant on X-Y plane (0)
+            - (1) polynomial line density (5 in shadow3).
+
+    Returns
+    -------
+    instance of S4Grating.
+    """
     def __init__(self,
                  # inputs related tosyned
                  name="Undefined",
@@ -27,7 +68,7 @@ class S4Grating(GratingVLS, S4OpticalElementDecorator):
                  # inputs related to observation direction
                  order=0,
                  f_ruling=0,    # (0) constant on X-Y plane (0)
-                                # (1) polynomial line density (5 in shadow5).
+                                # (1) polynomial line density (5 in shadow3).
                  # inputs NOT USED ANYMORE....
                  # # inputs related autosetting
                  # f_central=False,
@@ -74,27 +115,37 @@ class S4Grating(GratingVLS, S4OpticalElementDecorator):
         self._order = order
         self._f_ruling = f_ruling
 
-        self.congruence()
+        self._congruence()
 
-    def congruence(self):
-        if not self._f_ruling in [0,1,5]:
-            raise Exception("Not implemented grating with f_ruling=%d" % self._fruling)
+    def _congruence(self):
+        if not self._f_ruling in [0,1]:
+            raise Exception("Not implemented grating with f_ruling=%d" % self._f_ruling)
 
 class S4GratingElement(S4BeamlineElement):
-    """
-    Constructor.
+    class S4CrystalElement(S4BeamlineElement):
+        """
+        The base class for Shadow4 grating element.
+        It is made of a S4Grating and an ElementCoordinates instance. It also includes the input beam.
 
-    Parameters
-    ----------
-    optical_element : instance of OpticalElement, optional
-        The syned optical element.
-    coordinates : instance of ElementCoordinates, optional
-        The syned element coordinates.
-    movements : instance of S4BeamlineElementMovements, optional
-        The S4 element movements.
-    input_beam : instance of S4Beam, optional
-        The S4 incident beam.
-    """
+        Use derived classes for plane or other curved crystal surfaces.
+
+        Constructor.
+
+        Parameters
+        ----------
+        optical_element : instance of OpticalElement, optional
+            The syned optical element.
+        coordinates : instance of ElementCoordinates, optional
+            The syned element coordinates.
+        movements : instance of S4BeamlineElementMovements, optional
+            The S4 element movements.
+        input_beam : instance of S4Beam, optional
+            The S4 incident beam.
+
+        Returns
+        -------
+        instance of S4GratingElement.
+        """
     def __init__(self,
                  optical_element : S4Grating = None,
                  coordinates : ElementCoordinates = None,

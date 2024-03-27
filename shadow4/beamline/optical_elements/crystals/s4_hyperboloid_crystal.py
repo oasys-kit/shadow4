@@ -20,6 +20,20 @@ class S4HyperboloidCrystal(S4Crystal, S4HyperboloidOpticalElementDecorator):
         A name for the crystal
     boundary_shape : instance of BoundaryShape, optional
         The information on the crystal boundaries.
+    is_cylinder : int, optional
+        Flag to indicate that the surface has cylindrical symmetry (it is flat in one direction).
+    cylinder_direction : int, optional
+       For is_cylinder=1, the direction where the surface is flat.
+       Use synedDirection.TANGENTIAL (0) or Direction.SAGITTAL (1).
+    convexity : int, optional
+        The surface is concave (0) or convex (1).
+        Use syned Convexity.UPWARD (0) for concave or Convexity.DOWNWARD (1).
+    min_axis : float, optional
+        The hyperbola/hyperboloid minor axis.
+    maj_axis : float, optional
+        The hyperbola/hyperboloid major axis.
+    pole_to_focus : float, optional
+        The distance from focus 1 (locus of the source) to the crystal pole.
     material : str, optional
         The crystal material name (a name accepted by crystalpy).
     miller_index_h : int, optional
@@ -50,21 +64,10 @@ class S4HyperboloidCrystal(S4Crystal, S4HyperboloidOpticalElementDecorator):
         0: xraylib, 1: dabax, 2: preprocessor file v1, 3: preprocessor file v2.
     file_refl : str, optional
         for material_constants_library_flag=2,3, the name of the file containing the crystal parameters.
-    min_axis : float, optional
-        The hyperbola/hyperboloid minor axis.
-    maj_axis : float, optional
-        The hyperbola/hyperboloid major axis.
-    pole_to_focus : float, optional
-        The distance from focus 1 (locus of the source) to the crystal pole
-    is_cylinder : int, optional
-        Flag to indicate that the surface has cylindrical symmetry (it is flat in one direction).
-    cylinder_direction : int, optional
-       For is_cylinder=1, the direction where the surface is flat.
-       Use synedDirection.TANGENTIAL (0) or Direction.SAGITTAL (1).
-    convexity : int, optional
-        The surface is concave (0) or convex (1).
-        Use syned Convexity.UPWARD (0) for concave or Convexity.DOWNWARD (1).
 
+    Returns
+    -------
+    instance of S4HyperboloidCrystal.
     """
     def __init__(self,
                  name="Hyperboloid crystal",
@@ -146,7 +149,7 @@ class S4HyperboloidCrystal(S4Crystal, S4HyperboloidOpticalElementDecorator):
 
     def to_python_code(self, **kwargs):
         """
-        Auxiliar method to automatically create python scripts.
+        Creates the python code for defining the element.
 
         Parameters
         ----------
@@ -156,9 +159,7 @@ class S4HyperboloidCrystal(S4Crystal, S4HyperboloidOpticalElementDecorator):
         -------
         str
             Python code.
-
         """
-
         txt = "\nfrom shadow4.beamline.optical_elements.crystals.s4_hyperboloid_crystal import S4HyperboloidCrystal"
 
         txt_pre = """\noptical_element = S4HyperboloidCrystal(name='{name}',
@@ -211,7 +212,7 @@ class S4HyperboloidCrystalElement(S4CrystalElement):
 
     def to_python_code(self, **kwargs):
         """
-        Auxiliar method to automatically create python scripts.
+        Creates the python code for defining the element.
 
         Parameters
         ----------
@@ -221,7 +222,6 @@ class S4HyperboloidCrystalElement(S4CrystalElement):
         -------
         str
             Python code.
-
         """
         txt = "\n\n# optical element number XX"
         txt += self.get_optical_element().to_python_code()

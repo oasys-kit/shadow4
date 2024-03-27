@@ -8,10 +8,30 @@ from shadow4.beamline.s4_beamline_element_movements import S4BeamlineElementMove
 
 
 class S4AdditionalNumericalMeshMirror(S4NumericalMeshMirror):
+    """
+    Constructor.
+
+
+    Parameters
+    ----------
+    ideal_mirror : instance of S4Mirror
+        The mirror baseline.
+    numerical_mesh_mirror : instance of S4NumericalMeshMirror
+        The numerical mesh to be added to the ideal mirror.
+    name : str, optional
+        The name of the mirror.
+
+    Returns
+    -------
+    instance of S4AdditionalNumericalMeshMirror.
+    """
     def __init__(self,
                  ideal_mirror : S4Mirror = None,
                  numerical_mesh_mirror : S4NumericalMeshMirror = None,
                  name="Mirror with Additional Numerical Mesh"):
+        """
+
+        """
         S4NumericalMeshMirror.__init__(self, name=name,
                  boundary_shape=None if ideal_mirror is None else ideal_mirror.get_boundary_shape(),
                  xx=None if numerical_mesh_mirror is None else numerical_mesh_mirror._curved_surface_shape._xx,
@@ -47,7 +67,7 @@ class S4AdditionalNumericalMeshMirror(S4NumericalMeshMirror):
 
     def to_python_code(self, **kwargs):
         """
-        Creates the python code for defining the optical element.
+        Creates the python code for defining the element.
 
         Parameters
         ----------
@@ -56,6 +76,7 @@ class S4AdditionalNumericalMeshMirror(S4NumericalMeshMirror):
         Returns
         -------
         str
+            Python code.
         """
         txt = self.__ideal_mirror.to_python_code()
         txt += "ideal_mirror = optical_element"
@@ -104,6 +125,10 @@ class S4AdditionalNumericalMeshMirrorElement(S4MirrorElement):
         The S4 element movements.
     input_beam : instance of S4Beam, optional
         The S4 incident beam.
+
+    Returns
+    -------
+    instance of S4AdditionalNumericalMeshMirrorElement
     """
     def __init__(self,
                  optical_element: S4AdditionalNumericalMeshMirror = None,
@@ -119,7 +144,7 @@ class S4AdditionalNumericalMeshMirrorElement(S4MirrorElement):
 
     def to_python_code(self, **kwargs):
         """
-        Creates the python code for defining the optical element.
+        Creates the python code for defining the element.
 
         Parameters
         ----------
@@ -128,6 +153,7 @@ class S4AdditionalNumericalMeshMirrorElement(S4MirrorElement):
         Returns
         -------
         str
+            Python code.
         """
         txt = "\n\n# optical element number XX"
         txt += self.get_optical_element().to_python_code()

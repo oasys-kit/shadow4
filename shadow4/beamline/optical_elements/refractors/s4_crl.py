@@ -11,6 +11,34 @@ from shadow4.beamline.s4_optical_element_decorators import S4RefractiveLensOptic
 from shadow4.beamline.optical_elements.refractors.s4_lens import _get_lens_interfaces
 
 class S4CRL(CRL, S4RefractiveLensOpticalElementDecorator):
+    """
+    Constructor.
+
+    Parameters
+    ----------
+    name : str, optional
+        The name of the mirror.
+    boundary_shape : instance of BoundaryShape, optional
+        The boundary shape of the mirror.
+    surface_shape : instance of SurfaceShape, optional
+        The surface shape of the mirror
+    n_lens
+    piling_thickness
+    material
+    thickness
+    convex_to_the_beam
+    cylinder_angle
+    ri_calculation_mode
+    prerefl_file
+    refraction_index
+    attenuation_coefficient
+    radius
+    conic_coefficients
+
+    Returns
+    -------
+    instance of S4CRL.
+    """
     def __init__(self,
                  name="Undefined",
                  n_lens=1,
@@ -34,6 +62,12 @@ class S4CRL(CRL, S4RefractiveLensOpticalElementDecorator):
                  radius=500e-6,        # for surface_shape=(1,2): lens radius [m] (for spherical, or radius at the tip for paraboloid)
                  conic_coefficients=[0.0]*10,   # for surface_shape = 3: the conic coefficients
                  ):
+        """
+
+        Parameters
+        ----------
+
+        """
         S4RefractiveLensOpticalElementDecorator.__init__(self,
                                                          surface_shape,
                                                          convex_to_the_beam,
@@ -98,7 +132,7 @@ class S4CRL(CRL, S4RefractiveLensOpticalElementDecorator):
 
     def to_python_code(self, **kwargs):
         """
-        Creates the python code for defining the optical element.
+        Creates the python code for defining the element.
 
         Parameters
         ----------
@@ -107,6 +141,7 @@ class S4CRL(CRL, S4RefractiveLensOpticalElementDecorator):
         Returns
         -------
         str
+            Python code.
         """
         txt = self.to_python_code_boundary_shape()
 
@@ -165,6 +200,10 @@ class S4CRLElement(S4BeamlineElement):
         The syned element coordinates.
     input_beam : instance of S4Beam, optional
         The S4 incident beam.
+
+    Returns
+    -------
+    instance of S4CRLElement.
     """
     def __init__(self,
                  optical_element: S4CRL = None,
@@ -176,7 +215,7 @@ class S4CRLElement(S4BeamlineElement):
 
     def to_python_code(self, **kwargs):
         """
-        Creates the python code for defining the optical element.
+        Creates the python code for defining the element.
 
         Parameters
         ----------
@@ -185,6 +224,7 @@ class S4CRLElement(S4BeamlineElement):
         Returns
         -------
         str
+            Python code.
         """
         txt = "\n\n# optical element number XX"
         txt += self.get_optical_element().to_python_code()

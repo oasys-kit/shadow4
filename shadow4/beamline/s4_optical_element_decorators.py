@@ -294,6 +294,8 @@ class S4EllipsoidOpticalElementDecorator(S4CurvedOpticalElementDecorator):
         For surface_calculation=0, The minor axis of the ellipsoid (2a).
     maj_axis : float, optional
         For surface_calculation=0, The major axis of the ellipsoid (2b)
+    pole_to_focus : float, optional
+        For surface_calculation=0, the p or q distance (from focus to center of the optical element).
     p_focus : float, optional
         For surface_calculation=1,2, the p distance (from source plane to center of the optical element).
     q_focus : float, optional
@@ -380,6 +382,8 @@ class S4HyperboloidOpticalElementDecorator(S4CurvedOpticalElementDecorator):
         For surface_calculation=0, The minor axis of the ellipsoid (2a).
     maj_axis : float, optional
         For surface_calculation=0, The major axis of the ellipsoid (2b)
+    pole_to_focus : float, optional
+        For surface_calculation=0, the p or q distance (from focus to center of the optical element).
     p_focus : float, optional
         For surface_calculation=1,2, the p distance (from source plane to center of the optical element).
     q_focus : float, optional
@@ -454,6 +458,8 @@ class S4ToroidOpticalElementDecorator(S4CurvedOpticalElementDecorator):
         Toroid major radius in m. Note that this **is not** the tangential radius mut the radius of
         the toroidal axis, therefore for the usual case of concave surface it is the
         tangential radius minus the sagittal radius.
+    f_torus : int, optional
+        ........
     p_focus : float, optional
         For surface_calculation=1, the p distance (from source plane to center of the optical element).
     q_focus : float, optional

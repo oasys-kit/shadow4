@@ -6,6 +6,47 @@ from shadow4.beamline.s4_optical_element_decorators import S4NumericalMeshOptica
 from shadow4.beamline.s4_beamline_element_movements import S4BeamlineElementMovements
 
 class S4NumericalMeshMirror(S4Mirror, S4NumericalMeshOpticalElementDecorator):
+    """
+    Constructor.
+
+    Parameters
+    ----------
+    name : str, optional
+        The name of the mirror.
+    boundary_shape : instance of BoundaryShape, optional
+        The boundary shape of the mirror.
+    xx : ndarray, optional
+        the 1D array with the X points.
+    yy : ndarray, optional
+        the 1D array with the Y points.
+    zz : ndarray, optional
+        the 2D [shape Nx,Ny] array with the Z points.
+    surface_data_file : str, optional
+        the name of the h5 file with the mesh.
+    f_reflec : int, optional
+         the reflectivity of surface:
+            - 0=no reflectivity,
+            - 1=full polarization.
+    f_refl : int, optional
+        A flag to indicate the source of reflectivities:
+            - 0=prerefl file
+            - 1=electric susceptibility
+            - 2=user defined file (1D angle in mrad, reflectivity)
+            - 3=user defined file (1D energy in eV, reflectivity)
+            - 4=user defined file (2D energy in eV, angle in mrad, reflectivity)
+    file_refl : str, optional
+            name of user defined file (for f_refl=0).
+    refraction_index : complex, optional
+            complex scalar with refraction index n (for f_refl=1).
+    material : str, optional
+            string with material formula (for f_refl=5,6)
+    density : float, optional
+            material density in g/cm^3 (for f_refl=5,6)
+
+    Returns
+    -------
+    instance of S4NumericalMeshMirror.
+    """
     def __init__(self,
                  name="Numerical Mesh Mirror",
                  boundary_shape=None,
@@ -50,7 +91,7 @@ class S4NumericalMeshMirror(S4Mirror, S4NumericalMeshOpticalElementDecorator):
 
     def to_python_code(self, **kwargs):
         """
-        Creates the python code for defining the optical element.
+        Creates the python code for defining the element.
 
         Parameters
         ----------
@@ -59,6 +100,7 @@ class S4NumericalMeshMirror(S4Mirror, S4NumericalMeshOpticalElementDecorator):
         Returns
         -------
         str
+            Python code.
         """
         txt = self.to_python_code_boundary_shape()
         txt_pre = """
@@ -87,6 +129,10 @@ class S4NumericalMeshMirrorElement(S4MirrorElement):
         The S4 element movements.
     input_beam : instance of S4Beam, optional
         The S4 incident beam.
+
+    Returns
+    -------
+    instance of S4NumericalMeshMirrorElement
     """
     def __init__(self,
                  optical_element: S4NumericalMeshMirror = None,
@@ -102,7 +148,7 @@ class S4NumericalMeshMirrorElement(S4MirrorElement):
 
     def to_python_code(self, **kwargs):
         """
-        Creates the python code for defining the optical element.
+        Creates the python code for defining the element.
 
         Parameters
         ----------
@@ -111,6 +157,7 @@ class S4NumericalMeshMirrorElement(S4MirrorElement):
         Returns
         -------
         str
+            Python code.
         """
         txt = "\n\n# optical element number XX"
         txt += self.get_optical_element().to_python_code()

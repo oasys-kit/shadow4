@@ -657,7 +657,7 @@ class S4BendingMagnetLightSource(S4LightSource):
 
     def to_python_code(self, **kwargs):
         """
-        returns the python code for calculating the bending magnet source.
+        Returns the python code for calculating the bending magnet source.
 
         Returns
         -------

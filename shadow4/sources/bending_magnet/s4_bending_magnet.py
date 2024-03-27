@@ -191,7 +191,7 @@ class S4BendingMagnet(BendingMagnet):
 
     def to_python_code(self):
         """
-        returns the python code for defining the bending magnet magnetic structure.
+        Returns the python code for defining the bending magnet magnetic structure.
 
         Returns
         -------

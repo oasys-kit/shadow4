@@ -37,6 +37,18 @@ class S4BeamMovement(OpticalElement, S4OpticalElementDecorator):
         }
 
     def to_python_code(self, **kwargs):
+        """
+        Creates the python code for defining the element.
+
+        Parameters
+        ----------
+        **kwargs
+
+        Returns
+        -------
+        str
+            Python code.
+        """
         txt_pre = """
 
 from shadow4.beamline.optical_elements.ideal_elements.s4_beam_movement import S4BeamMovement
@@ -59,6 +71,11 @@ class S4BeamMovementElement(S4BeamlineElement):
         The syned element coordinates.
     input_beam : instance of S4Beam, optional
         The S4 incident beam.
+
+    Returns
+    -------
+        instance of S4BeamMovementElement.
+
     """
     def __init__(self,
                  optical_element : S4BeamMovement = None,
@@ -113,6 +130,18 @@ class S4BeamMovementElement(S4BeamlineElement):
         return output_beam, input_beam
 
     def to_python_code(self, **kwargs):
+        """
+        Creates the python code for defining the element.
+
+        Parameters
+        ----------
+        **kwargs
+
+        Returns
+        -------
+        str
+            Python code.
+        """
         txt = "\n\n# optical element number XX"
         txt += self.get_optical_element().to_python_code()
         coordinates = self.get_coordinates()

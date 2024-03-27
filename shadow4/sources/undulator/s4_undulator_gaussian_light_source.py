@@ -332,7 +332,7 @@ class S4UndulatorGaussianLightSource(S4LightSource):
 
     def to_python_code(self, **kwargs):
         """
-        returns the python code for calculating the wiggler source.
+        Returns the python code for calculating the wiggler source.
 
         Returns
         -------

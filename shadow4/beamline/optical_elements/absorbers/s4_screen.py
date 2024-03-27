@@ -105,7 +105,7 @@ class S4Screen(Absorber, S4OpticalElementDecorator):
 
     def to_python_code(self, **kwargs):
         """
-        Creates the python code for defining the optical element.
+        Creates the python code for defining the element.
 
         Parameters
         ----------
@@ -114,6 +114,7 @@ class S4Screen(Absorber, S4OpticalElementDecorator):
         Returns
         -------
         str
+            Python code.
         """
         txt = self.to_python_code_boundary_shape()
         txt_pre = """
@@ -128,16 +129,22 @@ optical_element = S4Screen(name='{name:s}', boundary_shape=boundary_shape,
 
 class S4ScreenElement(S4BeamlineElement):
     """
-    Constructor. Defines the beamline element for the screen.
+    Constructor.
 
     Parameters
     ----------
-    optical_element : instance of S4Slit, optional
-        The optical element.
+    optical_element : instance of OpticalElement, optional
+        The syned optical element.
     coordinates : instance of ElementCoordinates, optional
-        The element coordinates.
-    input_beam : instance of S4beam, optional
-        The incident beam.
+        The syned element coordinates.
+    movements : instance of S4BeamlineElementMovements, optional
+        The S4 element movements.
+    input_beam : instance of S4Beam, optional
+        The S4 incident beam.
+
+    Returns
+    -------
+    instance of S4ScreenElement.
     """
     def __init__(self, optical_element : S4Screen = None, coordinates : ElementCoordinates = None, input_beam : S4Beam = None):
         super().__init__(optical_element=optical_element if optical_element is not None else S4Screen(),
@@ -240,7 +247,7 @@ class S4ScreenElement(S4BeamlineElement):
 
     def to_python_code(self, **kwargs):
         """
-        Creates the python code for defining the beamline element.
+        Creates the python code for defining the element.
 
         Parameters
         ----------
@@ -249,6 +256,7 @@ class S4ScreenElement(S4BeamlineElement):
         Returns
         -------
         str
+            Python code.
         """
         txt = "\n\n# optical element number XX"
         txt += self.get_optical_element().to_python_code()

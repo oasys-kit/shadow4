@@ -324,6 +324,7 @@ class SourceGridPolar(S4LightSourceBase):
         Returns
         -------
         str
+            The python code.
         """
         txt = ""
         txt += "\n#\n#\n#"

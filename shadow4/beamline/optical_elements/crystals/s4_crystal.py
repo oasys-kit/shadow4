@@ -33,9 +33,9 @@ class S4Crystal(Crystal):
 
     Use derived classes for plane or other curved crystal surfaces.
 
-    Use other classes for
+    Use other classes for (to be developed):
         * S4TransmissionCrystal : Perfect crystal in transmission (Bragg-transmitted beam, Laue-diffracted and Laue-transmited)
-        * S4JohanssonCrystal : Johenssong curved perfect crystals (in Bragg reflection).
+        * S4JohanssonCrystal : Johanssong curved perfect crystals (in Bragg reflection).
         * S4MosaicCrystal : Mosaic crystals (in Bragg reflection).
 
     Constructor.
@@ -79,6 +79,9 @@ class S4Crystal(Crystal):
     file_refl : str, optional
         for material_constants_library_flag=2,3, the name of the file containing the crystal parameters.
 
+    Returns
+    -------
+    instance of S4Crystal.
     """
     def __init__(self,
                  name="Undefined",
@@ -189,6 +192,10 @@ class S4CrystalElement(S4BeamlineElement):
     input_beam : instance of S4Beam, optional
         The S4 incident beam.
 
+
+    Returns
+    -------
+    instance of S4CrystalElement.
     """
 
     def __init__(self,
@@ -210,8 +217,7 @@ class S4CrystalElement(S4BeamlineElement):
 
         Returns
         -------
-        Instance of crystalpy DiffractionSetupAbstract
-
+        instance of crystalpy DiffractionSetupAbstract
         """
         oe = self.get_optical_element()
         coor = self.get_coordinates()

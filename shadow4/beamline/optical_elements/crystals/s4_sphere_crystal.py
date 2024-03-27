@@ -19,6 +19,16 @@ class S4SphereCrystal(S4Crystal, S4SphereOpticalElementDecorator):
         A name for the crystal
     boundary_shape : instance of BoundaryShape, optional
         The information on the crystal boundaries.
+    is_cylinder : int, optional
+        Flag to indicate that the surface has cylindrical symmetry (it is flat in one direction).
+    cylinder_direction : int, optional
+       For is_cylinder=1, the direction where the surface is flat.
+       Use synedDirection.TANGENTIAL (0) or Direction.SAGITTAL (1).
+    convexity : int, optional
+        The surface is concave (0) or convex (1).
+        Use syned Convexity.UPWARD (0) for concave or Convexity.DOWNWARD (1).
+    radius : float, optional
+        The surface spherical radius.
     material : str, optional
         The crystal material name (a name accepted by crystalpy).
     miller_index_h : int, optional
@@ -49,16 +59,10 @@ class S4SphereCrystal(S4Crystal, S4SphereOpticalElementDecorator):
         0: xraylib, 1: dabax, 2: preprocessor file v1, 3: preprocessor file v2.
     file_refl : str, optional
         for material_constants_library_flag=2,3, the name of the file containing the crystal parameters.
-    radius : float, optional
-        The surface spherical radius.
-    is_cylinder : int, optional
-        Flag to indicate that the surface has cylindrical symmetry (it is flat in one direction).
-    cylinder_direction : int, optional
-       For is_cylinder=1, the direction where the surface is flat.
-       Use synedDirection.TANGENTIAL (0) or Direction.SAGITTAL (1).
-    convexity : int, optional
-        The surface is concave (0) or convex (1).
-        Use syned Convexity.UPWARD (0) for concave or Convexity.DOWNWARD (1).
+
+    Returns
+    -------
+    instance of S4SphereCrystal.
     """
     def __init__(self,
                  name="Sphere crystal",
@@ -136,7 +140,7 @@ class S4SphereCrystal(S4Crystal, S4SphereOpticalElementDecorator):
 
     def to_python_code(self, **kwargs):
         """
-        Creates the python code for defining the optical element.
+        Creates the python code for defining the element.
 
         Parameters
         ----------
@@ -145,8 +149,8 @@ class S4SphereCrystal(S4Crystal, S4SphereOpticalElementDecorator):
         Returns
         -------
         str
+            Python code.
         """
-
         txt = "\nfrom shadow4.beamline.optical_elements.crystals.s4_sphere_crystal import S4SphereCrystal"
 
         txt_pre = """\noptical_element = S4SphereCrystal(name='{name}',
@@ -199,7 +203,7 @@ class S4SphereCrystalElement(S4CrystalElement):
 
     def to_python_code(self, **kwargs):
         """
-        Creates the python code for defining the optical element.
+        Creates the python code for defining the element.
 
         Parameters
         ----------
@@ -208,6 +212,7 @@ class S4SphereCrystalElement(S4CrystalElement):
         Returns
         -------
         str
+            Python code.
         """
         txt = "\n\n# optical element number XX"
         txt += self.get_optical_element().to_python_code()

@@ -12,7 +12,7 @@ class S4Empty(Screen, S4OpticalElementDecorator):
 
     def to_python_code(self, **kwargs):
         """
-        Creates the python code for defining the optical element.
+        Creates the python code for defining the element.
 
         Parameters
         ----------
@@ -21,6 +21,7 @@ class S4Empty(Screen, S4OpticalElementDecorator):
         Returns
         -------
         str
+            Python code.
         """
         txt_pre = """
 
@@ -42,6 +43,11 @@ class S4EmptyElement(S4BeamlineElement):
         The syned element coordinates.
     input_beam : instance of S4Beam, optional
         The S4 incident beam.
+
+    Returns
+    -------
+    instance of S4EmptyElement.
+
     """
     def __init__(self,
                  optical_element : S4Empty = None,
@@ -95,6 +101,18 @@ class S4EmptyElement(S4BeamlineElement):
         return output_beam, input_beam
 
     def to_python_code(self, **kwargs):
+        """
+        Creates the python code for defining the element.
+
+        Parameters
+        ----------
+        **kwargs
+
+        Returns
+        -------
+        str
+            Python code.
+        """
         txt = "\n\n# optical element number XX"
         txt += self.get_optical_element().to_python_code()
         coordinates = self.get_coordinates()

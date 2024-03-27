@@ -5,6 +5,51 @@ from shadow4.beamline.s4_optical_element_decorators import SurfaceCalculation, S
 from shadow4.beamline.s4_beamline_element_movements import S4BeamlineElementMovements
 
 class S4ToroidMirror(S4Mirror, S4ToroidOpticalElementDecorator):
+    """
+    Constructor.
+
+    Parameters
+    ----------
+    name : str, optional
+        The name of the mirror.
+    boundary_shape : instance of BoundaryShape, optional
+        The boundary shape of the mirror.
+    surface_calculation : int, optional
+        flag:
+            0 = SurfaceCalculation.INTERNAL,
+            1 = SurfaceCalculation.EXTERNAL.
+    min_radius : float, optional
+        The minor axis of the toroid in m.
+    maj_radius : float, optional
+        Toroid major radius in m. Note that this **is not** the tangential radius mut the radius of
+        the toroidal axis, therefore for the usual case of concave surface it is the
+        tangential radius minus the sagittal radius.
+    f_torus : int, optional
+        ........
+    f_reflec : int, optional
+         the reflectivity of surface:
+            - 0=no reflectivity,
+            - 1=full polarization.
+    f_refl : int, optional
+        A flag to indicate the source of reflectivities:
+            - 0=prerefl file
+            - 1=electric susceptibility
+            - 2=user defined file (1D angle in mrad, reflectivity)
+            - 3=user defined file (1D energy in eV, reflectivity)
+            - 4=user defined file (2D energy in eV, angle in mrad, reflectivity)
+    file_refl : str, optional
+            name of user defined file (for f_refl=0).
+    refraction_index : complex, optional
+            complex scalar with refraction index n (for f_refl=1).
+    material : str, optional
+            string with material formula (for f_refl=5,6)
+    density : float, optional
+            material density in g/cm^3 (for f_refl=5,6)
+
+    Returns
+    -------
+    instance of S4ToroidMirror.
+    """
     def __init__(self,
                  name="Toroid Mirror",
                  boundary_shape=None,
@@ -57,6 +102,18 @@ class S4ToroidMirror(S4Mirror, S4ToroidOpticalElementDecorator):
         }
 
     def to_python_code(self, **kwargs):
+        """
+        Creates the python code for defining the element.
+
+        Parameters
+        ----------
+        **kwargs
+
+        Returns
+        -------
+        str
+            Python code.
+        """
         txt = self.to_python_code_boundary_shape()
         txt_pre = """
         
@@ -88,6 +145,10 @@ class S4ToroidMirrorElement(S4MirrorElement):
         The S4 element movements.
     input_beam : instance of S4Beam, optional
         The S4 incident beam.
+
+    Returns
+    -------
+    instance of S4ToroidMirrorElement
     """
     def __init__(self,
                  optical_element : S4ToroidMirror = None,
@@ -102,6 +163,18 @@ class S4ToroidMirrorElement(S4MirrorElement):
             raise ValueError("Wrong Optical Element: only Toroid shape is accepted")
 
     def to_python_code(self, **kwargs):
+        """
+        Creates the python code for defining the element.
+
+        Parameters
+        ----------
+        **kwargs
+
+        Returns
+        -------
+        str
+            Python code.
+        """
         txt = "\n\n# optical element number XX"
         txt += self.get_optical_element().to_python_code()
         coordinates = self.get_coordinates()

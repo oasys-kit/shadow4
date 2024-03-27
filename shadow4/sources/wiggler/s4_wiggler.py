@@ -304,7 +304,7 @@ class S4Wiggler(Wiggler):
 
     def to_python_code(self):
         """
-        returns the python code for defining the wiggler magnetic structure.
+        Returns the python code for defining the wiggler magnetic structure.
 
         Returns
         -------

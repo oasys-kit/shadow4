@@ -61,6 +61,18 @@ class S4NumericalMeshGrating(S4Grating, S4NumericalMeshOpticalElementDecorator):
         }
 
     def to_python_code(self, **kwargs):
+        """
+        Creates the python code for defining the element.
+
+        Parameters
+        ----------
+        **kwargs
+
+        Returns
+        -------
+        str
+            Python code.
+        """
         txt = "\nfrom shadow4.beamline.optical_elements.gratings.s4_numerical_mesh_grating import S4NumericalMeshGrating"
 
         txt_pre = """\noptical_element = S4NumericalMeshGrating(name='{name}',
@@ -97,6 +109,18 @@ class S4NumericalMeshGratingElement(S4GratingElement):
                          input_beam=input_beam)
 
     def to_python_code(self, **kwargs):
+        """
+        Creates the python code for defining the element.
+
+        Parameters
+        ----------
+        **kwargs
+
+        Returns
+        -------
+        str
+            Python code.
+        """
         txt = "\n\n# optical element number XX"
         txt += self.get_optical_element().to_python_code()
         coordinates = self.get_coordinates()

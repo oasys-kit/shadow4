@@ -1,3 +1,8 @@
+"""
+Abstract class for s4 mirror.
+
+"""
+
 import numpy
 
 from syned.beamline.shape import Rectangle, Ellipse
@@ -16,6 +21,10 @@ from shadow4.optical_surfaces.s4_mesh import S4Mesh
 
 class S4Mirror(Mirror):
     """
+    Shadow4 Mirror Class
+    This is a base class for mirrors.
+    Use derived classes for plane or other curved mirror surfaces.
+
     Constructor.
 
     Parameters
@@ -126,6 +135,11 @@ class S4Mirror(Mirror):
 
 class S4MirrorElement(S4BeamlineElement):
     """
+    The base class for Shadow4 mirror element.
+    It is made of a S4Mirror and an ElementCoordinates instance. It also includes the input beam.
+
+    Use derived classes for plane or other curved crystal surfaces.
+
     Constructor.
 
     Parameters
@@ -138,6 +152,10 @@ class S4MirrorElement(S4BeamlineElement):
         The S4 element movements.
     input_beam : instance of S4Beam, optional
         The S4 incident beam.
+
+    Returns
+    -------
+    instance of S4MirrorElement.
     """
     def __init__(self,
                  optical_element : S4Mirror = None,

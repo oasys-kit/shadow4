@@ -58,6 +58,18 @@ class S4ConicGrating(S4Grating, S4ConicOpticalElementDecorator):
         }
 
     def to_python_code(self, **kwargs):
+        """
+        Creates the python code for defining the element.
+
+        Parameters
+        ----------
+        **kwargs
+
+        Returns
+        -------
+        str
+            Python code.
+        """
         txt = "\nfrom shadow4.beamline.optical_elements.gratings.s4_conic_grating import S4ConicGrating"
 
         txt_pre = """\noptical_element = S4ConicGrating(name='{name}',
@@ -97,6 +109,18 @@ class S4ConicGratingElement(S4GratingElement):
                          input_beam=input_beam)
 
     def to_python_code(self, **kwargs):
+        """
+        Creates the python code for defining the element.
+
+        Parameters
+        ----------
+        **kwargs
+
+        Returns
+        -------
+        str
+            Python code.
+        """
         txt = "\n\n# optical element number XX"
         txt += self.get_optical_element().to_python_code()
         coordinates = self.get_coordinates()

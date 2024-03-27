@@ -52,7 +52,9 @@ class S4PlaneCrystal(S4Crystal, S4PlaneOpticalElementDecorator):
     file_refl : str, optional
         for material_constants_library_flag=2,3, the name of the file containing the crystal parameters.
 
-
+    Returns
+    -------
+    instance of S4PlaneCrystal.
     """
     def __init__(self,
                  name="Plane crystal",
@@ -119,7 +121,7 @@ class S4PlaneCrystal(S4Crystal, S4PlaneOpticalElementDecorator):
 
     def to_python_code(self, **kwargs):
         """
-        Creates the python code for defining the optical element.
+        Creates the python code for defining the element.
 
         Parameters
         ----------
@@ -128,8 +130,8 @@ class S4PlaneCrystal(S4Crystal, S4PlaneOpticalElementDecorator):
         Returns
         -------
         str
+            Python code.
         """
-
         txt = "\nfrom shadow4.beamline.optical_elements.crystals.s4_plane_crystal import S4PlaneCrystal"
 
         txt_pre = """\noptical_element = S4PlaneCrystal(name='{name}',
@@ -177,7 +179,7 @@ class S4PlaneCrystalElement(S4CrystalElement):
 
     def to_python_code(self, **kwargs):
         """
-        Creates the python code for defining the optical element.
+        Creates the python code for defining the element.
 
         Parameters
         ----------
@@ -186,6 +188,7 @@ class S4PlaneCrystalElement(S4CrystalElement):
         Returns
         -------
         str
+            Python code.
         """
         txt = "\n\n# optical element number XX"
         txt += self.get_optical_element().to_python_code()

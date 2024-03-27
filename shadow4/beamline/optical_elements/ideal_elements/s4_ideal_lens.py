@@ -14,7 +14,7 @@ class S4IdealLens(IdealLens, S4OpticalElementDecorator):
 
     def to_python_code(self, **kwargs):
         """
-        Creates the python code for defining the optical element.
+        Creates the python code for defining the element.
 
         Parameters
         ----------
@@ -23,6 +23,7 @@ class S4IdealLens(IdealLens, S4OpticalElementDecorator):
         Returns
         -------
         str
+            Python code.
         """
         txt_pre = """
 
@@ -44,6 +45,10 @@ class S4IdealLensElement(S4BeamlineElement):
         The syned element coordinates.
     input_beam : instance of S4Beam, optional
         The S4 incident beam.
+
+    Returns
+    -------
+    instance of S4IdealLensElement.
     """
     def __init__(self,
                  optical_element : S4IdealLens = None,
@@ -97,7 +102,7 @@ class S4IdealLensElement(S4BeamlineElement):
 
     def to_python_code(self, **kwargs):
         """
-        Creates the python code for defining the optical element.
+        Creates the python code for defining the element.
 
         Parameters
         ----------
@@ -106,6 +111,7 @@ class S4IdealLensElement(S4BeamlineElement):
         Returns
         -------
         str
+            Python code.
         """
         txt = "\n\n# optical element number XX"
         txt += self.get_optical_element().to_python_code()
@@ -138,7 +144,7 @@ class S4SuperIdealLens(IdealLens, S4OpticalElementDecorator):
 
     def to_python_code(self, **kwargs):
         """
-        Creates the python code for defining the optical element.
+        Creates the python code for defining the element.
 
         Parameters
         ----------
@@ -147,6 +153,7 @@ class S4SuperIdealLens(IdealLens, S4OpticalElementDecorator):
         Returns
         -------
         str
+            Python code.
         """
         txt_pre = """
 
@@ -170,6 +177,10 @@ class S4SuperIdealLensElement(S4BeamlineElement):
         The syned element coordinates.
     input_beam : instance of S4Beam, optional
         The S4 incident beam.
+
+    Returns
+    -------
+    instance of S4SuperIdealLensElement.
     """
     def __init__(self,
                  optical_element : S4SuperIdealLens = None,
@@ -236,7 +247,7 @@ class S4SuperIdealLensElement(S4BeamlineElement):
 
     def to_python_code(self, **kwargs):
         """
-        Creates the python code for defining the optical element.
+        Creates the python code for defining the element.
 
         Parameters
         ----------
@@ -245,6 +256,7 @@ class S4SuperIdealLensElement(S4BeamlineElement):
         Returns
         -------
         str
+            Python code.
         """
         txt = "\n\n# optical element number XX"
         txt += self.get_optical_element().to_python_code()

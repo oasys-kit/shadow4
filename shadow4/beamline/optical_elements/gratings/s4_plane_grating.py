@@ -51,6 +51,18 @@ class S4PlaneGrating(S4Grating, S4PlaneOpticalElementDecorator):
         }
 
     def to_python_code(self, **kwargs):
+        """
+        Creates the python code for defining the element.
+
+        Parameters
+        ----------
+        **kwargs
+
+        Returns
+        -------
+        str
+            Python code.
+        """
         txt = "\nfrom shadow4.beamline.optical_elements.gratings.s4_plane_grating import S4PlaneGrating"
 
         txt_pre = """\noptical_element = S4PlaneGrating(name='{name}',
@@ -90,7 +102,20 @@ class S4PlaneGratingElement(S4GratingElement):
                          coordinates=coordinates if coordinates is not None else ElementCoordinates(),
                          movements=movements,
                          input_beam=input_beam)
+
     def to_python_code(self, **kwargs):
+        """
+        Creates the python code for defining the element.
+
+        Parameters
+        ----------
+        **kwargs
+
+        Returns
+        -------
+        str
+            Python code.
+        """
         txt = "\n\n# optical element number XX"
         txt += self.get_optical_element().to_python_code()
         coordinates = self.get_coordinates()

@@ -5,6 +5,59 @@ from shadow4.beam.s4_beam import S4Beam
 from shadow4.beamline.s4_beamline_element_movements import S4BeamlineElementMovements
 
 class S4ParaboloidMirror(S4Mirror, S4ParaboloidOpticalElementDecorator):
+    """
+    Constructor.
+
+    Parameters
+    ----------
+    name : str, optional
+        The name of the mirror.
+    boundary_shape : instance of BoundaryShape, optional
+        The boundary shape of the mirror.
+    surface_calculation : int, optional
+        flag:
+            0 = SurfaceCalculation.INTERNAL,
+            1 = SurfaceCalculation.EXTERNAL.
+    is_cylinder : int, optional
+        flag:
+            0=No (there is revolution symmetry along Y)
+            1=Yes (flat surface along X or Y).
+    cylinder_direction : int (as defined by Direction), optional
+        NONE = -1, UPWARD = 0, DOWNWARD = 1.
+    convexity : int (as defined by Convexity), optional
+        NONE = -1, UPWARD = 0, DOWNWARD = 1.
+    parabola_parameter : float, optional
+        For surface_calculation=0, The parabola parameter PARAM (y^2 = 2 PARAM z)
+    at_infinity : int, optional
+        For surface_calculation=0, flag to indicate that
+            0: the source is at infinity (focusing paraboloid) = Side.SOURCE.
+            1: the image is at infinity (collimating paraboloid) = Side.IMAGE.
+    pole_to_focus : float, optional
+        For surface_calculation=0, the p or q distance (from focus to center of the optical element).
+    f_reflec : int, optional
+         the reflectivity of surface:
+            - 0=no reflectivity,
+            - 1=full polarization.
+    f_refl : int, optional
+        A flag to indicate the source of reflectivities:
+            - 0=prerefl file
+            - 1=electric susceptibility
+            - 2=user defined file (1D angle in mrad, reflectivity)
+            - 3=user defined file (1D energy in eV, reflectivity)
+            - 4=user defined file (2D energy in eV, angle in mrad, reflectivity)
+    file_refl : str, optional
+            name of user defined file (for f_refl=0).
+    refraction_index : complex, optional
+            complex scalar with refraction index n (for f_refl=1).
+    material : str, optional
+            string with material formula (for f_refl=5,6)
+    density : float, optional
+            material density in g/cm^3 (for f_refl=5,6)
+
+    Returns
+    -------
+    instance of S4ParaboloidMirror.
+    """
     def __init__(self,
                  name="Paraboloid Mirror",
                  boundary_shape=None,
@@ -60,7 +113,7 @@ class S4ParaboloidMirror(S4Mirror, S4ParaboloidOpticalElementDecorator):
 
     def to_python_code(self, **kwargs):
         """
-        Creates the python code for defining the optical element.
+        Creates the python code for defining the element.
 
         Parameters
         ----------
@@ -69,6 +122,7 @@ class S4ParaboloidMirror(S4Mirror, S4ParaboloidOpticalElementDecorator):
         Returns
         -------
         str
+            Python code.
         """
         txt = self.to_python_code_boundary_shape()
 
@@ -101,6 +155,10 @@ class S4ParaboloidMirrorElement(S4MirrorElement):
         The S4 element movements.
     input_beam : instance of S4Beam, optional
         The S4 incident beam.
+
+    Returns
+    -------
+    instance of S4ParaboloidMirrorElement
     """
     def __init__(self,
                  optical_element : S4ParaboloidMirror = None,
@@ -117,7 +175,7 @@ class S4ParaboloidMirrorElement(S4MirrorElement):
 
     def to_python_code(self, **kwargs):
         """
-        Creates the python code for defining the optical element.
+        Creates the python code for defining the element.
 
         Parameters
         ----------
@@ -126,6 +184,7 @@ class S4ParaboloidMirrorElement(S4MirrorElement):
         Returns
         -------
         str
+            Python code.
         """
         txt = "\n\n# optical element number XX"
         txt += self.get_optical_element().to_python_code()

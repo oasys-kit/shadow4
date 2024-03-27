@@ -47,7 +47,7 @@ class S4AdditionalNumericalMeshGrating(S4NumericalMeshGrating):
 
     def to_python_code(self, **kwargs):
         """
-        Creates the python code for defining the optical element.
+        Creates the python code for defining the element.
 
         Parameters
         ----------
@@ -56,6 +56,7 @@ class S4AdditionalNumericalMeshGrating(S4NumericalMeshGrating):
         Returns
         -------
         str
+            Python code.
         """
         txt = self.__ideal_grating.to_python_code()
         txt += "ideal_grating = optical_element"
@@ -100,7 +101,7 @@ class S4AdditionalNumericalMeshGratingElement(S4GratingElement):
 
     def to_python_code(self, **kwargs):
         """
-        Creates the python code for defining the optical element.
+        Creates the python code for defining the element.
 
         Parameters
         ----------
@@ -109,6 +110,7 @@ class S4AdditionalNumericalMeshGratingElement(S4GratingElement):
         Returns
         -------
         str
+            Python code.
         """
         txt = "\n\n# optical element number XX"
         txt += self.get_optical_element().to_python_code()

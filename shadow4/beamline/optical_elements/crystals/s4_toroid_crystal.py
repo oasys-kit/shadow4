@@ -20,6 +20,17 @@ class S4ToroidCrystal(S4Crystal, S4ToroidOpticalElementDecorator):
         A name for the crystal
     boundary_shape : instance of BoundaryShape, optional
         The information on the crystal boundaries.
+    min_radius : float, optional
+        The surface minor radius in m.
+    maj_radius : float, optional
+        The surface major radius in m. Note that this is the radius of the optical surface (it is not the radius
+        of the toroid).
+    f_torus : int, optional
+        A flag to indicate the position of the crystal pole within all the possible cases:
+        * lower/outer (concave/concave) (0),
+        * lower/inner (concave/convex) (1),
+        * upper/inner (convex/concave) (2),
+        * upper/outer (convex/convex) (3).
     material : str, optional
         The crystal material name (a name accepted by crystalpy).
     miller_index_h : int, optional
@@ -50,18 +61,10 @@ class S4ToroidCrystal(S4Crystal, S4ToroidOpticalElementDecorator):
         0: xraylib, 1: dabax, 2: preprocessor file v1, 3: preprocessor file v2.
     file_refl : str, optional
         for material_constants_library_flag=2,3, the name of the file containing the crystal parameters.
-    min_radius : float, optional
-        The surface minor radius in m.
-    maj_radius : float, optional
-        The surface major radius in m. Note that this is the radius of the optical surface (it is not the radius
-        of the toroid).
-    f_torus : int, optional
-        A flag to indicate the position of the crystal pole within all the possible cases:
-        * lower/outer (concave/concave) (0),
-        * lower/inner (concave/convex) (1),
-        * upper/inner (convex/concave) (2),
-        * upper/outer (convex/convex) (3).
 
+    Returns
+    -------
+    instance of S4ToroidCrystal.
     """
     def __init__(self,
                  name="Toroid crystal",
@@ -137,7 +140,7 @@ class S4ToroidCrystal(S4Crystal, S4ToroidOpticalElementDecorator):
 
     def to_python_code(self, **kwargs):
         """
-        Auxiliar method to automatically create python scripts.
+        Creates the python code for defining the element.
 
         Parameters
         ----------
@@ -147,9 +150,7 @@ class S4ToroidCrystal(S4Crystal, S4ToroidOpticalElementDecorator):
         -------
         str
             Python code.
-
         """
-
         txt = "\nfrom shadow4.beamline.optical_elements.crystals.s4_toroid_crystal import S4ToroidCrystal"
 
         txt_pre = """\noptical_element = S4ToroidCrystal(name='{name}',
@@ -203,7 +204,7 @@ class S4ToroidCrystalElement(S4CrystalElement):
 
     def to_python_code(self, **kwargs):
         """
-        Auxiliat method to automatically create python scripts.
+        Creates the python code for defining the element.
 
         Parameters
         ----------
@@ -213,7 +214,6 @@ class S4ToroidCrystalElement(S4CrystalElement):
         -------
         str
             Python code.
-
         """
         txt = "\n\n# optical element number XX"
         txt += self.get_optical_element().to_python_code()

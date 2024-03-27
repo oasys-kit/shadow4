@@ -19,6 +19,14 @@ class S4NumericalMeshCrystal(S4Crystal, S4NumericalMeshOpticalElementDecorator):
         A name for the crystal
     boundary_shape : instance of BoundaryShape, optional
         The information on the crystal boundaries.
+    xx : numpy array, optional
+        The array with the X (width) coordinates.
+    yy : numpy array, optional
+        The array with the Y (length) coordinates.
+    zz : numpy array, optional
+        The array with the Z(X,Y) coordinates.
+    surface_data_file : str, optional
+        The h5 file name with the mesh following the Oasys convention.
     material : str, optional
         The crystal material name (a name accepted by crystalpy).
     miller_index_h : int, optional
@@ -50,17 +58,9 @@ class S4NumericalMeshCrystal(S4Crystal, S4NumericalMeshOpticalElementDecorator):
     file_refl : str, optional
         for material_constants_library_flag=2,3, the name of the file containing the crystal parameters.
 
-    boundary_shape : instance of BoundaryShape, optional
-        The information on the crystal boundaries.
-    xx : numpy array, optional
-        The array with the X (width) coordinates.
-    yy : numpy array, optional
-        The array with the Y (length) coordinates.
-    zz : numpy array, optional
-        The array with the Z(X,Y) coordinates.
-    surface_data_file : str, optional
-        The h5 file name with the mesh following the Oasys convention.
-
+    Returns
+    -------
+    instance of S4NumericalMeshCrystal.
     """
     def __init__(self,
                  name="Numerical Mesh Crystal",
@@ -134,7 +134,7 @@ class S4NumericalMeshCrystal(S4Crystal, S4NumericalMeshOpticalElementDecorator):
 
     def to_python_code(self, **kwargs):
         """
-        Creates the python code for defining the optical element.
+        Creates the python code for defining the element.
 
         Parameters
         ----------
@@ -143,6 +143,7 @@ class S4NumericalMeshCrystal(S4Crystal, S4NumericalMeshOpticalElementDecorator):
         Returns
         -------
         str
+            Python code.
         """
         txt = self.to_python_code_boundary_shape()
         txt_pre = """
@@ -195,7 +196,7 @@ class S4NumericalMeshCrystalElement(S4CrystalElement):
 
     def to_python_code(self, **kwargs):
         """
-        Creates the python code for defining the optical element.
+        Creates the python code for defining the element.
 
         Parameters
         ----------
@@ -204,6 +205,7 @@ class S4NumericalMeshCrystalElement(S4CrystalElement):
         Returns
         -------
         str
+            Python code.
         """
         txt = "\n\n# optical element number XX"
         txt += self.get_optical_element().to_python_code()

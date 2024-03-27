@@ -90,6 +90,18 @@ class S4Lens(Lens, S4RefractiveLensOpticalElementDecorator):
         return txt
 
     def to_python_code(self, **kwargs):
+        """
+        Creates the python code for defining the element.
+
+        Parameters
+        ----------
+        **kwargs
+
+        Returns
+        -------
+        str
+            Python code.
+        """
         txt = self.to_python_code_boundary_shape()
 
         txt_pre = """
@@ -221,6 +233,10 @@ class S4LensElement(S4BeamlineElement):
         The S4 element movements.
     input_beam : instance of S4Beam, optional
         The S4 incident beam.
+
+    Returns
+    -------
+    instance of S4LensElement.
     """
     def __init__(self,
                  optical_element : S4Lens = None,
@@ -231,6 +247,18 @@ class S4LensElement(S4BeamlineElement):
                          input_beam=input_beam)
 
     def to_python_code(self, **kwargs):
+        """
+        Creates the python code for defining the element.
+
+        Parameters
+        ----------
+        **kwargs
+
+        Returns
+        -------
+        str
+            Python code.
+        """
         txt = "\n\n# optical element number XX"
         txt += self.get_optical_element().to_python_code()
         coordinates = self.get_coordinates()

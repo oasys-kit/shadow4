@@ -52,6 +52,10 @@ class S4ConicCrystal(S4Crystal, S4ConicOpticalElementDecorator):
         0: xraylib, 1: dabax, 2: preprocessor file v1, 3: preprocessor file v2.
     file_refl : str, optional
         for material_constants_library_flag=2,3, the name of the file containing the crystal parameters.
+
+    Returns
+    -------
+    instance of S4ConicCrystal.
     """
     def __init__(self,
                  name="Conic crystal",
@@ -120,7 +124,7 @@ class S4ConicCrystal(S4Crystal, S4ConicOpticalElementDecorator):
 
     def to_python_code(self, **kwargs):
         """
-        Auxiliar method to automatically create python scripts.
+        Creates the python code for defining the element.
 
         Parameters
         ----------
@@ -130,9 +134,7 @@ class S4ConicCrystal(S4Crystal, S4ConicOpticalElementDecorator):
         -------
         str
             Python code.
-
         """
-
         txt = "\nfrom shadow4.beamline.optical_elements.crystals.s4_conic_crystal import S4ConicCrystal"
 
         txt_pre = """\noptical_element = S4ConicCrystal(name='{name}',
@@ -180,7 +182,7 @@ class S4ConicCrystalElement(S4CrystalElement):
 
     def to_python_code(self, **kwargs):
         """
-        Auxiliar method to automatically create python scripts.
+        Creates the python code for defining the element.
 
         Parameters
         ----------
@@ -190,7 +192,6 @@ class S4ConicCrystalElement(S4CrystalElement):
         -------
         str
             Python code.
-
         """
         txt = "\n\n# optical element number XX"
         txt += self.get_optical_element().to_python_code()

@@ -20,6 +20,21 @@ class S4ParaboloidCrystal(S4Crystal, S4ParaboloidOpticalElementDecorator):
         A name for the crystal
     boundary_shape : instance of BoundaryShape, optional
         The information on the crystal boundaries.
+    is_cylinder : int, optional
+        Flag to indicate that the surface has cylindrical symmetry (it is flat in one direction).
+    cylinder_direction : int, optional
+       For is_cylinder=1, the direction where the surface is flat.
+       Use synedDirection.TANGENTIAL (0) or Direction.SAGITTAL (1).
+    convexity : int, optional
+        The surface is concave (0) or convex (1).
+        Use syned Convexity.UPWARD (0) for concave or Convexity.DOWNWARD (1).
+    at_infinity : int, optional
+        A flag to indicate if the source is at infinity or if the image is at infinity
+        0: at_infinity=Side.SOURCE; 1: at_infinity=Side.IMAGE
+    parabola_parameter : float, optional
+        The parabola parameter in m.
+    pole_to_focus : float, optional
+        The distance from the crystal pole to the focus in m.
     material : str, optional
         The crystal material name (a name accepted by crystalpy).
     miller_index_h : int, optional
@@ -50,22 +65,10 @@ class S4ParaboloidCrystal(S4Crystal, S4ParaboloidOpticalElementDecorator):
         0: xraylib, 1: dabax, 2: preprocessor file v1, 3: preprocessor file v2.
     file_refl : str, optional
         for material_constants_library_flag=2,3, the name of the file containing the crystal parameters.
-    at_infinity : int, optional
-        A flag to indicate if the source is at infinity or if the image is at infinity
-        0: at_infinity=Side.SOURCE; 1: at_infinity=Side.IMAGE
-    parabola_parameter : float, optional
-        The parabola parameter in m.
-    pole_to_focus : float, optional
-        The distance from the crystal pole to the focus in m.
-    is_cylinder : int, optional
-        Flag to indicate that the surface has cylindrical symmetry (it is flat in one direction).
-    cylinder_direction : int, optional
-       For is_cylinder=1, the direction where the surface is flat.
-       Use synedDirection.TANGENTIAL (0) or Direction.SAGITTAL (1).
-    convexity : int, optional
-        The surface is concave (0) or convex (1).
-        Use syned Convexity.UPWARD (0) for concave or Convexity.DOWNWARD (1).
 
+    Returns
+    -------
+    instance of S4paraboloidCrystal.
     """
     def __init__(self,
                  name="Paraboloid crystal",
@@ -147,7 +150,7 @@ class S4ParaboloidCrystal(S4Crystal, S4ParaboloidOpticalElementDecorator):
 
     def to_python_code(self, **kwargs):
         """
-        Auxiliar method to automatically create python scripts.
+        Creates the python code for defining the element.
 
         Parameters
         ----------
@@ -157,9 +160,7 @@ class S4ParaboloidCrystal(S4Crystal, S4ParaboloidOpticalElementDecorator):
         -------
         str
             Python code.
-
         """
-
         txt = "\nfrom shadow4.beamline.optical_elements.crystals.s4_paraboloid_crystal import S4ParaboloidCrystal"
 
         txt_pre = """\noptical_element = S4ParaboloidCrystal(name='{name}',
@@ -214,7 +215,7 @@ class S4ParaboloidCrystalElement(S4CrystalElement):
 
     def to_python_code(self, **kwargs):
         """
-        Auxiliar method to automatically create python scripts.
+        Creates the python code for defining the element.
 
         Parameters
         ----------
@@ -224,7 +225,6 @@ class S4ParaboloidCrystalElement(S4CrystalElement):
         -------
         str
             Python code.
-
         """
         txt = "\n\n# optical element number XX"
         txt += self.get_optical_element().to_python_code()

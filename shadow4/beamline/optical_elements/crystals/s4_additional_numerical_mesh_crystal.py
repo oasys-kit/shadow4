@@ -46,7 +46,7 @@ class S4AdditionalNumericalMeshCrystal(S4NumericalMeshCrystal):
 
     def to_python_code(self, **kwargs):
         """
-        Creates the python code for defining the optical element.
+        Creates the python code for defining the element.
 
         Parameters
         ----------
@@ -55,9 +55,8 @@ class S4AdditionalNumericalMeshCrystal(S4NumericalMeshCrystal):
         Returns
         -------
         str
+            Python code.
         """
-
-
         txt = self.__ideal_crystal.to_python_code()
         txt += "ideal_crystal = optical_element"
         txt += self.__numerical_mesh_crystal.to_python_code()
@@ -101,7 +100,7 @@ class S4AdditionalNumericalMeshCrystalElement(S4CrystalElement):
 
     def to_python_code(self, **kwargs):
         """
-        Creates the python code for defining the optical element.
+        Creates the python code for defining the element.
 
         Parameters
         ----------
@@ -110,6 +109,7 @@ class S4AdditionalNumericalMeshCrystalElement(S4CrystalElement):
         Returns
         -------
         str
+            Python code.
         """
         txt = "\n\n# optical element number XX"
         txt += self.get_optical_element().to_python_code()

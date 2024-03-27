@@ -855,7 +855,7 @@ class SourceGeometrical(S4LightSourceBase):
 
     def to_python_code(self):
         """
-        returns the python code for calculating the geometrical source.
+        Returns the python code for calculating the geometrical source.
 
         Returns
         -------

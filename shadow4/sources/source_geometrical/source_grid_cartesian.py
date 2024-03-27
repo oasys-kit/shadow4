@@ -392,6 +392,7 @@ class SourceGridCartesian(S4LightSourceBase):
         Returns
         -------
         str
+            The python code.
         """
 
         txt = ""
