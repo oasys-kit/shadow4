@@ -162,8 +162,8 @@ class S4ToroidCrystal(S4Crystal, S4ToroidOpticalElementDecorator):
     file_refl='{file_refl}',
     f_ext={f_ext},
     material_constants_library_flag={material_constants_library_flag}, # 0=xraylib,1=dabax,2=preprocessor v1,3=preprocessor v2
-    min_radius={min_radius:g}, # min_radius = sagittal = torus_minor_radius
-    maj_radius={maj_radius:g}, # maj_radius = tangential = torus_major_radius + torus_minor_radius
+    min_radius={min_radius:g}, # min_radius = sagittal
+    maj_radius={maj_radius:g}, # maj_radius = tangential
     f_torus={f_torus},
     )"""
         txt += txt_pre.format(**self.__inputs)

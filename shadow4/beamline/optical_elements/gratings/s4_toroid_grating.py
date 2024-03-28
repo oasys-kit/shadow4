@@ -84,8 +84,8 @@ class S4ToroidGrating(S4Grating, S4ToroidOpticalElementDecorator):
     ruling={ruling}, ruling_coeff_linear={ruling_coeff_linear}, 
     ruling_coeff_quadratic={ruling_coeff_quadratic}, ruling_coeff_cubic={ruling_coeff_cubic},
     ruling_coeff_quartic={ruling_coeff_quartic},
-    min_radius={min_radius:g}, # min_radius = sagittal = torus_minor_radius
-    maj_radius={maj_radius:g}, # maj_radius = tangential = torus_major_radius + torus_minor_radius
+    min_radius={min_radius:g},  # min_radius = sagittal
+    maj_radius={maj_radius:g},  # maj_radius = tangential
     f_torus={f_torus},
     )"""
         txt += txt_pre.format(**self.__inputs)

@@ -21,9 +21,8 @@ class S4ToroidMirror(S4Mirror, S4ToroidOpticalElementDecorator):
     min_radius : float, optional
         The minor axis of the toroid in m.
     maj_radius : float, optional
-        Toroid major radius in m. Note that this **is not** the tangential radius mut the radius of
-        the toroidal axis, therefore for the usual case of concave surface it is the
-        tangential radius minus the sagittal radius.
+        The surface major radius in m. Note that this is the radius of the optical surface (it is not the radius
+        of the toroid).
     f_torus : int, optional
         ........
     f_reflec : int, optional
@@ -120,8 +119,8 @@ class S4ToroidMirror(S4Mirror, S4ToroidOpticalElementDecorator):
 from shadow4.beamline.optical_elements.mirrors.s4_toroid_mirror import S4ToroidMirror
 optical_element = S4ToroidMirror(name='{name:s}',boundary_shape=boundary_shape,
     surface_calculation={surface_calculation:d},
-    min_radius={min_radius:g}, # min_radius = sagittal = torus_minor_radius
-    maj_radius={maj_radius:g}, # maj_radius = tangential = torus_major_radius + torus_minor_radius
+    min_radius={min_radius:g},  # min_radius = sagittal
+    maj_radius={maj_radius:g},  # maj_radius = tangential
     f_torus={f_torus},
     p_focus={p_focus:g},q_focus={q_focus:g},grazing_angle={grazing_angle:g},
     f_reflec={f_reflec:d},f_refl={f_refl:d},file_refl='{file_refl:s}',refraction_index={refraction_index:g},

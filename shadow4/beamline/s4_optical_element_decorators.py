@@ -455,9 +455,8 @@ class S4ToroidOpticalElementDecorator(S4CurvedOpticalElementDecorator):
     min_radius : float, optional
         The minor axis of the toroid in m.
     maj_radius : float, optional
-        Toroid major radius in m. Note that this **is not** the tangential radius mut the radius of
-        the toroidal axis, therefore for the usual case of concave surface it is the
-        tangential radius minus the sagittal radius.
+        The surface major radius in m. Note that this is the radius of the optical surface (it is not the radius
+        of the toroid).
     f_torus : int, optional
         ........
     p_focus : float, optional
@@ -477,7 +476,7 @@ class S4ToroidOpticalElementDecorator(S4CurvedOpticalElementDecorator):
                  grazing_angle=0.0,
                  ):
         if surface_calculation == SurfaceCalculation.EXTERNAL:
-            curved_surface_shape = Toroid.create_toroid_from_radii(min_radius, maj_radius+min_radius)
+            curved_surface_shape = Toroid.create_toroid_from_radii(min_radius, maj_radius)
         else:
             curved_surface_shape = Toroid.create_toroid_from_p_q(p_focus, q_focus, grazing_angle)
 
@@ -497,9 +496,10 @@ class S4ToroidOpticalElementDecorator(S4CurvedOpticalElementDecorator):
 
         if verbose:
             print("Toroidal optical element (syned stored, optical radii) %g   %g" % (surface_shape.get_maj_radius(), surface_shape.get_min_radius()) )
-            print("Setting S4Toroid (toroid radii, not optical) r_maj=%f, r_min=%g, f_torus=%d" % (
+            print("Setting optical surface S4Toroid (toroid radii, not optical) r_maj=%f, r_min=%g, f_torus=%d" % (
             surface_shape.get_maj_radius() - surface_shape.get_min_radius(),
-            surface_shape.get_min_radius(), self._f_torus))
+            surface_shape.get_min_radius(),
+            self._f_torus))
 
 
         return S4Toroid(
