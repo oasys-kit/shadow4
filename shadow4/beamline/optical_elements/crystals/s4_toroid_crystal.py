@@ -27,10 +27,10 @@ class S4ToroidCrystal(S4Crystal, S4ToroidOpticalElementDecorator):
         of the toroid).
     f_torus : int, optional
         A flag to indicate the position of the crystal pole within all the possible cases:
-        * lower/outer (concave/concave) (0),
-        * lower/inner (concave/convex) (1),
-        * upper/inner (convex/concave) (2),
-        * upper/outer (convex/convex) (3).
+        * lower/outer (concave in tangential / concave in sagittal) (0),
+        * lower/inner (concave in tangential / convex  in sagittal) (1),
+        * upper/inner (convex  in tangential / concave in sagittal) (2),
+        * upper/outer (convex  in tangential / convex  in sagittal) (3).
     material : str, optional
         The crystal material name (a name accepted by crystalpy).
     miller_index_h : int, optional

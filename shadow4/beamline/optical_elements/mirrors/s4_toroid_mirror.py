@@ -119,10 +119,10 @@ class S4ToroidMirror(S4Mirror, S4ToroidOpticalElementDecorator):
 from shadow4.beamline.optical_elements.mirrors.s4_toroid_mirror import S4ToroidMirror
 optical_element = S4ToroidMirror(name='{name:s}',boundary_shape=boundary_shape,
     surface_calculation={surface_calculation:d},
-    min_radius={min_radius:g},  # min_radius = sagittal
-    maj_radius={maj_radius:g},  # maj_radius = tangential
+    min_radius={min_radius:.6g},  # min_radius = sagittal
+    maj_radius={maj_radius:.6g},  # maj_radius = tangential
     f_torus={f_torus},
-    p_focus={p_focus:g},q_focus={q_focus:g},grazing_angle={grazing_angle:g},
+    p_focus={p_focus:.6g},q_focus={q_focus:.6g},grazing_angle={grazing_angle:g},
     f_reflec={f_reflec:d},f_refl={f_refl:d},file_refl='{file_refl:s}',refraction_index={refraction_index:g},
     coating_material='{coating_material:s}',coating_density={coating_density:g},coating_roughness={coating_roughness:g})
 """

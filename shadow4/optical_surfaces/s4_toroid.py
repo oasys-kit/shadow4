@@ -245,11 +245,12 @@ class S4Toroid(S4OpticalSurface):
 
         return normal
 
-    def calculate_intercept_and_choose_solution(self, x1, v1, reference_distance=0.0, method=0):
+    def calculate_intercept_and_choose_solution(self, x1, v1, reference_distance=0.0, method=0, use_newton_solution=0):
         """
 
         Calculates the intercept point (or stack of points) for a given ray or stack of rays,
         given a point XIN and director vector VIN.
+        Uses the exact solutions of the quartic equation (intersection torus ray).
 
         Parameters
         ----------
@@ -261,6 +262,9 @@ class S4Toroid(S4OpticalSurface):
             Not used in S4Toroid.
         method : int, optional
             Not used in S4Toroid.
+        use_newton_solution : int, optional
+            Calculate solution using the exact (0) or approximated Newton method (1). In this case, reference_distance
+            is used as a first solution guess.
 
         Returns
         -------
@@ -268,12 +272,66 @@ class S4Toroid(S4OpticalSurface):
             The selected solution (time or flight path).
 
         """
-        t0, t1, t2, t3 = self.calculate_intercept(x1, v1)
-        out = self.choose_solution(t0, t1, t2, t3)
-        return out
+        if use_newton_solution == 0:
+            t0, t1, t2, t3 = self.calculate_intercept(x1, v1)
+            out = self.choose_solution(t0, t1, t2, t3)
+            return out
+        else:
+            return self.calculate_intercept_and_choose_solution_newton(x1, v1,
+                                                                       reference_distance=reference_distance,
+                                                                       method=method)
+
+    def calculate_intercept_and_choose_solution_newton(self, x1, v1, reference_distance=0.0, method=0):
+        """
+
+        Calculates the intercept point (or stack of points) for a given ray or stack of rays,
+        given a point XIN and director vector VIN.
+        Uses the Newton approximated solution.
+
+        Parameters
+        ----------
+        XIN : numpy array
+            The coordinates of a point of origin of the ray: shape [3, NRAYS].
+        VIN : numpy array
+            The coordinates of a director vector the ray: shape [3, NRAYS].
+        reference_distance : float, optional
+            The initial solution guess.
+        method : int, optional
+            Not used in S4Toroid.
+
+        Returns
+        -------
+        numpy array
+            The selected solution (time or flight path).
+
+        """
+        print("Using NEWTON approximated solution.")
+        AA, BB, CC, DD = self._calculate_quartic_coefficients(x1, v1)
+
+        if False: # iteration
+            t = numpy.zeros_like(AA)
+            i_res = numpy.zeros_like(AA)
+            epsilon = 1e-10
+            for i in range(AA.size):
+                p  = lambda x: self._pol4 (x, ABCD=[AA[i], BB[i], CC[i], DD[i]])
+                Dp = lambda x: self._dpol4(x, ABCD=[AA[i], BB[i], CC[i], DD[i]])
+                t_approx, flag_approx = self._newton(p, Dp, reference_distance, epsilon=epsilon)
+                t[i] = t_approx
+                i_res[i] = flag_approx
+
+        else: # vectorized
+            p = lambda x: self._pol4(x, ABCD=[AA, BB, CC, DD])
+            Dp = lambda x: self._dpol4(x, ABCD=[AA, BB, CC, DD])
+            epsilon = 1e-10
+            iterations = 10
+            t, i_res = self._newton_vectorized(p, Dp, reference_distance, iterations=iterations)
+            if (numpy.abs(self._pol4(t, ABCD=[AA, BB, CC, DD])) > epsilon).any():
+                print("Warning: Lack of precision in Newton method.")
+
+        return t, i_res
 
 
-    def calculate_intercept(self, XIN, VIN, vectorize=0): #todo vectorized=1 fails - search another solution...
+    def calculate_intercept(self, XIN, VIN, vectorize=1, do_test_solution=1): #todo vectorized=1 fails - search another solution...
         """
         Calculates the intercept point (or stack of points) for a given ray or stack of rays,
         given a point XIN and director vector VIN.
@@ -284,6 +342,12 @@ class S4Toroid(S4OpticalSurface):
             The coordinates of a point of origin of the ray: shape [3, NRAYS].
         VIN : numpy array
             The coordinates of a director vector the ray: shape [3, NRAYS].
+        vectorize : int, optional
+            Flag:
+                * 1 use S4 new way to compute coefficients and vectorized-solutions,
+                * 0 use S3 equations and numpy iterative solutions.
+        do_test_solution : int, optional
+            Flag to test the solutions (substitute in the polynomial and check if result is zero): 0=No, 1=Yes.
 
         Returns
         -------
@@ -291,75 +355,10 @@ class S4Toroid(S4OpticalSurface):
             (t0, t1, t2, t3) The four solutions of the quartic equation (time or flight path).
         """
 
-        P1 = XIN[0,:]
-        P2 = XIN[1,:]
-        P3 = XIN[2,:]
 
-        V1 = VIN[0,:]
-        V2 = VIN[1,:]
-        V3 = VIN[2,:]
+        AA, BB, CC, DD = self._calculate_quartic_coefficients(XIN, VIN, method=vectorize)
 
-
-        #
-        # r_min and r_maj are like in shadow3
-        #
-        r_min = self.r_min
-        r_maj = self.r_maj
-
-        if self.f_torus == 0:
-            P3 = P3 - r_maj - r_min
-        elif self.f_torus == 1:
-            P3 = P3 - r_maj + r_min
-        elif self.f_torus == 2:
-            P3 = P3 + r_maj - r_min
-        elif self.f_torus == 3:
-            P3 = P3 + r_maj + r_min
-
-        #     ! ** Evaluates the quartic coefficients **
-        # z^4 + AA z^3 + BB z^2 + CC z + DD = 0
-
-        A	=   r_maj**2 - r_min**2
-        B	= -(r_maj**2 + r_min**2)
-
-        AA	= P1 * V1**3 + P2 * V2**3 + P3 * V3**3 + \
-            V1 * V2**2 * P1 + V1**2 * V2 * P2 + \
-            V1 * V3**2 * P1 + V1**2 * V3 * P3 + \
-            V2 * V3**2 * P2 + V2**2 * V3 * P3
-        AA	= 4*AA
-
-        BB	= 3 * P1**2 * V1**2 + 3 * P2**2 * V2**2 +  \
-            3 * P3**2 * V3**2 + \
-            V2**2 * P1**2 + V1**2 * P2**2 + \
-            V3**2 * P1**2 + V1**2 * P3**2 + \
-            V3**2 * P2**2 + V2**2 * P3**2 + \
-            A * V1**2 + B * V2**2 + B * V3**2 + \
-            4 * V1 * V2 * P1 * P2 +  \
-            4 * V1 * V3 * P1 * P3 +  \
-            4 * V2 * V3 * P2 * P3
-        BB	= 2 * BB
-
-        CC	= P1**3 * V1 + P2**3 * V2 + P3**3 * V3 + \
-            P2 * P1**2 * V2 + P1 * P2**2 * V1 + \
-            P3 * P1**2 * V3 + P1 * P3**2 * V1 + \
-            P3 * P2**2 * V3 + P2 * P3**2 * V2 + \
-            A * V1 * P1 + B * V2 * P2 + B * V3 * P3
-        CC	= 4 * CC
-
-        # TODO check DD that is the result of adding something like:
-        # DD0 + A**2 = -3.16397160937e+23 + 3.16397160937e+23 = 23018340352.0
-        # In fortran I get:
-        #  -3.1639716093723415E+023  + 3.1639716093725710E+023 =  22951231488.000000
-        DD	= P1**4 + P2**4 + P3**4 + \
-            2 * P1**2 * P2**2 + 2 * P1**2 * P3**2 + \
-            2 * P2**2 * P3**2 + \
-            2 * A * P1**2 + 2 * B * P2**2 + 2 * B * P3**2 + \
-            A**2
-
-        AA.shape = -1
-        BB.shape = -1
-        CC.shape = -1
-        DD.shape = -1
-
+        # get the four solutions of the quartic equation: t^4 + AA t^3 + BB t^2 + CC t + DD = 0
         if vectorize==0: # traditional method (numpy)
 
             t0 = numpy.zeros_like(AA, dtype=complex)
@@ -373,55 +372,72 @@ class S4Toroid(S4OpticalSurface):
                 t2[k] = h_output2[2]
                 t3[k] = h_output2[3]
 
-            # for k in range(10):
-            #     print("\n>> coeffs DCBA1: ", [DD[k], CC[k], BB[k], AA[k], 1.0])
-            #     print(">>>> solutions0: ", h_output2)
-            #     z = t0[k]
-            #     print(">>>> result0: ", z ** 4 + AA[k] * z ** 3 + BB[k] * z ** 2 + CC[k] * z + DD[k], )
-            #     z = t1[k]
-            #     print(">>>> result0: ", z ** 4 + AA[k] * z ** 3 + BB[k] * z ** 2 + CC[k] * z + DD[k], )
-            #     z = t2[k]
-            #     print(">>>> result0: ", z ** 4 + AA[k] * z ** 3 + BB[k] * z ** 2 + CC[k] * z + DD[k], )
-            #     z = t3[k]
-            #     print(">>>> result0: ", z ** 4 + AA[k] * z ** 3 + BB[k] * z ** 2 + CC[k] * z + DD[k], )
+            for k in range(AA.size):
+                z = t0[k]
+                result0 = z ** 4 + AA[k] * z ** 3 + BB[k] * z ** 2 + CC[k] * z + DD[k]
+                z = t1[k]
+                result1 = z ** 4 + AA[k] * z ** 3 + BB[k] * z ** 2 + CC[k] * z + DD[k]
+                z = t2[k]
+                result2 = z ** 4 + AA[k] * z ** 3 + BB[k] * z ** 2 + CC[k] * z + DD[k]
+                z = t3[k]
+                result3 = z ** 4 + AA[k] * z ** 3 + BB[k] * z ** 2 + CC[k] * z + DD[k]
+                if numpy.abs(result0) > 1e-3: print("Error in solution 0 of ray: ", k, AA[k], BB[k], CC[k], DD[k])
+                if numpy.abs(result1) > 1e-3: print("Error in solution 1 of ray: ", k, AA[k], BB[k], CC[k], DD[k])
+                if numpy.abs(result2) > 1e-3: print("Error in solution 2 of ray: ", k, AA[k], BB[k], CC[k], DD[k])
+                if numpy.abs(result3) > 1e-3: print("Error in solution 3 of ray: ", k, AA[k], BB[k], CC[k], DD[k])
 
             return t0, t1, t2, t3
 
-        else:  # vectorised (fqs modified)
+        elif vectorize == 1:  # new method vectorized
+            t0, t1, t2, t3 = self._solve_quartic_vectorized(AA, BB, CC, DD)
 
-            # calculate solutions array
-            #         Input data are coefficients of the Quartic polynomial of the form:
-            #
-            #             p[0]*x^4 + p[1]*x^3 + p[2]*x^2 + p[3]*x + p[4] = 0
-            P = numpy.zeros((AA.size, 5))
-            P[:, 0] = numpy.ones_like(AA)
-            P[:, 1] = AA.copy()
-            P[:, 2] = BB.copy()
-            P[:, 3] = CC.copy()
-            P[:, 4] = DD.copy()
+            # iterative
+            # t0 = numpy.zeros_like(AA, dtype=complex)
+            # t1 = numpy.zeros_like(AA, dtype=complex)
+            # t2 = numpy.zeros_like(AA, dtype=complex)
+            # t3 = numpy.zeros_like(AA, dtype=complex)
+            # for k in range(AA.size):
+            #     h_output2 = self._solve_quartic(AA[k], BB[k], CC[k], DD[k])
+            #     t0[k] = h_output2[0]
+            #     t1[k] = h_output2[1]
+            #     t2[k] = h_output2[2]
+            #     t3[k] = h_output2[3]
 
-            from srxraylib.profiles.diaboloid.fqs import quartic_roots
-            SOLUTION = quartic_roots(P, modified=1, zero_below=1e-6)
+            if do_test_solution:
+                for k in range(AA.size):
+                    z = t0[k]
+                    result0 = z ** 4 + AA[k] * z ** 3 + BB[k] * z ** 2 + CC[k] * z + DD[k]
+                    z = t1[k]
+                    result1 = z ** 4 + AA[k] * z ** 3 + BB[k] * z ** 2 + CC[k] * z + DD[k]
+                    z = t2[k]
+                    result2 = z ** 4 + AA[k] * z ** 3 + BB[k] * z ** 2 + CC[k] * z + DD[k]
+                    z = t3[k]
+                    result3 = z ** 4 + AA[k] * z ** 3 + BB[k] * z ** 2 + CC[k] * z + DD[k]
+                    if numpy.abs(result0) > 1e-3: print("Error in solution 0 of ray: ", k, AA[k], BB[k], CC[k], DD[k])
+                    if numpy.abs(result1) > 1e-3: print("Error in solution 1 of ray: ", k, AA[k], BB[k], CC[k], DD[k])
+                    if numpy.abs(result2) > 1e-3: print("Error in solution 2 of ray: ", k, AA[k], BB[k], CC[k], DD[k])
+                    if numpy.abs(result3) > 1e-3: print("Error in solution 3 of ray: ", k, AA[k], BB[k], CC[k], DD[k])
 
-            # from srxraylib.profiles.diaboloid.fqs import multi_quartic_modified
-            # PT = P.T
-            # SOLUTION = multi_quartic_modified(PT[0], PT[1], PT[2], PT[3], PT[4], zero_below=1e-6)
-            # SOLUTION = numpy.array(SOLUTION).T
+            return t0, t1, t2, t3
 
-            # print(">>>>", P.shape, SOLUTION.shape)
-            # for k in range(10): #AA.size):
-            #     print(">>>> solutions1: ", k, SOLUTION[k,:]) #, SOLUTION[k,1], SOLUTION[k,2], SOLUTION[k,3])
-            #     z = SOLUTION[k,0]
-            #     print(">>>> result1: ", P[k, 0] * z ** 4 + P[k, 1] * z ** 3 + P[k, 2] * z ** 2 + P[k, 3] * z + P[k, 4], )
-            #     z = SOLUTION[k,1]
-            #     print(">>>> result1: ", P[k, 0] * z ** 4 + P[k, 1] * z ** 3 + P[k, 2] * z ** 2 + P[k, 3] * z + P[k, 4], )
-            #     z = SOLUTION[k,2]
-            #     print(">>>> result1: ", P[k, 0] * z ** 4 + P[k, 1] * z ** 3 + P[k, 2] * z ** 2 + P[k, 3] * z + P[k, 4], )
-            #     z = SOLUTION[k,3]
-            #     print(">>>> result1: ", P[k, 0] * z ** 4 + P[k, 1] * z ** 3 + P[k, 2] * z ** 2 + P[k, 3] * z + P[k, 4], )
-
-            SOLUTION_T = SOLUTION.T
-            return SOLUTION_T[0], SOLUTION_T[1], SOLUTION_T[2], SOLUTION_T[3]
+        # elif vectorize == 2:  # vectorised (fqs modified) IT DOES NOT WORK!
+        #
+        #     # calculate solutions array
+        #     #         Input data are coefficients of the Quartic polynomial of the form:
+        #     #
+        #     #             p[0]*x^4 + p[1]*x^3 + p[2]*x^2 + p[3]*x + p[4] = 0
+        #     P = numpy.zeros((AA.size, 5))
+        #     P[:, 0] = numpy.ones_like(AA)
+        #     P[:, 1] = AA.copy()
+        #     P[:, 2] = BB.copy()
+        #     P[:, 3] = CC.copy()
+        #     P[:, 4] = DD.copy()
+        #
+        #     from srxraylib.profiles.diaboloid.fqs import quartic_roots
+        #     SOLUTION = quartic_roots(P, modified=1, zero_below=1e-6)
+        #
+        #     SOLUTION_T = SOLUTION.T
+        #     return SOLUTION_T[0], SOLUTION_T[1], SOLUTION_T[2], SOLUTION_T[3]
 
     def choose_solution(self, t0, t1, t2, t3, vectorize=0, zero_below=1e-6): #todo vectorized=1 fails - search another solution...
         """
@@ -596,6 +612,226 @@ class S4Toroid(S4OpticalSurface):
     def switch_convexity(self):
         raise Exception("Cannot switch_convexity() in a Toroid. Select the adequated f_torus.")
 
+    def _newton_vectorized(self, f, Df, x0, iterations=10):
+        # modified from https://patrickwalls.github.io/mathematicalpython/root-finding/newton/
+        xn = x0
+        for n in range(0, iterations):
+            fxn = f(xn)
+            Dfxn = Df(xn)
+            xn = xn - fxn / Dfxn
+        return xn, numpy.ones_like(xn)
+
+    def _newton(self, f, Df, x0, epsilon=1e-10, max_iter=10):
+        # modified from https://patrickwalls.github.io/mathematicalpython/root-finding/newton/
+        # '''Approximate solution of f(x)=0 by Newton's method.
+        #
+        # Parameters
+        # ----------
+        # f : function
+        #     Function for which we are searching for a solution f(x)=0.
+        # Df : function
+        #     Derivative of f(x).
+        # x0 : number
+        #     Initial guess for a solution f(x)=0.
+        # epsilon : number
+        #     Stopping criteria is abs(f(x)) < epsilon.
+        # max_iter : integer
+        #     Maximum number of iterations of Newton's method.
+        #
+        # Returns
+        # -------
+        # xn : number
+        #     Implement Newton's method: compute the linear approximation
+        #     of f(x) at xn and find x intercept by the formula
+        #         x = xn - f(xn)/Df(xn)
+        #     Continue until abs(f(xn)) < epsilon and return xn.
+        #     If Df(xn) == 0, return None. If the number of iterations
+        #     exceeds max_iter, then return None.
+        #
+        # Examples
+        # --------
+        # >>> f = lambda x: x**2 - x - 1
+        # >>> Df = lambda x: 2*x - 1
+        # >>> newton(f,Df,1,1e-8,10)
+        # Found solution after 5 iterations.
+        # 1.618033988749989
+        # '''
+        xn = x0
+        for n in range(0, max_iter):
+            fxn = f(xn)
+            if numpy.abs(fxn) < epsilon:
+                print('Found solution after', n, 'iterations.')
+                return xn, 1
+            Dfxn = Df(xn)
+            if Dfxn == 0:
+                print('Zero derivative. No solution found.')
+                return x0, -1
+            xn = xn - fxn / Dfxn
+        print('Exceeded maximum iterations. No solution found.')
+        return x0, -1
+
+    def _pol4(self, z0, ABCD=None):
+        return z0 ** 4 + ABCD[0] * z0 ** 3 + ABCD[1] * z0 ** 2 + ABCD[2] * z0 + ABCD[3]
+
+    def _dpol4(self, z0, ABCD=None):
+        return 4 * z0 ** 3 + 3 * ABCD[0] * z0 ** 2 + 2 * ABCD[1] * z0 + ABCD[2]
+
+    @classmethod
+    def _solve_quartic(cls, b, c, d, e):
+        e += 0j
+
+        D1 = 2 * c**3 - 9 * b * c * d + 27 * b**2 * e + 27 * d**2 - 72 * c * e
+        D0 = c**2 - 3 * b * d + 12 * e
+        D = (D1**2 - 4 * D0**3) / (-27)
+
+
+        k = (8 * c - 3 * b**2) / 8
+
+
+        Q = numpy.power(2, -1.0/3) * numpy.power((D1 + numpy.sqrt(D1**2 - 4 * D0**3)), 1.0/3)
+        S = 0.5 * numpy.sqrt((1.0/3) * (Q + D0 / Q) - 2 * k / 3)
+        if numpy.abs(S) < 1e-3:
+            # print(">>>> changed sign of sqrt")
+            Q = numpy.power(2, -1.0/3) * numpy.power((D1 - numpy.sqrt(D1**2 - 4 * D0**3)), 1.0/3)
+            S = 0.5 * numpy.sqrt((1.0/3) * (Q + D0 / Q) - 2 * k / 3)
+
+
+        m = (b**3 - 4 * b * c + 8 * d) / 8
+
+        # print(">>>>>>>>>Q,S,D: ", Q,S,D)
+
+        z1 = -b / 4 - S + 0.5 * numpy.sqrt(-4 * S**2 - 2 * k + m / S)
+        z2 = -b / 4 - S - 0.5 * numpy.sqrt(-4 * S**2 - 2 * k + m / S)
+        z3 = -b / 4 + S + 0.5 * numpy.sqrt(-4 * S**2 - 2 * k - m / S)
+        z4 = -b / 4 + S - 0.5 * numpy.sqrt(-4 * S**2 - 2 * k - m / S)
+
+        return z2, z3, z4, z1
+
+    @classmethod
+    def _solve_quartic_vectorized(self, b, c, d, e):
+
+        e = e + numpy.zeros_like(e, dtype=complex)
+
+        D1 = 2 * c**3 - 9 * b * c * d + 27 * b**2 * e + 27 * d**2 - 72 * c * e
+        D0 = c**2 - 3 * b * d + 12 * e
+        D = (D1**2 - 4 * D0**3) / (-27)
+
+        k = (8 * c - 3 * b**2) / 8
+
+        Q = numpy.power(2, -1.0/3) * numpy.power((D1 + numpy.sqrt(D1**2 - 4 * D0**3)), 1.0/3)
+        S = 0.5 * numpy.sqrt((1.0/3) * (Q + D0 / Q) - 2 * k / 3)
+        mask = numpy.abs(S) < 1e-3
+        Q[mask] = numpy.power(2, -1.0 / 3) * numpy.power((D1[mask] - numpy.sqrt(D1[mask] ** 2 - 4 * D0[mask] ** 3)), 1.0 / 3)
+        S[mask] = 0.5 * numpy.sqrt((1.0 / 3) * (Q[mask] + D0[mask] / Q[mask]) - 2 * k[mask] / 3)
+
+        m = (b**3 - 4 * b * c + 8 * d) / 8
+
+        z1 = -b / 4 - S + 0.5 * numpy.sqrt(-4 * S**2 - 2 * k + m / S)
+        z2 = -b / 4 - S - 0.5 * numpy.sqrt(-4 * S**2 - 2 * k + m / S)
+        z3 = -b / 4 + S + 0.5 * numpy.sqrt(-4 * S**2 - 2 * k - m / S)
+        z4 = -b / 4 + S - 0.5 * numpy.sqrt(-4 * S**2 - 2 * k - m / S)
+
+        return z2, z3, z4, z1
+
+    def _calculate_quartic_coefficients(self, XIN, VIN, method=1):
+        #calculates the coefficients of the quartic polynomial resulting from
+        #the intersection of the torus with a ray.
+        # For the new equations, see https://arxiv.org/pdf/2301.03191.pdf but pay attention that the
+        # equations are full of typos...
+
+        P1 = XIN[0,:]
+        P2 = XIN[1,:]
+        P3 = XIN[2,:]
+
+        V1 = VIN[0,:]
+        V2 = VIN[1,:]
+        V3 = VIN[2,:]
+
+        #
+        # r_min and r_maj are like in shadow3
+        #
+        r_min = self.r_min
+        r_maj = self.r_maj
+
+        if self.f_torus == 0:
+            P3 = P3 - r_maj - r_min
+        elif self.f_torus == 1:
+            P3 = P3 - r_maj + r_min
+        elif self.f_torus == 2:
+            P3 = P3 + r_maj - r_min
+        elif self.f_torus == 3:
+            P3 = P3 + r_maj + r_min
+
+
+        if method==0: # shadow3
+            #     ! ** Evaluates the quartic coefficients **
+            # z^4 + AA z^3 + BB z^2 + CC z + DD = 0
+
+            A	=   r_maj**2 - r_min**2
+            B	= -(r_maj**2 + r_min**2)
+
+            AA	= P1 * V1**3 + P2 * V2**3 + P3 * V3**3 + \
+                V1 * V2**2 * P1 + V1**2 * V2 * P2 + \
+                V1 * V3**2 * P1 + V1**2 * V3 * P3 + \
+                V2 * V3**2 * P2 + V2**2 * V3 * P3
+            AA	= 4*AA
+
+            BB	= 3 * P1**2 * V1**2 + 3 * P2**2 * V2**2 +  \
+                3 * P3**2 * V3**2 + \
+                V2**2 * P1**2 + V1**2 * P2**2 + \
+                V3**2 * P1**2 + V1**2 * P3**2 + \
+                V3**2 * P2**2 + V2**2 * P3**2 + \
+                A * V1**2 + B * V2**2 + B * V3**2 + \
+                4 * V1 * V2 * P1 * P2 +  \
+                4 * V1 * V3 * P1 * P3 +  \
+                4 * V2 * V3 * P2 * P3
+            BB	= 2 * BB
+
+            CC	= P1**3 * V1 + P2**3 * V2 + P3**3 * V3 + \
+                P2 * P1**2 * V2 + P1 * P2**2 * V1 + \
+                P3 * P1**2 * V3 + P1 * P3**2 * V1 + \
+                P3 * P2**2 * V3 + P2 * P3**2 * V2 + \
+                A * V1 * P1 + B * V2 * P2 + B * V3 * P3
+            CC	= 4 * CC
+
+            DD	= P1**4 + P2**4 + P3**4 + \
+                2 * P1**2 * P2**2 + 2 * P1**2 * P3**2 + \
+                2 * P2**2 * P3**2 + \
+                2 * A * P1**2 + 2 * B * P2**2 + 2 * B * P3**2 + \
+                A**2
+
+            AA.shape = -1
+            BB.shape = -1
+            CC.shape = -1
+            DD.shape = -1
+
+            # print("Old: AA", AA)
+            # print("Old: BB", BB)
+            # print("Old: CC", CC)
+            # print("Old: DD", DD)
+            # print("r_maj=%g, r_min=%g, P1=%g, P2=%g, P3=%g, V1=%g, V2=%g, V3=%g" % \
+            #       (r_maj, r_min, P1[0], P2[0], P3[0], V1[0], V2[0], V3[0]))
+
+        else: # shadow4 (much simpler, the same result...)
+            A = r_maj ** 2 - r_min ** 2
+
+            PdotV = P1 * V1 + P2 * V2 + P3 * V3
+            PdotP = P1 ** 2 + P2 ** 2 + P3 ** 2
+
+            AA = 4 * PdotV
+
+            BB = 4 * PdotV ** 2 + 2 * (A + PdotP) - 4 * r_maj ** 2 * (V2 ** 2 + V3 ** 2)
+
+            CC = 4 * PdotV * (A + PdotP) - 8 * r_maj ** 2 * (P2 * V2 + P3 * V3)
+
+            DD = (A + PdotP) ** 2 - 4 * r_maj ** 2 * (P2 ** 2 + P3 ** 2)
+
+            # print("New: AA", AA)
+            # print("New: BB", BB)
+            # print("New: CC", CC)
+            # print("New: DD", DD)
+
+        return AA, BB, CC, DD
 
 if __name__ == "__main__":
 

@@ -494,16 +494,25 @@ class S4ToroidOpticalElementDecorator(S4CurvedOpticalElementDecorator):
         """
         surface_shape = self.get_surface_shape_instance()
 
+
+        if self._f_torus == 0:
+            r_maj = surface_shape.get_maj_radius() - surface_shape.get_min_radius()
+        elif self._f_torus == 1:
+            r_maj = surface_shape.get_maj_radius() + surface_shape.get_min_radius()
+        elif self._f_torus == 2:
+            r_maj = surface_shape.get_maj_radius() + surface_shape.get_min_radius()
+        elif self._f_torus == 3:
+            r_maj = surface_shape.get_maj_radius() - surface_shape.get_min_radius()
+
         if verbose:
-            print("Toroidal optical element (syned stored, optical radii) %g   %g" % (surface_shape.get_maj_radius(), surface_shape.get_min_radius()) )
-            print("Setting optical surface S4Toroid (toroid radii, not optical) r_maj=%f, r_min=%g, f_torus=%d" % (
-            surface_shape.get_maj_radius() - surface_shape.get_min_radius(),
+            print("Toroidal optical element (syned stored, optical radii) %.6g   %.6g" % (surface_shape.get_maj_radius(), surface_shape.get_min_radius()) )
+            print("Setting optical surface S4Toroid (toroid radii, not optical) r_maj=%.6f, r_min=%.6g, f_torus=%d" % (
+            r_maj,
             surface_shape.get_min_radius(),
             self._f_torus))
 
-
         return S4Toroid(
-            r_maj=surface_shape.get_maj_radius() - surface_shape.get_min_radius(),
+            r_maj=r_maj,
             r_min=surface_shape.get_min_radius(),
             f_torus=self._f_torus)
 

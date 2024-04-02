@@ -813,7 +813,7 @@ class S4Conic(S4OpticalSurface):
         reference_distance : float, optional
             A reference distance. The selected solution is the closer to this reference distance.
         method : int, optional
-            0: new shadow4 way (essentially the same as in shadow3 but replacing TSOURCE (unavailable here) by reference_distance,
+            0: new shadow4 way (essentially the same as in shadow3 but replacing TSOURCE (unavailable here) by reference_distance),
             1: use first solution,
             2: use second solution.
 
