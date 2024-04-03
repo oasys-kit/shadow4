@@ -145,17 +145,41 @@ class S4Toroid(S4OpticalSurface):
         """
         return self.r_maj, self.r_min
 
-    def get_tangential_and_sagittal_radii(self):
+    def get_tangential_and_sagittal_radii(self, signed=0):
         """
         Gets the radii of the focusing surface.
+
+        Parameters
+        ----------
+        signed : int, optional
+            Flag (0): returns all positive values, (1): return negative value if radius is convex
 
         Returns
         -------
         tuple
         (r_rangential, r_sagittal) in m.
         """
-        return self.r_maj + self.r_min, self.r_min
-
+        if self.f_torus == 0:
+            rtan = self.r_maj + self.r_min
+            return rtan, self.r_min
+        elif self.f_torus == 1:
+            rtan = self.r_maj - self.r_min
+            if signed:
+                return rtan, -self.r_min
+            else:
+                return rtan, self.r_min
+        elif self.f_torus == 2:
+            rtan = self.r_maj - self.r_min
+            if signed:
+                return -rtan, self.r_min
+            else:
+                return rtan, self.r_min
+        elif self.f_torus == 3:
+            rtan = self.r_maj + self.r_min
+            if signed:
+                return -rtan, -self.r_min
+            else:
+                return rtan, self.r_min
 
     def set_cylindrical(self, CIL_ANG):
         raise Exception("Cannot set_cylindrical() in a Toroid")
@@ -175,13 +199,31 @@ class S4Toroid(S4OpticalSurface):
         -------
         str
         """
+        if self.f_torus == 0:
+            rtan = self.r_maj + self.r_min
+            rr = "(r_maj+r_min)"
+            ff = "(Lower/Outer = Concave/Concave)"
+        elif self.f_torus == 1:
+            rtan = self.r_maj - self.r_min
+            rr = "(r_maj-r_min)"
+            ff = "(Lower/Inner = Concave/Convex)"
+        elif self.f_torus == 2:
+            rtan = self.r_maj - self.r_min
+            rr = "(r_maj-r_min)"
+            ff = "(Upper/Inner = Convex/Concave)"
+        elif self.f_torus == 3:
+            rtan = self.r_maj + self.r_min
+            rr = "(r_maj+r_min)"
+            ff = "(Upper/Outer = Convex/Convex)"
+
         txt = ""
 
         txt += "++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++\n"
-        txt += " Toroid major radius (tangential-sagittal) = %f \n"%(self.r_maj)
-        txt += " Toroid minor radius (sagittal) = %f \n\n"%(self.r_min)
-        txt += " Toroid tangential (Rmaj+Rmin) = %f \n"%(self.r_maj+self.r_min)
+        txt += " Toroid major radius (not optical) r_maj = %f \n"%(self.r_maj)
+        txt += " Toroid minor radius (sagittal) r_min = %f \n\n"%(self.r_min)
+        txt += " Toroid tangential (optical) %s = %f \n"%(rr, rtan)
         txt += " Toroid sagittal (Rmin) = %f \n\n"%(self.r_min)
+        txt += " Toroid f_torus = %d %s \n\n" % (self.f_torus, ff)
         txt += "++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++'n"
 
         return txt
@@ -389,19 +431,19 @@ class S4Toroid(S4OpticalSurface):
             return t0, t1, t2, t3
 
         elif vectorize == 1:  # new method vectorized
-            t0, t1, t2, t3 = self._solve_quartic_vectorized(AA, BB, CC, DD)
-
-            # iterative
-            # t0 = numpy.zeros_like(AA, dtype=complex)
-            # t1 = numpy.zeros_like(AA, dtype=complex)
-            # t2 = numpy.zeros_like(AA, dtype=complex)
-            # t3 = numpy.zeros_like(AA, dtype=complex)
-            # for k in range(AA.size):
-            #     h_output2 = self._solve_quartic(AA[k], BB[k], CC[k], DD[k])
-            #     t0[k] = h_output2[0]
-            #     t1[k] = h_output2[1]
-            #     t2[k] = h_output2[2]
-            #     t3[k] = h_output2[3]
+            if False: # iterative
+                t0 = numpy.zeros_like(AA, dtype=complex)
+                t1 = numpy.zeros_like(AA, dtype=complex)
+                t2 = numpy.zeros_like(AA, dtype=complex)
+                t3 = numpy.zeros_like(AA, dtype=complex)
+                for k in range(AA.size):
+                    h_output2 = self._solve_quartic(AA[k], BB[k], CC[k], DD[k])
+                    t0[k] = h_output2[0]
+                    t1[k] = h_output2[1]
+                    t2[k] = h_output2[2]
+                    t3[k] = h_output2[3]
+            else:
+                t0, t1, t2, t3 = self._solve_quartic_vectorized(AA, BB, CC, DD)
 
             if do_test_solution:
                 for k in range(AA.size):
@@ -439,7 +481,7 @@ class S4Toroid(S4OpticalSurface):
         #     SOLUTION_T = SOLUTION.T
         #     return SOLUTION_T[0], SOLUTION_T[1], SOLUTION_T[2], SOLUTION_T[3]
 
-    def choose_solution(self, t0, t1, t2, t3, vectorize=0, zero_below=1e-6): #todo vectorized=1 fails - search another solution...
+    def choose_solution(self, t0, t1, t2, t3, vectorize=0, zero_below=1e-6):
         """
         Selects the wanted single solution from the total of solutions.
 
@@ -465,12 +507,6 @@ class S4Toroid(S4OpticalSurface):
         -------
         numpy array
             The chosen solution.
-
-        References
-        ----------
-        zero_below if used in the quartic equation solver:
-        https://github.com/oasys-kit/SR-xraylib/blob/master/srxraylib/profiles/diaboloid/fqs.py
-
         """
         i_res  = numpy.ones( t0.size )
         answer = numpy.ones( t0.size )
@@ -508,7 +544,6 @@ class S4Toroid(S4OpticalSurface):
                 answer[mask_all_imag] = 0.0
         else:
             for k in range(t0.size):
-
                 h_output = numpy.array([t0[k], t1[k], t2[k], t3[k]])
                 mask = numpy.abs(h_output.imag) < zero_below
                 h_output[mask] = numpy.real(h_output[mask])
@@ -546,13 +581,9 @@ class S4Toroid(S4OpticalSurface):
                             i_res[k] = -1
                     elif self.f_torus == 3:
                         answer[k] = Answers[0]
-
         return answer, i_res
 
-
-
-
-    def surface_height(self, X, Y, solution_index=3, method=0):
+    def surface_height(self, X, Y, solution_index=-1, method=0):
         """
         Calculates a 2D mesh array with the surface heights.
 
@@ -568,12 +599,13 @@ class S4Toroid(S4OpticalSurface):
             0 = guess the solution with zero at pole,
             1 = get first solution,
             2 = get second solution.
-
         return_solution : int, optional
             Flag:
-            0 = guess the solution with zero at pole,
-            1 = get first solution,
-            2 = get second solution.
+                * -1 = take the solution according with f_torus,
+                * 0 = get the first solution,
+                * 1 = get the second solution,
+                * 2 = get the third solution,
+                * 3 = get the fourth solution.
 
         Returns
         -------
@@ -581,29 +613,72 @@ class S4Toroid(S4OpticalSurface):
             the height mesh.
         """
         if method == 0: # fast
-            Rt, Rs = self.get_tangential_and_sagittal_radii()
-            if solution_index == 0:
-                return Rt + Rs + numpy.sqrt(Rt ** 2 - Y ** 2) + numpy.sqrt(Rs ** 2 - X ** 2)
-            elif solution_index == 1:
-                return Rt + Rs + numpy.sqrt(Rt ** 2 - Y ** 2) - numpy.sqrt(Rs ** 2 - X ** 2)
-            elif solution_index == 2:
-                return Rt + Rs - numpy.sqrt(Rt ** 2 - Y ** 2) + numpy.sqrt(Rs ** 2 - X ** 2)
-            elif solution_index == 3:
-                return Rt + Rs - numpy.sqrt(Rt**2 - Y**2) - numpy.sqrt(Rs**2 - X**2)
+            # memorandum: torus equation (x^2 + y^2 + z^2 + R^2 - r^2)^2 = 4 R^2 (y^2 + z^2)
+            # solve the equation for x=y=0 to sort the solutions and get the shift value.
+            RR = self.r_maj ** 2 - self.r_min ** 2
+            B = 2 * RR - 4 * self.r_maj ** 2
+            C = RR ** 2
+            t1 = 0.5 * (-B + numpy.sqrt(B ** 2 - 4 * C))
+            t2 = 0.5 * (-B - numpy.sqrt(B ** 2 - 4 * C))
+            z1 = numpy.sqrt(t1)
+            z2 = -numpy.sqrt(t1)
+            z3 = numpy.sqrt(t2)
+            z4 = -numpy.sqrt(t2)
+            ZZ0 = numpy.array([z1, z2, z3, z4])
+            if solution_index == -1: # automatic
+                indices_sorted = numpy.argsort(ZZ0)
+                solution_index = indices_sorted[self.f_torus]
+
+            # now for all values of X, Y
+            J = X**2 + Y**2 + self.r_maj**2 - self.r_min**2
+            B = 2 * J - 4 * self.r_maj**2
+            C = (J**2 - 4 * self.r_maj**2 * Y**2)
+            t1 = 0.5 * (-B + numpy.sqrt(B**2 - 4 * C))
+            t2 = 0.5 * (-B - numpy.sqrt(B**2 - 4 * C))
+            z1 =  numpy.sqrt(t1)
+            z2 = -numpy.sqrt(t1)
+            z3 =  numpy.sqrt(t2)
+            z4 = -numpy.sqrt(t2)
+            ZZ = numpy.array([z1, z2, z3, z4])
+
+            return ZZ[solution_index] - ZZ0[solution_index]
+
         else: # using calculate_intercept
             xx = X.flatten()
             yy = Y.flatten()
-            zz = numpy.zeros_like(xx)
+            zz = numpy.zeros_like(xx) + 10000.0
+
+            #
+            # r_min and r_maj are like in shadow3
+            #
+            r_min = self.r_min
+            r_maj = self.r_maj
+
+            if self.f_torus == 0:
+                zz0 =  - r_maj - r_min
+            elif self.f_torus == 1:
+                zz0 =  - r_maj + r_min
+            elif self.f_torus == 2:
+                zz0 =  + r_maj - r_min
+            elif self.f_torus == 3:
+                zz0 =  + r_maj + r_min
+
 
             XIN = numpy.vstack((xx, yy, zz))
-            VIN = numpy.vstack((zz, zz, numpy.ones_like(xx)))
+            VIN = numpy.vstack((numpy.zeros_like(xx), numpy.zeros_like(xx), numpy.ones_like(xx)))
 
-            HEIGHT, i_res = self.calculate_intercept_and_choose_solution(XIN, VIN, return_all_solutions=True)
+            t0, t1, t2, t3 = self.calculate_intercept(XIN, VIN)
+            nn = t0.size
+            ZZ0 = numpy.array([t0[nn//2], t1[nn//2], t2[nn//2], t3[nn//2]])
+            if solution_index == -1: # automatic
+                indices_sorted = numpy.argsort(ZZ0)
+                solution_index = indices_sorted[self.f_torus]
 
-            height = HEIGHT[solution_index,:]
+            ZZ = numpy.array([t0, t1, t2, t3])
+
+            height = zz + ZZ[solution_index]
             height.shape = X.shape
             return height
-
 
     #
     # calculations
@@ -670,10 +745,10 @@ class S4Toroid(S4OpticalSurface):
         print('Exceeded maximum iterations. No solution found.')
         return x0, -1
 
-    def _pol4(self, z0, ABCD=None):
+    def _pol4(self, z0, ABCD=None): # quartic polynomial
         return z0 ** 4 + ABCD[0] * z0 ** 3 + ABCD[1] * z0 ** 2 + ABCD[2] * z0 + ABCD[3]
 
-    def _dpol4(self, z0, ABCD=None):
+    def _dpol4(self, z0, ABCD=None): # derivative of the quartic polynomial
         return 4 * z0 ** 3 + 3 * ABCD[0] * z0 ** 2 + 2 * ABCD[1] * z0 + ABCD[2]
 
     @classmethod
@@ -690,15 +765,11 @@ class S4Toroid(S4OpticalSurface):
 
         Q = numpy.power(2, -1.0/3) * numpy.power((D1 + numpy.sqrt(D1**2 - 4 * D0**3)), 1.0/3)
         S = 0.5 * numpy.sqrt((1.0/3) * (Q + D0 / Q) - 2 * k / 3)
-        if numpy.abs(S) < 1e-3:
-            # print(">>>> changed sign of sqrt")
+        if numpy.abs(S) < 1e-3: # print(">>>> changed sign of sqrt")
             Q = numpy.power(2, -1.0/3) * numpy.power((D1 - numpy.sqrt(D1**2 - 4 * D0**3)), 1.0/3)
             S = 0.5 * numpy.sqrt((1.0/3) * (Q + D0 / Q) - 2 * k / 3)
 
-
         m = (b**3 - 4 * b * c + 8 * d) / 8
-
-        # print(">>>>>>>>>Q,S,D: ", Q,S,D)
 
         z1 = -b / 4 - S + 0.5 * numpy.sqrt(-4 * S**2 - 2 * k + m / S)
         z2 = -b / 4 - S - 0.5 * numpy.sqrt(-4 * S**2 - 2 * k + m / S)
@@ -708,7 +779,7 @@ class S4Toroid(S4OpticalSurface):
         return z2, z3, z4, z1
 
     @classmethod
-    def _solve_quartic_vectorized(self, b, c, d, e):
+    def _solve_quartic_vectorized(cls, b, c, d, e):
 
         e = e + numpy.zeros_like(e, dtype=complex)
 
@@ -766,7 +837,6 @@ class S4Toroid(S4OpticalSurface):
         if method==0: # shadow3
             #     ! ** Evaluates the quartic coefficients **
             # z^4 + AA z^3 + BB z^2 + CC z + DD = 0
-
             A	=   r_maj**2 - r_min**2
             B	= -(r_maj**2 + r_min**2)
 
@@ -805,13 +875,6 @@ class S4Toroid(S4OpticalSurface):
             CC.shape = -1
             DD.shape = -1
 
-            # print("Old: AA", AA)
-            # print("Old: BB", BB)
-            # print("Old: CC", CC)
-            # print("Old: DD", DD)
-            # print("r_maj=%g, r_min=%g, P1=%g, P2=%g, P3=%g, V1=%g, V2=%g, V3=%g" % \
-            #       (r_maj, r_min, P1[0], P2[0], P3[0], V1[0], V2[0], V3[0]))
-
         else: # shadow4 (much simpler, the same result...)
             A = r_maj ** 2 - r_min ** 2
 
@@ -819,28 +882,21 @@ class S4Toroid(S4OpticalSurface):
             PdotP = P1 ** 2 + P2 ** 2 + P3 ** 2
 
             AA = 4 * PdotV
-
             BB = 4 * PdotV ** 2 + 2 * (A + PdotP) - 4 * r_maj ** 2 * (V2 ** 2 + V3 ** 2)
-
             CC = 4 * PdotV * (A + PdotP) - 8 * r_maj ** 2 * (P2 * V2 + P3 * V3)
-
             DD = (A + PdotP) ** 2 - 4 * r_maj ** 2 * (P2 ** 2 + P3 ** 2)
-
-            # print("New: AA", AA)
-            # print("New: BB", BB)
-            # print("New: CC", CC)
-            # print("New: DD", DD)
 
         return AA, BB, CC, DD
 
 if __name__ == "__main__":
 
-    t = S4Toroid()
-    t.set_from_focal_distances(30.0, 10.0, 0.003)
+    t = S4Toroid(r_maj=5000.0, r_min=100, f_torus=3)
+    # t.set_from_focal_distances(30.0, 10.0, 0.003)
     print(t.info())
 
     print("Rmaj, Rmin", t.get_toroid_radii())
     print("Rtan, Rsag", t.get_tangential_and_sagittal_radii())
+    print("Rtan, Rsag (signed)", t.get_tangential_and_sagittal_radii(signed=1))
 
     from srxraylib.plot.gol import plot_surface
 
@@ -849,7 +905,7 @@ if __name__ == "__main__":
     X = numpy.outer(x,numpy.ones_like(y))
     Y = numpy.outer(numpy.ones_like(x),y)
 
-    Z = t.surface_height(X, Y)
+    Z = t.surface_height(X, Y, method=0, solution_index=-1)
     plot_surface(Z, x, y, xtitle="x")
 
     x2 = numpy.zeros((3, 10))
