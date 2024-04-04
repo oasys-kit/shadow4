@@ -654,7 +654,7 @@ if __name__ == "__main__":
 
         try:
             from xoppylib.scattering_functions.f1f2_calc import f1f2_calc
-           import xraylib
+            import xraylib
         except:
             print("Please install xoppylib (to be avoided)")
 
