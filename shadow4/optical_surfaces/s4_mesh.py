@@ -475,11 +475,13 @@ if __name__ == "__main__":
 
     def plot_surface_and_line(Z, x, y, zz, xx, yy, show=True):
 
-        import matplotlib.pylab as plt
-        from mpl_toolkits.mplot3d import Axes3D
-        from matplotlib import cm
-        from matplotlib.ticker import LinearLocator, FormatStrFormatter
-
+        try:
+            import matplotlib.pylab as plt
+            from mpl_toolkits.mplot3d import Axes3D
+            from matplotlib import cm
+            from matplotlib.ticker import LinearLocator, FormatStrFormatter
+        except:
+            print("Please install matplotlib to allow graphics")
         #
         # plot
         #

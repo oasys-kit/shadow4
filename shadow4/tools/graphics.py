@@ -8,7 +8,7 @@ try:
     import matplotlib.pyplot as plt
     import matplotlib
 except:
-    pass
+    print("Please install matplotlib to allow graphics")
 
 import numpy
 import sys

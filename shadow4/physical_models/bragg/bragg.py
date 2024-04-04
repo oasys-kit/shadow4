@@ -6,7 +6,10 @@
 #
 import numpy
 import scipy.constants as codata
-from xoppylib.crystals.bragg_preprocessor_file_io import bragg_preprocessor_file_v1_read
+try:
+    from xoppylib.crystals.bragg_preprocessor_file_io import bragg_preprocessor_file_v1_read
+except:
+    print("Please install xoppylib (to be avoided)")
 
 class Bragg(object):
     def __init__(self, preprocessor_file=None, preprocessor_dictionary=None):
@@ -258,8 +261,10 @@ if __name__ == "__main__":
     import numpy
     import xraylib
 
-
-    from xoppylib.crystals.create_bragg_preprocessor_file_v1 import create_bragg_preprocessor_file_v1
+    try:
+        from xoppylib.crystals.create_bragg_preprocessor_file_v1 import create_bragg_preprocessor_file_v1
+    except:
+        print("Please install xoppylib (to be avoided)")
 
     SHADOW_FILE = "bragg_v1_xraylib.dat"
     tmp = create_bragg_preprocessor_file_v1(interactive=False, DESCRIPTOR="Si", H_MILLER_INDEX=1,

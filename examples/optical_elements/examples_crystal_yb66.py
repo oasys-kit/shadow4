@@ -51,8 +51,12 @@ def crystal_diffraction_with_collimated_beam(do_plot=True):
         SCANPOINTS = 200
 
         print("Using crystal descriptor: ", descriptor)
-        from xoppylib.crystals.tools import bragg_calc2
-        from dabax.dabax_xraylib import DabaxXraylib
+        try:
+            from xoppylib.crystals.tools import bragg_calc2
+            from dabax.dabax_xraylib import DabaxXraylib
+        except:
+            print("Please install xoppylib (to be avoided)")
+
         bragg_dictionary = bragg_calc2(descriptor=descriptor,
                                        hh=4, kk=0, ll=0,
                                        temper=1.0,

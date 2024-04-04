@@ -127,10 +127,10 @@ class Sampler1Dcdf(object): # todo: move away
         ----------
         random_in_0_1  : float or numpy array
             Points sampled in a uniform interval.
-            bins : int, optional
-                Number of bins
-            range : list or tuple
-                [min, max] the histogram limits.
+        bins : int, optional
+            Number of bins
+        range : list or tuple
+            [min, max] the histogram limits.
 
         Returns
         -------
@@ -139,7 +139,6 @@ class Sampler1Dcdf(object): # todo: move away
             s1: the points sampled with the current pdf. The number of points is equal to the dimension of random_in_0_1,
             h: the array with the histogram values at the bin edges,
             bin_edges: the bin edges.
-
         """
         s1 = self.get_sampled(random_in_0_1)
         if range is None:

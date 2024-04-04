@@ -652,9 +652,11 @@ if __name__ == "__main__":
                 RS0[ii] = rs
 
 
-
-        from xoppylib.scattering_functions.f1f2_calc import f1f2_calc
-        import xraylib
+        try:
+            from xoppylib.scattering_functions.f1f2_calc import f1f2_calc
+           import xraylib
+        except:
+            print("Please install xoppylib (to be avoided)")
 
         aa = f1f2_calc("Au", Energy, theta=grazing_angle_mrad*1e-3, F=8, density=None, rough=0.0, verbose=True,
                        material_constants_library=xraylib)
