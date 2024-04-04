@@ -273,10 +273,14 @@ class S4Beam(object):
         Parameters
         ----------
         nolost : int, optional
-            0=return all rays, 1=Return only good rays (non-lost rays), 2=Return only lost rays.
+            * 0=return all rays,
+            * 1=Return only good rays (non-lost rays),
+            * 2=Return only lost rays.
 
         polarization : int, optional
-            0=total, 1=sigma, 2=pi.
+            * 0=total,
+            * 1=sigma,
+            * 2=pi.
 
         Returns
         -------
@@ -303,54 +307,57 @@ class S4Beam(object):
         ----------
         column : int
             Number of column (starting with 1). Possible choice for column are:
+            *  1   X spatial coordinate [user's unit]
+            *  2   Y spatial coordinate [user's unit]
+            *  3   Z spatial coordinate [user's unit]
+            *  4   Xp direction or divergence [rads]
+            *  5   Yp direction or divergence [rads]
+            *  6   Zp direction or divergence [rads]
+            *  7   X component of the electromagnetic vector (s-polariz)
+            *  8   Y component of the electromagnetic vector (s-polariz)
+            *  9   Z component of the electromagnetic vector (s-polariz)
+            * 10   Lost ray flag
+            * 11   wavenumber (2 pi / lambda[cm]) !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+            * 12   Ray index
+            * 13   Optical path length
+            * 14   Phase (s-polarization) in rad
+            * 15   Phase (p-polarization) in rad
+            * 16   X component of the electromagnetic vector (p-polariz)
+            * 17   Y component of the electromagnetic vector (p-polariz)
+            * 18   Z component of the electromagnetic vector (p-polariz)
+            *
+            * 19   Wavelength [A]
+            * 20   R= SQRT(X^2+Y^2+Z^2)
+            * 21   angle from Y axis
+            * 22   the magnitude of the Electromagnetic vector
+            * 23   |E|^2 (total intensity)
+            * 24   total intensity for s-polarization
+            * 25   total intensity for p-polarization
+            * 26   photon energy in eV !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+            * 27   K = 2 pi / lambda * col4 [A^-1]
+            * 28   K = 2 pi / lambda * col5 [A^-1]
+            * 29   K = 2 pi / lambda * col6 [A^-1]
+            * 30   S0-stokes = |Ep|^2 + |Es|^2
+            * 31   S1-stokes = |Ep|^2 - |Es|^2
+            * 32   S2-stokes = 2 |Es| |Ep| cos(phase_s-phase_p)
+            * 33   S3-stokes = 2 |Es| |Ep| sin(phase_s-phase_p)
+            * 34   Power = intensity(col 23) * energy (col 11)
+            * 35   Angle-X with Y: |arcsin(X')|
+            * 36   Angle-Z with Y: |arcsin(Z')|
+            * 37   Angle-X with Y: |arcsin(X') - mean(arcsin(X'))|
+            * 38   Angle-Z with Y: |arcsin(Z') - mean(arcsin(Z'))|
+            * 39   Phase difference in rad: Phase (s-polarization) - Phase (p-polarization)
+            * 40   Complex amplitude of the electric vector (s-polarization)
+            * 41   Complex amplitude of the electric vector (p-polarization)
 
-             1   X spatial coordinate [user's unit]
-             2   Y spatial coordinate [user's unit]
-             3   Z spatial coordinate [user's unit]
-             4   Xp direction or divergence [rads]
-             5   Yp direction or divergence [rads]
-             6   Zp direction or divergence [rads]
-             7   X component of the electromagnetic vector (s-polariz)
-             8   Y component of the electromagnetic vector (s-polariz)
-             9   Z component of the electromagnetic vector (s-polariz)
-            10   Lost ray flag
-            11   wavenumber (2 pi / lambda[cm]) !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-            12   Ray index
-            13   Optical path length
-            14   Phase (s-polarization) in rad
-            15   Phase (p-polarization) in rad
-            16   X component of the electromagnetic vector (p-polariz)
-            17   Y component of the electromagnetic vector (p-polariz)
-            18   Z component of the electromagnetic vector (p-polariz)
-
-            19   Wavelength [A]
-            20   R= SQRT(X^2+Y^2+Z^2)
-            21   angle from Y axis
-            22   the magnitude of the Electromagnetic vector
-            23   |E|^2 (total intensity)
-            24   total intensity for s-polarization
-            25   total intensity for p-polarization
-            26   photon energy in eV !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-            27   K = 2 pi / lambda * col4 [A^-1]
-            28   K = 2 pi / lambda * col5 [A^-1]
-            29   K = 2 pi / lambda * col6 [A^-1]
-            30   S0-stokes = |Ep|^2 + |Es|^2
-            31   S1-stokes = |Ep|^2 - |Es|^2
-            32   S2-stokes = 2 |Es| |Ep| cos(phase_s-phase_p)
-            33   S3-stokes = 2 |Es| |Ep| sin(phase_s-phase_p)
-            34   Power = intensity(col 23) * energy (col 11)
-            35   Angle-X with Y: |arcsin(X')|
-            36   Angle-Z with Y: |arcsin(Z')|
-            37   Angle-X with Y: |arcsin(X') - mean(arcsin(X'))|
-            38   Angle-Z with Y: |arcsin(Z') - mean(arcsin(Z'))|
-            39   Phase difference in rad: Phase (s-polarization) - Phase (p-polarization)
-            40   Complex amplitude of the electric vector (s-polarization)
-            41   Complex amplitude of the electric vector (p-polarization)
-
-            -11: column 26
+        Notes
+        -----
+        Column 11 in Shadow3 is column 26 in Shadow4.
 
         nolost : int, optional
-            0=return all rays, 1=Return only good rays (non-lost rays), 2=Return only lost rays.
+            * 0=return all rays,
+            * 1=Return only good rays (non-lost rays),
+            * 2=Return only lost rays.
 
         Returns
         -------

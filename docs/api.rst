@@ -59,14 +59,14 @@ beamline optical elements
 -------------------------
 ``shadow4.beamline.optical_elements`` The S4 optical elements
 
-* ``shadow4.sources.optical_elements.absorbers`` The absorbers, slits, sops, screens
+* ``shadow4.beamline.optical_elements.absorbers`` The absorbers, slits, sops, screens
 
    .. autosummary::
       :toctree: generated/
 
       shadow4.beamline.optical_elements.absorbers.s4_screen
 
-* ``shadow4.sources.optical_elements.mirrors`` The mirrors
+* ``shadow4.beamline.optical_elements.mirrors`` The mirrors
 
    .. autosummary::
       :toctree: generated/
@@ -81,7 +81,7 @@ beamline optical elements
       shadow4.beamline.optical_elements.mirrors.s4_numerical_mesh_mirror
       shadow4.beamline.optical_elements.mirrors.s4_additional_numerical_mesh_mirror
 
-* ``shadow4.sources.optical_elements.gratings`` The gratings
+* ``shadow4.beamline.optical_elements.gratings`` The gratings
 
    .. autosummary::
       :toctree: generated/
@@ -96,7 +96,7 @@ beamline optical elements
       shadow4.beamline.optical_elements.gratings.s4_numerical_mesh_grating
       shadow4.beamline.optical_elements.gratings.s4_additional_numerical_mesh_grating
 
-* ``shadow4.sources.optical_elements.crystals`` The crystals
+* ``shadow4.beamline.optical_elements.crystals`` The crystals
 
    .. autosummary::
       :toctree: generated/
@@ -111,7 +111,7 @@ beamline optical elements
       shadow4.beamline.optical_elements.crystals.s4_numerical_mesh_crystal
       shadow4.beamline.optical_elements.crystals.s4_additional_numerical_mesh_crystal
 
-* ``shadow4.sources.optical_elements.refractors`` The refractors
+* ``shadow4.beamline.optical_elements.refractors`` The refractors
 
    .. autosummary::
       :toctree: generated/
@@ -120,7 +120,7 @@ beamline optical elements
       shadow4.beamline.optical_elements.refractors.s4_crl
       shadow4.beamline.optical_elements.refractors.s4_conic_interface
 
-* ``shadow4.sources.optical_elements.ideal_elements`` The ideal elements
+* ``shadow4.beamline.optical_elements.ideal_elements`` The ideal elements
 
    .. autosummary::
       :toctree: generated/
