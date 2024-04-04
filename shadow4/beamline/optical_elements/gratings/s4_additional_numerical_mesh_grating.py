@@ -8,6 +8,23 @@ from shadow4.beamline.s4_beamline_element_movements import S4BeamlineElementMove
 
 
 class S4AdditionalNumericalMeshGrating(S4NumericalMeshGrating):
+    """
+    Constructor.
+
+
+    Parameters
+    ----------
+    ideal_grating : instance of S4Grating
+        The grating baseline.
+    numerical_mesh_grating : instance of S4NumericalMeshGrating
+        The numerical mesh to be added to the ideal grating.
+    name : str, optional
+        The name of the grating.
+
+    Returns
+    -------
+    instance of S4AdditionalNumericalMeshGrating.
+    """
     def __init__(self,
                  ideal_grating : S4Grating = None,
                  numerical_mesh_grating : S4NumericalMeshGrating = None,
@@ -43,7 +60,25 @@ class S4AdditionalNumericalMeshGrating(S4NumericalMeshGrating):
             "numerical_mesh_grating": numerical_mesh_grating,
         }
 
-    def ideal_grating(self): return self.__ideal_grating
+    def ideal_grating(self):
+        """
+        get the ideal optical element.
+
+        Returns
+        -------
+        instance of S4Grating
+        """
+        return self.__ideal_grating
+
+    def get_ideal(self):
+        """
+        get the ideal optical element.
+
+        Returns
+        -------
+        instance of S4Grating
+        """
+        return self.__ideal_grating
 
     def to_python_code(self, **kwargs):
         """

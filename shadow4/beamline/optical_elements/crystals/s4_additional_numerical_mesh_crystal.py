@@ -8,6 +8,23 @@ from shadow4.beamline.s4_beamline_element_movements import S4BeamlineElementMove
 
 
 class S4AdditionalNumericalMeshCrystal(S4NumericalMeshCrystal):
+    """
+    Constructor.
+
+
+    Parameters
+    ----------
+    ideal_mirror : instance of S4Crystal
+        The crystal baseline.
+    numerical_mesh_crystal : instance of S4NumericalMeshMirror
+        The numerical mesh to be added to the ideal crystal.
+    name : str, optional
+        The name of the crystal.
+
+    Returns
+    -------
+    instance of S4AdditionalNumericalMeshCrystal.
+    """
     def __init__(self,
                  ideal_crystal : S4Crystal = None,
                  numerical_mesh_crystal : S4NumericalMeshCrystal = None,
@@ -43,6 +60,26 @@ class S4AdditionalNumericalMeshCrystal(S4NumericalMeshCrystal):
             "ideal_crystal": ideal_crystal,
             "numerical_mesh_crystal": numerical_mesh_crystal,
         }
+
+    def ideal_crystal(self):
+        """
+        get the ideal optical element.
+
+        Returns
+        -------
+        instance of S4Crystal
+        """
+        return self.__ideal_crystal
+
+    def get_ideal(self):
+        """
+        get the ideal optical element.
+
+        Returns
+        -------
+        instance of S4Crystal
+        """
+        return self.__ideal_crystal
 
     def to_python_code(self, **kwargs):
         """
