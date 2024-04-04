@@ -1,8 +1,3 @@
-"""
-Abstract class for s4 mirror.
-
-"""
-
 import numpy
 
 from syned.beamline.shape import Rectangle, Ellipse
