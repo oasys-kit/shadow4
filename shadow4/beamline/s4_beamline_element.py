@@ -95,7 +95,7 @@ class S4BeamlineElement(BeamlineElement):
 
     def info(self):
         """
-        Gets the information text.
+        Gets the information text (syned doc).
 
         Returns
         -------
@@ -103,6 +103,44 @@ class S4BeamlineElement(BeamlineElement):
             A info text for the S4 beamline element.
         """
         return self.get_optical_element().info() + "\n" + self.get_coordinates().info()
+
+    def get_info(self):
+        """
+        Gets the information text for the specific element.
+
+        Returns
+        -------
+        str
+            A info text for the S4 beamline element.
+        """
+        txt_oe = self.get_optical_element().get_info()
+        coordinates = self.get_coordinates()
+        print(coordinates)
+        txt_coordinates = \
+"""
++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+********************   OPTICAL ELEMENT  DESCRIPTION   ********************
+O.E. #XX
++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+Central Axis parameters :
+Source Plane Distance                    xxx m
+Image  Plane                             xxx m
+Incidence Angle (to normal)              xxx  deg
+Reflection/Diffraction Angle (to normal) xxx  deg
+Grazing Incidence Angle                  xxx  mrad
+Grazing Reflection/Diffraction Angle     xxx  mrad
++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+"""
+
+        txt_end = \
+"""
++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+***************                 E N D                  ***************
++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+"""
+        return txt_coordinates + "\n" + txt_oe + "\n" + txt_end
 
     def to_python_code(self, **kwargs):
         """

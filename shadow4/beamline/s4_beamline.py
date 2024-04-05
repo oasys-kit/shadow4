@@ -117,11 +117,112 @@ class S4Beamline(Beamline):
 
         return output_beam, output_mirr
 
+    def sourcinfo(self):
+        txt_source = \
+"""
++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+**************  S O U R C E       D E S C R I P T I O N  **************
+
+
++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+Random Source
+Generated total xxxx rays.
+Source assumed BIDIMENSIONAL (flat).
+Source Spatial Characteristics: xxxxxx    
+Sigma X:     xxxx and Sigma Z:    xxxx
++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+Source Emission Characteristics
+Distribution Type: GAUSSIAN     
+Distribution Limits. +X :                 xx   -X:                 xx   rad
+                     +Z :                 xx   -Z:                 xx   rad
+Horiz. StDev :    xxx
+Verti. StDev :    xxx
++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+Source Photon Energy Distribution: BOX DISTR.   
+From Photon Energy:          xxx eV or        xxx Angs.
+ to  Photon Energy:          xxx eV or        xxx Angs.
+Angular difference in phase is           xxx
+Degree of polarization is                xxx
+Source points have INCOHERENT phase.
+"""
+        txt_end = \
+"""
++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+***************                 E N D                  ***************
++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+"""
+        return txt_source + "\n" + self.get_light_source().get_info() + txt_end
+
+    def oeinfo(self, oe_index=None):
+        if oe_index is None:
+            txt = ""
+            for i, element in enumerate(self.get_beamline_elements()):
+                txt += element.get_info()
+        else:
+            txt = self.get_beamline_element_at(oe_index).get_info()
+
+        return txt
+
+    def sysinfo(self):
+        txt_system = \
+"""
++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+**************  S Y S T E M      D E S C R I P T I O N  **************
++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+
++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+Units (length) in use:  m 
+
+ 
+Optical Element # 1      System Number: 
+
+EMPTY ELEMENT
+
+  Orientation        xxx  deg
+  Source Plane       xxx  m 
+  Incidence Ang.     xxx  deg
+  Reflection Ang.    xxx  deg
+  Image Plane        xxx  m 
+ 
+Optical Element # 2      System Number: 
+
+REFLECTOR-MIRROR    ELLIPTICAL      UNLIMITED    CURVATURE: COMPUTED    REFLECTIVITY ON
+
+  Orientation        xxx  deg
+  Source Plane       xxx  m 
+  Incidence Ang.     xxx  deg
+  Reflection Ang.    xxx  deg
+  Image Plane        xxx  m
+    ----------------
+
+
+                          OPTICAL SYSTEM CONFIGURATION
+                           Laboratory Reference Frame.
+OPT. Elem #       X =                 Y =                 Z =
+
+       0         0.00000000xxx          0.00000000xxx          0.00000000xxx
+       1         0.00000000xxx         xx.20000000xxx          0.00000000xxx
+          1'        -0.00000000xxx         xx.20000000000          0.00000000000
+       2        -0.00000000xxx         xx.00000000000          0.00000000000
+          2'        -0.00000000xxx         xx.00000000000          0.00000000000
+
++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+********                 E N D                  ***************
++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ 
+"""
+        return txt_system
+
+    def distances_summary(self):
+        return "S4Beamline.distances_summary() not yet implemented."
+
 
 if __name__ == "__main__":
     from shadow4.sources.source_geometrical.source_geometrical import SourceGeometrical
     from shadow4.beamline.optical_elements.mirrors.s4_plane_mirror import S4PlaneMirror, S4PlaneMirrorElement
     from syned.beamline.element_coordinates import ElementCoordinates
+    from srxraylib.plot.gol import set_qt
+    set_qt()
 
     light_source = SourceGeometrical(name='SourceGeometrical', nrays=10000, seed=5676561)
 
@@ -140,7 +241,15 @@ if __name__ == "__main__":
     output_beam, output_mirr = bl.run_beamline()
 
     # test plot
-    from srxraylib.plot.gol import plot_scatter
-    rays = output_beam.get_rays()
-    plot_scatter(1e6 * rays[:, 3], 1e6 * rays[:, 5], title='(Xp,Zp) in microns')
+    # from srxraylib.plot.gol import plot_scatter
+    # rays = output_beam.get_rays()
+    # plot_scatter(1e6 * rays[:, 3], 1e6 * rays[:, 5], title='(Xp,Zp) in microns')
+
+    print(bl.sourcinfo())
+
+    print(bl.oeinfo())
+
+    print(bl.sysinfo())
+
+    print(bl.to_json())
 
