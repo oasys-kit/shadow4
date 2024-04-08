@@ -606,6 +606,103 @@ class SourceGeometrical(S4LightSourceBase):
         self.set_depth_distribution(2, value)
 
     #
+    # info
+    #
+    def get_info(self):
+        """
+        Returns an array of strings with info.
+
+        Returns
+        -------
+        str
+        """
+
+        f2dot35 = 2*numpy.sqrt(2*numpy.log(2))
+        txt = ""
+
+        txt += "SourceGeometrical: \n"
+
+        txt += "\nspatial type: %s \n" % self._spatial_type
+
+        # print(">>>>>>>>>>>>>", , self._angular_distribution, self._energy_distribution)
+        if self._spatial_type == "Point":
+            pass
+        elif self._spatial_type == "Rectangle":
+            txt +=  "source width (X) %g m\n" % self._wxsou
+            txt += "source height (Z) %g m\n" % self._wzsou
+            if self._fsource_depth: txt += "source depth (Y) %g m\n" % self._wysou
+        elif self._spatial_type == "Ellipse":
+            txt += "source axis a (X) %g m\n" % self._wxsou
+            txt += "source axis b (Z) %g m\n" % self._wzsou
+            if self._fsource_depth: txt += "source depth (Y) %g m\n" % self._wysou
+        elif self._spatial_type == "Gaussian":
+            txt += "sigma for H size: %g m\n" % self._sigmax
+            txt += "sigma for V size: %g m\n" % self._sigmaz
+
+        # depth
+        if self._fsource_depth == 0:  # off
+            txt += "No depth.\n"
+        elif self._fsource_depth == 1:  # uniform
+            txt += "Uniform depth (%g m) \n" % (self._wysou)
+        elif self._fsource_depth == 2:  # gaussian
+            txt += "Uniform depth (sigma: %g m)" % (self._wysou)
+
+
+        txt += "\nangular distribution: %s \n" % self._angular_distribution
+
+        if self._angular_distribution == "Flat":
+            txt +=  "source divergence limits X: %g %g rad\n" % (self._hdiv1, self._hdiv2)
+            txt += "source divergence limits Z: %g %g rad\n" % (self._vdiv1, self._vdiv2)
+        elif self._angular_distribution == "Uniform":
+            txt +=  "source divergence limits X: %g %g rad\n" % (self._hdiv1, self._hdiv2)
+            txt += "source divergence limits Z: %g %g rad\n" % (self._vdiv1, self._vdiv2)
+        elif self._angular_distribution == "Gaussian":
+            txt += "sigma for H divergence: %g m\n" % self._sigdix
+            txt += "sigma for V divergence: %g m\n" % self._sigdiz
+        elif self._angular_distribution == "Cone":
+            txt += "sigma for cone min divergence: %g m\n" % self._cone_min
+            txt += "sigma for cone max divergence: %g m\n" % self._cone_max
+        elif self._angular_distribution == "Collimated":
+            pass
+
+        # energy
+
+        txt += "\nenergy distribution: \n"
+
+
+        unit = ['eV', 'A'][self._f_phot]
+
+        if self._f_color == 1:  # "Single line":
+            txt += "Single line at: %g %s \n" % \
+                   (self._ph[0], unit)
+        elif self._f_color == 2:  # "Several lines":
+            txt += "Several lines at:\n "
+            nlines = (numpy.array(self._ph)).size
+            for i in range(nlines):
+                txt += "    %g, %s \n" %  (self._ph[i], unit)
+        elif self._f_color == 3:  # "Uniform":
+            txt += "Uniform from: %g, %s to %g $s\n" % (self._ph[0], unit, self._ph[1], unit)
+        elif self._f_color == 4:  # "Relative intensities":
+            txt += "Several lines with relative intensities at:\n "
+            nlines = (numpy.array(self._ph)).size
+            for i in range(nlines):
+                txt += "    %g, %s, weight: %f\n" %  (self._ph[i], unit, self._rl[i])
+        elif self._f_color == 5:  # "Gaussian":
+            txt += "Gaussian distribution(center=%f %s, sigma=%f\n" % (self._ph[0], unit, self._ph[1])
+        elif self._f_color == 6:  # "User defined":
+            txt += "User defined #### TODO: COMPLETE"
+
+        #polarization/coherence
+        txt += "Degree of polarization is %f. Angular difference in phase is %f\n" % \
+               (self._pol_deg, self._pol_angle)
+        if self._f_foher:
+            txt += "Source rays have INCOHERENT phase\n"
+        else:
+            txt += "Source rays have COHERENT phase\n"
+
+        return txt
+
+    #
     # sampler
     #
     def calculate_beam(self):
@@ -1004,3 +1101,5 @@ if __name__ == "__main__":
     a = SourceGeometrical(depth_distribution="Gaussian")
     print(a.to_python_code())
     print(a.info())
+
+    print(a.get_info())

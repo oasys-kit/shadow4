@@ -341,9 +341,7 @@ class SourceGaussian(S4LightSourceBase):
         f2dot35 = 2*numpy.sqrt(2*numpy.log(2))
         txt = ""
 
-        txt += "++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++\n"
-        txt += "Number of rays: %d \n"%self.get_number_of_points()
-        txt += "Gausian source: \n"
+        txt += "SourceGaussian: \n"
         txt += "   Real space: \n"
         txt += "         Horizontal: sigmaX = %5.3f um; FWHM X = %5.3f um\n"%(1e6*self._sigmaX,1e6*f2dot35*self._sigmaX)
         txt += "         Vertical:   sigmaZ = %5.3f um; FWHM Z = %5.3f um\n"%(1e6*self._sigmaZ,1e6*f2dot35*self._sigmaZ)
@@ -351,7 +349,6 @@ class SourceGaussian(S4LightSourceBase):
         txt += "   Direction space (divergences): \n"
         txt += "         Horizontal: sigmaXprime = %5.3f urad; FWHM X = %5.3f urad\n"%(1e6*self._sigmaXprime,1e6*f2dot35*self._sigmaXprime)
         txt += "         Vertical:   sigmaZprime = %5.3f urad; FWHM Z = %5.3f urad\n"%(1e6*self._sigmaZprime,1e6*f2dot35*self._sigmaZprime)
-        txt += "++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++'n"
 
         return txt
 
@@ -360,7 +357,7 @@ class SourceGaussian(S4LightSourceBase):
     # interfaces
     #
 
-    def get_beam(self,wavelength=1e-10):
+    def get_beam(self, wavelength=1e-10):
         """
         Returns an instance of S4Beam with the sampled rays.
 
@@ -396,10 +393,9 @@ if __name__ == "__main__":
                                  )
     print(src.info())
 
-    print(src.get_info())
-
-
     beam = S4Beam()
     beam.generate_source(src)
     beam.set_photon_energy_eV(1000.0)
     print(beam.info())
+
+    print(src.get_info())

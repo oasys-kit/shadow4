@@ -98,13 +98,14 @@ class S4UndulatorGaussian(Undulator):
 
     def get_info(self):
         """
-        Returns the specific information of the wiggler magnetic structure.
+        Returns the specific information of the undulator magnetic structure in Gaussian approximation.
 
         Returns
         -------
         str
         """
-        txt = ""
+        txt = "Undulator source in GAUSSIAN approximation\n"
+        txt += "\n"
 
         txt += "Input Undulator parameters: \n"
         txt += "        period: %f m\n"%self.period_length()
@@ -112,16 +113,34 @@ class S4UndulatorGaussian(Undulator):
         if self.K_vertical() is not None:
             txt += "        K-value: %f\n"%self.K_vertical()
 
-        # txt += "-----------------------------------------------------\n"
-
         txt += "\nEnergy Grid: \n"
         if self.is_monochromatic():
-            txt += "        photon energy %f eV\n" % (self._photon_energy)
+            txt += "        (monochromatic) photon energy %f eV\n" % (self._photon_energy)
         else:
-            txt += "        photon energy from %10.3f eV to %10.3f eV\n" % (\
+            txt += "        (polychromatic) photon energy from %10.3f eV to %10.3f eV\n" % (\
                 self._photon_energy - 0.5 * self._delta_e, self._photon_energy - 0.5 * self._delta_e)
 
 
+        txt += "\n"
+        if self._flag_emittance:
+            txt += "Using electron beam emittance\n"
+        else:
+            txt += "Using ZERO electron beam emittance\n"
+
+        txt += "\n"
+        txt += "When sampling rays: use e- energy spread (0=No, 1=Yes): %d \n" % self._flag_energy_spread
+        if self._flag_energy_spread:
+            txt += "                  harmonic_number = %d \m" % self._harmonic_number
+
+        txt += "\n"
+        txt += "Flux peak: "
+        if self._flag_autoset_flux_central_cone:
+            txt += " calculated \n"
+        else:
+            txt += " user-defined (%g photons/s/0.1percent bw) \n" % self._flag_autoset_flux_central_cone
+
+        txt += "\n"
+        txt += "Number of points in energy (for flux calculation): %d \n" % self._NG_E
         return txt
 
     def get_flag_emittance(self):
@@ -239,6 +258,6 @@ source = S4UndulatorGaussian(
 
 if __name__ == "__main__":
     u = S4UndulatorGaussian()
-    print(u.info())
+    # print(u.info())
     print(u.get_info())
-    print(u.to_python_code())
+    # print(u.to_python_code())

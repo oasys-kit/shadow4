@@ -101,22 +101,17 @@ class S4BendingMagnetLightSource(S4LightSource):
         electron_beam = self.get_electron_beam()
         magnetic_structure = self.get_magnetic_structure()
         txt = ""
-        txt += "-----------------------------------------------------\n"
         txt += "Input Electron parameters: \n"
         txt += "        Electron energy: %f geV\n"%electron_beam.energy()
         txt += "        Electron current: %f A\n"%electron_beam.current()
         if magnetic_structure._FLAG_EMITTANCE:
             sigmas = electron_beam.get_sigmas_all()
-            txt += "        Electron sigmaX: %g [um]\n"%(1e6*sigmas[0])
-            txt += "        Electron sigmaZ: %g [um]\n"%(1e6*sigmas[2])
+            txt += "        Electron sigmaX: %g um\n"%(1e6*sigmas[0])
+            txt += "        Electron sigmaZ: %g um\n"%(1e6*sigmas[2])
             txt += "        Electron sigmaX': %f urad\n"%(1e6*sigmas[1])
             txt += "        Electron sigmaZ': %f urad\n"%(1e6*sigmas[3])
-        txt += "Input Bending Magnet parameters: \n"
-        txt += "        radius: %f m\n"%magnetic_structure._radius
-        txt += "        magnetic field: %f T\n"%magnetic_structure._magnetic_field
-        txt += "        length: %f m\n"%magnetic_structure._length
         txt += "Lorentz factor (gamma): %f\n"%electron_beam.gamma()
-        txt += "-----------------------------------------------------\n"
+        txt += "\n" + magnetic_structure.get_info()
         return (txt)
 
     def __calculate_rays(self,
@@ -718,3 +713,5 @@ if __name__ == "__main__":
     from srxraylib.plot.gol import plot
     plot(e, f, xlog=1, ylog=1, marker='+')
     plot(e, w, xlog=1, ylog=1, marker='+')
+
+    print(light_source.get_info())

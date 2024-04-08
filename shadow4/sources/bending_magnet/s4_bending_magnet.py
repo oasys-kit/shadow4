@@ -51,6 +51,21 @@ class S4BendingMagnet(BendingMagnet):
                     ("FLAG_EMITTANCE", "Use emittance (0=No, 1=Yes)", "" ),
             ] )
 
+    def get_info(self):
+        """
+        Returns the specific information for the wiggler magnetic structure.
+
+        Returns
+        -------
+        str
+        """
+        txt = ""
+        txt += "Input Bending Magnet parameters: \n"
+        txt += "        radius: %f m\n"%self._radius
+        txt += "        magnetic field: %f T\n"%self._magnetic_field
+        txt += "        length: %f m\n"%self._length
+        return (txt)
+
     def set_energy_monochromatic(self, emin):
         """
         Sets a single energy line for the source (monochromatic).

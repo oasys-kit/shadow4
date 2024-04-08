@@ -3,7 +3,8 @@ S4 Undulator magnetic structure.
 """
 
 from syned.storage_ring.magnetic_structures.undulator import Undulator
-
+import numpy
+import scipy.constants as codata
 
 class S4Undulator(Undulator):
     """
@@ -143,6 +144,54 @@ class S4Undulator(Undulator):
             ("flag_energy_spread",               "for monochromatod sources, apply (1) or not (0) electron energy spread correction", ""),
         ] )
 
+    def get_info(self, debug=False):
+        """
+        Returns the specific information for the undulator magnetic structure.
+
+        Returns
+        -------
+        str
+        """
+        undulator = self
+
+        txt = ""
+        txt = "Undulator source\n"
+        txt += "\n"
+        txt += "Input Undulator parameters: \n"
+        txt += "        period: %f m\n"%undulator.period_length()
+        txt += "        number of periods: %d\n"%undulator.number_of_periods()
+        txt += "        K-value: %f\n"%undulator.K_vertical()
+
+        txt += "Undulator length: %f m\n"%(undulator.period_length()*undulator.number_of_periods())
+        K_to_B = (2.0 * numpy.pi / undulator.period_length()) * codata.m_e * codata.c / codata.e
+
+        txt += "Undulator peak magnetic field: %f T\n"%(K_to_B*undulator.K_vertical())
+
+        txt += "\nGrids: \n"
+        if undulator.is_monochromatic():
+            txt += "        photon energy %f eV\n"%(undulator._emin)
+        else:
+            txt += "        photon energy from %10.3f eV to %10.3f eV\n"%(undulator._emin,undulator._emax)
+        txt += "        number of points for the trajectory: %d\n"%(undulator._ng_j)
+        txt += "        number of energy points: %d\n"%(undulator._ng_e)
+        txt += "        maximum elevation angle: %f urad\n"%(1e6*undulator._maxangle)
+        txt += "        number of angular elevation points: %d\n"%(undulator._ng_t)
+        txt += "        number of angular azimuthal points: %d\n"%(undulator._ng_p)
+
+        txt += "\n"
+        txt += "calculation code: %s\n"%undulator.code_undul_phot
+
+        txt += "\n"
+        txt += "Sampling: \n"
+        if undulator._flag_size == 0:
+            flag = "point"
+        elif undulator._flag_size == 1:
+            flag = "Gaussian"
+        elif undulator._flag_size == 2:
+            flag = "Far field backpropagated"
+
+        txt += "        Photon source size sampling flag: %d (%s)\n"%(undulator._flag_size, flag)
+        return txt
 
     def __script_dict(self):
         return {
@@ -169,65 +218,6 @@ class S4Undulator(Undulator):
             "weight_ratio"                     : self._weight_ratio,
             "flag_energy_spread"               : self._flag_energy_spread,
         }
-
-    def get_info(self):
-        """
-        Returns the specific information of the wiggler magnetic structure.
-
-        Returns
-        -------
-        str
-        """
-        txt = ""
-
-        txt += "Input Undulator parameters: \n"
-        txt += "        period: %f m\n"%self.period_length()
-        txt += "        number of periods: %d\n"%self.number_of_periods()
-        txt += "        K-value: %f\n"%self.K_vertical()
-
-        # txt += "-----------------------------------------------------\n"
-
-        txt += "\nEnergy Grid: \n"
-        if self._ng_e == 1:
-            txt += "        photon energy %f eV\n" % (self._emin)
-        else:
-            txt += "        photon energy from %10.3f eV to %10.3f eV\n" % (self._emin, self._emax)
-
-
-        txt += "\nOther Grids: \n"
-        txt += "        number of points for the trajectory: %d\n"%(self._ng_j)
-        txt += "        number of energy points: %d\n"%(self._ng_e)
-        txt += "        maximum elevation angle: %f urad\n"%(1e6*self._maxangle)
-        txt += "        number of angular elevation points: %d\n"%(self._ng_t)
-        txt += "        number of angular azimuthal points: %d\n"%(self._ng_p)
-        # txt += "        number of rays: %d\n"%(self.NRAYS)
-        # txt += "        random seed: %d\n"%(self.SEED)
-        txt += "-----------------------------------------------------\n"
-
-        txt += "calculation code: %s\n"%self.code_undul_phot
-        # if self._result_radiation is None:
-        #     txt += "radiation: NOT YET CALCULATED\n"
-        # else:
-        #     txt += "radiation: CALCULATED\n"
-        txt += "Sampling: \n"
-        if self._flag_size == 0:
-            flag = "point"
-        elif self._flag_size == 1:
-            flag = "Gaussian"
-        elif self._flag_size == 2:
-            flag = "Far field backpropagated"
-
-        txt += "        Photon source size sampling flag: %d (%s)\n"%(self._flag_size, flag)
-
-        #todo add backpropagation stuff.... add energy spread info....
-
-        # if self._flag_size == 1:
-        #     if self._result_photon_size_sigma is not None:
-        #         txt += "        Photon source size sigma (Gaussian): %6.3f um \n"%(1e6*self._result_photon_size_sigma)
-
-        # txt += "-----------------------------------------------------\n"
-
-        return txt
 
     def get_flag_emittance(self):
         """
@@ -366,8 +356,8 @@ source = S4Undulator(
 
 if __name__ == "__main__":
     u = S4Undulator()
-    print(u.info())
+    # print(u.info())
     print(u.get_info())
-    print(u.to_python_code())
+    # print(u.to_python_code())
 
 

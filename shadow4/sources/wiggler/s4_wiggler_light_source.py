@@ -1053,22 +1053,20 @@ class S4WigglerLightSource(S4LightSource):
         magnetic_structure = self.get_magnetic_structure()
 
         txt = ""
-        txt += "-----------------------------------------------------\n"
 
         txt += "Input Electron parameters: \n"
         txt += "        Electron energy: %f geV\n"%electron_beam.energy()
         txt += "        Electron current: %f A\n"%electron_beam.current()
         if magnetic_structure._FLAG_EMITTANCE:
             sigmas = electron_beam.get_sigmas_all()
-            txt += "        Electron sigmaX: %g [um]\n"%(1e6*sigmas[0])
-            txt += "        Electron sigmaZ: %g [um]\n"%(1e6*sigmas[2])
+            txt += "        Electron sigmaX: %g um\n"%(1e6*sigmas[0])
+            txt += "        Electron sigmaZ: %g um\n"%(1e6*sigmas[2])
             txt += "        Electron sigmaX': %f urad\n"%(1e6*sigmas[1])
             txt += "        Electron sigmaZ': %f urad\n"%(1e6*sigmas[3])
-
         txt += "Lorentz factor (gamma): %f\n"%electron_beam.gamma()
 
-        txt2 = magnetic_structure.info()
-        return (txt + "\n\n" + txt2)
+        txt += "\n\n" + magnetic_structure.get_info()
+        return (txt)
 
     def to_python_code(self, **kwargs):
         """
@@ -1207,24 +1205,25 @@ if __name__ == "__main__":
 
 
 
-    if False:
-        traj, parms = light_source.get_trajectory()
-        print(traj.shape, parms)
-        from srxraylib.plot.gol import plot
-        plot(traj[1, :], traj[0, :], xtitle="Y", ytitle="X")
-        plot(traj[1, :], traj[3, :], xtitle="Y", ytitle="BetaX")
-        plot(traj[1, :], traj[6, :], xtitle="Y", ytitle="Curvature")
-        plot(traj[1, :], traj[7, :], xtitle="Y", ytitle="B")
+    # if False:
+    #     traj, parms = light_source.get_trajectory()
+    #     print(traj.shape, parms)
+    #     from srxraylib.plot.gol import plot
+    #     plot(traj[1, :], traj[0, :], xtitle="Y", ytitle="X")
+    #     plot(traj[1, :], traj[3, :], xtitle="Y", ytitle="BetaX")
+    #     plot(traj[1, :], traj[6, :], xtitle="Y", ytitle="Curvature")
+    #     plot(traj[1, :], traj[7, :], xtitle="Y", ytitle="B")
+    #
+    #
+    #     photon_energy, flux, spectral_power = light_source.calculate_spectrum()
+    #     plot(photon_energy, flux, xtitle="photon energy [eV]", ytitle="Flux photons/s/0.001bw")
+    #
+    #
+    # beam = light_source.get_beam()
+    # # test plot
+    # from srxraylib.plot.gol import plot_scatter
+    # rays = beam.get_rays()
+    # plot_scatter(1e6 * rays[:, 0], 1e6 * rays[:, 2], title='(X,Z) in microns',   xrange=[-1800,100], yrange=[-100,100], show=0)
+    # plot_scatter(1e6 * rays[:, 3], 1e6 * rays[:, 5], title='(Xp,Zp) in microns', xrange=[-10000,8000], yrange=[-300,300])
 
-
-        photon_energy, flux, spectral_power = light_source.calculate_spectrum()
-        plot(photon_energy, flux, xtitle="photon energy [eV]", ytitle="Flux photons/s/0.001bw")
-
-
-    beam = light_source.get_beam()
-    # test plot
-    from srxraylib.plot.gol import plot_scatter
-    rays = beam.get_rays()
-    plot_scatter(1e6 * rays[:, 0], 1e6 * rays[:, 2], title='(X,Z) in microns',   xrange=[-1800,100], yrange=[-100,100], show=0)
-    plot_scatter(1e6 * rays[:, 3], 1e6 * rays[:, 5], title='(Xp,Zp) in microns', xrange=[-10000,8000], yrange=[-300,300])
-
+    print(light_source.get_info())

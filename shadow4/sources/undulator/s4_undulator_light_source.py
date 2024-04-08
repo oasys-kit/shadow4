@@ -351,25 +351,17 @@ class S4UndulatorLightSource(S4LightSource):
         txt += "        Electron current: %f A\n"%syned_electron_beam._current
         if undulator.get_flag_emittance():
             sigmas = syned_electron_beam.get_sigmas_all()
-            txt += "        Electron sigmaX: %g [um]\n"%(1e6*sigmas[0])
-            txt += "        Electron sigmaZ: %g [um]\n"%(1e6*sigmas[2])
+            txt += "        Electron sigmaX: %g um\n"%(1e6*sigmas[0])
+            txt += "        Electron sigmaZ: %g um\n"%(1e6*sigmas[2])
             txt += "        Electron sigmaX': %f urad\n"%(1e6*sigmas[1])
             txt += "        Electron sigmaZ': %f urad\n"%(1e6*sigmas[3])
 
-        txt += "Input Undulator parameters: \n"
-        txt += "        period: %f m\n"%undulator.period_length()
-        txt += "        number of periods: %d\n"%undulator.number_of_periods()
-        txt += "        K-value: %f\n"%undulator.K_vertical()
-
-        txt += "-----------------------------------------------------\n"
-
         txt += "Lorentz factor (gamma): %f\n"%syned_electron_beam.gamma()
         txt += "Electron velocity: %.12f c units\n"%(numpy.sqrt(1.0 - 1.0 / syned_electron_beam.gamma() ** 2))
-        txt += "Undulator length: %f m\n"%(undulator.period_length()*undulator.number_of_periods())
-        K_to_B = (2.0 * numpy.pi / undulator.period_length()) * codata.m_e * codata.c / codata.e
 
-        txt += "Undulator peak magnetic field: %f T\n"%(K_to_B*undulator.K_vertical())
-        txt += "Resonances: \n"
+        txt += "\n" + undulator.get_info()
+
+        txt += "\nResonances: \n"
         txt += "        harmonic number [n]                   %10d %10d %10d \n"%(1,3,5)
         txt += "        wavelength [A]:                       %10.6f %10.6f %10.6f   \n"%(\
                                                                 1e10*undulator.resonance_wavelength(syned_electron_beam.gamma(),harmonic=1),
@@ -392,34 +384,11 @@ class S4UndulatorLightSource(S4LightSource):
                                                                 1e6*self.get_resonance_ring(3,1),
                                                                 1e6*self.get_resonance_ring(5,1))
 
-        txt += "-----------------------------------------------------\n"
-        txt += "Grids: \n"
-        if undulator.is_monochromatic():
-            txt += "        photon energy %f eV\n"%(undulator._emin)
-        else:
-            txt += "        photon energy from %10.3f eV to %10.3f eV\n"%(undulator._emin,undulator._emax)
-        txt += "        number of points for the trajectory: %d\n"%(undulator._ng_j)
-        txt += "        number of energy points: %d\n"%(undulator._ng_e)
-        txt += "        maximum elevation angle: %f urad\n"%(1e6*undulator._maxangle)
-        txt += "        number of angular elevation points: %d\n"%(undulator._ng_t)
-        txt += "        number of angular azimuthal points: %d\n"%(undulator._ng_p)
-        txt += "-----------------------------------------------------\n"
-
-        txt += "calculation code: %s\n"%undulator.code_undul_phot
         if self.__result_radiation is None:
-            txt += "radiation: NOT YET CALCULATED\n"
+            txt += "\nradiation: NOT YET CALCULATED\n"
         else:
-            txt += "radiation: CALCULATED\n"
-        txt += "Sampling: \n"
-        if undulator._flag_size == 0:
-            flag = "point"
-        elif undulator._flag_size == 1:
-            flag = "Gaussian"
-        elif undulator._flag_size == 2:
-            flag = "Far field backpropagated"
+            txt += "\nradiation: CALCULATED\n"
 
-        txt += "        Photon source size sampling flag: %d (%s)\n"%(undulator._flag_size, flag)
-        txt += "-----------------------------------------------------\n"
         return txt
 
     def to_python_code(self, **kwargs):
@@ -966,27 +935,29 @@ if __name__ == "__main__":
 
     ls = S4UndulatorLightSource(name="", electron_beam=ebeam, magnetic_structure=su)
 
-    beam =  ls.get_beam()
+    # beam =  ls.get_beam()
+    # #
+    # # print(ls.info())
+    # # # print(ls.to_python_code())
+    # #
+    # ls.set_energy_monochromatic_at_resonance(harmonic_number=1)
+    # # print(ls.info())
     #
-    # print(ls.info())
-    # # print(ls.to_python_code())
+    # print("dict: ")
+    # d = ls.get_result_dictionary()
+    # for key in d.keys():
+    #     print(key)
     #
-    ls.set_energy_monochromatic_at_resonance(harmonic_number=1)
-    # print(ls.info())
+    # # print("radiation: ", d["radiation"].shape)
+    # # print("polarization: ", d["polarization"].shape)
+    # # print("phi: ", d["phi"].shape)
+    # # print("theta: ", d["theta"].shape)
+    # traj = d['trajectory']
+    # print(">>> traj ", traj.shape)
+    # from srxraylib.plot.gol import plot
+    # import scipy.constants as codata
+    # plot(traj[3] * codata.c, traj[1] * codata.c, xtitle="Z", ytitle="X")
+    # plot(traj[3] * codata.c, traj[4], xtitle="Z", ytitle="beta_x")
 
-    print("dict: ")
-    d = ls.get_result_dictionary()
-    for key in d.keys():
-        print(key)
-
-    # print("radiation: ", d["radiation"].shape)
-    # print("polarization: ", d["polarization"].shape)
-    # print("phi: ", d["phi"].shape)
-    # print("theta: ", d["theta"].shape)
-    traj = d['trajectory']
-    print(">>> traj ", traj.shape)
-    from srxraylib.plot.gol import plot
-    import scipy.constants as codata
-    plot(traj[3] * codata.c, traj[1] * codata.c, xtitle="Z", ytitle="X")
-    plot(traj[3] * codata.c, traj[4], xtitle="Z", ytitle="beta_x")
+    print(ls.get_info())
 

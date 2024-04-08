@@ -118,33 +118,29 @@ class S4Beamline(Beamline):
         return output_beam, output_mirr
 
     def sourcinfo(self):
+        from shadow4.sources.source_geometrical.source_grid_cartesian import SourceGridCartesian
+        from shadow4.sources.source_geometrical.source_grid_polar import SourceGridPolar
+
+        light_source = self.get_light_source()
+
+
+
         txt_source = \
 """
 +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 **************  S O U R C E       D E S C R I P T I O N  **************
-
-
 +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-Random Source
-Generated total xxxx rays.
-Source assumed BIDIMENSIONAL (flat).
-Source Spatial Characteristics: xxxxxx    
-Sigma X:     xxxx and Sigma Z:    xxxx
-+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-Source Emission Characteristics
-Distribution Type: GAUSSIAN     
-Distribution Limits. +X :                 xx   -X:                 xx   rad
-                     +Z :                 xx   -Z:                 xx   rad
-Horiz. StDev :    xxx
-Verti. StDev :    xxx
-+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-Source Photon Energy Distribution: BOX DISTR.   
-From Photon Energy:          xxx eV or        xxx Angs.
- to  Photon Energy:          xxx eV or        xxx Angs.
-Angular difference in phase is           xxx
-Degree of polarization is                xxx
-Source points have INCOHERENT phase.
 """
+
+        if isinstance(light_source, SourceGridCartesian):
+            txt_source += "Grid source (cartesian)\n"
+        elif isinstance(light_source, SourceGridPolar):
+            txt_source += "Grid source (polar)\n"
+        else:
+            txt_source += "Random source\n"
+
+        txt_source += "Generated total %d rays.\n" % light_source.get_nrays()
+
         txt_end = \
 """
 +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -247,9 +243,9 @@ if __name__ == "__main__":
 
     print(bl.sourcinfo())
 
-    print(bl.oeinfo())
-
-    print(bl.sysinfo())
-
-    print(bl.to_json())
+    # print(bl.oeinfo())
+    #
+    # print(bl.sysinfo())
+    #
+    # print(bl.to_json())
 

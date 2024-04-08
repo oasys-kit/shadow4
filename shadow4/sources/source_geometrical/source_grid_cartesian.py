@@ -333,9 +333,6 @@ class SourceGridCartesian(S4LightSourceBase):
         """
         txt = ""
 
-        txt += "++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++\n"
-        txt += "Grid source: \n"
-        txt += "Number of points: %d \n"%self.get_number_of_points()
         txt += "Gridding in real space:      %d, %d, %d \n"%(self._real_space_points[0],
                                                                 self._real_space_points[1],
                                                                 self._real_space_points[2])
@@ -349,7 +346,10 @@ class SourceGridCartesian(S4LightSourceBase):
         txt += "real_space_center "+repr(self._real_space_center) + "\n"
         txt += "direction_space_center "+repr(self._direction_space_center) + "\n"
 
-        txt += "++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++'n"
+        txt += "\nWavelength = %g m" % self._wavelength
+        txt += "Degree of polarization is %f. Angular difference in phase is %f\n" % \
+               (self._polarization_degree, self._polarization_phase_deg)
+
 
         return txt
 
@@ -459,3 +459,4 @@ if __name__ == "__main__":
 
 
     print(a.to_python_code())
+

@@ -262,9 +262,6 @@ class SourceGridPolar(S4LightSourceBase):
         str
         """
         txt = ""
-
-        txt += "++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++\n"
-        txt += "Grid source: \n"
         txt += "Number of points: Nreal_space: %d, Ndirection_space: %d, Total: %d \n"%(
                                                 self.get_number_of_points_real_space(),
                                                 self.get_number_of_points_direction_space(),
@@ -281,7 +278,9 @@ class SourceGridPolar(S4LightSourceBase):
         txt += "real_space_center "+repr(self._real_space_center) + "\n"
         txt += "direction_space_center "+repr(self._direction_space_center) + "\n"
 
-        txt += "++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++'n"
+        txt += "\nWavelength = %g m" % self._wavelength
+        txt += "Degree of polarization is %f. Angular difference in phase is %f\n" % \
+               (self._polarization_degree, self._polarization_phase_deg)
 
         return txt
 

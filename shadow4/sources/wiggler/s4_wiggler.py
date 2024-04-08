@@ -126,15 +126,12 @@ class S4Wiggler(Wiggler):
         str
         """
         txt = ""
-        # txt += "-----------------------------------------------------\n"
 
         if self._magnetic_field_periodic:  # conventional wiggler
             txt += "Input Wiggler parameters: \n"
             txt += "        period: %f m\n"%self.period_length()
             txt += "        number of periods: %d\n"%self.number_of_periods()
             txt += "        K-value: %f\n"%self.K_vertical()
-
-            # txt += "-----------------------------------------------------\n"
 
             txt += "Wiggler length: %f m\n"%(self.period_length()*self.number_of_periods())
             K_to_B = (2.0 * numpy.pi / self.period_length()) * codata.m_e * codata.c / codata.e
@@ -144,7 +141,6 @@ class S4Wiggler(Wiggler):
             txt += "Input Wiggler parameters: \n"
             txt += "        from external magnetic field: %s \n" % self._file_with_magnetic_field
 
-        # txt += "-----------------------------------------------------\n"
         txt += "Grids: \n"
         if self._NG_E == 1:
             txt += "        photon energy %f eV\n"%(self._EMIN)
@@ -153,11 +149,9 @@ class S4Wiggler(Wiggler):
         txt += "        number of energy points: %d\n"%(self._NG_E)
         txt += "        number of points for the trajectory: %d\n"%(self._NG_J)
 
-        txt += "\n\n"
+        txt += "\n"
         txt += "        distance from waist X: %f m\n" % (self._EPSI_DX)
         txt += "        distance from waist Z: %f m\n" % (self._EPSI_DZ)
-        # txt += "-----------------------------------------------------\n"
-
         return txt
 
     def get_flag_emittance(self):
