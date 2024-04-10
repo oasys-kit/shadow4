@@ -80,7 +80,8 @@ class S4ParaboloidGrating(S4Grating, S4ParaboloidOpticalElementDecorator):
         str
             Python code.
         """
-        txt = "\nfrom shadow4.beamline.optical_elements.gratings.s4_paraboloid_grating import S4ParaboloidGrating"
+        txt = self.to_python_code_boundary_shape()
+        txt += "\nfrom shadow4.beamline.optical_elements.gratings.s4_paraboloid_grating import S4ParaboloidGrating"
 
         txt_pre = """\noptical_element = S4ParaboloidGrating(name='{name}',
     boundary_shape=None, f_ruling={f_ruling}, order={order},

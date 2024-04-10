@@ -137,7 +137,7 @@ class S4UndulatorGaussian(Undulator):
         if self._flag_autoset_flux_central_cone:
             txt += " calculated \n"
         else:
-            txt += " user-defined (%g photons/s/0.1percent bw) \n" % self._flag_autoset_flux_central_cone
+            txt += " user-defined (%g photons/s/0.1percent bw) \n" % self._flux_central_cone
 
         txt += "\n"
         txt += "Number of points in energy (for flux calculation): %d \n" % self._NG_E

@@ -101,6 +101,68 @@ class S4Mirror(Mirror):
                     ("coating_roughness",  "S4: roughness of coating material",         "A"),
             ] )
 
+    def get_info(self):
+        """
+        Returns the specific information of the S4 mirror optical element.
+
+        Returns
+        -------
+        str
+        """
+        txt = "\n\n"
+        txt += "MIRROR\n"
+        if self._f_reflec:
+            txt += "Reflectivity calculation: ON\n"
+            if self._f_refl == 0:
+                txt += "   Calculated reflectivity from preprocessor (prerefl) file: %s\n" % self._file_refl
+            elif self._f_refl == 1:
+                txt += "   Calculated reflectivity from electric susceptibility\n"
+            elif self._f_refl == 2:
+                txt += "   Calculated reflectivity from user defined file (1D reflectivity vs angle): %s\n" % self._file_refl
+            elif self._f_refl == 3:
+                txt += "   Calculated reflectivity from user defined file (1D reflectivity vs energy): %s\n" % self._file_refl
+            elif self._f_refl == 4:
+                txt += "   Calculated reflectivity from user defined file (2D reflectivity vs energy and angle): %s\n" % self._file_refl
+            elif self._f_refl == 5:
+                txt += "   Calculated reflectivity using xraylib\n"
+            elif self._f_refl == 6:
+                txt += "   Calculated reflectivity using dabax\n"
+        else:
+            txt += "Reflectivity calculation: OFF\n"
+
+        txt += "\n"
+        ss = self.get_surface_shape()
+        if ss is None:
+            txt += "Surface shape is: Plane (** UNDEFINED?? **)\n"
+        else:
+            txt += "Surface shape is: %s\n" % ss.__class__.__name__
+
+        try:
+            sc = self._surface_calculation
+            if sc == 0:
+                txt += "Mirror parameters COMPUTED\n"
+                txt += "    Objective focus at p: %f m\n" % ss.get_p_focus()
+                txt += "    Image focus at p: %f m\n" % ss.get_q_focus()
+                txt += "    Incidence angle (grazing): %f mrad\n" % (1e3 * ss.get_grazing_angle())
+            else:
+                txt += "Mirror parameters EXTERNAL\n"
+        except:
+            pass
+
+        txt += "\nParameters:\n %s\n" % ss.info()
+
+        txt += self.get_optical_surface_instance().info() + "\n"
+
+        boundary = self.get_boundary_shape()
+        if boundary is None:
+            txt += "Surface boundaries not considered (infinite)"
+        else:
+            txt += "Surface boundaries are: %s\n" % boundary.__class__.__name__
+            txt += "    Limits: " + repr( boundary.get_boundaries()) + "\n"
+            txt += boundary.info()
+
+        return txt
+
     def to_python_code_boundary_shape(self):
         """
         Creates a code block with information of boundary shape.

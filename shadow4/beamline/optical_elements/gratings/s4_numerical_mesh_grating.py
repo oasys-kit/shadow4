@@ -73,7 +73,8 @@ class S4NumericalMeshGrating(S4Grating, S4NumericalMeshOpticalElementDecorator):
         str
             Python code.
         """
-        txt = "\nfrom shadow4.beamline.optical_elements.gratings.s4_numerical_mesh_grating import S4NumericalMeshGrating"
+        txt = self.to_python_code_boundary_shape()
+        txt += "\nfrom shadow4.beamline.optical_elements.gratings.s4_numerical_mesh_grating import S4NumericalMeshGrating"
 
         txt_pre = """\noptical_element = S4NumericalMeshGrating(name='{name}',
     boundary_shape=None,

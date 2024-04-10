@@ -77,7 +77,8 @@ class S4ToroidGrating(S4Grating, S4ToroidOpticalElementDecorator):
         str
             Python code.
         """
-        txt = "\nfrom shadow4.beamline.optical_elements.gratings.s4_toroid_grating import S4ToroidGrating"
+        txt = self.to_python_code_boundary_shape()
+        txt += "\nfrom shadow4.beamline.optical_elements.gratings.s4_toroid_grating import S4ToroidGrating"
 
         txt_pre = """\noptical_element = S4ToroidGrating(name='{name}',
     boundary_shape=None, f_ruling={f_ruling}, order={order},

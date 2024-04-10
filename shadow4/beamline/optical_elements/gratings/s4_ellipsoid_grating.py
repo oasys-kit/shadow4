@@ -79,7 +79,8 @@ class S4EllipsoidGrating(S4Grating, S4EllipsoidOpticalElementDecorator):
         str
             Python code.
         """
-        txt = "\nfrom shadow4.beamline.optical_elements.gratings.s4_ellipsoid_grating import S4EllipsoidGrating"
+        txt = self.to_python_code_boundary_shape()
+        txt += "\nfrom shadow4.beamline.optical_elements.gratings.s4_ellipsoid_grating import S4EllipsoidGrating"
 
         txt_pre = """\noptical_element = S4EllipsoidGrating(name='{name}',
     boundary_shape=None, f_ruling={f_ruling}, order={order},

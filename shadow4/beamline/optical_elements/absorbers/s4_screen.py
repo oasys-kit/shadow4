@@ -25,7 +25,7 @@ class S4Screen(Absorber, S4OpticalElementDecorator):
                  i_abs=0,      # include absorption: 0=No, 1=using preprocessor file
                                # 2=direct calculation using xraylib
                                # 3=direct calculation using dabax
-                 i_stop=False, # aperture/stop
+                 i_stop=0, # aperture/stop
                  thick=0.0,    # thickness of the absorber (in SI)
                  file_abs="",  # if i_abs=1, the material file (from prerefl)
                  material="",  # if i_abs=2,3, the material name
@@ -79,6 +79,41 @@ class S4Screen(Absorber, S4OpticalElementDecorator):
             "file_abs": file_abs,
             "density": density,
         }
+
+    def get_info(self):
+        """
+        Returns the specific information of the S4 screen optical element.
+
+        Returns
+        -------
+        str
+        """
+        txt = "\n\n"
+        txt += "SCREEN/SLIT/STOP/FILTER\n"
+
+        if self._i_abs > 1:
+            txt += "  Absorber or attenuator"
+            if self._i_abs == 1:
+                txt += "   Calculated attenuation from (prerefl) file: %s\n" % self._file_abs
+            elif self._i_abs == 2:
+                txt += "   Calculated attenuation using xraylib\n"
+            elif self._i_abs == 3:
+                    txt += "   Calculated attenuation using dabax\n"
+
+        boundary = self.get_boundary_shape()
+        if boundary is None:
+            txt += "Boundaries not considered (infinite screen)"
+        else:
+            txt += "Boundaries are: %s\n" % boundary.__class__.__name__
+            if self._i_stop == 0:
+                txt += "SLIT or APERTURE\n"
+            else:
+                txt += "STOP or OBSTRUCTION\n"
+            txt += "Boundaries not considered (infinite screen)"
+            txt += "    Limits: " + repr( boundary.get_boundaries()) + "\n"
+            txt += boundary.info()
+
+        return txt
 
     def to_python_code_boundary_shape(self):
         """

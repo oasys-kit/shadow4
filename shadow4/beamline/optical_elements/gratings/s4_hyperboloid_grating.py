@@ -79,7 +79,8 @@ class S4HyperboloidGrating(S4Grating, S4HyperboloidOpticalElementDecorator):
         str
             Python code.
         """
-        txt = "\nfrom shadow4.beamline.optical_elements.gratings.s4_hyperboloid_grating import S4HyperboloidGrating"
+        txt = self.to_python_code_boundary_shape()
+        txt += "\nfrom shadow4.beamline.optical_elements.gratings.s4_hyperboloid_grating import S4HyperboloidGrating"
 
         txt_pre = """\noptical_element = S4HyperboloidGrating(name='{name}',
     boundary_shape=None, f_ruling={f_ruling}, order={order},

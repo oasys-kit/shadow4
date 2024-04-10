@@ -4,6 +4,7 @@ import scipy.constants as codata
 from syned.beamline.optical_elements.gratings.grating import GratingVLS
 from syned.beamline.shape import Plane, Sphere, Conic, Toroid, Paraboloid, Hyperboloid, Ellipsoid, NumericalMesh
 from syned.beamline.element_coordinates import ElementCoordinates
+from syned.beamline.shape import Rectangle, Ellipse
 
 from shadow4.beam.s4_beam import S4Beam
 from shadow4.beamline.s4_optical_element_decorators import S4OpticalElementDecorator
@@ -117,9 +118,72 @@ class S4Grating(GratingVLS, S4OpticalElementDecorator):
 
         self._congruence()
 
+    def get_info(self):
+        """
+        Returns the specific information of the S4 grating optical element.
+
+        Returns
+        -------
+        str
+        """
+        txt = "\n\n"
+        txt += "GRATING\n"
+
+        txt += "\n"
+        txt += "Ruling coeffcients:\n"
+        txt += "Ruling at center:       %f  lines/m  \n"         %self._ruling
+        txt += "Ruling linear coeff:    %f  lines/m^2 \n"     %self._ruling_coeff_linear
+        txt += "Ruling quadratic coeff: %f lines/m^3   \n" %self._ruling_coeff_quadratic
+        txt += "Ruling cubic coeff:     %f  lines/m^4 \n"      %self._ruling_coeff_cubic
+        txt += "Ruling quartic coeff:   %f lines/m^5  \n"    %self._ruling_coeff_quartic
+
+        txt += "\n"
+        ss = self.get_surface_shape()
+        if ss is None:
+            txt += "Surface shape is: Plane (** UNDEFINED?? **)\n"
+        else:
+            txt += "Surface shape is: %s\n" % ss.__class__.__name__
+
+        #
+        if ss is not None: txt += "\nParameters:\n %s\n" % ss.info()
+
+        txt += self.get_optical_surface_instance().info() + "\n"
+
+        boundary = self.get_boundary_shape()
+        if boundary is None:
+            txt += "Surface boundaries not considered (infinite)"
+        else:
+            txt += "Surface boundaries are: %s\n" % boundary.__class__.__name__
+            txt += "    Limits: " + repr( boundary.get_boundaries()) + "\n"
+            txt += boundary.info()
+
+        return txt
+
+    def to_python_code_boundary_shape(self):
+        """
+        Creates a code block with information of boundary shape.
+
+        Returns
+        -------
+        str
+            The text with the code.
+        """
+        txt = "" # "\nfrom shadow4.beamline.optical_elements.mirrors.s4_plane_mirror import S4PlaneMirror"
+        bs = self._boundary_shape
+        if bs is None:
+            txt += "\nboundary_shape = None"
+        elif isinstance(bs, Rectangle):
+            txt += "\nfrom syned.beamline.shape import Rectangle"
+            txt += "\nboundary_shape = Rectangle(x_left=%g, x_right=%g, y_bottom=%g, y_top=%g)" % bs.get_boundaries()
+        elif isinstance(bs, Ellipse):
+            txt += "\nfrom syned.beamline.shape import Ellipse"
+            txt += "\nboundary_shape = Ellipse(a_axis_min=%g, a_axis_max=%g, b_axis_min=%g, b_axis_max=%g)" % bs.get_boundaries()
+        return txt
+
     def _congruence(self):
         if not self._f_ruling in [0,1]:
             raise Exception("Not implemented grating with f_ruling=%d" % self._f_ruling)
+
 
 class S4GratingElement(S4BeamlineElement):
     class S4CrystalElement(S4BeamlineElement):

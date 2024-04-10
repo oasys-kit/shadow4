@@ -128,7 +128,31 @@ class S4Beamline(Beamline):
 
         return output_beam, output_mirr
 
+    def _get_info_coordinates(self, oe_index):
+        coordinates = self.get_beamline_element_at(oe_index).get_coordinates()
+        T_SOURCE, T_IMAGE, T_INCIDENCE, T_REFLECTION, ALPHA = coordinates.get_positions()
+        print(coordinates)
+        txt_coordinates = ""
+
+        txt_coordinates += "Central Axis parameters :                          \n"
+        txt_coordinates += "Source Plane Distance                    %f m\n" % T_SOURCE
+        txt_coordinates += "Image  Plane                             %f m\n" % T_IMAGE
+        txt_coordinates += "Incidence Angle (to normal)              %f deg\n" % numpy.degrees(T_INCIDENCE)
+        txt_coordinates += "Reflection/Diffraction Angle (to normal) %f deg\n" % numpy.degrees(T_REFLECTION)
+        txt_coordinates += "Grazing Incidence Angle                  %f mrad\n" % (1e3 * (numpy.pi / 2 - T_INCIDENCE))
+        txt_coordinates += "Grazing Reflection/Diffraction Angle     %f mrad\n" % (1e3 * (numpy.pi / 2 - T_REFLECTION))
+
+        return txt_coordinates
+
+
     def sourcinfo(self):
+        """
+        Returns the source information (sourcinfo in shadow3).
+
+        Returns
+        -------
+        str
+        """
         from shadow4.sources.source_geometrical.source_grid_cartesian import SourceGridCartesian
         from shadow4.sources.source_geometrical.source_grid_polar import SourceGridPolar
 
@@ -161,67 +185,47 @@ class S4Beamline(Beamline):
         return txt_source + "\n" + self.get_light_source().get_info() + txt_end
 
     def oeinfo(self, oe_index=None):
+        """
+        Returns the optical element(s) information (oeinfo or mirinfo in shadow3).
+
+        Returns
+        -------
+        str
+        """
+        top_txt1 = \
+"""
++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+********************   OPTICAL ELEMENT  DESCRIPTION   ********************
+"""
+        top_txt2 = \
+"""
++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+"""
+        bottom_txt = \
+"""
++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+***************                 E N D                  ***************
++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+"""
         if oe_index is None:
             txt = ""
             for i, element in enumerate(self.get_beamline_elements()):
-                txt += element.get_info()
+                txt += top_txt1
+                txt += "O.E. %d" % (i+1)
+                txt += top_txt2
+                txt += self._get_info_coordinates(i)
+                txt += element.get_optical_element().get_info()
+                txt += bottom_txt
         else:
-            txt = self.get_beamline_element_at(oe_index).get_info()
+            txt = ""
+            txt += top_txt1
+            txt += "O.E. %d" % (oe_index + 1)
+            txt += top_txt2
+            txt += self._get_info_coordinates(i)
+            txt += self.get_beamline_element_at(oe_index).get_optical_element().get_info()
+            txt += bottom_txt
 
         return txt
-
-#     def sysinfo(self):
-#         txt_system = \
-# """
-# +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-# **************  S Y S T E M      D E S C R I P T I O N  **************
-# +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-#
-#
-# +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-# Units (length) in use:  m
-#
-#
-# Optical Element # 1      System Number:
-#
-# EMPTY ELEMENT
-#
-#   Orientation        xxx  deg
-#   Source Plane       xxx  m
-#   Incidence Ang.     xxx  deg
-#   Reflection Ang.    xxx  deg
-#   Image Plane        xxx  m
-#
-# Optical Element # 2      System Number:
-#
-# REFLECTOR-MIRROR    ELLIPTICAL      UNLIMITED    CURVATURE: COMPUTED    REFLECTIVITY ON
-#
-#   Orientation        xxx  deg
-#   Source Plane       xxx  m
-#   Incidence Ang.     xxx  deg
-#   Reflection Ang.    xxx  deg
-#   Image Plane        xxx  m
-#     ----------------
-#
-#
-#                           OPTICAL SYSTEM CONFIGURATION
-#                            Laboratory Reference Frame.
-# OPT. Elem #       X =                 Y =                 Z =
-#
-#        0         0.00000000xxx          0.00000000xxx          0.00000000xxx
-#        1         0.00000000xxx         xx.20000000xxx          0.00000000xxx
-#           1'        -0.00000000xxx         xx.20000000000          0.00000000000
-#        2        -0.00000000xxx         xx.00000000000          0.00000000000
-#           2'        -0.00000000xxx         xx.00000000000          0.00000000000
-#
-# +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-# ********                 E N D                  ***************
-# +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-# """
-#         return txt_system
-
-    def distances_summary(self):
-        return "S4Beamline.distances_summary() not yet implemented."
 
 
     def syspositions(self):
@@ -424,13 +428,12 @@ class S4Beamline(Beamline):
 
     def sysinfo(self, title="", comment=""):
         """
-        Creates a text with information of the optical system containing for all elements
+        Returns the system information (sysinfo in shadow3).
 
-        :param title: optional title
-        :param comment: optional comment
-        :return: an array of strings with the text
+        Returns
+        -------
+        str
         """
-
         txt = "\n"
 
         TOPLIN = '+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++\n'
@@ -525,18 +528,15 @@ class S4Beamline(Beamline):
 
     def distances_summary(self,file=''):
         """
-        write a summary of the real distances, focal distances and orientation angles.
-        :param file: set to a file name to dump tesult into ir
-        :return: a text array
-        """
-        # print("CompoundOE name: %s, found %d elements"%(self.name,self.number_oe()))
-        # for i,j in enumerate(self.list):
-        #   print('oe %d, p=%f, q=%f'%(1+i,j.T_SOURCE,j.T_IMAGE))
+        Returns a summary of the real distances, focal distances and orientation angles.
 
+        Returns
+        -------
+        str
+        """
         txt = '  ********  SUMMARY OF DISTANCES ********\n'
         txt += '   ** DISTANCES FOR ALL O.E. [m] **           \n'
         txt += "%12s %12s %14s %14s %14s %14s \n"%('OE','TYPE','p[m]','q[m]','src-oe','src-screen')
-
 
         tot = 0.0
         alphatot=0.0
@@ -683,5 +683,7 @@ if __name__ == "__main__":
 
     # print(bl.syspositions())
 
-    print(bl.distances_summary())
+    # print(bl.distances_summary())
+
+    print(bl.oeinfo())
 

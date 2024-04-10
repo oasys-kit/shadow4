@@ -681,7 +681,7 @@ class SourceGeometrical(S4LightSourceBase):
             for i in range(nlines):
                 txt += "    %g, %s \n" %  (self._ph[i], unit)
         elif self._f_color == 3:  # "Uniform":
-            txt += "Uniform from: %g, %s to %g $s\n" % (self._ph[0], unit, self._ph[1], unit)
+            txt += "Uniform from: %g, %s to %g %s\n" % (self._ph[0], unit, self._ph[1], unit)
         elif self._f_color == 4:  # "Relative intensities":
             txt += "Several lines with relative intensities at:\n "
             nlines = (numpy.array(self._ph)).size

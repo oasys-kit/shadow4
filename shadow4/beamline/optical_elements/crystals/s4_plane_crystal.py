@@ -77,10 +77,10 @@ class S4PlaneCrystal(S4Crystal, S4PlaneOpticalElementDecorator):
                                                      # 2=shadow preprocessor file v1
                                                      # 3=shadow preprocessor file v2
                  ):
-
         S4PlaneOpticalElementDecorator.__init__(self)
         S4Crystal.__init__(self,
                            name=name,
+                           surface_shape=self.get_surface_shape_instance(),
                            boundary_shape=boundary_shape,
                            material=material,
                            # diffraction_geometry=diffraction_geometry,  # ?? not supposed to be in syned...

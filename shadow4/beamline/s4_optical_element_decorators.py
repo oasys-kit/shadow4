@@ -61,7 +61,7 @@ class S4OpticalElementDecorator(object):
         -------
         str
         """
-        return "\n\nSpecific information not available (get_info() method not overloaded).\n\n"
+        return "\n\nSpecific information not available (get_info() method not overloaded in %s).\n\n" % self.__class__.__name__
 
     def to_python_code(self, **kwargs):
         """

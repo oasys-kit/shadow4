@@ -619,24 +619,22 @@ class S4Conic(S4OpticalSurface):
         -------
         str
         """
-        txt = ""
-        txt += "++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++\n"
-        txt += "OE surface in form of conic equation: \n"
-        txt += "  ccc[0]*X^2 + ccc[1]*Y^2 + ccc[2]*Z^2  \n"
-        txt += "  ccc[3]*X*Y + ccc[4]*Y*Z + ccc[5]*X*Z  \n"
-        txt += "  ccc[6]*X   + ccc[7]*Y   + ccc[8]*Z + ccc[9] = 0 \n"
-        txt += " with \n"
-        txt += " c[0] = %g \n "%self.ccc[0]
-        txt += " c[1] = %g \n "%self.ccc[1]
-        txt += " c[2] = %g \n "%self.ccc[2]
-        txt += " c[3] = %g \n "%self.ccc[3]
-        txt += " c[4] = %g \n "%self.ccc[4]
-        txt += " c[5] = %g \n "%self.ccc[5]
-        txt += " c[6] = %g \n "%self.ccc[6]
-        txt += " c[7] = %g \n "%self.ccc[7]
-        txt += " c[8] = %g \n "%self.ccc[8]
-        txt += " c[9] = %g \n "%self.ccc[9]
-        txt += "++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++'n"
+        txt = "\n"
+        txt += "OE surface in form of conic equation:\n"
+        txt += "    c_xx X^2 + c_yy Y^2 + c_zz Z^2\n"
+        txt += "    c_xy X*Y + c_yz Y*Z + c_xz X*Z\n"
+        txt += "    c_x X   + c_y Y   + c_z Z + c_0 = 0\n"
+        txt += "    with:\n"
+        txt += "        c_xx = %g\n" % self.ccc[0]
+        txt += "        c_yy = %g\n" % self.ccc[1]
+        txt += "        c_zz = %g\n" % self.ccc[2]
+        txt += "        c_xy = %g\n" % self.ccc[3]
+        txt += "        c_yz = %g\n" % self.ccc[4]
+        txt += "        c_xz = %g\n" % self.ccc[5]
+        txt += "        c_x  = %g\n" % self.ccc[6]
+        txt += "        c_y  = %g\n" % self.ccc[7]
+        txt += "        c_z  = %g\n" % self.ccc[8]
+        txt += "        c_0  = %g\n" % self.ccc[9]
         return txt
 
     def duplicate(self):

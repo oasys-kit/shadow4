@@ -67,7 +67,7 @@ class S4Crystal(Crystal):
     f_central : int, optional
         Flag for autosetting the crystal to the corrected Bragg angle.
     f_phot_cent : int, optional
-        0: setting photon energy in eV, 1:setting photon wavelength in m.
+        0: setting photon energy in eV, 1:setting photon wavelength in A.
     phot_cent : float, optional
         for f_central=1, the value of the photon energy (f_phot_cent=0) or photon wavelength (f_phot_cent=1).
     f_ext : inf, optional
@@ -106,7 +106,7 @@ class S4Crystal(Crystal):
                  f_ext=0,
                  material_constants_library_flag=0, # 0=xraylib, 1=dabax
                                                     # 2=shadow preprocessor file v1
-                                                    # 3=shadow preprocessor file v1
+                                                    # 3=shadow preprocessor file v2
                  file_refl="",
                  ):
 
@@ -150,6 +150,64 @@ class S4Crystal(Crystal):
                     ("material_constants_library_flag", "S4: crystal data from: 0=xraylib, 1=dabax, 2=file v1, 3=file v1", ""),
                     ("file_refl",           "S4: preprocessor file name",                  ""),
             ] )
+
+
+    def get_info(self):
+        """
+        Returns the specific information of the S4 crystal optical element.
+
+        Returns
+        -------
+        str
+        """
+        txt = "\n\n"
+        txt += "CRYSTAL\n"
+        if self._material_constants_library_flag == 0:
+            txt += "Crystal data using xraylib for %s %d%d%d\n" % (self._material,
+                                                                   self._miller_index_h,
+                                                                   self._miller_index_k,
+                                                                   self._miller_index_l)
+        elif self._material_constants_library_flag == 1:
+            txt += "Crystal data using dabax for %s %d%d%d\n" % (self._material,
+                                                                   self._miller_index_h,
+                                                                   self._miller_index_k,
+                                                                   self._miller_index_l)
+        elif self._material_constants_library_flag == 2:
+           txt += "Crystal data using preprocessor (bragg V1) file: %s \n" % self._file_refl
+        elif self._material_constants_library_flag == 3:
+           txt += "Crystal data using preprocessor (bragg V2) file: %s \n" % self._file_refl
+
+        if self._f_central == 0:
+            txt += "Using EXTERNAL incidence and reflection angles.\n"
+        else:
+            txt += "Using INTERNAL or calculated incidence and reflection angles for "
+            if self._f_phot_cent == 0:
+                txt += "photon energy %.6f eV\n" % self._phot_cent
+            else:
+                txt += "photon wavelength %f A\n" % (self._phot_cent)
+
+
+        txt += "\n"
+        ss = self.get_surface_shape()
+        if ss is None:
+            txt += "Surface shape is: Plane (** UNDEFINED?? **)\n"
+        else:
+            txt += "Surface shape is: %s\n" % ss.__class__.__name__
+
+        #
+        if ss is not None: txt += "\nParameters:\n %s\n" % ss.info()
+
+        txt += self.get_optical_surface_instance().info() + "\n"
+
+        boundary = self.get_boundary_shape()
+        if boundary is None:
+            txt += "Surface boundaries not considered (infinite)"
+        else:
+            txt += "Surface boundaries are: %s\n" % boundary.__class__.__name__
+            txt += "    Limits: " + repr( boundary.get_boundaries()) + "\n"
+            txt += boundary.info()
+
+        return txt
 
     def to_python_code_boundary_shape(self):
         """

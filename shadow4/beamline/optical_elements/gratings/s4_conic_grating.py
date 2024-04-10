@@ -70,7 +70,8 @@ class S4ConicGrating(S4Grating, S4ConicOpticalElementDecorator):
         str
             Python code.
         """
-        txt = "\nfrom shadow4.beamline.optical_elements.gratings.s4_conic_grating import S4ConicGrating"
+        txt = self.to_python_code_boundary_shape()
+        txt += "\nfrom shadow4.beamline.optical_elements.gratings.s4_conic_grating import S4ConicGrating"
 
         txt_pre = """\noptical_element = S4ConicGrating(name='{name}',
     boundary_shape=None, f_ruling={f_ruling}, order={order},
