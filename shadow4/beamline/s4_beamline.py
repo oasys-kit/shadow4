@@ -230,18 +230,18 @@ class S4Beamline(Beamline):
 
     def syspositions(self):
         """
-        return a dictionary with the positions of the source, o.e. and images
+        Returns a dictionary with the positions of the source, o.e. and images.
 
-        :return: dic
-        dic["source"]  numpy  array (icoor) with the three coordinates of source
-        dic["source"]  numpy  array (n_oe,icoor) with the three coordinates of optical elements for all elements
-        dic["source"]  numpy  array (n_oe,icoor) with the three coordinates of image positions for all elements
-        dic["optical_axis_x"] numpy array with the x coordinates of the optical axis
-        dic["optical_axis_y"] numpy array with the y coordinates of the optical axis
-        dic["optical_axis_z"] numpy array with the z coordinates of the optical axis
+        Returns
+        -------
+        dict
+            dict["source"]  numpy  array (icoor) with the three coordinates of source
+            dict["source"]  numpy  array (n_oe,icoor) with the three coordinates of optical elements for all elements
+            dict["source"]  numpy  array (n_oe,icoor) with the three coordinates of image positions for all elements
+            dict["optical_axis_x"] numpy array with the x coordinates of the optical axis
+            dict["optical_axis_y"] numpy array with the y coordinates of the optical axis
+            dict["optical_axis_z"] numpy array with the z coordinates of the optical axis
         """
-
-
         #
         # This is a translation of the OPTAXIS routine in shadow3
         #

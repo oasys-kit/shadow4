@@ -10,6 +10,19 @@ class S4Empty(Screen, S4OpticalElementDecorator):
     def __init__(self, name="Undefined"):
         super().__init__(name=name)
 
+    def get_info(self):
+        """
+        Returns the specific information of the S4 empty optical element.
+
+        Returns
+        -------
+        str
+        """
+        txt = "\n\n"
+        txt += "EMPTY\n"
+
+        return txt
+
     def to_python_code(self, **kwargs):
         """
         Creates the python code for defining the element.
