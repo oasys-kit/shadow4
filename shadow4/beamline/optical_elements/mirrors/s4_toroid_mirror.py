@@ -176,13 +176,8 @@ class S4ToroidMirrorElement(S4MirrorElement):
         """
         txt = "\n\n# optical element number XX"
         txt += self.get_optical_element().to_python_code()
-        coordinates = self.get_coordinates()
-        txt += "\nfrom syned.beamline.element_coordinates import ElementCoordinates"
-        txt += "\ncoordinates = ElementCoordinates(p=%g, q=%g, angle_radial=%.10g, angle_azimuthal=%.10g, angle_radial_out=%.10g)" % \
-               (coordinates.p(), coordinates.q(), coordinates.angle_radial(), coordinates.angle_azimuthal(), coordinates.angle_radial_out())
-
+        txt += self.to_python_code_coordinates()
         txt += self.to_python_code_movements()
-
         txt += "\nfrom shadow4.beamline.optical_elements.mirrors.s4_toroid_mirror import S4ToroidMirrorElement"
         txt += "\nbeamline_element = S4ToroidMirrorElement(optical_element=optical_element, coordinates=coordinates, movements=movements, input_beam=beam)"
         txt += "\n\nbeam, mirr = beamline_element.trace_beam()"
@@ -190,5 +185,5 @@ class S4ToroidMirrorElement(S4MirrorElement):
 
 if __name__ == "__main__":
     a = S4ToroidMirror(refraction_index=6j)
-    b= S4ToroidMirrorElement(optical_element=a)
+    b= S4ToroidMirrorElement(optical_element=a, coordinates=ElementCoordinates(1.11111111111111111111111111111111,2,3,4))
     print(b.to_python_code())

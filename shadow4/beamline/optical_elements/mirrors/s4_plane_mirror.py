@@ -147,13 +147,8 @@ class S4PlaneMirrorElement(S4MirrorElement):
         """
         txt = "\n\n# optical element number XX"
         txt += self.get_optical_element().to_python_code()
-        coordinates = self.get_coordinates()
-        txt += "\nfrom syned.beamline.element_coordinates import ElementCoordinates"
-        txt += "\ncoordinates = ElementCoordinates(p=%g, q=%g, angle_radial=%g, angle_azimuthal=%g, angle_radial_out=%g)" % \
-               (coordinates.p(), coordinates.q(), coordinates.angle_radial(), coordinates.angle_azimuthal(), coordinates.angle_radial_out())
-
+        txt += self.to_python_code_coordinates()
         txt += self.to_python_code_movements()
-
         txt += "\nfrom shadow4.beamline.optical_elements.mirrors.s4_plane_mirror import S4PlaneMirrorElement"
         txt += "\nbeamline_element = S4PlaneMirrorElement(optical_element=optical_element, coordinates=coordinates, movements=movements, input_beam=beam)"
         txt += "\n\nbeam, mirr = beamline_element.trace_beam()"

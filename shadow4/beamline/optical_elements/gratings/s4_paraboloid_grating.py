@@ -135,13 +135,8 @@ class S4ParaboloidGratingElement(S4GratingElement):
         """
         txt = "\n\n# optical element number XX"
         txt += self.get_optical_element().to_python_code()
-        coordinates = self.get_coordinates()
-        txt += "\nfrom syned.beamline.element_coordinates import ElementCoordinates"
-        txt += "\ncoordinates = ElementCoordinates(p=%g, q=%g, angle_radial=%g, angle_azimuthal=%g, angle_radial_out=%g)" % \
-               (coordinates.p(), coordinates.q(), coordinates.angle_radial(), coordinates.angle_azimuthal(), coordinates.angle_radial_out())
-
+        txt += self.to_python_code_coordinates()
         txt += self.to_python_code_movements()
-
         txt += "\nfrom shadow4.beamline.optical_elements.gratings.s4_paraboloid_grating import S4ParaboloidGratingElement"
         txt += "\nbeamline_element = S4ParaboloidGratingElement(optical_element=optical_element, coordinates=coordinates, movements=movements, input_beam=beam)"
         txt += "\n\nbeam, footprint = beamline_element.trace_beam()"

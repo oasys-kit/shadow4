@@ -150,13 +150,8 @@ class S4ConicMirrorElement(S4MirrorElement):
         """
         txt = "\n\n# optical element number XX"
         txt += self.get_optical_element().to_python_code()
-        coordinates = self.get_coordinates()
-        txt += "\nfrom syned.beamline.element_coordinates import ElementCoordinates"
-        txt += "\ncoordinates = ElementCoordinates(p=%.12g, q=%.12g, angle_radial=%.12g, angle_azimuthal=%.12g, angle_radial_out=%.12g)" % \
-               (coordinates.p(), coordinates.q(), coordinates.angle_radial(), coordinates.angle_azimuthal(), coordinates.angle_radial_out())
-
+        txt += self.to_python_code_coordinates()
         txt += self.to_python_code_movements()
-
         txt += "\nfrom shadow4.beamline.optical_elements.mirrors.s4_conic_mirror import S4ConicMirrorElement"
         txt += "\nbeamline_element = S4ConicMirrorElement(optical_element=optical_element, coordinates=coordinates, movements=movements, input_beam=beam)"
         txt += "\n\nbeam, mirr = beamline_element.trace_beam()"

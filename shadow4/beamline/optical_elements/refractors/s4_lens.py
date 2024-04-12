@@ -261,11 +261,8 @@ class S4LensElement(S4BeamlineElement):
         """
         txt = "\n\n# optical element number XX"
         txt += self.get_optical_element().to_python_code()
-        coordinates = self.get_coordinates()
-        txt += "\nfrom syned.beamline.element_coordinates import ElementCoordinates"
         txt += "\nimport numpy"
-        txt += "\ncoordinates = ElementCoordinates(p=%g, q=%g, angle_radial=0, angle_azimuthal=0, angle_radial_out=numpy.pi)" % \
-               (coordinates.p(), coordinates.q())
+        txt += self.to_python_code_coordinates()
         txt += "\nfrom shadow4.beamline.optical_elements.refractors.s4_lens import S4LensElement"
         txt += "\nbeamline_element = S4LensElement(optical_element=optical_element, coordinates=coordinates, input_beam=beam)"
         txt += "\n\nbeam, mirr = beamline_element.trace_beam()"

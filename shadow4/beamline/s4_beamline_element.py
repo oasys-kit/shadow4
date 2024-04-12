@@ -138,3 +138,18 @@ class S4BeamlineElement(BeamlineElement):
             txt = "\nmovements = None"
 
         return txt
+
+    def to_python_code_coordinates(self):
+        """
+        Returns a code block to implement the element coordinates (to be used by the upper classes).
+
+        Returns
+        -------
+        str
+            A code block.
+        """
+        coordinates = self.get_coordinates()
+        txt = "\nfrom syned.beamline.element_coordinates import ElementCoordinates"
+        txt += "\ncoordinates = ElementCoordinates(p=%.10g, q=%.10g, angle_radial=%.10g, angle_azimuthal=%.10g, angle_radial_out=%.10g)" % \
+               (coordinates.p(), coordinates.q(), coordinates.angle_radial(), coordinates.angle_azimuthal(), coordinates.angle_radial_out())
+        return txt

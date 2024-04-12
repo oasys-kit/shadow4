@@ -307,11 +307,8 @@ class S4CRLElement(S4BeamlineElement):
         """
         txt = "\n\n# optical element number XX"
         txt += self.get_optical_element().to_python_code()
-        coordinates = self.get_coordinates()
-        txt += "\nfrom syned.beamline.element_coordinates import ElementCoordinates"
         txt += "\nimport numpy"
-        txt += "\ncoordinates = ElementCoordinates(p=%g, q=%g, angle_radial=0, angle_azimuthal=0, angle_radial_out=numpy.pi)" % \
-               (coordinates.p(), coordinates.q())
+        txt += self.to_python_code_coordinates()
         txt += "\nfrom shadow4.beamline.optical_elements.refractors.s4_crl import S4CRLElement"
         txt += "\nbeamline_element = S4CRLElement(optical_element=optical_element, coordinates=coordinates, input_beam=beam)"
         txt += "\n\nbeam, mirr = beamline_element.trace_beam()"
