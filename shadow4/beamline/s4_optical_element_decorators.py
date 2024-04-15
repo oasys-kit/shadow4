@@ -701,8 +701,10 @@ class S4RefractiveLensOpticalElementDecorator(S4CurvedOpticalElementDecorator):
         For ri_calculation_mode=1: the linear absorption coefficient, in cm^-1 (real)..=
     radius : float, optional
         For surface_shape=(1,2): lens radius [m] (for spherical, or radius at the tip for paraboloid).
-    conic_coefficients : list or ndarray, optional
-        For surface_shape = 3: the 10 conic coefficients.
+    conic_coefficients1 : list or ndarray, optional
+        For surface_shape = 3: the 10 conic coefficients of the first refractive interface.
+    conic_coefficients2 : list or ndarray, optional
+        For surface_shape = 3: the 10 conic coefficients of the second refractive interface.
     """
     def __init__(self,
                  surface_shape=1,      # now: 0=plane, 1=sphere, 2=parabola, 3=conic coefficients
@@ -719,7 +721,8 @@ class S4RefractiveLensOpticalElementDecorator(S4CurvedOpticalElementDecorator):
                  refraction_index=1.0, # for ri_calculation_mode=1: n (real)
                  attenuation_coefficient=0.0, # for ri_calculation_mode=1: mu in cm^-1 (real)
                  radius=500e-6,        # for surface_shape=(1,2): lens radius [m] (for spherical, or radius at the tip for paraboloid)
-                 conic_coefficients=[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,-1.0,0.0],   # for surface_shape = 3: the conic coefficients
+                 conic_coefficients1=None,   # for surface_shape = 3: the conic coefficients of the first interface
+                 conic_coefficients2=None,  # for surface_shape = 3: the conic coefficients of the second interface
                  ):
 
 
@@ -727,10 +730,17 @@ class S4RefractiveLensOpticalElementDecorator(S4CurvedOpticalElementDecorator):
                                                           radius,
                                                           cylinder_angle,
                                                           convex_to_the_beam,
-                                                          conic_coefficients)
+                                                          conic_coefficients1,
+                                                          conic_coefficients2)
 
-        curved_surface_shape = [Conic(conic_coefficients=conic_coefficients[0]),
-                                Conic(conic_coefficients=conic_coefficients[1])]
+        if surface_shape == 2:
+            if conic_coefficients1 is None: conic_coefficients1 = [0, 0, 0, 0, 0, 0, 0, 0, -1, 0]
+            if conic_coefficients2 is None: conic_coefficients2 = [0, 0, 0, 0, 0, 0, 0, 0, -1, 0]
+            curved_surface_shape = [Conic(conic_coefficients=conic_coefficients1),
+                                    Conic(conic_coefficients=conic_coefficients2)]
+        else:
+            curved_surface_shape = [Conic(conic_coefficients=conic_coefficients[0]),
+                                    Conic(conic_coefficients=conic_coefficients[1])]
 
         S4CurvedOpticalElementDecorator.__init__(self,
                                                  surface_calculation=SurfaceCalculation.EXTERNAL,
@@ -741,20 +751,30 @@ class S4RefractiveLensOpticalElementDecorator(S4CurvedOpticalElementDecorator):
         self._refraction_index        = refraction_index
         self._attenuation_coefficient = attenuation_coefficient
 
-    def _get_conic_coefficients(self, surface_shape, radius, cylinder_angle, convex_to_the_beam, conic_coefficients):
+    def _get_conic_coefficients(self, surface_shape, radius, cylinder_angle, convex_to_the_beam, conic_coefficients1, conic_coefficients2):
         if surface_shape == 0:   conic_coefficients_1 = [0, 0, 0, 0, 0, 0, 0, 0, -1, 0]
         elif surface_shape == 1: conic_coefficients_1 = [1.0, 1.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, -2.0 * radius, 0.0]
         elif surface_shape == 2: conic_coefficients_1 = [1.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, -2.0 * radius, 0.0]
-        elif surface_shape == 3: conic_coefficients_1 = conic_coefficients.copy()
+        elif surface_shape == 3:
+            if conic_coefficients1 is None:
+                conic_coefficients_1 = [0, 0, 0, 0, 0, 0, 0, 0, -1, 0]
+            else:
+                conic_coefficients_1 = conic_coefficients1.copy()
         else: return None
 
-        if   cylinder_angle == 1: conic_coefficients_1[0] = conic_coefficients_1[3] = conic_coefficients_1[5] = conic_coefficients_1[6] = 0
-        elif cylinder_angle == 2: conic_coefficients_1[1] = conic_coefficients_1[3] = conic_coefficients_1[4] = conic_coefficients_1[7] = 0
+        if surface_shape == 3:
+            if conic_coefficients2 is None:
+                conic_coefficients_2 = [0, 0, 0, 0, 0, 0, 0, 0, -1, 0]
+            else:
+                conic_coefficients_2 = conic_coefficients2.copy()
+        else:
+            if   cylinder_angle == 1: conic_coefficients_1[0] = conic_coefficients_1[3] = conic_coefficients_1[5] = conic_coefficients_1[6] = 0
+            elif cylinder_angle == 2: conic_coefficients_1[1] = conic_coefficients_1[3] = conic_coefficients_1[4] = conic_coefficients_1[7] = 0
 
-        if convex_to_the_beam == 1: conic_coefficients_1[8] *= -1
+            if convex_to_the_beam == 1: conic_coefficients_1[8] *= -1
 
-        conic_coefficients_2 = conic_coefficients_1.copy()
-        conic_coefficients_2[8] *= -1
+            conic_coefficients_2 = conic_coefficients_1.copy()
+            conic_coefficients_2[8] *= -1
 
         return [conic_coefficients_1, conic_coefficients_2]
 

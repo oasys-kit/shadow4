@@ -178,6 +178,7 @@ class S4ConicInterfaceElement(S4InterfaceElement):
                  input_beam : S4Beam = None):
         super().__init__(optical_element=optical_element if optical_element is not None else S4ConicInterface(),
                          coordinates=coordinates if coordinates is not None else ElementCoordinates(),
+                         movements=movements,
                          input_beam=input_beam)
         if not isinstance(self.get_optical_element().get_surface_shape(), Conic):
             raise ValueError("Wrong Optical Element: only Conic shape is accepted")
@@ -201,7 +202,7 @@ class S4ConicInterfaceElement(S4InterfaceElement):
         txt += self.to_python_code_coordinates()
         txt += self.to_python_code_movements()
         txt += "\nfrom shadow4.beamline.optical_elements.refractors.s4_conic_interface import S4ConicInterfaceElement"
-        txt += "\nbeamline_element = S4ConicInterfaceElement(optical_element=optical_element, coordinates=coordinates, input_beam=beam)"
+        txt += "\nbeamline_element = S4ConicInterfaceElement(optical_element=optical_element, coordinates=coordinates, movements=movements, input_beam=beam)"
         txt += "\n\nbeam, mirr = beamline_element.trace_beam()"
         return txt
 

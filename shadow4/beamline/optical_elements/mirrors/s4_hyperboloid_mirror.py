@@ -15,10 +15,22 @@ class S4HyperboloidMirror(S4Mirror, S4HyperboloidOpticalElementDecorator):
         The name of the mirror.
     boundary_shape : instance of BoundaryShape, optional
         The boundary shape of the mirror.
+    surface_calculation : int, optional
+        flag:
+            0 = SurfaceCalculation.INTERNAL,
+            1 = SurfaceCalculation.EXTERNAL.
+    is_cylinder : int, optional
+        flag:
+            0=No (there is revolution symmetry along Y)
+            1=Yes (flat surface along X or Y).
+    cylinder_direction : int (as defined by Direction), optional
+        NONE = -1, UPWARD = 0, DOWNWARD = 1.
+    convexity : int (as defined by Convexity), optional
+        NONE = -1, UPWARD = 0, DOWNWARD = 1.
     min_axis : float, optional
-        For surface_calculation=0, The minor axis of the ellipsoid (2a).
+        For surface_calculation=0, The minor axis of the hyperboloid (2a).
     maj_axis : float, optional
-        For surface_calculation=0, The major axis of the ellipsoid (2b)
+        For surface_calculation=0, The major axis of the hyperboloid (2b)
     pole_to_focus : float, optional
         For surface_calculation=0, the p or q distance (from focus to center of the optical element).
     f_reflec : int, optional

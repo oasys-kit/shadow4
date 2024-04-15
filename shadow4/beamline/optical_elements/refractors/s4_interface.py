@@ -8,6 +8,7 @@ from syned.beamline.optical_elements.refractors.interface import Interface
 
 from shadow4.beam.s4_beam import S4Beam
 from shadow4.beamline.s4_beamline_element import S4BeamlineElement
+from shadow4.beamline.s4_beamline_element_movements import S4BeamlineElementMovements
 
 from syned.beamline.shape import Rectangle, Ellipse
 
@@ -307,6 +308,8 @@ class S4InterfaceElement(S4BeamlineElement):
         The syned optical element.
     coordinates : instance of ElementCoordinates, optional
         The syned element coordinates.
+    movements : instance of S4BeamlineElementMovements, optional
+            The S4 element movements.
     input_beam : instance of S4Beam, optional
         The S4 incident beam.
 
@@ -317,9 +320,11 @@ class S4InterfaceElement(S4BeamlineElement):
     def __init__(self,
                  optical_element : S4Interface = None,
                  coordinates : ElementCoordinates = None,
+                 movements: S4BeamlineElementMovements = None,
                  input_beam : S4Beam = None):
         super().__init__(optical_element=optical_element if optical_element is not None else S4Interface(),
                          coordinates=coordinates if coordinates is not None else ElementCoordinates(),
+                         movements=movements,
                          input_beam=input_beam)
 
     def trace_beam(self, **params):
@@ -351,6 +356,17 @@ class S4InterfaceElement(S4BeamlineElement):
         input_beam.rotate(alpha1, axis=2)
         input_beam.rotate(theta_grazing1, axis=1)
         input_beam.translation([0.0, -p * numpy.cos(theta_grazing1), p * numpy.sin(theta_grazing1)])
+
+        # mirror movement:
+        movements = self.get_movements()
+        if movements is not None:
+            if movements.f_move:
+                input_beam.rot_for(OFFX=movements.offset_x,
+                                   OFFY=movements.offset_y,
+                                   OFFZ=movements.offset_z,
+                                   X_ROT=movements.rotation_x,
+                                   Y_ROT=movements.rotation_y,
+                                   Z_ROT=movements.rotation_z)
 
         #
         # refract beam in the mirror surface

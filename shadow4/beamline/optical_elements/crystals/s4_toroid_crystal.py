@@ -21,16 +21,16 @@ class S4ToroidCrystal(S4Crystal, S4ToroidOpticalElementDecorator):
     boundary_shape : instance of BoundaryShape, optional
         The information on the crystal boundaries.
     min_radius : float, optional
-        The surface minor radius in m.
+        The minor axis of the toroid in m. This corresponds to the sagittal optical surface.
     maj_radius : float, optional
-        The surface major radius in m. Note that this is the radius of the optical surface (it is not the radius
-        of the toroid).
+        The optical surface major radius in m. This corresponds to the tangential optical surface
+        (it is **not** the radius of the toroid).
     f_torus : int, optional
-        A flag to indicate the position of the crystal pole within all the possible cases:
-        * lower/outer (concave in tangential / concave in sagittal) (0),
-        * lower/inner (concave in tangential / convex  in sagittal) (1),
-        * upper/inner (convex  in tangential / concave in sagittal) (2),
-        * upper/outer (convex  in tangential / convex  in sagittal) (3).
+        Flag to indicate which optical surface is in use (where the mirror pole is located). Values are:
+            * 0=lower/outer (tangential: concave / sagittal:concave),
+            * 1=lower/inner (tangential: concave / sagittal:convex) ,
+            * 2=upper/inner (tangential: convex  / sagittal:concave),
+            * 3=upper/outer (tangential: convex  / sagittal:convex).
     material : str, optional
         The crystal material name (a name accepted by crystalpy).
     miller_index_h : int, optional

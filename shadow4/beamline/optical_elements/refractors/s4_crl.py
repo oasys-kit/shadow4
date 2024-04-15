@@ -6,6 +6,7 @@ from syned.beamline.shape import Rectangle, Ellipse, Circle
 
 from shadow4.beam.s4_beam import S4Beam
 from shadow4.beamline.s4_beamline_element import S4BeamlineElement
+from shadow4.beamline.s4_beamline_element_movements import S4BeamlineElementMovements
 from shadow4.beamline.optical_elements.refractors.s4_conic_interface import S4ConicInterfaceElement
 from shadow4.beamline.s4_optical_element_decorators import S4RefractiveLensOpticalElementDecorator
 from shadow4.beamline.optical_elements.refractors.s4_lens import _get_lens_interfaces
@@ -20,20 +21,44 @@ class S4CRL(CRL, S4RefractiveLensOpticalElementDecorator):
         The name of the mirror.
     boundary_shape : instance of BoundaryShape, optional
         The boundary shape of the mirror.
-    surface_shape : instance of SurfaceShape, optional
-        The surface shape of the mirror
-    n_lens
-    piling_thickness
-    material
-    thickness
-    convex_to_the_beam
-    cylinder_angle
-    ri_calculation_mode
-    prerefl_file
-    refraction_index
-    attenuation_coefficient
-    radius
-    conic_coefficients
+    n_lens : int, optional
+        The number of (idential) lenses.
+    piling_thickness : float, optional
+        The distance from one lens to the next one in m.
+    material : str, optional
+        A string with the material element symbol or compound formula.
+    thickness : float, optional
+        The thickness of a single lens in m. (Distance between the two interfaces at the center of the lenses.)
+    surface_shape : int, optional
+        A flag to indicate the shape of the optical surfaces: 0=plane, 1=sphere, 2=parabola, 3=conic coefficients.
+    convex_to_the_beam : int, optional
+        A flag to indicate the convexity of the first optical surface. Used for surface_shape > 0.
+        The first interface exposed to the beam is convex: 0=No, 1=Yes.
+        The second interface has opposite convexity.
+    cylinder_angle : int, optional
+        A flag to indicate is the CRL is 2D0fucusing, aor 1D focusing and in which direction:
+        Used for surface_shape > 0. Values are:
+            0=CRL is focusing in 2D (not cylindrical),
+            1=CRL is focusing in 1D (meridional focusing),
+            2=CRL is focusing in 2D (sagittal focusing).
+    ri_calculation_mode : int, optional
+        A flag to indicate the source of the refraction index. Values are:
+            * 0=User,
+            * 1=prerefl file,
+            * 2=direct calculation using xraylib,
+            * 3=direct calculation using dabax.
+    prerefl_file : str, optional
+        For ri_calculation_mode=1, the prerefl preprocessor file name.
+    refraction_index : float, optional
+        For ri_calculation_mode=0, the real part of the refraction index.
+    attenuation_coefficient : float, optional
+        For ri_calculation_mode=0, the attenuation coefficient in cm^-1.
+    radius : float, optional
+        For surface_shape=(1,2), the lens radius in m. (For parabolic lenses, it is the radius at the tip for paraboloid.)
+    conic_coefficients1 : None or list, optional
+        For surface_shape=3, A list with the 10 conic coefficients of interface 1. None is considered as Plane.
+    conic_coefficients2 : None or list, optional
+        For surface_shape=3, A list with the 10 conic coefficients of interface 2. None is considered as Plane.
 
     Returns
     -------
@@ -60,7 +85,8 @@ class S4CRL(CRL, S4RefractiveLensOpticalElementDecorator):
                  refraction_index=1.0, # for ri_calculation_mode=1: n (real)
                  attenuation_coefficient=0.0, # for ri_calculation_mode=1: mu in cm^-1 (real)
                  radius=500e-6,        # for surface_shape=(1,2): lens radius [m] (for spherical, or radius at the tip for paraboloid)
-                 conic_coefficients=[0.0]*10,   # for surface_shape = 3: the conic coefficients
+                 conic_coefficients1=None,   # for surface_shape = 3: the conic coefficients of the first interface
+                 conic_coefficients2=None,  # for surface_shape = 3: the conic coefficients of the second interface
                  ):
         """
 
@@ -77,7 +103,8 @@ class S4CRL(CRL, S4RefractiveLensOpticalElementDecorator):
                                                          refraction_index,
                                                          attenuation_coefficient,
                                                          radius,
-                                                         conic_coefficients)
+                                                         conic_coefficients1,
+                                                         conic_coefficients2)
         CRL.__init__(self,
                      name=name,
                      n_lens=n_lens,
@@ -103,7 +130,8 @@ class S4CRL(CRL, S4RefractiveLensOpticalElementDecorator):
             "refraction_index": refraction_index,
             "attenuation_coefficient": attenuation_coefficient,
             "radius": radius,
-            "conic_coefficients": repr(conic_coefficients),
+            "conic_coefficients1": repr(conic_coefficients1),
+            "conic_coefficients2": repr(conic_coefficients2),
         }
 
     def get_info(self):
@@ -243,7 +271,8 @@ optical_element = S4CRL(name='{name:s}',
      refraction_index={refraction_index:g}, # for ri_calculation_mode=1: n (real)
      attenuation_coefficient={attenuation_coefficient:g}, # for ri_calculation_mode=1: mu in cm^-1 (real)
      radius={radius:g}, # for surface_shape=(1,2): lens radius [m] (for spherical, or radius at the tip for paraboloid)
-     conic_coefficients=None, # for surface_shape = 3: the conic coefficients [todo: noy yet implemented]
+     conic_coefficients1={conic_coefficients1}, # for surface_shape = 3: the conic coefficients of the single lens interface 1
+     conic_coefficients2={conic_coefficients2}, # for surface_shape = 3: the conic coefficients of the single lens interface 2
      )
     """
         txt += txt_pre.format(**self.__inputs)
@@ -277,6 +306,9 @@ class S4CRLElement(S4BeamlineElement):
         The syned optical element.
     coordinates : instance of ElementCoordinates, optional
         The syned element coordinates.
+    movements : instance of S4BeamlineElementMovements, optional
+        The S4 element movements. (The same movements are applied to the two interfaces. Therefore, each rotation is
+        applied around the local axes of each interface, which are different.)
     input_beam : instance of S4Beam, optional
         The S4 incident beam.
 
@@ -287,9 +319,11 @@ class S4CRLElement(S4BeamlineElement):
     def __init__(self,
                  optical_element: S4CRL = None,
                  coordinates: ElementCoordinates = None,
+                 movements: S4BeamlineElementMovements = None,
                  input_beam: S4Beam = None):
         super().__init__(optical_element=optical_element if optical_element is not None else S4CRL(),
                          coordinates=coordinates if coordinates is not None else ElementCoordinates(),
+                         movements=movements,
                          input_beam=input_beam)
 
     def to_python_code(self, **kwargs):
@@ -309,8 +343,9 @@ class S4CRLElement(S4BeamlineElement):
         txt += self.get_optical_element().to_python_code()
         txt += "\nimport numpy"
         txt += self.to_python_code_coordinates()
+        txt += self.to_python_code_movements()
         txt += "\nfrom shadow4.beamline.optical_elements.refractors.s4_crl import S4CRLElement"
-        txt += "\nbeamline_element = S4CRLElement(optical_element=optical_element, coordinates=coordinates, input_beam=beam)"
+        txt += "\nbeamline_element = S4CRLElement(optical_element=optical_element, coordinates=coordinates, movements=movements, input_beam=beam)"
         txt += "\n\nbeam, mirr = beamline_element.trace_beam()"
         return txt
 
@@ -328,6 +363,7 @@ class S4CRLElement(S4BeamlineElement):
             (output_beam, footprint) instances of S4Beam.
         """
         input_beam = self.get_input_beam().duplicate()
+        movements  = self.get_movements()
         oe         = self.get_optical_element()
 
         optical_surfaces = oe.get_lens_interfaces()
@@ -342,11 +378,11 @@ class S4CRLElement(S4BeamlineElement):
             coordinates_1 = ElementCoordinates(p=source_plane, q=oe.get_thickness()*0.5, angle_radial=angle_radial, angle_radial_out=numpy.pi,          angle_azimuthal=angle_azimuthal)
             coordinates_2 = ElementCoordinates(p=oe.get_thickness()*0.5, q=image_plane,  angle_radial=0.0,           angle_radial_out=angle_radial_out, angle_azimuthal=0.0)
 
-            beamline_element_1 = S4ConicInterfaceElement(optical_element=optical_surfaces[lens_index, 0], coordinates=coordinates_1, input_beam=input_beam)
+            beamline_element_1 = S4ConicInterfaceElement(optical_element=optical_surfaces[lens_index, 0], coordinates=coordinates_1, movements=movements, input_beam=input_beam)
             if lens_index==0: beam1, footprint1 = beamline_element_1.trace_beam()
             else:             beam1, _          = beamline_element_1.trace_beam()
 
-            beamline_element_2 = S4ConicInterfaceElement(optical_element=optical_surfaces[lens_index, 1], coordinates=coordinates_2, input_beam=beam1)
+            beamline_element_2 = S4ConicInterfaceElement(optical_element=optical_surfaces[lens_index, 1], coordinates=coordinates_2, movements=movements, input_beam=beam1)
             if lens_index==n_lens-1: beam2, footprint2 = beamline_element_2.trace_beam()
             else:                    beam2, _          = beamline_element_2.trace_beam()
 
@@ -358,32 +394,109 @@ class S4CRLElement(S4BeamlineElement):
 
 
 if __name__ == "__main__":
-    from shadow4.physical_models.prerefl.prerefl import PreRefl
+    if False:
+        from shadow4.physical_models.prerefl.prerefl import PreRefl
 
-    #
-    # collimated source
-    #
-    from shadow4.sources.source_geometrical.source_geometrical import SourceGeometrical
+        #
+        # collimated source
+        #
+        from shadow4.sources.source_geometrical.source_geometrical import SourceGeometrical
 
-    src = SourceGeometrical()
-    src.set_energy_distribution_singleline(value=5000, unit='eV')
-    src.set_spatial_type_rectangle(width=1e-3, height=1e-3)
-    src.set_angular_distribution_uniform(0, 0, 0, 0)
+        src = SourceGeometrical()
+        src.set_energy_distribution_singleline(value=5000, unit='eV')
+        src.set_spatial_type_rectangle(width=1e-3, height=1e-3)
+        src.set_angular_distribution_uniform(0, 0, 0, 0)
 
-    beam = src.get_beam()
+        beam = src.get_beam()
 
-    filename = "Be.dat"
+        filename = "Be.dat"
 
-    PreRefl.prerefl(interactive=False, SYMBOL="Be", FILE=filename, DENSITY=1.848, E_MIN=4500, E_MAX=5500, E_STEP=1)
+        PreRefl.prerefl(interactive=False, SYMBOL="Be", FILE=filename, DENSITY=1.848, E_MIN=4500, E_MAX=5500, E_STEP=1)
 
-    #
-    # lens
-    #
-    lens = S4CRL(n_lens=3, piling_thickness=2.5e-3, prerefl_file=filename)
-    e = S4CRLElement(optical_element=lens,
-                      coordinates=ElementCoordinates(p=10, q=20, angle_radial=0, angle_azimuthal=0, angle_radial_out=numpy.pi),
-                      input_beam=beam)
+        #
+        # lens
+        #
+        lens = S4CRL(n_lens=3, piling_thickness=2.5e-3, prerefl_file=filename)
+        e = S4CRLElement(optical_element=lens,
+                          coordinates=ElementCoordinates(p=10, q=20, angle_radial=0, angle_azimuthal=0, angle_radial_out=numpy.pi),
+                          input_beam=beam)
 
-    e.trace_beam()
+        e.trace_beam()
 
-    print(e.to_python_code())
+        print(e.to_python_code())
+
+
+    if True:
+        from shadow4.beamline.s4_beamline import S4Beamline
+
+        beamline = S4Beamline()
+
+        #
+        #
+        #
+        from shadow4.sources.source_geometrical.source_geometrical import SourceGeometrical
+
+        light_source = SourceGeometrical(name='SourceGeometrical', nrays=5000, seed=5676561)
+        light_source.set_spatial_type_gaussian(sigma_h=6.38000015e-05, sigma_v=0.000064)
+        light_source.set_depth_distribution_off()
+        light_source.set_angular_distribution_cone(cone_max=0.000010, cone_min=0.000000)
+        light_source.set_energy_distribution_singleline(14000.000000, unit='eV')
+        light_source.set_polarization(polarization_degree=1.000000, phase_diff=0.000000, coherent_beam=0)
+        beam = light_source.get_beam()
+
+        beamline.set_light_source(light_source)
+
+        # optical element number XX
+        boundary_shape = None
+        from shadow4.beamline.optical_elements.refractors.s4_crl import S4CRL
+
+        optical_element = S4CRL(name='Compound Refractive Lens',
+                                n_lens=30,
+                                piling_thickness=0.000625,  # syned stuff
+                                boundary_shape=boundary_shape,
+                                # syned stuff, replaces "diameter" in the shadow3 append_lens
+                                material="",  # syned stuff, not (yet) used
+                                thickness=2.4999999999999998e-05,
+                                # syned stuff, lens thickness [m] (distance between the two interfaces at the center of the lenses)
+                                surface_shape=1,  # now: 0=plane, 1=sphere, 2=parabola, 3=conic coefficients
+                                # (in shadow3: 1=sphere 4=paraboloid, 5=plane)
+                                convex_to_the_beam=0,
+                                # for surface_shape: convexity of the first interface exposed to the beam 0=No, 1=Yes
+                                cylinder_angle=1,  # for surface_shape: 0=not cylindricaL, 1=meridional 2=sagittal
+                                ri_calculation_mode=1,  # source of refraction indices and absorption coefficients
+                                # 0=User, 1=prerefl file, 2=xraylib, 3=dabax
+                                prerefl_file='/users/srio/Oasys/Al5_55.dat',
+                                # for ri_calculation_mode=0: file name (from prerefl) to get the refraction index.
+                                refraction_index=1,  # for ri_calculation_mode=1: n (real)
+                                attenuation_coefficient=0,  # for ri_calculation_mode=1: mu in cm^-1 (real)
+                                radius=0.0003,
+                                # for surface_shape=(1,2): lens radius [m] (for spherical, or radius at the tip for paraboloid)
+                                conic_coefficients1=None,
+                                # for surface_shape = 3: the conic coefficients of the single lens interface 1
+                                conic_coefficients2=None,
+                                # for surface_shape = 3: the conic coefficients of the single lens interface 2
+                                )
+
+        import numpy
+        from syned.beamline.element_coordinates import ElementCoordinates
+
+        coordinates = ElementCoordinates(p=30, q=1.8987, angle_radial=0, angle_azimuthal=0,
+                                         angle_radial_out=3.141592654)
+        movements = None
+        from shadow4.beamline.optical_elements.refractors.s4_crl import S4CRLElement
+
+        beamline_element = S4CRLElement(optical_element=optical_element, coordinates=coordinates, movements=movements,
+                                        input_beam=beam)
+
+        beam, mirr = beamline_element.trace_beam()
+
+        beamline.append_beamline_element(beamline_element)
+
+        # test plot
+        if True:
+            from srxraylib.plot.gol import plot_scatter
+
+            plot_scatter(beam.get_photon_energy_eV(nolost=1), beam.get_column(23, nolost=1),
+                         title='(Intensity,Photon Energy)', plot_histograms=0)
+            plot_scatter(1e6 * beam.get_column(1, nolost=1), 1e6 * beam.get_column(3, nolost=1),
+                         title='(X,Z) in microns')

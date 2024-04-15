@@ -10,6 +10,51 @@ from shadow4.beamline.optical_elements.gratings.s4_grating import S4GratingEleme
 
 
 class S4ToroidGrating(S4Grating, S4ToroidOpticalElementDecorator):
+    """
+    Constructor.
+
+    Parameters
+    ----------
+    name :  str, optional
+        A name for the crystal
+    boundary_shape : instance of BoundaryShape, optional
+        The information on the crystal boundaries.
+    min_radius : float, optional
+        The minor axis of the toroid in m. This corresponds to the sagittal optical surface.
+    maj_radius : float, optional
+        The optical surface major radius in m. This corresponds to the tangential optical surface
+        (it is **not** the radius of the toroid).
+    f_torus : int, optional
+        Flag to indicate which optical surface is in use (where the mirror pole is located). Values are:
+            * 0=lower/outer (tangential: concave / sagittal:concave),
+            * 1=lower/inner (tangential: concave / sagittal:convex) ,
+            * 2=upper/inner (tangential: convex  / sagittal:concave),
+            * 3=upper/outer (tangential: convex  / sagittal:convex).
+    ruling : float, optional
+        The constant term of the ruling in lines/m.
+    ruling_coeff_linear : float, optional
+        The linear term of the ruling in lines/m^2.
+    ruling_coeff_quadratic : float, optional
+        The quadratic term of the ruling in lines/m^3.
+    ruling_coeff_cubic : float, optional
+        The cubic term of the ruling in lines/m^4.
+    ruling_coeff_quartic : float, optional
+        The quartic term of the ruling in lines/m^5.
+    coating : str, optional
+        The identified if the coating material (not used, passed to syned).
+    coating_thickness : float, optional
+        The thickness of the coating in m (not used, passed to syned).
+    order : int, optional
+        The diffraction order.
+    f_ruling : int, optional
+        A flag to define the type of ruling:
+            - (0) constant on X-Y plane (0)
+            - (1) polynomial line density (5 in shadow3).
+
+    Returns
+    -------
+    instance of S4________Grating.
+    """
     def __init__(self,
                  name="Toroid Grating",
                  boundary_shape=None,

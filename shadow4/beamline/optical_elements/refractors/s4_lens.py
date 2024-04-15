@@ -6,10 +6,56 @@ from syned.beamline.shape import Rectangle, Ellipse, Circle
 
 from shadow4.beam.s4_beam import S4Beam
 from shadow4.beamline.s4_beamline_element import S4BeamlineElement
+from shadow4.beamline.s4_beamline_element_movements import S4BeamlineElementMovements
 from shadow4.beamline.optical_elements.refractors.s4_conic_interface import S4ConicInterface, S4ConicInterfaceElement
 from shadow4.beamline.s4_optical_element_decorators import S4RefractiveLensOpticalElementDecorator
 
 class S4Lens(Lens, S4RefractiveLensOpticalElementDecorator):
+    """
+    Constructor.
+
+    Parameters
+    ----------
+    name : str, optional
+        The name of the mirror.
+    boundary_shape : instance of BoundaryShape, optional
+        The boundary shape of the mirror.
+    material : str, optional
+        A string with the material element symbol or compound formula.
+    thickness : float, optional
+        The thickness of a single lens in m.
+    surface_shape : int, optional
+        A flag to indicate the shape of the optical surfaces: 0=plane, 1=sphere, 2=parabola, 3=conic coefficients.
+    convex_to_the_beam : int, optional
+        A flag to indicate the convexity of the first optical surface. Used for surface_shape > 0.
+        The first interface exposed to the beam is convex: 0=No, 1=Yes.
+        The second interface has opposite convexity.
+    cylinder_angle : int, optional
+        A flag to indicate is the CRL is 2D0fucusing, aor 1D focusing and in which direction:
+        Used for surface_shape > 0. Values are:
+            0=CRL is focusing in 2D (not cylindrical),
+            1=CRL is focusing in 1D (meridional focusing),
+            2=CRL is focusing in 2D (sagittal focusing).
+    ri_calculation_mode : int, optional
+        A flag to indicate the source of the refraction index. Values are:
+            * 0=User,
+            * 1=prerefl file,
+            * 2=direct calculation using xraylib,
+            * 3=direct calculation using dabax.
+    prerefl_file : str, optional
+        For ri_calculation_mode=1, the prerefl preprocessor file name.
+    refraction_index : float, optional
+        For ri_calculation_mode=0, the real part of the refraction index.
+    attenuation_coefficient : float, optional
+        For ri_calculation_mode=0, the attenuation coefficient in cm^-1.
+    radius : float, optional
+        For surface_shape=(1,2), the lens radius in m. (For parabolic lenses, it is the radius at the tip for paraboloid.)
+    conic_coefficients1 : None or list, optional
+        For surface_shape=3, A list with the 10 conic coefficients of interface 1. None is considered as Plane.
+    conic_coefficients2 : None or list, optional
+        For surface_shape=3, A list with the 10 conic coefficients of interface 2. None is considered as Plane.
+    """
+
     def __init__(self,
                  name="Undefined",
                  boundary_shape=None,  # syned stuff, replaces "diameter" in the shadow3 append_lens
@@ -29,7 +75,8 @@ class S4Lens(Lens, S4RefractiveLensOpticalElementDecorator):
                  refraction_index=1.0, # for ri_calculation_mode=1: n (real)
                  attenuation_coefficient=0.0, # for ri_calculation_mode=1: mu in cm^-1 (real)
                  radius=500e-6,        # for surface_shape=(1,2): lens radius [m] (for spherical, or radius at the tip for paraboloid)
-                 conic_coefficients=[0.0]*10,   # for surface_shape = 3: the conic coefficients
+                 conic_coefficients1=None,   # for surface_shape = 3: the conic coefficients of the first interface
+                 conic_coefficients2=None,  # for surface_shape = 3: the conic coefficients of the second interface
                  ):
         S4RefractiveLensOpticalElementDecorator.__init__(self,
                                                          surface_shape,
@@ -40,7 +87,9 @@ class S4Lens(Lens, S4RefractiveLensOpticalElementDecorator):
                                                          refraction_index,
                                                          attenuation_coefficient,
                                                          radius,
-                                                         conic_coefficients)
+                                                         conic_coefficients1,
+                                                         conic_coefficients2)
+
         Lens.__init__(self,
                       name=name,
                       surface_shape1=self.get_surface_shape_instance()[0],
@@ -62,7 +111,8 @@ class S4Lens(Lens, S4RefractiveLensOpticalElementDecorator):
             "refraction_index":        refraction_index,
             "attenuation_coefficient": attenuation_coefficient,
             "radius":                  radius,
-            "conic_coefficients":      repr(conic_coefficients),
+            "conic_coefficients1":     repr(conic_coefficients1),
+            "conic_coefficients2":     repr(conic_coefficients2),
         }
 
     def to_python_code_boundary_shape(self):
@@ -121,7 +171,8 @@ optical_element = S4Lens(name='{name:s}',
      refraction_index={refraction_index:g}, # for ri_calculation_mode=1: n (real)
      attenuation_coefficient={attenuation_coefficient:g}, # for ri_calculation_mode=1: mu in cm^-1 (real)
      radius={radius:g}, # for surface_shape=(1,2): lens radius [m] (for spherical, or radius at the tip for paraboloid)
-     conic_coefficients=None, # for surface_shape = 3: the conic coefficients [todo: noy yet implemented]
+     conic_coefficients1={conic_coefficients1}, # for surface_shape = 3: the conic coefficients for interface 1
+     conic_coefficients2={conic_coefficients2}, # for surface_shape = 3: the conic coefficients for interface 2
      )
     """
         txt += txt_pre.format(**self.__inputs)
@@ -230,7 +281,8 @@ class S4LensElement(S4BeamlineElement):
     coordinates : instance of ElementCoordinates, optional
         The syned element coordinates.
     movements : instance of S4BeamlineElementMovements, optional
-        The S4 element movements.
+        The S4 element movements. (The same movements are applied to the two interfaces. Therefore, each rotation is
+        applied around the local axes of each interface, which are different.)
     input_beam : instance of S4Beam, optional
         The S4 incident beam.
 
@@ -241,9 +293,11 @@ class S4LensElement(S4BeamlineElement):
     def __init__(self,
                  optical_element : S4Lens = None,
                  coordinates : ElementCoordinates = None,
+                 movements: S4BeamlineElementMovements = None,
                  input_beam : S4Beam = None):
         super().__init__(optical_element=optical_element if optical_element is not None else S4Lens(),
                          coordinates=coordinates if coordinates is not None else ElementCoordinates(),
+                         movements=movements,
                          input_beam=input_beam)
 
     def to_python_code(self, **kwargs):
@@ -263,8 +317,9 @@ class S4LensElement(S4BeamlineElement):
         txt += self.get_optical_element().to_python_code()
         txt += "\nimport numpy"
         txt += self.to_python_code_coordinates()
+        txt += self.to_python_code_movements()
         txt += "\nfrom shadow4.beamline.optical_elements.refractors.s4_lens import S4LensElement"
-        txt += "\nbeamline_element = S4LensElement(optical_element=optical_element, coordinates=coordinates, input_beam=beam)"
+        txt += "\nbeamline_element = S4LensElement(optical_element=optical_element, coordinates=coordinates, movements=movements, input_beam=beam)"
         txt += "\n\nbeam, mirr = beamline_element.trace_beam()"
         return txt
 
@@ -292,6 +347,7 @@ class S4LensElement(S4BeamlineElement):
         #
         # #
         input_beam = self.get_input_beam().duplicate()
+        movements = self.get_movements()
         oe         = self.get_optical_element()
 
         half_lens_1, half_lens_2 = oe.get_lens_interfaces()
@@ -302,12 +358,12 @@ class S4LensElement(S4BeamlineElement):
         coordinates_1 = ElementCoordinates(p=p, q=oe.get_thickness() * 0.5, angle_radial=angle_radial, angle_radial_out=numpy.pi, angle_azimuthal=angle_azimuthal)
         coordinates_2 = ElementCoordinates(p=oe.get_thickness() * 0.5, q=q, angle_radial=0, angle_radial_out=angle_radial_out, angle_azimuthal=0)
 
-        beamline_element_1 = S4ConicInterfaceElement(optical_element=half_lens_1, coordinates=coordinates_1, input_beam=input_beam)
+        beamline_element_1 = S4ConicInterfaceElement(optical_element=half_lens_1, coordinates=coordinates_1, movements=movements, input_beam=input_beam)
         beam1, footprint1  = beamline_element_1.trace_beam()
 
         # return beam1, footprint1
 
-        beamline_element_2 = S4ConicInterfaceElement(optical_element=half_lens_2, coordinates=coordinates_2, input_beam=beam1)
+        beamline_element_2 = S4ConicInterfaceElement(optical_element=half_lens_2, coordinates=coordinates_2, movements=movements, input_beam=beam1)
         beam2, footprint2  = beamline_element_2.trace_beam()
 
         return beam2, [footprint1, footprint2]
@@ -336,7 +392,7 @@ if __name__ == "__main__":
                  boundary_shape=None,  # syned stuff, replaces "diameter" in the shadow3 append_lens
                  material="",          # syned stuff, not (yet) used
                  thickness=0.03,       # syned stuff, lens thickness [m] (distance between the two interfaces at the center of the lenses)
-                 surface_shape=1,      # now: 0=plane, 1=sphere, 2=parabola, 3=conic coefficients
+                 surface_shape=2,      # now: 0=plane, 1=sphere, 2=parabola, 3=conic coefficients
                                        # (in shadow3: 1=sphere 4=paraboloid, 5=plane)
                  convex_to_the_beam=0, # for surface_shape (1,2): convexity of the first interface exposed to the beam 0=No, 1=Yes
                                        # the second interface has opposite convexity
@@ -350,7 +406,8 @@ if __name__ == "__main__":
                  refraction_index=1.5, # for ri_calculation_mode=1: n (real)
                  attenuation_coefficient=1e-3, # for ri_calculation_mode=1: mu in cm^-1 (real)
                  radius=0.1,        # for surface_shape=(1,2): lens radius [m] (for spherical, or radius at the tip for paraboloid)
-                 conic_coefficients=[0.0]*10,   # for surface_shape = 3: the conic coefficients)
+                 conic_coefficients1=None,   # for surface_shape = 3: the conic coefficients of interface 1
+                 conic_coefficients2=None,  # for surface_shape = 3: the conic coefficients of interface 2
                   )
 
     e = S4LensElement(optical_element=lens,

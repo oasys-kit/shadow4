@@ -266,8 +266,7 @@ class S4GratingElement(S4BeamlineElement):
         #
         soe = self.get_optical_element()
 
-        beam_in_crystal_frame_before_reflection = input_beam.duplicate()
-        footprint, normal = self.apply_grating_diffraction(input_beam)  # warning, beam is also changed!!
+        footprint, normal = self._apply_grating_diffraction(input_beam)  # warning, beam is also changed!!
 
 
         if movements is not None:
@@ -319,7 +318,7 @@ class S4GratingElement(S4BeamlineElement):
 
         return output_beam, footprint
 
-    def apply_grating_diffraction(self, beam):  # to be implemented in the children classes
+    def _apply_grating_diffraction(self, beam):
         oe = self.get_optical_element()
         ssi = oe.get_surface_shape_instance()
         ccc = oe.get_optical_surface_instance()

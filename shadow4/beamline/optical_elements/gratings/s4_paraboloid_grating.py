@@ -10,6 +10,56 @@ from shadow4.beamline.s4_beamline_element_movements import S4BeamlineElementMove
 from syned.beamline.shape import Paraboloid, ParabolicCylinder, Convexity, Direction, Side
 
 class S4ParaboloidGrating(S4Grating, S4ParaboloidOpticalElementDecorator):
+    """
+    Constructor.
+
+    Parameters
+    ----------
+    name :  str, optional
+        A name for the crystal
+    boundary_shape : instance of BoundaryShape, optional
+        The information on the crystal boundaries.
+    is_cylinder : int, optional
+        flag:
+            0=No (there is revolution symmetry along Y)
+            1=Yes (flat surface along X or Y).
+    cylinder_direction : int (as defined by Direction), optional
+        NONE = -1, UPWARD = 0, DOWNWARD = 1.
+    convexity : int (as defined by Convexity), optional
+        NONE = -1, UPWARD = 0, DOWNWARD = 1.
+    parabola_parameter : float, optional
+        For surface_calculation=0, The parabola parameter PARAM (y^2 = 2 PARAM z)
+    at_infinity : int, optional
+        For surface_calculation=0, flag to indicate that
+            0: the source is at infinity (focusing paraboloid) = Side.SOURCE.
+            1: the image is at infinity (collimating paraboloid) = Side.IMAGE.
+    pole_to_focus : float, optional
+        For surface_calculation=0, the p or q distance (from focus to center of the optical element).
+    ruling : float, optional
+        The constant term of the ruling in lines/m.
+    ruling_coeff_linear : float, optional
+        The linear term of the ruling in lines/m^2.
+    ruling_coeff_quadratic : float, optional
+        The quadratic term of the ruling in lines/m^3.
+    ruling_coeff_cubic : float, optional
+        The cubic term of the ruling in lines/m^4.
+    ruling_coeff_quartic : float, optional
+        The quartic term of the ruling in lines/m^5.
+    coating : str, optional
+        The identified if the coating material (not used, passed to syned).
+    coating_thickness : float, optional
+        The thickness of the coating in m (not used, passed to syned).
+    order : int, optional
+        The diffraction order.
+    f_ruling : int, optional
+        A flag to define the type of ruling:
+            - (0) constant on X-Y plane (0)
+            - (1) polynomial line density (5 in shadow3).
+
+    Returns
+    -------
+    instance of S4ParaboloidGrating.
+    """
     def __init__(self,
                  name="Paraboloid Grating",
                  boundary_shape=None,

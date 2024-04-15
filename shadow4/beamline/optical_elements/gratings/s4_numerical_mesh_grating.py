@@ -8,6 +8,48 @@ from shadow4.beamline.optical_elements.gratings.s4_grating import S4GratingEleme
 
 
 class S4NumericalMeshGrating(S4Grating, S4NumericalMeshOpticalElementDecorator):
+    """
+    Constructor.
+
+    Parameters
+    ----------
+    name :  str, optional
+        A name for the crystal
+    boundary_shape : instance of BoundaryShape, optional
+        The information on the crystal boundaries.
+    xx : ndarray, optional
+        the 1D array with the X points.
+    yy : ndarray, optional
+        the 1D array with the Y points.
+    zz : ndarray, optional
+        the 2D [shape Nx,Ny] array with the Z points.
+    surface_data_file : str, optional
+        the name of the h5 file with the mesh.
+    ruling : float, optional
+        The constant term of the ruling in lines/m.
+    ruling_coeff_linear : float, optional
+        The linear term of the ruling in lines/m^2.
+    ruling_coeff_quadratic : float, optional
+        The quadratic term of the ruling in lines/m^3.
+    ruling_coeff_cubic : float, optional
+        The cubic term of the ruling in lines/m^4.
+    ruling_coeff_quartic : float, optional
+        The quartic term of the ruling in lines/m^5.
+    coating : str, optional
+        The identified if the coating material (not used, passed to syned).
+    coating_thickness : float, optional
+        The thickness of the coating in m (not used, passed to syned).
+    order : int, optional
+        The diffraction order.
+    f_ruling : int, optional
+        A flag to define the type of ruling:
+            - (0) constant on X-Y plane (0)
+            - (1) polynomial line density (5 in shadow3).
+
+    Returns
+    -------
+    instance of S4NumericalMeshGrating.
+    """
     def __init__(self,
                  name="NumericalMesh Grating",
                  boundary_shape=None,
