@@ -36,11 +36,13 @@ class S4Mirror(Mirror):
             - 1=full polarization.
     f_refl : int, optional
         A flag to indicate the source of reflectivities:
-            - 0=prerefl file
-            - 1=electric susceptibility
-            - 2=user defined file (1D angle in mrad, reflectivity)
-            - 3=user defined file (1D energy in eV, reflectivity)
-            - 4=user defined file (2D energy in eV, angle in mrad, reflectivity)
+            * 0=prerefl file,
+            * 1=electric susceptibility,
+            * 2=user defined file (1D angle in mrad, reflectivity),
+            * 3=user defined file (1D energy in eV, reflectivity),
+            * 4=user defined file (2D energy in eV, angle in mrad, reflectivity),
+            * 5=direct calculation using xraylib,
+            * 6=direct calculation using dabax.
     file_refl : str, optional
             name of user defined file (for f_refl=0).
     refraction_index : complex, optional

@@ -699,6 +699,8 @@ class S4RefractiveLensOpticalElementDecorator(S4CurvedOpticalElementDecorator):
         For ri_calculation_mode=1: the real part of the refraction coefficient Real[n].
     attenuation_coefficient : float, optional
         For ri_calculation_mode=1: the linear absorption coefficient, in cm^-1 (real)..=
+    dabax : None or instance of DabaxXraylib,
+        The pointer to the dabax library  (used for f_r_ind > 6).
     radius : float, optional
         For surface_shape=(1,2): lens radius [m] (for spherical, or radius at the tip for paraboloid).
     conic_coefficients1 : list or ndarray, optional
@@ -720,6 +722,8 @@ class S4RefractiveLensOpticalElementDecorator(S4CurvedOpticalElementDecorator):
                  prerefl_file=None,    # for ri_calculation_mode=0: file name (from prerefl) to get the refraction index.
                  refraction_index=1.0, # for ri_calculation_mode=1: n (real)
                  attenuation_coefficient=0.0, # for ri_calculation_mode=1: mu in cm^-1 (real)
+                 density=1.0,
+                 dabax=None,
                  radius=500e-6,        # for surface_shape=(1,2): lens radius [m] (for spherical, or radius at the tip for paraboloid)
                  conic_coefficients1=None,   # for surface_shape = 3: the conic coefficients of the first interface
                  conic_coefficients2=None,  # for surface_shape = 3: the conic coefficients of the second interface
@@ -750,6 +754,8 @@ class S4RefractiveLensOpticalElementDecorator(S4CurvedOpticalElementDecorator):
         self._prerefl_file            = prerefl_file
         self._refraction_index        = refraction_index
         self._attenuation_coefficient = attenuation_coefficient
+        self._density = density
+        self._dabax = dabax
 
     def _get_conic_coefficients(self, surface_shape, radius, cylinder_angle, convex_to_the_beam, conic_coefficients1, conic_coefficients2):
         if surface_shape == 0:   conic_coefficients_1 = [0, 0, 0, 0, 0, 0, 0, 0, -1, 0]

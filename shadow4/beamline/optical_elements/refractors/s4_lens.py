@@ -22,6 +22,8 @@ class S4Lens(Lens, S4RefractiveLensOpticalElementDecorator):
         The boundary shape of the mirror.
     material : str, optional
         A string with the material element symbol or compound formula.
+    density : float, optional
+        The density of the material in the lens in g/cm^3.
     thickness : float, optional
         The thickness of a single lens in m.
     surface_shape : int, optional
@@ -47,7 +49,9 @@ class S4Lens(Lens, S4RefractiveLensOpticalElementDecorator):
     refraction_index : float, optional
         For ri_calculation_mode=0, the real part of the refraction index.
     attenuation_coefficient : float, optional
-        For ri_calculation_mode=0, the attenuation coefficient in cm^-1.
+        For ri_calculation_mode=0, the attenuation coefficient in m^-1 !!!.
+    dabax : None or instance of DabaxXraylib,
+        The pointer to the dabax library  (used for f_r_ind > 6).
     radius : float, optional
         For surface_shape=(1,2), the lens radius in m. (For parabolic lenses, it is the radius at the tip for paraboloid.)
     conic_coefficients1 : None or list, optional
@@ -74,6 +78,8 @@ class S4Lens(Lens, S4RefractiveLensOpticalElementDecorator):
                  prerefl_file=None,    # for ri_calculation_mode=0: file name (from prerefl) to get the refraction index.
                  refraction_index=1.0, # for ri_calculation_mode=1: n (real)
                  attenuation_coefficient=0.0, # for ri_calculation_mode=1: mu in cm^-1 (real)
+                 density=1.0,
+                 dabax=None,
                  radius=500e-6,        # for surface_shape=(1,2): lens radius [m] (for spherical, or radius at the tip for paraboloid)
                  conic_coefficients1=None,   # for surface_shape = 3: the conic coefficients of the first interface
                  conic_coefficients2=None,  # for surface_shape = 3: the conic coefficients of the second interface
@@ -86,6 +92,8 @@ class S4Lens(Lens, S4RefractiveLensOpticalElementDecorator):
                                                          prerefl_file,
                                                          refraction_index,
                                                          attenuation_coefficient,
+                                                         density,
+                                                         dabax,
                                                          radius,
                                                          conic_coefficients1,
                                                          conic_coefficients2)
@@ -110,6 +118,8 @@ class S4Lens(Lens, S4RefractiveLensOpticalElementDecorator):
             "prerefl_file":            prerefl_file,
             "refraction_index":        refraction_index,
             "attenuation_coefficient": attenuation_coefficient,
+            "density":                 density,
+            "dabax":                   repr(dabax),
             "radius":                  radius,
             "conic_coefficients1":     repr(conic_coefficients1),
             "conic_coefficients2":     repr(conic_coefficients2),
@@ -159,7 +169,8 @@ from shadow4.beamline.optical_elements.refractors.s4_lens import S4Lens
 
 optical_element = S4Lens(name='{name:s}',
      boundary_shape=boundary_shape,         # syned stuff, replaces "diameter" in the shadow3 append_lens
-     material="", # syned stuff, not (yet) used
+     material='{material:s}', # the material for ri_calculation_mode > 1
+     density={density:g}, # the density for ri_calculation_mode > 1
      thickness={thickness}, # syned stuff, lens thickness [m] (distance between the two interfaces at the center of the lenses)
      surface_shape={surface_shape}, # now: 0=plane, 1=sphere, 2=parabola, 3=conic coefficients
                                     # (in shadow3: 1=sphere 4=paraboloid, 5=plane)
@@ -170,6 +181,7 @@ optical_element = S4Lens(name='{name:s}',
      prerefl_file='{prerefl_file:s}', # for ri_calculation_mode=0: file name (from prerefl) to get the refraction index.
      refraction_index={refraction_index:g}, # for ri_calculation_mode=1: n (real)
      attenuation_coefficient={attenuation_coefficient:g}, # for ri_calculation_mode=1: mu in cm^-1 (real)
+     dabax={dabax:s}, # the pointer to dabax library
      radius={radius:g}, # for surface_shape=(1,2): lens radius [m] (for spherical, or radius at the tip for paraboloid)
      conic_coefficients1={conic_coefficients1}, # for surface_shape = 3: the conic coefficients for interface 1
      conic_coefficients2={conic_coefficients2}, # for surface_shape = 3: the conic coefficients for interface 2
@@ -184,13 +196,25 @@ optical_element = S4Lens(name='{name:s}',
                                     ri_calculation_mode=self._ri_calculation_mode,
                                     refraction_index=self._refraction_index,
                                     attenuation_coefficient=self._attenuation_coefficient,
-                                    prerefl_file=self._prerefl_file)
+                                    prerefl_file=self._prerefl_file,
+                                    material=self.get_material(),
+                                    density=self._density,
+                                    dabax=self._dabax,
+                                    )
 
-def _get_lens_interfaces(lens_optical_surfaces, boundary_shape, ri_calculation_mode, refraction_index, attenuation_coefficient, prerefl_file):
+def _get_lens_interfaces(lens_optical_surfaces,
+                         boundary_shape,
+                         ri_calculation_mode,
+                         refraction_index,
+                         attenuation_coefficient,
+                         prerefl_file,
+                         material,
+                         density,
+                         dabax):
     conic_coefficients1 = lens_optical_surfaces[0].get_coefficients()
     conic_coefficients2 = lens_optical_surfaces[1].get_coefficients()
 
-    if ri_calculation_mode == 0:
+    if ri_calculation_mode == 0: # user
         half_lens_1 = S4ConicInterface(
             name="First half-lens",
             boundary_shape=boundary_shape,
@@ -228,7 +252,7 @@ def _get_lens_interfaces(lens_optical_surfaces, boundary_shape, ri_calculation_m
             file_r_ind_ima="",  # (for f_r_ind=2,3): file generated by PREREFL
             conic_coefficients=conic_coefficients2,
         )
-    else:
+    elif ri_calculation_mode == 1: # prerefl file
         half_lens_1 = S4ConicInterface(
             name="First half-lens",
             boundary_shape=boundary_shape,
@@ -264,6 +288,93 @@ def _get_lens_interfaces(lens_optical_surfaces, boundary_shape, ri_calculation_m
             r_attenuation_ima=0.0,  # (for f_r_ind=0,1): attenuation coefficient in image space. Units of UserUnitLength^(-1)
             file_r_ind_obj=prerefl_file,  # (for f_r_ind=1,3): file generated by PREREFL
             file_r_ind_ima="",  # (for f_r_ind=2,3): file generated by PREREFL
+            conic_coefficients=conic_coefficients2,
+        )
+    elif ri_calculation_mode == 2: # xraylib
+        half_lens_1 = S4ConicInterface(
+            name="First half-lens",
+            boundary_shape=boundary_shape,
+            material_object=None,
+            material_image=material,
+            density_object=1.0,
+            density_image=density,
+            f_r_ind=5,  # source of optical constants, from constant value or PREREFL preprocessor (file):
+            #      (0) constant value in both object and image spaces
+            #      (1) file in object space, constant value in image space
+            #      (2) constant value in object space, file in image space
+            #      (3) file in both object and image space
+            r_ind_obj=1.0,  # (for f_r_ind=0,2): index of refraction in object space.
+            r_ind_ima=1.0,  # (for f_r_ind=0,1): index of refraction in image space.
+            r_attenuation_obj=0.0,  # (for f_r_ind=0,2): attenuation coefficient in object space. Units of UserUnitLength^(-1)
+            r_attenuation_ima=0.0,  # (for f_r_ind=0,1): attenuation coefficient in image space. Units of UserUnitLength^(-1)
+            file_r_ind_obj="",  # (for f_r_ind=1,3): file generated by PREREFL
+            file_r_ind_ima=prerefl_file,  # (for f_r_ind=2,3): file generated by PREREFL
+            conic_coefficients=conic_coefficients1,
+        )
+
+        half_lens_2 = S4ConicInterface(
+            name="Second half-lens",
+            boundary_shape=boundary_shape,
+            material_object=material,
+            material_image=None,
+            density_object=density,
+            density_image=1.0,
+            f_r_ind=4,  # source of optical constants, from constant value or PREREFL preprocessor (file):
+            #      (0) constant value in both object and image spaces
+            #      (1) file in object space, constant value in image space
+            #      (2) constant value in object space, file in image space
+            #      (3) file in both object and image space
+            r_ind_obj=1.0,  # (for f_r_ind=0,2): index of refraction in object space.
+            r_ind_ima=1.0,  # (for f_r_ind=0,1): index of refraction in image space.
+            r_attenuation_obj=0.0,  # (for f_r_ind=0,2): attenuation coefficient in object space. Units of UserUnitLength^(-1)
+            r_attenuation_ima=0.0,  # (for f_r_ind=0,1): attenuation coefficient in image space. Units of UserUnitLength^(-1)
+            file_r_ind_obj=prerefl_file,  # (for f_r_ind=1,3): file generated by PREREFL
+            file_r_ind_ima="",  # (for f_r_ind=2,3): file generated by PREREFL
+            conic_coefficients=conic_coefficients2,
+        )
+
+    elif ri_calculation_mode == 3: # dabax
+        half_lens_1 = S4ConicInterface(
+            name="First half-lens",
+            boundary_shape=boundary_shape,
+            material_object=None,
+            material_image=material,
+            density_object=1.0,
+            density_image=density,
+            f_r_ind=8,  # source of optical constants, from constant value or PREREFL preprocessor (file):
+            #      (0) constant value in both object and image spaces
+            #      (1) file in object space, constant value in image space
+            #      (2) constant value in object space, file in image space
+            #      (3) file in both object and image space
+            r_ind_obj=1.0,  # (for f_r_ind=0,2): index of refraction in object space.
+            r_ind_ima=1.0,  # (for f_r_ind=0,1): index of refraction in image space.
+            r_attenuation_obj=0.0,  # (for f_r_ind=0,2): attenuation coefficient in object space. Units of UserUnitLength^(-1)
+            r_attenuation_ima=0.0,  # (for f_r_ind=0,1): attenuation coefficient in image space. Units of UserUnitLength^(-1)
+            file_r_ind_obj="",  # (for f_r_ind=1,3): file generated by PREREFL
+            file_r_ind_ima=prerefl_file,  # (for f_r_ind=2,3): file generated by PREREFL
+            dabax=dabax,
+            conic_coefficients=conic_coefficients1,
+        )
+
+        half_lens_2 = S4ConicInterface(
+            name="Second half-lens",
+            boundary_shape=boundary_shape,
+            material_object=material,
+            material_image=None,
+            density_object=density,
+            density_image=1.0,
+            f_r_ind=7,  # source of optical constants, from constant value or PREREFL preprocessor (file):
+            #      (0) constant value in both object and image spaces
+            #      (1) file in object space, constant value in image space
+            #      (2) constant value in object space, file in image space
+            #      (3) file in both object and image space
+            r_ind_obj=1.0,  # (for f_r_ind=0,2): index of refraction in object space.
+            r_ind_ima=1.0,  # (for f_r_ind=0,1): index of refraction in image space.
+            r_attenuation_obj=0.0,  # (for f_r_ind=0,2): attenuation coefficient in object space. Units of UserUnitLength^(-1)
+            r_attenuation_ima=0.0,  # (for f_r_ind=0,1): attenuation coefficient in image space. Units of UserUnitLength^(-1)
+            file_r_ind_obj=prerefl_file,  # (for f_r_ind=1,3): file generated by PREREFL
+            file_r_ind_ima="",  # (for f_r_ind=2,3): file generated by PREREFL
+            dabax=dabax,
             conic_coefficients=conic_coefficients2,
         )
 

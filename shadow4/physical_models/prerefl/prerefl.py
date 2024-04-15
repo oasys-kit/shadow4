@@ -149,7 +149,70 @@ class PreRefl(object):
 
         return dx.CS_Total_CP(material, photon_energy_ev*1e-3) * density
 
+#######################
 
+    @classmethod
+    def get_refraction_index_external_xraylib(self,
+                                                     photon_energy_ev=10000.0,
+                                                     material="SiC",
+                                                     density=3.217,):
+
+        import xraylib
+        if isinstance(photon_energy_ev, (float, int)):
+            return xraylib.Refractive_Index(material, photon_energy_ev * 1e-3, density)
+        else:
+            photon_energy_ev_array = numpy.array(photon_energy_ev)
+            refraction_index = numpy.zeros_like(photon_energy_ev_array, dtype=complex)
+
+            for i,photon_energy_ev in enumerate(photon_energy_ev_array):
+                refraction_index[i] = xraylib.Refractive_Index(material, photon_energy_ev * 1e-3, density)
+            return refraction_index
+
+    @classmethod
+    def get_refraction_index_real_external_xraylib(cls,
+                                                     photon_energy_ev=10000.0,
+                                                     material="SiC",
+                                                     density=3.217,):
+
+        return cls.get_refraction_index_external_xraylib(
+                                                     photon_energy_ev=photon_energy_ev,
+                                                     material=material,
+                                                     density=density).real
+
+    @classmethod
+    def get_refraction_index_external_dabax(self,
+                                                     photon_energy_ev=10000.0,
+                                                     material="SiC",
+                                                     density=3.217,
+                                                     dabax=None,
+                                                     ):
+
+        from dabax.dabax_xraylib import DabaxXraylib
+        if isinstance(dabax, DabaxXraylib):
+            dx = dabax
+        else:
+            dx = DabaxXraylib()
+
+        return dx.Refractive_Index_Re(material, photon_energy_ev * 1e-3, density) + \
+               1j * dx.Refractive_Index_Im(material, photon_energy_ev * 1e-3, density)
+
+    @classmethod
+    def get_refraction_index_real_external_dabax(self,
+                                                     photon_energy_ev=10000.0,
+                                                     material="SiC",
+                                                     density=3.217,
+                                                     dabax=None,
+                                                     ):
+
+        from dabax.dabax_xraylib import DabaxXraylib
+        if isinstance(dabax, DabaxXraylib):
+            dx = dabax
+        else:
+            dx = DabaxXraylib()
+
+        return dx.Refractive_Index_Re(material, photon_energy_ev * 1e-3, density)
+
+#######################
     def reflectivity_fresnel(self,photon_energy_ev=10000.0,grazing_angle_mrad=3.0,
                              roughness_rms_A=0.0, method=2):
         """
@@ -402,7 +465,6 @@ class PreRefl(object):
             print("    ", iMaterial, " contains %i atoms and %i elements" % (cdtest['nAtomsAll'], cdtest['nElements']))
             for i in range(cdtest['nElements']):
                 print("    Element %i: %lf %%" % (cdtest['Elements'][i], cdtest['massFractions'][i] * 100.0))
-            print(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>")
             print(qmin, qmax, qstep, depth0)
             print(npoint)
             for i in range(npoint):
@@ -411,7 +473,6 @@ class PreRefl(object):
                 print(energy, qq, \
                       2e0 * (1e0 - xraylib.Refractive_Index_Re(iMaterial, energy, density)), \
                       2e0 * (xraylib.Refractive_Index_Im(iMaterial, energy, density)))
-            print(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>")
 
         return None
 
@@ -749,3 +810,70 @@ if __name__ == "__main__":
 
         print(">>>> tmp_xrl", tmp_xrl)
         print(">>>> tmp_dx", tmp_dx)
+
+
+        if False:
+            print("Refraction index Au (prerefl file): ", a.get_refraction_index(numpy.array(energies)))
+
+            n_xrl = PreRefl.get_refraction_index_external_xraylib(
+                                                photon_energy_ev=numpy.array((2000, 3000, 4000, 4000)),
+                                                material="Au",
+                                                density=19.3,
+                                                       )
+
+            n_dx = PreRefl.get_refraction_index_external_dabax(
+                                                photon_energy_ev=numpy.array((2000, 3000, 4000, 4000)),
+                                                material="Au",
+                                                density=19.3,
+                                                dabax=None,
+                                                       )
+
+            print("Refraction index Au (xraylib): ", n_xrl)
+            print("Refraction index Au (dabax): ", n_dx)
+
+        if True:
+            prerefl_file = "reflec1.dat"
+
+            PreRefl.prerefl(interactive=False, SYMBOL="Al", DENSITY=2.6989, FILE=prerefl_file,
+                            E_MIN=13000.0, E_MAX=15000.0, E_STEP=100.0)
+
+            a = PreRefl()
+            a.read_preprocessor_file(prerefl_file)
+
+            energies = (14000, 14001, 14002)
+
+
+
+
+            n_xrl = PreRefl.get_refraction_index_external_xraylib(
+                                                photon_energy_ev=numpy.array(energies),
+                                                material="Al",
+                                                density=2.6989,
+                                                       )
+
+            n_dx = PreRefl.get_refraction_index_external_dabax(
+                                                photon_energy_ev=numpy.array(energies),
+                                                material="Al",
+                                                density=2.6989,
+                                                dabax=None,
+                                                       )
+
+            a_xrl = PreRefl.get_attenuation_coefficient_external_xraylib(
+                                                photon_energy_ev=numpy.array(energies),
+                                                material="Al",
+                                                density=2.6989,
+                                                       )
+
+            a_dx = PreRefl.get_attenuation_coefficient_external_dabax(
+                                                photon_energy_ev=numpy.array(energies),
+                                                material="Al",
+                                                density=2.6989,
+                                                dabax=None,
+                                                       )
+            # print("Refraction index Al (prerefl file): ", a.get_refraction_index(numpy.array(energies)))
+            # print("Refraction index Al (xraylib): ", n_xrl)
+            # print("Refraction index Al (dabax): ", n_dx)
+
+            print("Attenuation index Al (prerefl file): ", a.get_attenuation_coefficient(numpy.array(energies)))
+            print("Attenuation index Al (xraylib): ", a_xrl)
+            print("Attenuation index Al (dabax): ", a_dx)
