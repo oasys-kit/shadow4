@@ -21,6 +21,7 @@ from shadow4.sources.wiggler.s4_wiggler import S4Wiggler
 from shadow4.beam.s4_beam import S4Beam
 from shadow4.tools.arrayofvectors import vector_cross, vector_norm
 from shadow4.tools.sync_f_sigma_and_pi import sync_f_sigma_and_pi, sync_f_sigma_and_pi_approx
+from shadow4.tools.logger import is_verbose, is_debug
 
 import time
 
@@ -355,7 +356,7 @@ class S4WigglerLightSource(S4LightSource):
                          EPSI_DZ=0.0,
                          psi_interval_in_units_one_over_gamma=None,
                          psi_interval_number_of_points=1001,
-                         verbose=True):
+                         ):
         # compute the rays in SHADOW matrix (shape (npoints,18) )
         # :param F_COHER: set this flag for coherent beam
         # :param user_unit_to_m: default 1.0 (m)
@@ -363,10 +364,10 @@ class S4WigglerLightSource(S4LightSource):
         if self.__result_cdf is None:
             self.__calculate_radiation()
 
-        if verbose:
-            print(">>>   Results of calculate_radiation")
-            print(">>>       trajectory.shape: ", self.__result_trajectory.shape)
-            print(">>>       cdf: ", self.__result_cdf.keys())
+        if is_verbose():
+            print("      Results of calculate_radiation")
+            print("          trajectory.shape: ", self.__result_trajectory.shape)
+            print("          cdf: ", self.__result_cdf.keys())
 
         wiggler = self.get_magnetic_structure()
         syned_electron_beam = self.get_electron_beam()
@@ -398,7 +399,7 @@ class S4WigglerLightSource(S4LightSource):
         EPSI_PATH = numpy.arange(CURV.size) * PATH_STEP # should be like Y_TRAJ - Y_TRAJ[0]
 
         if False:
-            if verbose: print(">>>>> PATH_STEP: ", PATH_STEP, Y_TRAJ[1] - Y_TRAJ[0]) # todo: check preprocessor: PATH_STEP:  0.001000019065427119 0.0010000000000000009
+            if is_verbose(): print(">>>>> PATH_STEP: ", PATH_STEP, Y_TRAJ[1] - Y_TRAJ[0]) # todo: check preprocessor: PATH_STEP:  0.001000019065427119 0.0010000000000000009
             from srxraylib.plot.gol import plot
             plot(Y_TRAJ, X_TRAJ, xtitle='y', ytitle='x', title="trajectory", show=0)
             plot(Y_TRAJ, SEEDIN, xtitle='y', ytitle='cdf', title="cdf", show=0)
@@ -450,7 +451,7 @@ class S4WigglerLightSource(S4LightSource):
             psi_interval_in_units_one_over_gamma = self.__psi_max_estimation(RAD_MIN_global, wiggler._EMIN / critical_energy)
 
 
-        if verbose: print(">>> psi_interval_in_units_one_over_gamma: ",psi_interval_in_units_one_over_gamma)
+        if is_verbose(): print("    psi_interval_in_units_one_over_gamma: ",psi_interval_in_units_one_over_gamma)
 
         angle_array_mrad = numpy.linspace(-0.5 * psi_interval_in_units_one_over_gamma * 1e3 / gamma,
                                           0.5 * psi_interval_in_units_one_over_gamma * 1e3 / gamma,
@@ -951,7 +952,7 @@ class S4WigglerLightSource(S4LightSource):
 
         t6 = time.time()
 
-        if verbose:
+        if is_verbose():
             print("------------ timing---------")
 
             t = t6-t0
@@ -983,7 +984,7 @@ class S4WigglerLightSource(S4LightSource):
     ############################################################################
     #
     ############################################################################
-    def get_beam(self, F_COHER=0, psi_interval_in_units_one_over_gamma=None, verbose=1):
+    def get_beam(self, F_COHER=0, psi_interval_in_units_one_over_gamma=None):
         """
         Creates the beam as emitted by the wiggler.
 
@@ -993,8 +994,6 @@ class S4WigglerLightSource(S4LightSource):
             A flag to indicate that the phase for the s-component is set to zero (coherent_beam=1) or is random for incoherent.
         psi_interval_in_units_one_over_gamma : None or float, optional
             The interval of psi*gamma for sampling rays.
-        verbose : int, optional
-            Set to 1 for verbose output.
 
         Returns
         -------

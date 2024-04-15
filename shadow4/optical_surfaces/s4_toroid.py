@@ -10,6 +10,7 @@ from shadow4.tools.arrayofvectors import vector_cross, vector_dot, vector_multip
 from shadow4.tools.arrayofvectors import vector_modulus_square, vector_modulus, vector_norm, vector_rotate_around_axis
 from shadow4.tools.arrayofvectors import vector_reflection
 from shadow4.tools.arrayofvectors import vector_refraction, vector_scattering
+from shadow4.tools.logger import is_verbose, is_debug
 
 class S4Toroid(S4OpticalSurface):
     """
@@ -54,7 +55,7 @@ class S4Toroid(S4OpticalSurface):
     #
     # setters + getters
     #
-    def set_from_focal_distances(self, ssour, simag, theta_grazing, verbose=1):
+    def set_from_focal_distances(self, ssour, simag, theta_grazing):
         """
         Sets the toroid radii from factory parameters (p, q, theta).
 
@@ -72,8 +73,6 @@ class S4Toroid(S4OpticalSurface):
             For cylindrical=1, the angle of the cylinder axis with the X axis (CCW).
         switch_convexity : int, optional
             Flag to indicate that the convexity os inverted.
-        verbose : int, optional
-            Flag for verbose output.
 
         Returns
         -------
@@ -86,7 +85,7 @@ class S4Toroid(S4OpticalSurface):
         self.r_maj = R_TANGENTIAL - R_SAGITTAL
         self.r_min = R_SAGITTAL
 
-        if verbose:
+        if is_verbose():
             print("R_TANGENTIAL, R_SAGITTAL: ", R_TANGENTIAL, R_SAGITTAL)
             print("Toroid r_maj, r_min: ", self.r_maj, self.r_min)
 

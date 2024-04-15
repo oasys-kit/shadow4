@@ -13,6 +13,7 @@ from srxraylib.util.inverse_method_sampler import Sampler1D
 from shadow4.sources.s4_light_source_base import S4LightSourceBase
 
 from shadow4.tools.arrayofvectors import vector_cross, vector_norm
+from shadow4.tools.logger import is_verbose, is_debug
 
 class SourceGeometrical(S4LightSourceBase):
     """
@@ -728,14 +729,9 @@ class SourceGeometrical(S4LightSourceBase):
         """
         return self.calculate_beam()
 
-    def calculate_rays(self, verbose=0):
+    def calculate_rays(self):
         """
         Returns a numpy array (nrays,18) with the sampled rays.
-
-        Parameters
-        ----------
-        verbose : int
-            Set to 1 for voerbose output.
 
         Returns
         -------
@@ -749,7 +745,7 @@ class SourceGeometrical(S4LightSourceBase):
 
         rays = self._sample_rays_default(N)
 
-        if verbose: print(">> Spatial type: %s"%(self._spatial_type))
+        if is_verbose(): print("    Spatial type: %s"%(self._spatial_type))
 
         #
         # spatial type
@@ -778,7 +774,7 @@ class SourceGeometrical(S4LightSourceBase):
         #
         # depth distribution
         #
-        if verbose: print(">> Depth distribution: %s"%(self._depth_distribution))
+        if is_verbose(): print(">> Depth distribution: %s"%(self._depth_distribution))
 
         if self._depth_distribution == "Off":
             pass
@@ -793,7 +789,7 @@ class SourceGeometrical(S4LightSourceBase):
         #
         # angular distribution
         #
-        if verbose: print(">> Angular distribution: %s"%(self._angular_distribution))
+        if is_verbose(): print(">> Angular distribution: %s"%(self._angular_distribution))
 
         if self._angular_distribution == "Flat":
             rays[:,3],rays[:,5] = Flat2D.sample(N,
@@ -828,7 +824,7 @@ class SourceGeometrical(S4LightSourceBase):
         # energy distribution
         # ["Single line","Several lines","Uniform","Relative intensities","Gaussian","User defined"]
         #
-        if verbose: print(">> Energy distribution: ",self._energy_distribution)
+        if is_verbose(): print("    Energy distribution: ",self._energy_distribution)
 
         if self._energy_distribution == "Single line":
             if self._f_phot == 0:
@@ -945,8 +941,6 @@ class SourceGeometrical(S4LightSourceBase):
 
         # set flag (col 10)
         rays[:, 9] = 1.0
-
-        if verbose: print("<><>",dir(self))
         return rays
 
 

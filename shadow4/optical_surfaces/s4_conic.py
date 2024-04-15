@@ -16,6 +16,10 @@ import numpy
 
 from shadow4.optical_surfaces.s4_optical_surface import S4OpticalSurface
 
+from shadow4.tools.logger import is_verbose, is_debug
+
+import logging
+
 class S4Conic(S4OpticalSurface):
     """
     Class to manage conic optical surfaces [expressed as a quadratoc polynomial].
@@ -295,7 +299,7 @@ class S4Conic(S4OpticalSurface):
     #
     @classmethod
     def initialize_as_sphere_from_focal_distances(cls, p, q, theta_grazing,
-                                                  cylindrical=0, cylangle=0.0, switch_convexity=0, verbose=1):
+                                                  cylindrical=0, cylangle=0.0, switch_convexity=0):
         """
         Creates an instance of S4Conic representing a sphere from factory parameters (p, q, theta).
 
@@ -313,8 +317,6 @@ class S4Conic(S4OpticalSurface):
             For cylindrical=1, the angle of the cylinder axis with the X axis (CCW).
         switch_convexity : int, optional
             Flag to indicate that the convexity os inverted.
-        verbose : int, optional
-            Flag for verbose output.
 
         Returns
         -------
@@ -325,8 +327,8 @@ class S4Conic(S4OpticalSurface):
         theta = (numpy.pi / 2) - theta_grazing
         rmirr = p * q * 2 / numpy.cos(theta) / (p + q)
 
-        if verbose:
-            txt = ""
+        if is_verbose():
+            txt = "\n"
             txt += "p=%f, q=%f, theta_grazing=%f rad, theta_normal=%f rad\n" % (p, q, theta_grazing, theta)
             txt += "Radius= %f \n" % (rmirr)
             print(txt)
@@ -350,7 +352,7 @@ class S4Conic(S4OpticalSurface):
     @classmethod
     def initialize_as_ellipsoid_from_focal_distances(cls, p, q, theta1,
                                                      cylindrical=0, cylangle=0.0, switch_convexity=0,
-                                                     method=1, verbose=1):
+                                                     method=1):
         """
         Creates an instance of S4Conic representing an ellipsoid from factory parameters (p, q, theta).
 
@@ -368,8 +370,6 @@ class S4Conic(S4OpticalSurface):
             For cylindrical=1, the angle of the cylinder axis with the X axis (CCW).
         switch_convexity : int, optional
             Flag to indicate that the convexity os inverted.
-        verbose : int, optional
-            Flag for verbose output.
         method : int, optional
             See reference, 0: use Table 5, 1: use table 4.
 
@@ -416,8 +416,8 @@ class S4Conic(S4OpticalSurface):
                     0,
                     2 * (n[2] * X[2] + b_over_a_square * n[1] * X[1]),
                     0]
-            if verbose:
-                txt = ""
+            if is_verbose():
+                txt = "\n"
                 txt += "p=%f, q=%f, theta_grazing=%f rad, theta_normal=%f rad\n" % (p, q, theta1, numpy.pi - theta1)
                 txt += 'Ellipsoid of revolution a=%f \n'%a
                 txt += 'Ellipsoid of revolution b=%f \n'%b
@@ -426,13 +426,14 @@ class S4Conic(S4OpticalSurface):
                 txt += 'Optical element center at: [%f,%f,%f]\n'%(X[0], X[1], X[2])
                 txt += 'Optical element normal: [%f,%f,%f]\n'%(n[0], n[1], n[2])
                 print(txt)
+                # raise Exception
         conic = S4Conic(ccc=numpy.array(ccc))
         return cls._transform_conic(conic, cylindrical, cylangle, switch_convexity)
 
     @classmethod
     def initialize_as_paraboloid_from_focal_distances(cls, p, q, theta1,
                                                       cylindrical=0, cylangle=0.0, switch_convexity=0,
-                                                      method=1, verbose=1):
+                                                      method=1):
         """
         Creates an instance of S4Conic representing a paraboloid from factory parameters (p, q, theta).
 
@@ -450,8 +451,6 @@ class S4Conic(S4OpticalSurface):
             For cylindrical=1, the angle of the cylinder axis with the X axis (CCW).
         switch_convexity : int, optional
             Flag to indicate that the convexity os inverted.
-        verbose : int, optional
-            Flag for verbose output.
         method : int, optional
             See reference, 0: use Table 5, 1: use table 4.
 
@@ -504,8 +503,8 @@ class S4Conic(S4OpticalSurface):
 
             ccc = [1, n[2] ** 2, n[1] ** 2, 0, 2 * n[1] * n[2], 0, 0, 0, -4 * a_p / n[2], 0]
 
-            if verbose:
-                txt = ""
+            if is_verbose():
+                txt = "\n"
                 if p > q:
                     txt += "Source is at infinity\n"
                     txt += "q=%f, theta_grazing=%f rad, theta_normal=%f rad\n" % (q, theta1, numpy.pi - theta1)
@@ -524,7 +523,7 @@ class S4Conic(S4OpticalSurface):
     @classmethod
     def initialize_as_hyperboloid_from_focal_distances(cls, p, q, theta1,
                                                        cylindrical=0, cylangle=0.0, switch_convexity=0,
-                                                       method=0, verbose=1):
+                                                       method=0):
         """
         Creates an instance of S4Conic representing a hyperboloid from factory parameters (p, q, theta).
 
@@ -542,8 +541,6 @@ class S4Conic(S4OpticalSurface):
             For cylindrical=1, the angle of the cylinder axis with the X axis (CCW).
         switch_convexity : int, optional
             Flag to indicate that the convexity os inverted.
-        verbose : int, optional
-            Flag for verbose output.
         method : int, optional
             See reference, 0: use Table 5, 1: use table 4.
 
@@ -593,8 +590,8 @@ class S4Conic(S4OpticalSurface):
                     0,
                     2 * (n[2] * X[2] - b_over_a_square * n[1] * X[1]),
                     0]
-            if verbose:
-                txt = ""
+            if is_verbose():
+                txt = "\n"
                 txt += "p=%f, q=%f, theta_grazing=%f rad, theta_normal=%f rad\n" % (p, q, theta1, numpy.pi - theta1)
                 txt += 'Hyperboloid of revolution a=%f \n' % a
                 txt += 'Hyperboloid of revolution b=%f \n' % b
@@ -1068,7 +1065,7 @@ if __name__ == "__main__":
     from srxraylib.plot.gol import set_qt
     set_qt()
 
-    if True:
+    if False:
         ccc = S4Conic.initialize_as_plane()
         x2 = numpy.zeros((3,10))
         print("plane: ", ccc.get_normal(x2))
@@ -1084,7 +1081,7 @@ if __name__ == "__main__":
         ccc = S4Conic.initialize_as_sphere_from_external_parameters(-1000.0)
         x2 = numpy.zeros((3,10))
         print("R=-1000: ", ccc.get_normal(x2))
-    if True:
+    if False:
         p = 13.73 + 13.599
         q = 2.64
         theta1 = 0.02181
@@ -1126,7 +1123,7 @@ if __name__ == "__main__":
             print(ccc.get_coefficients()[i], ccc2.get_coefficients()[i])
 
 
-    if True:
+    if False:
         p = 40.0
         q = 10.0
         theta1 = 0.003
@@ -1146,11 +1143,11 @@ if __name__ == "__main__":
         ccc.write_mesh_file(x, y,   filename="/tmp/mirror111.dat")
         ccc.write_mesh_h5file(x, y, filename="/tmp/mirror111.h5")
 
-    if True:
+    if False:
         a = S4Conic.initialize_as_sphere_from_external_parameters(100)
         print(a.info())
 
-    if True:
+    if False:
         ccc = S4Conic.initialize_as_hyperboloid_from_focal_distances(10.0, 3.0, 0.003, cylindrical=0, cylangle=0.0, switch_convexity=0)
         c = ccc.get_coefficients()
         print(c)
@@ -1172,7 +1169,7 @@ if __name__ == "__main__":
 
     # check method 0: Goldberg&Sanchez del Rio, 1: Sanchez del Rio&Goldberg.
     # shape = 2 # 0=parabola, 1=ellipse, 2=hyperbola
-    if True:
+    if False:
         ntimes = 100
         for shape in [0,1,2]:
             for i in range(ntimes):
@@ -1189,32 +1186,32 @@ if __name__ == "__main__":
                                                                                cylindrical=0, cylangle=0.0,
                                                                                switch_convexity=0,
                                                                                method=0, #0: Goldberg&Sanchez del Rio, 1: Sanchez del Rio&Goldberg.
-                                                                               verbose=1)
+                                                                               )
                     print(conic.get_coefficients())
 
                     ccc = S4Conic.initialize_as_paraboloid_from_focal_distances(p, q, theta1,
                                                                                cylindrical=0, cylangle=0.0,
                                                                                switch_convexity=0,
                                                                                method=1, #0: Goldberg&Sanchez del Rio, 1: Sanchez del Rio&Goldberg.
-                                                                               verbose=1)
+                                                                               )
                 elif shape == 1:
                     conic = S4Conic.initialize_as_ellipsoid_from_focal_distances(p, q, theta1,
                                                                                cylindrical=0, cylangle=0.0, switch_convexity=0,
-                                                                               method=0, verbose=1)
+                                                                               method=0)
                     print(conic.get_coefficients())
 
                     ccc = S4Conic.initialize_as_ellipsoid_from_focal_distances(p, q, theta1,
                                                                                cylindrical=0, cylangle=0.0, switch_convexity=0,
-                                                                               method=1, verbose=1)
+                                                                               method=1)
                 elif shape == 2:
                     conic = S4Conic.initialize_as_hyperboloid_from_focal_distances(p, q, theta1,
                                                                                cylindrical=0, cylangle=0.0, switch_convexity=0,
-                                                                               method=0, verbose=1)
+                                                                               method=0)
                     print(conic.get_coefficients())
 
                     ccc = S4Conic.initialize_as_hyperboloid_from_focal_distances(p, q, theta1,
                                                                                cylindrical=0, cylangle=0.0, switch_convexity=0,
-                                                                               method=1, verbose=1)
+                                                                               method=1)
 
 
                 print(ccc.get_coefficients() * conic.get_coefficients()[0])
@@ -1232,3 +1229,20 @@ if __name__ == "__main__":
 
 
                 print(conic.info())
+
+
+    if True:
+        from shadow4.tools.logger import set_verbose, set_debug
+        p = 13.73 + 13.599
+        q = 2.64
+        theta1 = 0.02181
+        # set_verbose(1)
+        ccc = S4Conic.initialize_as_ellipsoid_from_focal_distances(p, q, theta1, cylindrical=0, cylangle=0.0, switch_convexity=0)
+        print("Done 1")
+        set_verbose(1)
+        ccc = S4Conic.initialize_as_ellipsoid_from_focal_distances(p, q, theta1, cylindrical=0, cylangle=0.0, switch_convexity=0)
+        print("Done 2")
+        set_debug(1)
+        ccc = S4Conic.initialize_as_ellipsoid_from_focal_distances(p, q, theta1, cylindrical=0, cylangle=0.0, switch_convexity=0)
+        print("Done 3")
+

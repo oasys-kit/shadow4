@@ -16,6 +16,7 @@ from shadow4.beam.s4_beam import S4Beam
 from shadow4.sources.s4_light_source import S4LightSource
 
 from shadow4.tools.arrayofvectors import vector_cross, vector_norm
+from shadow4.tools.logger import is_verbose, is_debug
 
 from shadow4.tools.sync_f_sigma_and_pi import sync_f_sigma_and_pi
 import time
@@ -58,7 +59,7 @@ class S4BendingMagnetLightSource(S4LightSource):
                        EPSI_DZ=0.0,
                        psi_interval_in_units_one_over_gamma=None,
                        psi_interval_number_of_points=1001,
-                       verbose=False):
+                       ):
         """
         Creates the beam as emitted by the bending magnet.
 
@@ -75,8 +76,6 @@ class S4BendingMagnetLightSource(S4LightSource):
             If None, it is calculated automatically.
         psi_interval_number_of_points : int, optional
             The number of points for the vertical divergency scan.
-        verbose : int, optional
-            set to 1 for verbose output.
 
         Returns
         -------
@@ -87,7 +86,7 @@ class S4BendingMagnetLightSource(S4LightSource):
                                                                   EPSI_DZ=EPSI_DZ,
                                                                   psi_interval_in_units_one_over_gamma=psi_interval_in_units_one_over_gamma,
                                                                   psi_interval_number_of_points=psi_interval_number_of_points,
-                                                                  verbose=verbose))
+                                                                  ))
 
 
     def get_info(self):
@@ -120,7 +119,7 @@ class S4BendingMagnetLightSource(S4LightSource):
                          EPSI_DZ=0.0,
                          psi_interval_in_units_one_over_gamma=None,
                          psi_interval_number_of_points=1001,
-                         verbose=0):
+                         ):
         #
         # compute the rays in SHADOW matrix (shape (npoints,18) )
         #
@@ -154,8 +153,8 @@ class S4BendingMagnetLightSource(S4LightSource):
             if psi_interval_in_units_one_over_gamma < 2:
                 psi_interval_in_units_one_over_gamma = 2
 
-        if verbose:
-            print(">>> psi_interval_in_units_one_over_gamma: ",psi_interval_in_units_one_over_gamma)
+        if is_verbose():
+            print("    psi_interval_in_units_one_over_gamma: ",psi_interval_in_units_one_over_gamma)
 
 
         angle_array_mrad = numpy.linspace(-0.5 * psi_interval_in_units_one_over_gamma * 1e3 / gamma,
@@ -173,9 +172,9 @@ class S4BendingMagnetLightSource(S4LightSource):
         t1 = time.time()
 
         if self.get_magnetic_structure().is_monochromatic():
-            if verbose:
-                print(">>> calculate_rays: is monochromatic")
-                print(">>> calculate_rays: (s) E=%f GeV, I=%f A, D=%f mrad, R=%f m, PhE=%f eV, Ec=%f eV, PhE/Ec=%f "% ( \
+            if is_verbose():
+                print("    calculate_rays: is monochromatic")
+                print("    calculate_rays: (s) E=%f GeV, I=%f A, D=%f mrad, R=%f m, PhE=%f eV, Ec=%f eV, PhE/Ec=%f "% ( \
                     self.get_electron_beam().energy(),
                     self.get_electron_beam().current(),
                     (HDIV1 + HDIV2) * 1e3,
@@ -203,7 +202,7 @@ class S4BendingMagnetLightSource(S4LightSource):
             angular_distribution_s *= eene**2 * a8 * i_a * hdiv_mrad * e_gev**2
             angular_distribution_p *= eene**2 * a8 * i_a * hdiv_mrad * e_gev**2
 
-            if verbose:
+            if is_verbose():
                 from srxraylib.plot.gol import plot
                 plot(angle_array_mrad,angular_distribution_s,
                      angle_array_mrad,angular_distribution_p,
@@ -212,9 +211,9 @@ class S4BendingMagnetLightSource(S4LightSource):
             t3 = time.time()
             sampler_angle = Sampler1D(angular_distribution_s + angular_distribution_p, angle_array_mrad * 1e-3)
 
-            if verbose: print(">>> calculate_rays: get_n_sampled_points (angle)")
+            if is_verbose(): print("    calculate_rays: get_n_sampled_points (angle)")
             sampled_angle = sampler_angle.get_n_sampled_points(NRAYS)
-            if verbose: print(">>> calculate_rays: DONE get_n_sampled_points (angle)  %d points"%(sampled_angle.size))
+            if is_verbose(): print("    calculate_rays: DONE get_n_sampled_points (angle)  %d points"%(sampled_angle.size))
 
             sampled_photon_energy = numpy.zeros_like(sampled_angle) + self.get_magnetic_structure()._EMIN
 
@@ -257,9 +256,9 @@ class S4BendingMagnetLightSource(S4LightSource):
             self.fm_s = fm_s
             self.fm_p = fm_p
 
-            if verbose:
+            if is_verbose():
                 print(angle_array_mrad.shape, photon_energy_array.shape, fm_s.shape, fm_p.shape)
-                print(">>> DONE : calculating energy distribution",photon_energy_array.shape,fm.shape)
+                print("    DONE : calculating energy distribution",photon_energy_array.shape,fm.shape)
                 from srxraylib.plot.gol import plot,plot_image
                 plot(photon_energy_array, fm[fm.shape[0] // 2, :],
                      xtitle="Energy / eV", ytitle="Flux at zero elevation")
@@ -361,7 +360,7 @@ class S4BendingMagnetLightSource(S4LightSource):
                 E_BEAMZZZ_array[itik] = ZZZ
 
 
-            if verbose:
+            if is_verbose():
                 from srxraylib.plot.gol import plot_scatter
                 plot_scatter(E_BEAMXXX_array,E_BEAM1_array,title="sampled electron X Xp")
                 plot_scatter(E_BEAMZZZ_array,E_BEAM3_array,title="sampled electron Z Zp")
@@ -587,7 +586,7 @@ class S4BendingMagnetLightSource(S4LightSource):
         rays[:, 14] = PHASEZ
         t7 = time.time()
 
-        if verbose:
+        if is_verbose():
             print("------------ timing---------")
 
             t = t7-t0

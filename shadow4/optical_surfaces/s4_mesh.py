@@ -18,6 +18,7 @@ from shadow4.tools.arrayofvectors import vector_modulus_square, vector_norm
 from shadow4.beam.s4_beam import S4Beam
 
 from shadow4.tools.arrayofvectors import vector_reflection
+from shadow4.tools.logger import is_verbose, is_debug
 
 class S4Mesh(S4OpticalSurface):
     """
@@ -202,7 +203,7 @@ class S4Mesh(S4OpticalSurface):
         """
         npoints = XIN.shape[1]
 
-        print("\n\n>>>>> main loop to find solutions")
+        if is_debug(): print("\n\n>>>>> main loop to find solutions")
         t0 = time.time()
 
         self.__x0 = XIN
@@ -214,7 +215,7 @@ class S4Mesh(S4OpticalSurface):
         i_flag[numpy.where(success == False)] = -1
 
         t1 = time.time()
-        print(">>>>> done main loop to find solutions, spent: %g s for %d rays (%g ms/ray)\n\n" % (t1 - t0, npoints, 1000 * (t1 - t0) / npoints))
+        if is_debug(): print(">>>>> done main loop to find solutions, spent: %g s for %d rays (%g ms/ray)\n\n" % (t1 - t0, npoints, 1000 * (t1 - t0) / npoints))
 
         return answer, i_flag
 
@@ -262,7 +263,7 @@ class S4Mesh(S4OpticalSurface):
                                                                               self._mesh_z.shape[1]))
             self._mesh_z += z1
         else:
-            print(">>>>Entered data type: ", type(z1) )
+            if is_debug(): print(">>>>Entered data type: ", type(z1) )
             raise ValueError("Entry type not supported")
 
         self._calculate_surface_from_mesh()

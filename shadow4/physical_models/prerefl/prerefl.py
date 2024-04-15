@@ -8,6 +8,7 @@ TODO: vectorization
 
 import numpy
 import scipy.constants as codata
+from shadow4.tools.logger import is_verbose, is_debug
 
 tocm = codata.h * codata.c / codata.e * 1e2 # 12398.419739640718e-8
 
@@ -45,7 +46,7 @@ class PreRefl(object):
 
         self.prerefl_dict = {"QMIN":QMIN,"QMAX":QMAX,"QSTEP":QSTEP,"DEPTH0":DEPTH0,"NREFL":NREFL,"ZF1":ZF1,"ZF2":ZF2}
 
-    def preprocessor_info(self,verbose=False):
+    def preprocessor_info(self):
 
         print("\n========================================")
         print("         preprocesor PreRefl info         ")
@@ -62,7 +63,7 @@ class PreRefl(object):
     def info(self):
         return self.preprocessor_info()
 
-    def get_refraction_index(self,energy1,verbose=False):
+    def get_refraction_index(self,energy1):
 
         wnum = 2*numpy.pi * energy1 / tocm
 
@@ -90,7 +91,7 @@ class PreRefl(object):
 
         refraction_index = (1.0 - ALFA / 2) + (GAMMA / 2)*1j
 
-        if verbose:
+        if is_verbose():
             print("   prerefl_test: calculates refraction index for a given energy")
             print("                 using a file created by the prerefl preprocessor.")
             print("   \n")
@@ -112,8 +113,8 @@ class PreRefl(object):
 
         return refraction_index
 
-    def get_attenuation_coefficient(self,energy1,verbose=False):
-        refraction_index = self.get_refraction_index(energy1,verbose=verbose)
+    def get_attenuation_coefficient(self,energy1):
+        refraction_index = self.get_refraction_index(energy1)
         wnum = 2 * numpy.pi * energy1 / tocm
 
         return 2*refraction_index.imag*wnum
@@ -516,7 +517,7 @@ if __name__ == "__main__":
 
         a.read_preprocessor_file(prerefl_file)
 
-        refraction_index = a.get_refraction_index(10000.0,verbose=True)
+        refraction_index = a.get_refraction_index(10000.0)
 
         a.preprocessor_info()
 
@@ -631,7 +632,7 @@ if __name__ == "__main__":
 
         a = PreRefl()
         a.read_preprocessor_file(prerefl_file)
-        a.get_refraction_index(110.0, verbose=1)
+        a.get_refraction_index(110.0)
 
         RS0 = numpy.zeros_like(Energy)
 
@@ -658,7 +659,7 @@ if __name__ == "__main__":
         except:
             print("Please install xoppylib (to be avoided)")
 
-        aa = f1f2_calc("Au", Energy, theta=grazing_angle_mrad*1e-3, F=8, density=None, rough=0.0, verbose=True,
+        aa = f1f2_calc("Au", Energy, theta=grazing_angle_mrad*1e-3, F=8, density=None, rough=0.0,
                        material_constants_library=xraylib)
         print(aa.shape)
         plot(Energy,RS0,
@@ -732,7 +733,7 @@ if __name__ == "__main__":
         print("Energies: ", energies)
         for energy in energies:
             print(
-                a.get_attenuation_coefficient(energy, verbose=1))
+                a.get_attenuation_coefficient(energy))
 
         tmp_xrl = PreRefl.get_attenuation_coefficient_external_xraylib(
                                           photon_energy_ev=numpy.array((2000, 3000, 4000, 4000)),

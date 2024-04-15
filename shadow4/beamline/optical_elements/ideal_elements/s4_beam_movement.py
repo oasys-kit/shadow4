@@ -5,6 +5,7 @@ from shadow4.beam.s4_beam import S4Beam
 from shadow4.beamline.s4_optical_element_decorators import S4OpticalElementDecorator
 from shadow4.beamline.s4_beamline_element import S4BeamlineElement
 from shadow4.beam.s4_beam import S4Beam
+from shadow4.tools.logger import is_verbose, is_debug
 
 class S4BeamMovement(OpticalElement, S4OpticalElementDecorator):
     def __init__(self, name="Undefined",
@@ -108,19 +109,19 @@ class S4BeamMovementElement(S4BeamlineElement):
         oe = self.get_optical_element()
 
         if oe.apply_flag:
-            if verbose:
+            if is_verbose():
                 print("Beam translated [%f,%f,%f] um" % (1e6 * oe.translation_x,
                                                          1e6 * oe.translation_y,
                                                          1e6 * oe.translation_z, ))
             input_beam.translation([oe.translation_x, oe.translation_y, oe.translation_z])
             if oe.rotation_x != 0.0:
-                if verbose: print("Beam rotated %f urad along X" % (1e6 * self.rotation_x))
+                if is_verbose(): print("Beam rotated %f urad along X" % (1e6 * self.rotation_x))
                 input_beam.rotate(oe.rotation_x, axis=1, rad=True)
             if oe.rotation_y != 0.0:
-                if verbose: print("Beam rotated %f urad along Y" % (1e6 * oe.rotation_y))
+                if is_verbose(): print("Beam rotated %f urad along Y" % (1e6 * oe.rotation_y))
                 input_beam.rotate(oe.rotation_y, axis=2, rad=True)
             if oe.rotation_z != 0.0:
-                if verbose: print("Beam rotated %f urad along Z" % (1e6 * oe.rotation_z))
+                if is_verbose(): print("Beam rotated %f urad along Z" % (1e6 * oe.rotation_z))
                 input_beam.rotate(oe.rotation_z, axis=3, rad=True)
 
         #

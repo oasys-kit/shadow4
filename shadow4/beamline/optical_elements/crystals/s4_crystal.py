@@ -24,6 +24,8 @@ from crystalpy.diffraction.PerfectCrystalDiffraction import PerfectCrystalDiffra
 from shadow4.optical_surfaces.s4_mesh import S4Mesh
 from shadow4.optical_surfaces.s4_toroid import S4Toroid
 
+from shadow4.tools.logger import is_verbose, is_debug
+
 import scipy.constants as codata
 
 class S4Crystal(Crystal):
@@ -281,7 +283,7 @@ class S4CrystalElement(S4BeamlineElement):
         coor = self.get_coordinates()
 
         if oe._material_constants_library_flag == 0:
-            print("\nCreating a diffraction setup (XRAYLIB) for material:", oe._material)
+            if is_verbose(): print("\nCreating a diffraction setup (XRAYLIB) for material:", oe._material)
             diffraction_setup = DiffractionSetupXraylib(geometry_type=BraggDiffraction(),  # todo: use oe._diffraction_geometry
                                                  crystal_name=oe._material,  # string
                                                  thickness=oe._thickness,  # meters
@@ -291,7 +293,7 @@ class S4CrystalElement(S4BeamlineElement):
                                                  asymmetry_angle=oe._asymmetry_angle,                            # radians
                                                  azimuthal_angle=0.0)
         elif oe._material_constants_library_flag == 1:
-            print("\nCreating a diffraction setup (DABAX) for material:", oe._material)
+            if is_verbose(): print("\nCreating a diffraction setup (DABAX) for material:", oe._material)
             diffraction_setup = DiffractionSetupDabax(geometry_type=BraggDiffraction(),  # todo: use oe._diffraction_geometry
                                                  crystal_name=oe._material,  # string
                                                  thickness=oe._thickness,  # meters
@@ -301,7 +303,7 @@ class S4CrystalElement(S4BeamlineElement):
                                                  asymmetry_angle=oe._asymmetry_angle,  # radians
                                                  azimuthal_angle=0.0)
         elif oe._material_constants_library_flag == 2:
-            print("\nCreating a diffraction setup (shadow preprocessor file V1)...")
+            if is_verbose(): print("\nCreating a diffraction setup (shadow preprocessor file V1)...")
             diffraction_setup = DiffractionSetupShadowPreprocessorV1(geometry_type=BraggDiffraction(),  # todo: use oe._diffraction_geometry
                                                  crystal_name=oe._material,            # string
                                                  thickness=oe._thickness,              # meters
@@ -312,7 +314,7 @@ class S4CrystalElement(S4BeamlineElement):
                                                  azimuthal_angle=0.0,
                                                  preprocessor_file=oe._file_refl)
         elif oe._material_constants_library_flag == 3:
-            print("\nCreating a diffraction setup (shadow preprocessor file V2)...")
+            if is_verbose(): print("\nCreating a diffraction setup (shadow preprocessor file V2)...")
             diffraction_setup = DiffractionSetupShadowPreprocessorV2(geometry_type=BraggDiffraction(),  # todo: use oe._diffraction_geometry
                                                  crystal_name=oe._material,            # string
                                                  thickness=oe._thickness,              # meters
@@ -327,15 +329,9 @@ class S4CrystalElement(S4BeamlineElement):
 
         self._crystalpy_diffraction_setup = diffraction_setup
 
-    def align_crystal(self, verbose=True):
+    def align_crystal(self):
         """
         Sets the adequate incident and reflection angles to match the tuning energy.
-
-        Parameters
-        ----------
-        verbose : boolean, optional
-            Set this keyword to print debugging/verbose information.
-
         """
         oe = self.get_optical_element()
         coor = self.get_coordinates()
@@ -352,29 +348,29 @@ class S4CrystalElement(S4BeamlineElement):
             setting_angle = self._crystalpy_diffraction_setup.angleBraggCorrected(energy)
             theta_in_grazing  = setting_angle + oe._asymmetry_angle
 
-            if verbose:
-                print(">>>>> align_crystal: dSpacingSI: " , (self._crystalpy_diffraction_setup.dSpacingSI()))
-                print(">>>>> align_crystal: Bragg angle (uncorrected) for E=%f eV is %f deg" % (energy, numpy.degrees(self._crystalpy_diffraction_setup.angleBragg(energy))))
-                print(">>>>> align_crystal: Bragg angle (corrected) for E=%f eV is %f deg" % (energy, numpy.degrees(setting_angle)))
-                print(">>>>> align_crystal: (normal) Incident   angle",  numpy.degrees(numpy.pi/2 - (theta_in_grazing ) ))
-                print(">>>>> align_crystal: grazing incident angle: ", numpy.degrees(theta_in_grazing ))
+            if is_verbose():
+                print("    align_crystal: dSpacingSI: " , (self._crystalpy_diffraction_setup.dSpacingSI()))
+                print("    align_crystal: Bragg angle (uncorrected) for E=%f eV is %f deg" % (energy, numpy.degrees(self._crystalpy_diffraction_setup.angleBragg(energy))))
+                print("    align_crystal: Bragg angle (corrected) for E=%f eV is %f deg" % (energy, numpy.degrees(setting_angle)))
+                print("    align_crystal: (normal) Incident   angle",  numpy.degrees(numpy.pi/2 - (theta_in_grazing ) ))
+                print("    align_crystal: grazing incident angle: ", numpy.degrees(theta_in_grazing ))
 
                 theta_out_grazing = setting_angle - oe._asymmetry_angle # wrong because this just applies the Laue equation
-                print(">>>>> align_crystal: (normal) Reflection angle [LAUE EQUATION]",  numpy.degrees(numpy.pi/2 - (theta_out_grazing) ))
-                print(">>>>> align_crystal: grazing output angle [LAUE EQUATION]: ", numpy.degrees(theta_out_grazing))
+                print("    align_crystal: (normal) Reflection angle [LAUE EQUATION]",  numpy.degrees(numpy.pi/2 - (theta_out_grazing) ))
+                print("    align_crystal: grazing output angle [LAUE EQUATION]: ", numpy.degrees(theta_out_grazing))
 
 
             KIN = self._crystalpy_diffraction_setup.vectorKscattered(energy=energy)
             theta_out = KIN.angle(self._crystalpy_diffraction_setup.vectorNormalSurface())
-            if verbose: print(">>>>> align_crystal: (normal) Reflection angle [SCATTERING EQUATION]: ", numpy.degrees(theta_out))
+            if is_verbose(): print("    align_crystal: (normal) Reflection angle [SCATTERING EQUATION]: ", numpy.degrees(theta_out))
             _,_,angle_azimuthal = coor.get_angles()
             coor.set_angles(angle_radial=    numpy.pi/2 - theta_in_grazing ,
                             angle_radial_out=theta_out,
                             angle_azimuthal=angle_azimuthal)
         else:
-            if verbose: print("align_crystal: nothing to align: f_central=0")
+            if is_verbose(): print("align_crystal: nothing to align: f_central=0")
 
-        if verbose: print(coor.info())
+        if is_verbose(): print(coor.info())
 
     def trace_beam(self, **params):
         """

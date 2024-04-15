@@ -13,6 +13,7 @@ import time
 from shadow4.tools.arrayofvectors import vector_reflection, vector_refraction, vector_scattering
 from shadow4.tools.arrayofvectors import vector_cross, vector_dot, vector_multiply_scalar, vector_sum, vector_diff
 from shadow4.tools.arrayofvectors import vector_modulus_square, vector_modulus, vector_norm, vector_rotate_around_axis
+from shadow4.tools.logger import is_verbose, is_debug
 
 class S4OpticalSurface(object):
 
@@ -136,8 +137,8 @@ class S4OpticalSurface(object):
 
         if apply_attenuation:
             att1 = numpy.sqrt(numpy.exp(-numpy.abs(t) * linear_attenuation_coefficient))
-            print(">>> mu (object space): ", linear_attenuation_coefficient)
-            print(">>> attenuation of amplitudes (object space): ", att1)
+            if is_debug(): print(">>> mu (object space): ", linear_attenuation_coefficient)
+            if is_debug(): print(">>> attenuation of amplitudes (object space): ", att1)
             newbeam.rays[:, 7 - 1 ] *= att1
             newbeam.rays[:, 8 - 1 ] *= att1
             newbeam.rays[:, 9 - 1 ] *= att1
@@ -323,7 +324,7 @@ class S4OpticalSurface(object):
         print("File %s written to disk." % filename)
 
     @classmethod
-    def write_shadow_surface(cls, s, xx, yy, outFile='presurface.dat', verbose=1):
+    def write_shadow_surface(cls, s, xx, yy, outFile='presurface.dat'):
         """
         Writes a mesh in the SHADOW3/presurface format
 
@@ -337,8 +338,6 @@ class S4OpticalSurface(object):
             The array with the Y spatial coordinates (tangential, along mirror length.) in m.
         outFile : str, optional
             The file name (for output).
-        verbose : int, optional
-            Set to 1 for verbose output.
 
         Returns
         -------
@@ -370,7 +369,7 @@ class S4OpticalSurface(object):
                 fs.write(' ' + repr(xx[i]) + " " + tmps)
                 fs.write("\n")
             fs.close()
-            if verbose: print("write_shadow_surface: File for SHADOW " + outFile + " written to disk.")
+            if is_verbose(): print("write_shadow_surface: File for SHADOW " + outFile + " written to disk.")
         return out
 
 if __name__ == "__main__":

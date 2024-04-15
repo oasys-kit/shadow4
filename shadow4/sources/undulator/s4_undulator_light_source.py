@@ -26,6 +26,8 @@ from shadow4.tools.arrayofvectors import vector_cross, vector_norm
 
 from shadow4.sources.undulator.s4_undulator_gaussian_light_source import S4UndulatorGaussianLightSource # to get q_a and q_s
 
+from shadow4.tools.logger import is_verbose, is_debug
+
 INTEGRATION_METHOD = 1 # 0=sum, 1=trapz
 
 class S4UndulatorLightSource(S4LightSource):
@@ -68,7 +70,7 @@ class S4UndulatorLightSource(S4LightSource):
 
 
 
-    def get_beam(self, F_COHER=0, verbose=1):
+    def get_beam(self, F_COHER=0):
         """
         Creates the beam as emitted by the undulator.
 
@@ -76,8 +78,6 @@ class S4UndulatorLightSource(S4LightSource):
         ----------
         F_COHER : int, optional
             A flag to indicate that the phase for the s-component is set to zero (coherent_beam=1) or is random for incoherent.
-        verbose : int, optional
-            Set to 1 for verbose output.
 
         Returns
         -------
@@ -85,7 +85,7 @@ class S4UndulatorLightSource(S4LightSource):
         """
 
         return S4Beam.initialize_from_array(self.__calculate_rays(
-            user_unit_to_m=1.0, F_COHER=F_COHER, verbose=verbose))
+            user_unit_to_m=1.0, F_COHER=F_COHER))
 
 
     def get_resonance_ring(self, harmonic_number=1, ring_order=1):
@@ -106,7 +106,7 @@ class S4UndulatorLightSource(S4LightSource):
         return 1.0 / self.get_electron_beam().gamma() * numpy.sqrt(
             ring_order / harmonic_number * (1 + 0.5 * self.get_magnetic_structure().K_vertical()**2))
 
-    def set_energy_monochromatic_at_resonance(self, harmonic_number=1, verbose=1):
+    def set_energy_monochromatic_at_resonance(self, harmonic_number=1):
         """
         Sets the undulator to a resonance photon energy.
 
@@ -123,13 +123,12 @@ class S4UndulatorLightSource(S4LightSource):
         e_res = u.resonance_energy(e.gamma(), harmonic=harmonic_number)
         maxangle = 3 * 0.69 * u.gaussian_central_cone_aperture(e.gamma(), harmonic_number) # take 3*sigma - _MAXANGLE is in RAD  TODO: why 0.69??
 
-        if verbose:
-            print(">>> Setting monochromatic: n=%d, e0=%f eV, maxangle=%f urad" % (harmonic_number, e_res, 1e6 * maxangle))
+        if is_debug(): print(">>> Setting monochromatic: n=%d, e0=%f eV, maxangle=%f urad" % (harmonic_number, e_res, 1e6 * maxangle))
 
         u.set_energy_monochromatic(e_res)
         u.set_maxangle(maxangle)
 
-    def set_energy_at_resonance(self, harmonic_number=1, delta_e=0.0, verbose=1):
+    def set_energy_at_resonance(self, harmonic_number=1, delta_e=0.0):
         """
         Sets the undulator to a resonance photon energy.
 
@@ -149,8 +148,7 @@ class S4UndulatorLightSource(S4LightSource):
         e0 = u.resonance_energy(e.gamma(), harmonic=harmonic_number)
         maxangle = 3 * 0.69 * u.gaussian_central_cone_aperture(e.gamma(), harmonic_number) # take 3*sigma - _MAXANGLE is in RAD  TODO: why 0.69??
 
-        if verbose:
-            print(">>> Setting monochromatic: n=%d, e0=%f eV, maxangle=%f urad" % (harmonic_number, e0, 1e6 * maxangle))
+        if is_debug(): print(">>> Setting monochromatic: n=%d, e0=%f eV, maxangle=%f urad" % (harmonic_number, e0, 1e6 * maxangle))
 
         u.set_energy_box(e0 - delta_e / 2, e0 + delta_e / 2)
         u.set_maxangle(3 * 0.69 * u.gaussian_central_cone_aperture(e.gamma(), harmonic_number)) # take 3*sigma - _MAXANGLE is in RAD  TODO: why 0.69??
@@ -525,12 +523,13 @@ class S4UndulatorLightSource(S4LightSource):
             harmonic_number = int(sampled_photon_energy.mean() / undulator.resonance_energy(e.gamma(), harmonic=1))
             x = 2 * numpy.pi * harmonic_number * undulator.number_of_periods() * e._energy_spread
             q_s = S4UndulatorGaussianLightSource.q_s(x, factor=0.5)
-            print(">>>>> energy spread correction x: %f; Qs(x)=%f" % (x, q_s))
-            print("      n=%d, N=%f, sigma_delta=%g; Normalized energy spread = %g" %
-                  (harmonic_number, undulator.number_of_periods(), e._energy_spread, x))
+            if is_debug():
+                print(">>>>> energy spread correction x: %f; Qs(x)=%f" % (x, q_s))
+                print("      n=%d, N=%f, sigma_delta=%g; Normalized energy spread = %g" %
+                      (harmonic_number, undulator.number_of_periods(), e._energy_spread, x))
         else:
             q_s = 1.0
-            print(">>>>> NO energy spread correction")
+            if is_debug(): print(">>>>> NO energy spread correction")
 
 
         if undulator._flag_size == 0:
@@ -650,7 +649,7 @@ class S4UndulatorLightSource(S4LightSource):
         return x_photon, y_photon, z_photon
 
 
-    def __calculate_rays(self, user_unit_to_m=1.0, F_COHER=0, verbose=1):
+    def __calculate_rays(self, user_unit_to_m=1.0, F_COHER=0):
         """
         compute the rays in SHADOW matrix (shape (npoints,18) )
 
@@ -659,8 +658,6 @@ class S4UndulatorLightSource(S4LightSource):
         user_unit_to_m
         F_COHER: float, optional
             set this flag for coherent beam.
-        verbose: float, optional
-            user_unit_to_m: default 1.0 (m).
 
         Returns
         -------
@@ -864,12 +861,13 @@ class S4UndulatorLightSource(S4LightSource):
                 harmonic_number = int(photon_energy.mean() / undulator.resonance_energy(e.gamma(), harmonic=1))
                 x = 2 * numpy.pi * harmonic_number * undulator.number_of_periods() * e._energy_spread
                 q_a = S4UndulatorGaussianLightSource.q_a(x)
-                print(">>>>> energy spread correction x: %f; Qa(x)=%f" % (x, q_a))
-                print("      n=%d, N=%f, sigma_delta=%g; Normalized energy spread = %g" %
-                      (harmonic_number, undulator.number_of_periods(), e._energy_spread, x))
+                if is_debug():
+                    print(">>>>> energy spread correction x: %f; Qa(x)=%f" % (x, q_a))
+                    print("      n=%d, N=%f, sigma_delta=%g; Normalized energy spread = %g" %
+                          (harmonic_number, undulator.number_of_periods(), e._energy_spread, x))
             else:
                 q_a = 1.0
-                print(">>>>> NO energy spread correction")
+                if is_debug(): print(">>>>> NO energy spread correction")
 
             #2D case
             tmp = self.__result_radiation["radiation"][0, :, :].copy()

@@ -17,6 +17,8 @@ from shadow4.sources.undulator.s4_undulator_gaussian import S4UndulatorGaussian
 from shadow4.sources.s4_light_source import S4LightSource
 from shadow4.sources.source_geometrical.source_gaussian import SourceGaussian
 
+from shadow4.tools.logger import is_verbose, is_debug
+
 class S4UndulatorGaussianLightSource(S4LightSource):
     """
     Defines an undulator light source and implements the mechanism of sampling rays.
@@ -198,14 +200,9 @@ class S4UndulatorGaussianLightSource(S4LightSource):
 
         return Energies, SizeH, SizeV, DivergenceH, DivergenceV, Labels
 
-    def get_beam(self, verbose=1):
+    def get_beam(self):
         """
         Creates the beam as emitted by the undulator.
-
-        Parameters
-        ----------
-        verbose : int, optional
-            Set to 1 for verbose output.
 
         Returns
         -------
@@ -258,7 +255,7 @@ class S4UndulatorGaussianLightSource(S4LightSource):
         txt += "    Sigma_x': %g urad \n" % (1e6 * Spx)
         txt += "    Sigma_z': %g urad \n" % (1e6 * Spz)
 
-        if verbose: print(txt)
+        if is_verbose(): print(txt)
 
         a = SourceGaussian.initialize_from_keywords(
                                                     sigmaX=Sx,
@@ -371,7 +368,7 @@ class S4UndulatorGaussianLightSource(S4LightSource):
         sp_phot = 0.69 * numpy.sqrt(lambda1 / undulator_length)
         return s_phot, sp_phot
 
-    def norm_energ_spr(self, harmonic_number=None, verbose=1):
+    def norm_energ_spr(self, harmonic_number=None):
         """
         Calculate the "normalized" electron energy spread: 2 pi * harmonic_number * n_periods * energy spread DE/E.
 
@@ -380,8 +377,6 @@ class S4UndulatorGaussianLightSource(S4LightSource):
         harmonic_number : int or None, optional
             the harmonic number to be used. If None, use the one define in S4GaussianUndulator, otherwise use the
             one defined here. It must be odd.
-        verbose : int, optional
-            Set to 1 for verbose output.
 
         Returns
         -------
@@ -401,7 +396,7 @@ class S4UndulatorGaussianLightSource(S4LightSource):
         if u.get_flag_energy_spread():
             e = self.get_electron_beam()
             out = 2 * numpy.pi * harmonic_number * u.number_of_periods() * e._energy_spread
-            if verbose:
+            if is_verbose():
                 print("n=%d, N=%f, sigma_delta=%g; Normalized energy spread = %g" %
                       (harmonic_number, u.number_of_periods(), e._energy_spread, out) )
             return out
@@ -412,7 +407,7 @@ class S4UndulatorGaussianLightSource(S4LightSource):
         x = self.norm_energ_spr(harmonic_number=harmonic_number)
         return self.q_a(x), self.q_s(x, factor=0.5)
 
-    def get_flux_central_cone(self, K=None, verbose=1):
+    def get_flux_central_cone(self, K=None):
         """
         Calculate the flux in the central code.
 
@@ -421,8 +416,6 @@ class S4UndulatorGaussianLightSource(S4LightSource):
         K : float or None, optional
             If None, K is calculated for the photon energy and harmonic_number defined in S4UndulatorGaussian.
             Otherwise, use the value defined here.
-        verbose : int, optional
-            Set to 1 for verbose output.
 
         Returns
         -------
@@ -449,7 +442,7 @@ class S4UndulatorGaussianLightSource(S4LightSource):
 
         out = (numpy.pi * codata.alpha * 1e-3 / codata.e * u.number_of_periods() * current * self.Qn(K, u._harmonic_number) )
 
-        if verbose:
+        if is_verbose():
             print("*** Flux Calculation ***")
             print("  Using target E=%f eV; n=%f periods, current=%f => K=%f" % (u._photon_energy, u._harmonic_number, current, K))
             print("  Calculated Flux: %g photons/s/0.1%%bw" % (out))
@@ -699,7 +692,7 @@ if __name__ == "__main__":
     #
     # if True:
     #     print(light_source.q_a(1.0))
-    #     nes = light_source.norm_energ_spr(verbose=1)
+    #     nes = light_source.norm_energ_spr()
     #     print("Normalized energy spread: ", nes )
     #     print("Qa: ", light_source.q_a(nes))
     #     print("Qs: ", light_source.q_s(nes, factor=0.5))

@@ -45,6 +45,8 @@ from shadow4.optical_surfaces.s4_conic import S4Conic
 from shadow4.optical_surfaces.s4_mesh import S4Mesh
 from shadow4.optical_surfaces.s4_toroid import S4Toroid
 
+from shadow4.tools.logger import is_verbose, is_debug
+
 class S4OpticalElementDecorator(object):
     """
     Base abstract class.
@@ -83,14 +85,9 @@ class S4OpticalElementDecorator(object):
         """
         raise NotImplementedError()
 
-    def get_optical_surface_instance(self, verbose=1): # return a Shadow4 object of type S4OpticalSurface
+    def get_optical_surface_instance(self): # return a Shadow4 object of type S4OpticalSurface
         """
         Returns a object of type S4OpticalSurface.
-
-        Parameters
-        ----------
-        verbose : int, optional
-            Set to 1 for verbose output.
 
         Raises
         ------
@@ -127,21 +124,16 @@ class S4PlaneOpticalElementDecorator(S4OpticalElementDecorator):
         """
         return Plane()
 
-    def get_optical_surface_instance(self, verbose=1):
+    def get_optical_surface_instance(self):
         """
         Returns a shadow4 optical element object of type optical surface.
-
-        Parameters
-        ----------
-        verbose : int, optional
-            Set to 1 for verbose output.
 
         Returns
         -------
         instance of shadow4.s4_optical_surfaces.s4_conic.S4Conic
         """
         out = S4Conic.initialize_as_plane()
-        if verbose: print("Plane ccc", out.ccc)
+        if is_verbose(): print("Plane ccc", out.ccc)
         return out
 
 class S4CurvedOpticalElementDecorator(S4OpticalElementDecorator):
@@ -237,14 +229,9 @@ class S4SphereOpticalElementDecorator(S4CurvedOpticalElementDecorator):
                                                  is_cylinder=is_cylinder,
                                                  curved_surface_shape=curved_surface_shape)
 
-    def get_optical_surface_instance(self, verbose=1):
+    def get_optical_surface_instance(self):
         """
         Returns a shadow4 optical element object of type optical surface.
-
-        Parameters
-        ----------
-        verbose : int, optional
-            Set to 1 for verbose output.
 
         Returns
         -------
@@ -261,7 +248,7 @@ class S4SphereOpticalElementDecorator(S4CurvedOpticalElementDecorator):
             cylindrical = 0
             cylangle    = 0.0
 
-        if verbose:
+        if is_verbose():
             print("S4SphereOpticalElement.get_optical_surface_instance(): R, cyl, cyl_angle, optical element, ",
                   radius, cylindrical, cylangle, surface_shape)
         out = S4Conic.initialize_as_sphere_from_external_parameters(radius,
@@ -269,7 +256,7 @@ class S4SphereOpticalElementDecorator(S4CurvedOpticalElementDecorator):
                                                                     cylangle=cylangle,
                                                                     switch_convexity=switch_convexity,
                                                                     )
-        if verbose: print("Sphere ccc", out.ccc)
+        if is_verbose: print("Sphere ccc", out.ccc)
         return out
 
 class S4EllipsoidOpticalElementDecorator(S4CurvedOpticalElementDecorator):
@@ -324,14 +311,9 @@ class S4EllipsoidOpticalElementDecorator(S4CurvedOpticalElementDecorator):
 
         S4CurvedOpticalElementDecorator.__init__(self, surface_calculation, is_cylinder, curved_surface_shape)
 
-    def get_optical_surface_instance(self, verbose=1): # todo: update this one like hyperboloid
+    def get_optical_surface_instance(self): # todo: update this one like hyperboloid
         """
         Returns a shadow4 optical element object of type optical surface.
-
-        Parameters
-        ----------
-        verbose : int, optional
-            Set to 1 for verbose output.
 
         Returns
         -------
@@ -342,11 +324,11 @@ class S4EllipsoidOpticalElementDecorator(S4CurvedOpticalElementDecorator):
         switch_convexity = 0 if surface_shape.get_convexity() == Convexity.DOWNWARD else 1
 
         if isinstance(surface_shape, EllipticalCylinder):
-            if verbose: print("EllipticalCylinder optical element", surface_shape)
+            if is_verbose(): print("EllipticalCylinder optical element", surface_shape)
             cylindrical = 1
             cylangle = 0.0 if surface_shape.get_cylinder_direction() == Direction.TANGENTIAL else (0.5 * numpy.pi)
         elif isinstance(surface_shape, Ellipsoid):
-            if verbose: print("Ellipsoid optical element", surface_shape)
+            if is_verbose(): print("Ellipsoid optical element", surface_shape)
             cylindrical = 0
             cylangle    = 0.0
 
@@ -357,7 +339,7 @@ class S4EllipsoidOpticalElementDecorator(S4CurvedOpticalElementDecorator):
                                                                    cylangle=cylangle,
                                                                    switch_convexity=switch_convexity,
                                                                    )
-        if verbose: print("Ellipsoid ccc", out.ccc)
+        if is_verbose(): print("Ellipsoid ccc", out.ccc)
         return out
 
 class S4HyperboloidOpticalElementDecorator(S4CurvedOpticalElementDecorator):
@@ -412,7 +394,7 @@ class S4HyperboloidOpticalElementDecorator(S4CurvedOpticalElementDecorator):
 
         S4CurvedOpticalElementDecorator.__init__(self, surface_calculation, is_cylinder, curved_surface_shape)
 
-    def get_optical_surface_instance(self, verbose=1):
+    def get_optical_surface_instance(self):
         """
         Returns a shadow4 optical element object of type optical surface.
 
@@ -425,11 +407,11 @@ class S4HyperboloidOpticalElementDecorator(S4CurvedOpticalElementDecorator):
         switch_convexity = 0 if surface_shape.get_convexity() == Convexity.DOWNWARD else 1
 
         if isinstance(surface_shape, HyperbolicCylinder):
-            if verbose: print("HyperbolicCylinder optical element", surface_shape)
+            if is_verbose(): print("HyperbolicCylinder optical element", surface_shape)
             cylindrical = 1
             cylangle = 0.0 if surface_shape.get_cylinder_direction() == Direction.TANGENTIAL else (0.5 * numpy.pi)
         elif isinstance(surface_shape, Hyperboloid):
-            if verbose: print("Hyperboloid optical element", surface_shape)
+            if is_verbose(): print("Hyperboloid optical element", surface_shape)
             cylindrical = 0
             cylangle    = 0.0
 
@@ -439,7 +421,7 @@ class S4HyperboloidOpticalElementDecorator(S4CurvedOpticalElementDecorator):
                                                                       cylindrical=cylindrical,
                                                                       cylangle=cylangle,
                                                                       switch_convexity=switch_convexity)
-        if verbose: print("Hyperboloid ccc", out.ccc)
+        if is_verbose(): print("Hyperboloid ccc", out.ccc)
         return out
 
 class S4ToroidOpticalElementDecorator(S4CurvedOpticalElementDecorator):
@@ -484,7 +466,7 @@ class S4ToroidOpticalElementDecorator(S4CurvedOpticalElementDecorator):
 
         self._f_torus = f_torus
 
-    def get_optical_surface_instance(self, verbose=1):
+    def get_optical_surface_instance(self):
         """
         Returns a shadow4 optical element object of type optical surface.
 
@@ -504,7 +486,7 @@ class S4ToroidOpticalElementDecorator(S4CurvedOpticalElementDecorator):
         elif self._f_torus == 3:
             r_maj = surface_shape.get_maj_radius() - surface_shape.get_min_radius()
 
-        if verbose:
+        if is_verbose():
             print("Toroidal optical element (syned stored, optical radii) %.6g   %.6g" % (surface_shape.get_maj_radius(), surface_shape.get_min_radius()) )
             print("Setting optical surface S4Toroid (toroid radii, not optical) r_maj=%.6f, r_min=%.6g, f_torus=%d" % (
             r_maj,
@@ -578,7 +560,7 @@ class S4ParaboloidOpticalElementDecorator(S4CurvedOpticalElementDecorator):
 
         S4CurvedOpticalElementDecorator.__init__(self, surface_calculation, is_cylinder, curved_surface_shape)
 
-    def get_optical_surface_instance(self, verbose=1):
+    def get_optical_surface_instance(self):
         """
         Returns a shadow4 optical element object of type optical surface.
 
@@ -598,17 +580,17 @@ class S4ParaboloidOpticalElementDecorator(S4CurvedOpticalElementDecorator):
             p = surface_shape.get_pole_to_focus()
 
         if isinstance(surface_shape, ParabolicCylinder):
-            if verbose: print("ParabolicCylinder optical element", surface_shape)
+            if is_verbose(): print("ParabolicCylinder optical element", surface_shape)
             cylindrical = 1
             cylangle = 0.0 if surface_shape.get_cylinder_direction() == Direction.TANGENTIAL else (0.5 * numpy.pi)
         elif isinstance(surface_shape, Paraboloid):
-            if verbose: print("Paraboloid optical element", surface_shape)
+            if is_verbose(): print("Paraboloid optical element", surface_shape)
             cylindrical = 0
             cylangle    = 0.0
 
         out = S4Conic.initialize_as_paraboloid_from_focal_distances(p, q, surface_shape.get_grazing_angle(), cylindrical=cylindrical, cylangle=cylangle, switch_convexity=switch_convexity)
 
-        if verbose: print("Paraboloid ccc", out.ccc)
+        if is_verbose(): print("Paraboloid ccc", out.ccc)
         return out
 
 class S4ConicOpticalElementDecorator(S4CurvedOpticalElementDecorator):
@@ -628,7 +610,7 @@ class S4ConicOpticalElementDecorator(S4CurvedOpticalElementDecorator):
             is_cylinder=False,
             curved_surface_shape=None if conic_coefficients is None else Conic(conic_coefficients=conic_coefficients))
 
-    def get_optical_surface_instance(self, verbose=1):
+    def get_optical_surface_instance(self):
         """
         Returns a shadow4 optical element object of type optical surface.
 
@@ -638,7 +620,7 @@ class S4ConicOpticalElementDecorator(S4CurvedOpticalElementDecorator):
         """
         surface_shape = self.get_surface_shape_instance()
         out = S4Conic.initialize_from_coefficients(surface_shape.get_conic_coefficients())
-        if verbose:
+        if is_verbose():
             print("Conic optical element")
             print("Conic ccc", out.ccc)
         return out
@@ -665,7 +647,7 @@ class S4NumericalMeshOpticalElementDecorator(S4CurvedOpticalElementDecorator):
                                                  is_cylinder=False,
                                                  curved_surface_shape = NumericalMesh(xx, yy, zz, surface_data_file))
 
-    def get_optical_surface_instance(self, verbose=1):
+    def get_optical_surface_instance(self):
         """
         Returns a shadow4 optical element object of type optical surface.
 
@@ -675,7 +657,7 @@ class S4NumericalMeshOpticalElementDecorator(S4CurvedOpticalElementDecorator):
         """
         surface_shape = self.get_surface_shape_instance()
 
-        if verbose: print("SurfaceData optical element")
+        if is_verbose(): print("SurfaceData optical element")
         numerical_mesh = S4Mesh()
 
         if surface_shape.has_surface_data(): numerical_mesh.load_surface_data(surface_shape)
@@ -776,7 +758,7 @@ class S4RefractiveLensOpticalElementDecorator(S4CurvedOpticalElementDecorator):
 
         return [conic_coefficients_1, conic_coefficients_2]
 
-    def get_optical_surface_instance(self, verbose=1):
+    def get_optical_surface_instance(self):
         """
         Returns a shadow4 optical element object of type optical surface.
 
@@ -788,7 +770,7 @@ class S4RefractiveLensOpticalElementDecorator(S4CurvedOpticalElementDecorator):
         surface_shapes = self.get_surface_shape_instance()
         c1 = S4Conic.initialize_from_coefficients(numpy.array(surface_shapes[0].get_conic_coefficients()))
         c2 = S4Conic.initialize_from_coefficients(numpy.array(surface_shapes[1].get_conic_coefficients()))
-        if verbose:
+        if is_verbose():
             print("interface 1: conic ccc", c1.ccc)
             print("interface 2: conic ccc", c2.ccc)
         return [c1, c2]
