@@ -1160,13 +1160,15 @@ class S4Beam(object):
         ----------
         theta: float
             the grazing angle in rad (default) or deg (if deg=False).
-
         T_IMAGE: float
             the distance o.e. to image in m.
-
         rad: boolean, optional
             set False if theta is given in degrees.
-
+                refraction_index
+        apply_attenuation : int, optional
+            A flag to indicate that attenuation must be applied (using linear_attenuation_coefficient).
+        linear_attenuation_coefficient : float or numpy array
+            The attenuation coefficient in m^(-1).
         """
         if rad:
             theta1 = theta
@@ -1226,12 +1228,7 @@ class S4Beam(object):
 
         if apply_attenuation:
             att1 = numpy.sqrt(numpy.exp(-numpy.abs(DIST) * linear_attenuation_coefficient))
-            self.rays[:, 7 - 1 ] *= att1
-            self.rays[:, 8 - 1 ] *= att1
-            self.rays[:, 9 - 1 ] *= att1
-            self.rays[:, 16 - 1] *= att1
-            self.rays[:, 17 - 1] *= att1
-            self.rays[:, 18 - 1] *= att1
+            self.apply_attenuation(att1)
 
     @classmethod
     def get_UVW(self, X_ROT=0, Y_ROT=0, Z_ROT=0): # in radians!!
@@ -1741,6 +1738,22 @@ class S4Beam(object):
         elif fshape == 3:  # hole in ellipse
             raise Exception("Not yet implemented")
 
+    def apply_attenuation(self, att1):
+        """
+        Apply an attenuation factor to the beam.
+
+        Parameters
+        ----------
+        att1 : float or numpy array
+            The attenuator factor in amplitude (real).
+        """
+        # att1 = numpy.sqrt(numpy.exp(-numpy.abs(DIST) * linear_attenuation_coefficient))
+        self.rays[:, 7 - 1 ] *= att1
+        self.rays[:, 8 - 1 ] *= att1
+        self.rays[:, 9 - 1 ] *= att1
+        self.rays[:, 16 - 1] *= att1
+        self.rays[:, 17 - 1] *= att1
+        self.rays[:, 18 - 1] *= att1
 
     def apply_reflectivity_s(self, Rs):
         """

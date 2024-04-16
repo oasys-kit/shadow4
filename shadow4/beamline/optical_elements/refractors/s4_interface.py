@@ -414,6 +414,19 @@ class S4Interface(Interface):
 
         return attenuation_coefficient_object, attenuation_coefficient_image
 
+    def _apply_interface_refraction(self, beam,
+                                    refraction_index_object, refraction_index_image, mu_object,
+                                    apply_attenuation=1):
+        # refraction_index_object, refraction_index_image = self.get_refraction_indices(photon_energy_eV=beam.get_photon_energy_eV())
+        # mu_object, mu_image = self.get_attenuation_coefficients(photon_energy_eV=beam.get_photon_energy_eV())
+        ccc = self.get_optical_surface_instance()
+        footprint, normal = ccc.apply_refraction_on_beam(beam,
+                                                         refraction_index_object, refraction_index_image,
+                                                         apply_attenuation=apply_attenuation,
+                                                         linear_attenuation_coefficient=mu_object)
+
+        return footprint, normal
+
 class S4InterfaceElement(S4BeamlineElement):
     """
     Constructor.
@@ -443,6 +456,23 @@ class S4InterfaceElement(S4BeamlineElement):
                          movements=movements,
                          input_beam=input_beam)
 
+        self.__stored_optical_constants = None
+
+    def get_stored_optical_constants(self):
+        """
+        When running trace_beam() the optical constants (refraction index and attenuation coefficients for media 1 and 2)
+        are calculated. They are stored for accelerating further calls. This method permits to retrieve the stored
+        optical constants.
+
+        Returns
+        -------
+        tuple
+            (n1, mu1m n2, mu2)
+            n1, n2: arrays with real part of the refraction indices for the object and image media, respectively.
+            mu1, mu2: arrays with attenuation coefficient in m^(-1) for the object and image media, respectively.
+        """
+        return self.__stored_optical_constants
+
     def trace_beam(self, **params):
         """
         Runs (ray tracing) the input beam through the element.
@@ -457,6 +487,7 @@ class S4InterfaceElement(S4BeamlineElement):
             (output_beam, footprint) instances of S4Beam.
         """
         flag_lost_value = params.get("flag_lost_value", -1)
+        reused_stored_optical_constants = params.get("reused_stored_optical_constants", None)
 
         p = self.get_coordinates().p()
         q = self.get_coordinates().q()
@@ -466,6 +497,18 @@ class S4InterfaceElement(S4BeamlineElement):
 
         #
         input_beam = self.get_input_beam().duplicate()
+        soe = self.get_optical_element()
+
+        # retrieve and store optical constants
+        if reused_stored_optical_constants is not None:
+            n1, mu1, n2, mu2 = reused_stored_optical_constants
+        else:
+            energy1 = input_beam.get_photon_energy_eV()
+            n1, n2 = soe.get_refraction_indices(energy1)
+            mu1, mu2 = soe.get_attenuation_coefficients(energy1) # in m^-1
+            self.__stored_optical_constants = (n1, mu1, n2, mu2)
+
+
         #
         # put beam in mirror reference system
         #
@@ -487,13 +530,11 @@ class S4InterfaceElement(S4BeamlineElement):
         #
         # refract beam in the mirror surface
         #
-        soe = self.get_optical_element() #._optical_element_syned
-        # print(">>> CCC", soe.get_surface_shape().get_conic_coefficients())
 
         # TODO (maybe): no check for total reflection is done...
         # TODO (maybe): implement correctly in shadow4 via Fresnel equations for the transmitted beam
 
-        footprint, normal = self.get_optical_element().apply_interface_refraction(input_beam)
+        footprint, normal = soe._apply_interface_refraction(input_beam, n1, n2, mu1, apply_attenuation=1)
 
         #
         # apply mirror boundaries
@@ -503,18 +544,12 @@ class S4InterfaceElement(S4BeamlineElement):
         #
         # from element reference system to image plane
         #
-
         output_beam = footprint.duplicate()
-        energy1 = output_beam.get_photon_energy_eV()
-        oe = self.get_optical_element()
-        _, n2 = oe.get_refraction_indices(energy1)
-
-        _, mu2 = oe.get_attenuation_coefficients(energy1) # in m^-1
-
         output_beam.change_to_image_reference_system(theta_grazing2, q,
                                                      refraction_index=n2,
                                                      apply_attenuation=1,
                                                      linear_attenuation_coefficient=mu2)
+
 
         return output_beam, footprint
 

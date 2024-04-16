@@ -620,7 +620,7 @@ class S4ConicOpticalElementDecorator(S4CurvedOpticalElementDecorator):
         """
         surface_shape = self.get_surface_shape_instance()
         out = S4Conic.initialize_from_coefficients(surface_shape.get_conic_coefficients())
-        if is_verbose():
+        if is_debug():
             print("Conic optical element")
             print("Conic ccc", out.ccc)
         return out

@@ -120,35 +120,6 @@ class S4ConicInterface(S4Interface, S4ConicOpticalElementDecorator):
 
         self.inputs = self.__inputs
 
-    def apply_interface_refraction(self, beam):
-        """
-        Apply the refraction on the incident beam.
-
-        Parameters
-        ----------
-        beam : instance of S4beam
-            The input beam.
-
-        Returns
-        -------
-        tuple
-            (footprint, normal) S4Beam with the footprint, array with the normals.
-        """
-
-        ccc = S4Conic.initialize_from_coefficients(self.get_surface_shape().get_conic_coefficients())
-
-        refraction_index_object, refraction_index_image = self.get_refraction_indices(photon_energy_eV=beam.get_photon_energy_eV())
-        mu_object, mu_image = self.get_attenuation_coefficients(
-            photon_energy_eV=beam.get_photon_energy_eV())
-
-        # print(">>>>> mu_object, mu_image", mu_object, mu_image)
-
-        footprint, normal = ccc.apply_refraction_on_beam(beam, refraction_index_object, refraction_index_image,
-                                                         apply_attenuation=1, linear_attenuation_coefficient=mu_object)
-
-        return footprint, normal
-
-
     def to_python_code(self, **kwargs):
         """
         Creates the python code for defining the element.

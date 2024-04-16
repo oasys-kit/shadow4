@@ -399,16 +399,19 @@ class S4CRLElement(S4BeamlineElement):
             coordinates_2 = ElementCoordinates(p=oe.get_thickness()*0.5, q=image_plane,  angle_radial=0.0,          angle_radial_out=angle_radial_out, angle_azimuthal=0.0)
 
             beamline_element_1 = S4ConicInterfaceElement(optical_element=optical_surfaces[lens_index, 0], coordinates=coordinates_1, movements=movements, input_beam=input_beam)
-            if lens_index==0: beam1, footprint1 = beamline_element_1.trace_beam()
-            else:             beam1, _          = beamline_element_1.trace_beam()
+            if lens_index==0:
+                beam1, footprint1 = beamline_element_1.trace_beam()
+                n1, mu1, n2, mu2 = beamline_element_1.get_stored_optical_constants()
+            else:
+                beam1, _          = beamline_element_1.trace_beam(reused_stored_optical_constants=(n1, mu1, n2, mu2))
 
             beamline_element_2 = S4ConicInterfaceElement(optical_element=optical_surfaces[lens_index, 1], coordinates=coordinates_2, movements=movements, input_beam=beam1)
-            if lens_index==n_lens-1: beam2, footprint2 = beamline_element_2.trace_beam()
-            else:                    beam2, _          = beamline_element_2.trace_beam()
+            if lens_index==n_lens-1:
+                beam2, footprint2 = beamline_element_2.trace_beam(reused_stored_optical_constants=(n2, mu2, n1, mu1))
+            else:
+                beam2, _          = beamline_element_2.trace_beam(reused_stored_optical_constants=(n2, mu2, n1, mu1))
 
             if lens_index < n_lens-1: input_beam = beam2.duplicate()
-
-            #print(beamline_element_2.info())
 
         return beam2, [footprint1, footprint2]
 
@@ -447,6 +450,8 @@ if __name__ == "__main__":
 
 
     if True:
+        from shadow4.tools.logger import set_verbose
+        set_verbose()
         from shadow4.beamline.s4_beamline import S4Beamline
 
         beamline = S4Beamline()
@@ -475,7 +480,8 @@ if __name__ == "__main__":
                                 piling_thickness=0.000625,  # syned stuff
                                 boundary_shape=boundary_shape,
                                 # syned stuff, replaces "diameter" in the shadow3 append_lens
-                                material="",  # syned stuff, not (yet) used
+                                material='Al',  # the material for ri_calculation_mode > 1
+                                density=2.6989,  # the density for ri_calculation_mode > 1
                                 thickness=2.4999999999999998e-05,
                                 # syned stuff, lens thickness [m] (distance between the two interfaces at the center of the lenses)
                                 surface_shape=1,  # now: 0=plane, 1=sphere, 2=parabola, 3=conic coefficients
@@ -483,12 +489,13 @@ if __name__ == "__main__":
                                 convex_to_the_beam=0,
                                 # for surface_shape: convexity of the first interface exposed to the beam 0=No, 1=Yes
                                 cylinder_angle=1,  # for surface_shape: 0=not cylindricaL, 1=meridional 2=sagittal
-                                ri_calculation_mode=1,  # source of refraction indices and absorption coefficients
+                                ri_calculation_mode=2,  # source of refraction indices and absorption coefficients
                                 # 0=User, 1=prerefl file, 2=xraylib, 3=dabax
-                                prerefl_file='/users/srio/Oasys/Al5_55.dat',
+                                prerefl_file='Al5_55.dat',
                                 # for ri_calculation_mode=0: file name (from prerefl) to get the refraction index.
                                 refraction_index=1,  # for ri_calculation_mode=1: n (real)
                                 attenuation_coefficient=0,  # for ri_calculation_mode=1: mu in cm^-1 (real)
+                                dabax=None,  # the pointer to dabax library
                                 radius=0.0003,
                                 # for surface_shape=(1,2): lens radius [m] (for spherical, or radius at the tip for paraboloid)
                                 conic_coefficients1=None,
@@ -516,7 +523,9 @@ if __name__ == "__main__":
         if True:
             from srxraylib.plot.gol import plot_scatter
 
-            plot_scatter(beam.get_photon_energy_eV(nolost=1), beam.get_column(23, nolost=1),
-                         title='(Intensity,Photon Energy)', plot_histograms=0)
+            # plot_scatter(beam.get_photon_energy_eV(nolost=1), beam.get_column(23, nolost=1),
+            #              title='(Intensity,Photon Energy)', plot_histograms=0)
             plot_scatter(1e6 * beam.get_column(1, nolost=1), 1e6 * beam.get_column(3, nolost=1),
                          title='(X,Z) in microns')
+
+        print(beam.intensity())

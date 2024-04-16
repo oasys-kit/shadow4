@@ -625,7 +625,6 @@ class SourceGeometrical(S4LightSourceBase):
 
         txt += "\nspatial type: %s \n" % self._spatial_type
 
-        # print(">>>>>>>>>>>>>", , self._angular_distribution, self._energy_distribution)
         if self._spatial_type == "Point":
             pass
         elif self._spatial_type == "Rectangle":
@@ -774,7 +773,7 @@ class SourceGeometrical(S4LightSourceBase):
         #
         # depth distribution
         #
-        if is_verbose(): print(">> Depth distribution: %s"%(self._depth_distribution))
+        if is_verbose(): print("   Depth distribution: %s"%(self._depth_distribution))
 
         if self._depth_distribution == "Off":
             pass
@@ -789,7 +788,7 @@ class SourceGeometrical(S4LightSourceBase):
         #
         # angular distribution
         #
-        if is_verbose(): print(">> Angular distribution: %s"%(self._angular_distribution))
+        if is_verbose(): print("   Angular distribution: %s"%(self._angular_distribution))
 
         if self._angular_distribution == "Flat":
             rays[:,3],rays[:,5] = Flat2D.sample(N,
