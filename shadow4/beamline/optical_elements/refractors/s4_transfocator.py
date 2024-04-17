@@ -15,7 +15,7 @@ from syned.beamline.optical_element import OpticalElement
 
 from shadow4.beamline.s4_optical_element_decorators import S4OpticalElementDecorator
 from shadow4.beamline.optical_elements.refractors.s4_crl import S4CRL, S4CRLElement
-
+from shadow4.tools.logger import set_verbose,set_debug, is_verbose, is_debug
 
 class S4Transfocator(OpticalElement, S4OpticalElementDecorator):
     """
@@ -262,7 +262,7 @@ class S4Transfocator(OpticalElement, S4OpticalElementDecorator):
             The text with the code.
         """
         txt = "" # "\nfrom shadow4.beamline.optical_elements.mirrors.s4_plane_mirror import S4PlaneMirror"
-        bs = self._boundary_shape
+        bs = self.get_crl_at_index(0)._boundary_shape
         if bs is None:
             txt += "\nboundary_shape = None"
         elif isinstance(bs, Rectangle):
@@ -314,6 +314,7 @@ optical_element = S4Transfocator(name='{name}',
      radius={radius}, # for surface_shape=(1,2): lens radius [m] (for spherical, or radius at the tip for paraboloid)
      conic_coefficients1={conic_coefficients1}, # for surface_shape = 3: the conic coefficients of the single lens interface 1
      conic_coefficients2={conic_coefficients2}, # for surface_shape = 3: the conic coefficients of the single lens interface 2
+     empty_space_after_last_interface={empty_space_after_last_interface},
      )
     """
         txt += txt_pre.format(**self.__inputs)
@@ -350,6 +351,30 @@ class S4TransfocatorElement(S4BeamlineElement):
                          movements=movements,
                          input_beam=input_beam)
 
+    def to_python_code_boundary_shape(self):
+        """
+        Creates a code block with information of boundary shape.
+
+        Returns
+        -------
+        str
+            The text with the code.
+        """
+        txt = ""
+        bs = self.get_optical_element()._boundary_shape
+        if bs is None:
+            txt += "\nboundary_shape = None"
+        elif isinstance(bs, Rectangle):
+            txt += "\nfrom syned.beamline.shape import Rectangle"
+            txt += "\nboundary_shape = Rectangle(x_left=%g, x_right=%g, y_bottom=%g, y_top=%g)" % bs.get_boundaries()
+        elif isinstance(bs, Circle):
+            txt += "\nfrom syned.beamline.shape import Circle"
+            txt += "\nboundary_shape = Circle(radius=%g, x_center=%g,y_center=%g)" % bs.get_boundaries()
+        elif isinstance(bs, Ellipse):
+            txt += "\nfrom syned.beamline.shape import Ellipse"
+            txt += "\nboundary_shape = Ellipse(a_axis_min=%g, a_axis_max=%g, b_axis_min=%g, b_axis_max=%g)" % bs.get_boundaries()
+        return txt
+
     def to_python_code(self, **kwargs):
         """
         Creates the python code for defining the element.
@@ -364,6 +389,7 @@ class S4TransfocatorElement(S4BeamlineElement):
             Python code.
         """
         txt = "\n\n# optical element number XX"
+        txt += self.to_python_code_boundary_shape()
         txt += self.get_optical_element().to_python_code()
         txt += "\nimport numpy"
         txt += self.to_python_code_coordinates()
@@ -372,6 +398,44 @@ class S4TransfocatorElement(S4BeamlineElement):
         txt += "\nbeamline_element = S4TransfocatorElement(optical_element=optical_element, coordinates=coordinates, movements=movements, input_beam=beam)"
         txt += "\n\nbeam, mirr = beamline_element.trace_beam()"
         return txt
+
+    def _get_list_of_individual_elements_crl(self):
+        bel_list = []
+
+        movements   = self.get_movements()
+        oe          = self.get_optical_element()
+        coordinates = self.get_coordinates().duplicate()
+        CRLs        = oe.get_crls()
+        n = len(CRLs)
+        P = [0.0] * n
+        Q = [0.0] * n
+        p, q, angle_radial, angle_radial_out, angle_azimuthal = coordinates.get_positions()
+        P[0] = p
+        Q[-1] = q
+        for i in range(n): P[i] = P[i] + oe._empty_space_after_last_interface[i]
+
+        print(">>>> P, Q: ", P, Q)
+        for i, ioe in enumerate(CRLs):
+            print("\n>>>>>> -------------- adding CRL beamline element with index: ", i)
+            # if i == 0:
+            #     input_beam = self.get_input_beam().duplicate()
+            # else:
+            #     input_beam = None
+
+            bel = S4CRLElement(optical_element=ioe,
+                               coordinates=ElementCoordinates(p=P[i],
+                                                              q=Q[i],
+                                                              angle_radial=angle_radial,
+                                                              angle_azimuthal=angle_azimuthal,
+                                                              angle_radial_out=angle_radial_out),
+                               input_beam=None,
+                               movements=movements,
+                               )
+            bel_list.append(bel)
+            print(bel.info())
+
+        return bel_list
+
 
     def trace_beam(self, **params):
         """
@@ -386,31 +450,44 @@ class S4TransfocatorElement(S4BeamlineElement):
         tuple
             (output_beam, footprint) instances of S4Beam.
         """
+        bel_list = self._get_list_of_individual_elements_crl()
+
         input_beam  = self.get_input_beam().duplicate()
-        movements   = self.get_movements()
-        oe          = self.get_optical_element()
-        coordinates = self.get_coordinates().duplicate()
-        CRLs        = oe.get_crls()
-        n = len(CRLs)
-        P = [0.0] * n
-        Q = [0.0] * n
-        p, q = coordinates.get_p_and_q()
-        P[0] = p
-        Q[-1] = q
 
+        n = len(bel_list)
 
-        beam1 = input_beam.duplicate()
-        for i, ioe in enumerate(CRLs):
-            angle_azimuthal = 0
-            # icoordinates = ElementCoordinates(p=0, q=0, angle_radial=0, angle_radial_out=numpy.pi, angle_azimuthal=angle_azimuthal)
-            coordinates.set_p_and_q(p=P[i], q=Q[i]+oe._empty_space_after_last_interface[i])
-            bel = S4CRLElement(optical_element=ioe,
-                               coordinates=coordinates,
-                               input_beam=beam1,
-                               movements=movements,
-                               )
+        # movements   = self.get_movements()
+        # oe          = self.get_optical_element()
+        # coordinates = self.get_coordinates().duplicate()
+        # CRLs        = oe.get_crls()
+        # n = len(CRLs)
+        # P = [0.0] * n
+        # Q = [0.0] * n
+        # p, q = coordinates.get_p_and_q()
+        # P[0] = p
+        # Q[-1] = q
+        # print(">>>> P, Q: ", P, Q)
+        # beam1 = input_beam.duplicate()
+        for i, bel in enumerate(bel_list):
+            print("\n>>>>>> -------------- tracing CRL with index: ", i)
+            bel.set_input_beam(input_beam=input_beam)
             output_beam, footprint = bel.trace_beam()
-            if i < (n - 1): beam1 = output_beam.duplicate()
+            if i < (n - 1): input_beam = output_beam.duplicate()
+            print(bel.to_python_code())
+
+            # angle_azimuthal = 0
+            # # icoordinates = ElementCoordinates(p=0, q=0, angle_radial=0, angle_radial_out=numpy.pi, angle_azimuthal=angle_azimuthal)
+            # coordinates.set_p_and_q(p=P[i], q=Q[i]+oe._empty_space_after_last_interface[i])
+            # bel = S4CRLElement(optical_element=ioe,
+            #                    coordinates=coordinates,
+            #                    input_beam=beam1,
+            #                    movements=movements,
+            #                    )
+            # print(bel.info())
+            # print(bel.to_python_code())
+            # output_beam, footprint = bel.trace_beam()
+            # print("intensity after run: ", output_beam.intensity(nolost=1), footprint[1].intensity(nolost=1))
+            # if i < (n - 1): beam1 = output_beam.duplicate()
 
         return output_beam, footprint
 
@@ -452,7 +529,6 @@ if __name__ == "__main__":
 
     if True:
         from shadow4.tools.logger import set_verbose
-        set_verbose()
         from shadow4.beamline.s4_beamline import S4Beamline
 
         beamline = S4Beamline()
@@ -476,34 +552,67 @@ if __name__ == "__main__":
         boundary_shape = None
         from shadow4.beamline.optical_elements.refractors.s4_crl import S4CRL
 
+        # optical_element = S4Transfocator(name='TF',
+        #                         n_lens=[30],
+        #                         piling_thickness=[0.000625],  # syned stuff
+        #                         boundary_shape=boundary_shape,
+        #                         # syned stuff, replaces "diameter" in the shadow3 append_lens
+        #                         material=['Al'],  # the material for ri_calculation_mode > 1
+        #                         density=[2.6989],  # the density for ri_calculation_mode > 1
+        #                         thickness=[2.4999999999999998e-05],
+        #                         # syned stuff, lens thickness [m] (distance between the two interfaces at the center of the lenses)
+        #                         surface_shape=[1],  # now: 0=plane, 1=sphere, 2=parabola, 3=conic coefficients
+        #                         # (in shadow3: 1=sphere 4=paraboloid, 5=plane)
+        #                         convex_to_the_beam=[0],
+        #                         # for surface_shape: convexity of the first interface exposed to the beam 0=No, 1=Yes
+        #                         cylinder_angle=[1],  # for surface_shape: 0=not cylindricaL, 1=meridional 2=sagittal
+        #                         ri_calculation_mode=[2],  # source of refraction indices and absorption coefficients
+        #                         # 0=User, 1=prerefl file, 2=xraylib, 3=dabax
+        #                         prerefl_file=['Al5_55.dat'],
+        #                         # for ri_calculation_mode=0: file name (from prerefl) to get the refraction index.
+        #                         refraction_index=[1],  # for ri_calculation_mode=1: n (real)
+        #                         attenuation_coefficient=[0],  # for ri_calculation_mode=1: mu in cm^-1 (real)
+        #                         dabax=None,  # the pointer to dabax library
+        #                         radius=[0.0003],
+        #                         # for surface_shape=(1,2): lens radius [m] (for spherical, or radius at the tip for paraboloid)
+        #                         conic_coefficients1=[None],
+        #                         # for surface_shape = 3: the conic coefficients of the single lens interface 1
+        #                         conic_coefficients2=[None],
+        #                         # for surface_shape = 3: the conic coefficients of the single lens interface 2
+        #                         empty_space_after_last_interface=[0.0],
+        #                         )
+
         optical_element = S4Transfocator(name='TF',
-                                n_lens=[30],
-                                piling_thickness=[0.000625],  # syned stuff
-                                boundary_shape=boundary_shape,
-                                # syned stuff, replaces "diameter" in the shadow3 append_lens
-                                material=['Al'],  # the material for ri_calculation_mode > 1
-                                density=[2.6989],  # the density for ri_calculation_mode > 1
-                                thickness=[2.4999999999999998e-05],
-                                # syned stuff, lens thickness [m] (distance between the two interfaces at the center of the lenses)
-                                surface_shape=[1],  # now: 0=plane, 1=sphere, 2=parabola, 3=conic coefficients
-                                # (in shadow3: 1=sphere 4=paraboloid, 5=plane)
-                                convex_to_the_beam=[0],
-                                # for surface_shape: convexity of the first interface exposed to the beam 0=No, 1=Yes
-                                cylinder_angle=[1],  # for surface_shape: 0=not cylindricaL, 1=meridional 2=sagittal
-                                ri_calculation_mode=[2],  # source of refraction indices and absorption coefficients
-                                # 0=User, 1=prerefl file, 2=xraylib, 3=dabax
-                                prerefl_file=['Al5_55.dat'],
-                                # for ri_calculation_mode=0: file name (from prerefl) to get the refraction index.
-                                refraction_index=[1],  # for ri_calculation_mode=1: n (real)
-                                attenuation_coefficient=[0],  # for ri_calculation_mode=1: mu in cm^-1 (real)
-                                dabax=None,  # the pointer to dabax library
-                                radius=[0.0003],
-                                # for surface_shape=(1,2): lens radius [m] (for spherical, or radius at the tip for paraboloid)
-                                conic_coefficients1=[None],
-                                # for surface_shape = 3: the conic coefficients of the single lens interface 1
-                                conic_coefficients2=[None],
-                                # for surface_shape = 3: the conic coefficients of the single lens interface 2
-                                )
+                                         n_lens=[30,30],
+                                         piling_thickness=[0.000625,0.000625],  # syned stuff
+                                         boundary_shape=boundary_shape,
+                                         # syned stuff, replaces "diameter" in the shadow3 append_lens
+                                         material=['Al','Al'],  # the material for ri_calculation_mode > 1
+                                         density=[2.6989,2.6989],  # the density for ri_calculation_mode > 1
+                                         thickness=[2.4999999999999998e-05,2.4999999999999998e-05],
+                                         # syned stuff, lens thickness [m] (distance between the two interfaces at the center of the lenses)
+                                         surface_shape=[2,2],  # now: 0=plane, 1=sphere, 2=parabola, 3=conic coefficients
+                                         # (in shadow3: 1=sphere 4=paraboloid, 5=plane)
+                                         convex_to_the_beam=[0,0],
+                                         # for surface_shape: convexity of the first interface exposed to the beam 0=No, 1=Yes
+                                         cylinder_angle=[1,1],
+                                         # for surface_shape: 0=not cylindricaL, 1=meridional 2=sagittal
+                                         ri_calculation_mode=[2,2],
+                                         # source of refraction indices and absorption coefficients
+                                         # 0=User, 1=prerefl file, 2=xraylib, 3=dabax
+                                         prerefl_file=['Al5_55.dat','Al5_55.dat'],
+                                         # for ri_calculation_mode=0: file name (from prerefl) to get the refraction index.
+                                         refraction_index=[1,1],  # for ri_calculation_mode=1: n (real)
+                                         attenuation_coefficient=[0,0],  # for ri_calculation_mode=1: mu in cm^-1 (real)
+                                         dabax=None,  # the pointer to dabax library
+                                         radius=[0.0003,0.0003],
+                                         # for surface_shape=(1,2): lens radius [m] (for spherical, or radius at the tip for paraboloid)
+                                         conic_coefficients1=[None, None],
+                                         # for surface_shape = 3: the conic coefficients of the single lens interface 1
+                                         conic_coefficients2=[None, None],
+                                         # for surface_shape = 3: the conic coefficients of the single lens interface 2
+                                         empty_space_after_last_interface=[0.0, 0.0],
+                                         )
 
         import numpy
         from syned.beamline.element_coordinates import ElementCoordinates
@@ -522,8 +631,8 @@ if __name__ == "__main__":
         beamline.append_beamline_element(beamline_element)
 
         print(beamline.info())
-        print(beamline_element.to_python_code())
-        print(beamline.distances_summary())
+        # print(beamline_element.to_python_code())
+        # print(beamline.distances_summary())
 
         #
         # # test plot
