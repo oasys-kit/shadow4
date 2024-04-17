@@ -236,7 +236,7 @@ class S4CRL(CRL, S4RefractiveLensOpticalElementDecorator):
         str
             The text with the code.
         """
-        txt = "" # "\nfrom shadow4.beamline.optical_elements.mirrors.s4_plane_mirror import S4PlaneMirror"
+        txt = ""
         bs = self._boundary_shape
         if bs is None:
             txt += "\nboundary_shape = None"

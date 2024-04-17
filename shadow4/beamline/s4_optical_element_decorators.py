@@ -737,7 +737,7 @@ class S4RefractiveLensOpticalElementDecorator(S4CurvedOpticalElementDecorator):
                                                           conic_coefficients1,
                                                           conic_coefficients2)
 
-        if surface_shape == 2:
+        if surface_shape == 0:
             if conic_coefficients1 is None: conic_coefficients1 = [0, 0, 0, 0, 0, 0, 0, 0, -1, 0]
             if conic_coefficients2 is None: conic_coefficients2 = [0, 0, 0, 0, 0, 0, 0, 0, -1, 0]
             curved_surface_shape = [Conic(conic_coefficients=conic_coefficients1),
