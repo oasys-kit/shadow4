@@ -22,7 +22,7 @@ class S4CRL(CRL, S4RefractiveLensOpticalElementDecorator):
     boundary_shape : instance of BoundaryShape, optional
         The boundary shape of the mirror.
     n_lens : int, optional
-        The number of (idential) lenses.
+        The number of (identical) lenses.
     piling_thickness : float, optional
         The distance from one lens to the next one in m.
     material : str, optional
