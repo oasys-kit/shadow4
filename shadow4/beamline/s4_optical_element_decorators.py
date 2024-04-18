@@ -95,6 +95,21 @@ class S4OpticalElementDecorator(object):
         """
         raise NotImplementedError()
 
+
+    def interthickness(self):
+        """
+        Returns the interthickness of the beamline element, which is the distance covered by the element along the
+        optical axis. Elements with a single optical surface (mirrors, crystals, etc.) have interthickness zero.
+        This is the value returned here.
+        Elements like lenses, CRL, transfocators, etc. have interthickness > 0. They have to redefine this method.
+        Note that the interthickness is the projection along the (image) optical axis.
+
+        Returns
+        -------
+        float
+        """
+        return 0.0
+
 class SurfaceCalculation:
     """
     class supporting the flag for external or internal calculation:

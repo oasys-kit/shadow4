@@ -144,6 +144,20 @@ class S4CRL(CRL, S4RefractiveLensOpticalElementDecorator):
             "conic_coefficients2": repr(conic_coefficients2),
         }
 
+    def interthickness(self):
+        """
+        Returns the interthickness of the beamline element, which is the distance covered by the element along the
+        optical axis.
+        Elements with a single optical surface (mirrors, crystals, etc.) have interthickness zero.
+        Elements like lenses, CRL, transfocators, etc. have interthickness > 0. It is redefined in this method.
+        Note that the interthickness is the projection along the (image) optical axis.
+
+        Returns
+        -------
+        float
+        """
+        return self._piling_thickness * self._n_lens
+
     def get_info(self):
         """
         Returns the specific information of the S4 CRL optical element.
@@ -177,6 +191,7 @@ class S4CRL(CRL, S4RefractiveLensOpticalElementDecorator):
         txt += "Radius: %f m\n" % self.__inputs["radius"]
         txt += "Piling thickness: %f m\n" % self._piling_thickness
         txt += "thickness: %f m\n" % self._thickness
+        txt += "Total thickness [interthickness]: %f m\n" % self.interthickness()
         txt += "convex_to_the_beam (0:No, 1=Yes): %d \n" % self.__inputs["convex_to_the_beam"]
 
         if self.__inputs["cylinder_angle"] == 0:
@@ -529,3 +544,4 @@ if __name__ == "__main__":
                          title='(X,Z) in microns')
 
         print(beam.intensity())
+        print(optical_element.get_info())

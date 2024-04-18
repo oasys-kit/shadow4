@@ -163,6 +163,25 @@ class S4Transfocator(OpticalElement, S4OpticalElementDecorator):
     def get_crls(self):
         return self._crl_list
 
+    def interthickness(self):
+        """
+        Returns the interthickness of the beamline element, which is the distance covered by the element along the
+        optical axis.
+        Elements with a single optical surface (mirrors, crystals, etc.) have interthickness zero.
+        Elements like lenses, CRL, transfocators, etc. have interthickness > 0. It is redefined in this method.
+        Note that the interthickness is the projection along the (image) optical axis.
+
+        Returns
+        -------
+        float
+        """
+        crls = self.get_crls()
+        ithick = 0.0
+        for i, crl in enumerate(crls):
+            ithick += crl.interthickness() + self._empty_space_after_last_interface[i]
+
+        return ithick
+
     def get_info(self):
         """
         Returns the specific information of the S4 Transfocator optical element.
@@ -175,6 +194,7 @@ class S4Transfocator(OpticalElement, S4OpticalElementDecorator):
         n = len(crls)
         txt = "\n\n"
         txt += "TRANSFOCATOR (%d CRLs)\n" % n
+        txt += "  Total thickness [interthickness] %f m\n" % self.interthickness()
         txt += "\n"
 
         for i,oe in enumerate(crls):
@@ -479,3 +499,6 @@ if __name__ == "__main__":
         print(beam.intensity(nolost=1))
 
         # print(beamline_element.to_python_code())
+
+        print(beamline.sysinfo())
+        print(beamline.distances_summary())

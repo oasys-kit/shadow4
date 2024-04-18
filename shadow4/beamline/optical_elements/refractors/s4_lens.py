@@ -125,6 +125,20 @@ class S4Lens(Lens, S4RefractiveLensOpticalElementDecorator):
             "conic_coefficients2":     repr(conic_coefficients2),
         }
 
+    def interthickness(self):
+        """
+        Returns the interthickness of the beamline element, which is the distance covered by the element along the
+        optical axis.
+        Elements with a single optical surface (mirrors, crystals, etc.) have interthickness zero.
+        Elements like lenses, CRL, transfocators, etc. have interthickness > 0. It is redefined in this method.
+        Note that the interthickness is the projection along the (image) optical axis.
+
+        Returns
+        -------
+        float
+        """
+        return self.get_thickness()
+
     def to_python_code_boundary_shape(self):
         """
         Creates a code block with information of boundary shape.

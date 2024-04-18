@@ -14,6 +14,7 @@ from shadow4.beamline.optical_elements.mirrors.s4_mirror import S4Mirror
 from shadow4.beamline.optical_elements.crystals.s4_crystal import S4Crystal
 from shadow4.beamline.optical_elements.gratings.s4_grating import S4Grating
 from shadow4.beamline.optical_elements.refractors.s4_lens import S4Lens
+from shadow4.beamline.optical_elements.refractors.s4_transfocator import S4Transfocator
 from shadow4.beamline.optical_elements.refractors.s4_crl import S4CRL
 from shadow4.beamline.optical_elements.absorbers.s4_screen import S4Screen
 
@@ -264,6 +265,7 @@ class S4Beamline(Beamline):
             coor = oe.get_coordinates()
 
             T_SOURCE, T_IMAGE, T_INCIDENCE, T_REFLECTION, ALPHA = coor.get_positions()
+            T_IMAGE += oe.get_optical_element().interthickness()
 
             COSAL = numpy.cos(ALPHA)
             SINAL = numpy.sin(ALPHA)
@@ -475,7 +477,6 @@ class S4Beamline(Beamline):
 
             txt += ' \n'
             txt += 'Optical Element # %d\n'%(i + 1)
-
             if isinstance(oe, S4Empty):
                 TEXT = "EMPTY ELEMENT"
             elif isinstance(oe, S4Mirror):
@@ -488,6 +489,8 @@ class S4Beamline(Beamline):
                 TEXT = "LENS"
             elif isinstance(oe, S4CRL):
                 TEXT = "COMPOUND REFRACTIVE LENS"
+            elif isinstance(oe, S4Transfocator):
+                TEXT = "TRANSFOCATOR"
             elif isinstance(oe, S4Screen):
                 TEXT = "SCREEN/SLIT/ABSORBER"
             else:
@@ -504,6 +507,7 @@ class S4Beamline(Beamline):
             txt +=  '  Incidence Ang.     %f deg (grazing: %f mrad)\n'  %( numpy.degrees(T_INCIDENCE), (numpy.pi / 2 - T_INCIDENCE) * 1e3)
             txt +=  '  Reflection Ang.    %f deg (grazing: %f mrad)\n'  %( numpy.degrees(T_REFLECTION),(numpy.pi / 2 - T_REFLECTION) * 1e3)
             txt +=  '  Image Plane        %f m  \n'    %(T_IMAGE)
+            txt +=  '  O.E. (inter) thickness        %f m  \n' % (oe.interthickness())
             txt += 	BREAK
 
         txt += "\n\n                          OPTICAL SYSTEM CONFIGURATION\n"
@@ -574,13 +578,16 @@ class S4Beamline(Beamline):
             elif isinstance(oe, S4CRL):
                 oetype = "COMPOUND REFRACTIVE LENS"
                 is_focusing = 1
+            elif isinstance(oe, S4Transfocator):
+                oetype = "TRANSFOCATOR"
+                is_focusing = 1
             elif isinstance(oe, S4Screen):
                 oetype = "SCR/SLIT/ABS"
             else:
                 oetype = "*** Error: NOT IDENTIFIED OE %s ***" % repr(oe)
 
             #1) Distances summary
-            tot = tot + T_SOURCE + T_IMAGE
+            tot = tot + T_SOURCE + oe.interthickness() + T_IMAGE
             totoe = tot - T_IMAGE
             line="%12d %12s %14.4f %14.4f %14.4f %14.4f \n"%(i+1,oetype,T_SOURCE,T_IMAGE,totoe,tot)
             txt1 += line
@@ -648,6 +655,7 @@ class S4Beamline(Beamline):
 if __name__ == "__main__":
     from shadow4.sources.source_geometrical.source_geometrical import SourceGeometrical
     from shadow4.beamline.optical_elements.mirrors.s4_plane_mirror import S4PlaneMirror, S4PlaneMirrorElement
+    from shadow4.beamline.optical_elements.refractors.s4_transfocator import S4Transfocator, S4TransfocatorElement
     from syned.beamline.element_coordinates import ElementCoordinates
     from srxraylib.plot.gol import set_qt
     set_qt()
@@ -655,10 +663,13 @@ if __name__ == "__main__":
     light_source = SourceGeometrical(name='SourceGeometrical', nrays=10000, seed=5676561)
 
     m1 = S4PlaneMirror()
-    m2 = S4PlaneMirror()
+    # m2 = S4PlaneMirror()
+    m2 = S4Transfocator()
+
 
     e1 = S4PlaneMirrorElement(m1, ElementCoordinates())
-    e2 = S4PlaneMirrorElement(m2, ElementCoordinates())
+    # e2 = S4PlaneMirrorElement(m2, ElementCoordinates())
+    e2 = S4TransfocatorElement(m2, ElementCoordinates())
 
     bl = S4Beamline(light_source=light_source, beamline_elements_list=[e1,e2])
 
@@ -683,7 +694,7 @@ if __name__ == "__main__":
 
     # print(bl.syspositions())
 
-    # print(bl.distances_summary())
+    print(bl.distances_summary())
 
-    print(bl.oeinfo())
+    # print(bl.oeinfo())
 
