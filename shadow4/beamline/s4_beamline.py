@@ -414,19 +414,24 @@ class S4Beamline(Beamline):
             star[1,i] = CENTRAL[8]
             star[2,i] = CENTRAL[9]
 
-        x = numpy.append(source[0],mirr[0,:])
-        x = numpy.append(x,star[0,-1])
-        x = numpy.round(x,10)
+        if n_elements > 0:
+            x = numpy.append(source[0],mirr[0,:])
+            x = numpy.append(x,star[0,-1])
+            x = numpy.round(x,10)
 
-        y = numpy.append(source[1],mirr[1,:])
-        y = numpy.append(y,star[1,-1])
-        y = numpy.round(y,10)
+            y = numpy.append(source[1],mirr[1,:])
+            y = numpy.append(y,star[1,-1])
+            y = numpy.round(y,10)
 
-        z = numpy.append(source[2],mirr[2,:])
-        z = numpy.append(z,star[2,-1])
-        z = numpy.round(z,10)
+            z = numpy.append(source[2],mirr[2,:])
+            z = numpy.append(z,star[2,-1])
+            z = numpy.round(z,10)
 
-        return {"source":source, "mirr":mirr, "star":star, "optical_axis_x":x, "optical_axis_y":y, "optical_axis_z":z}
+        # print(">>>>>> source: ", source)
+        # print(">>>>>> X", x)
+            return {"source":source, "mirr":mirr, "star":star, "optical_axis_x":x, "optical_axis_y":y, "optical_axis_z":z}
+        else:
+            return {"source": numpy.zeros(3)}
 
     def sysinfo(self, title="", comment=""):
         """
@@ -671,7 +676,7 @@ if __name__ == "__main__":
     # e2 = S4PlaneMirrorElement(m2, ElementCoordinates())
     e2 = S4TransfocatorElement(m2, ElementCoordinates())
 
-    bl = S4Beamline(light_source=light_source, beamline_elements_list=[e1,e2])
+    bl = S4Beamline(light_source=light_source) # , beamline_elements_list=[e1,e2])
 
     # print(bl.info())
     #
@@ -696,5 +701,7 @@ if __name__ == "__main__":
 
     print(bl.distances_summary())
 
-    # print(bl.oeinfo())
+    print(">>>> oe info: ", bl.oeinfo())
+
+    print(">>>> sys info: ", bl.sysinfo())
 

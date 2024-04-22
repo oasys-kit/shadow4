@@ -202,7 +202,7 @@ class S4BendingMagnetLightSource(S4LightSource):
             angular_distribution_s *= eene**2 * a8 * i_a * hdiv_mrad * e_gev**2
             angular_distribution_p *= eene**2 * a8 * i_a * hdiv_mrad * e_gev**2
 
-            if is_verbose():
+            if is_debug():
                 from srxraylib.plot.gol import plot
                 plot(angle_array_mrad,angular_distribution_s,
                      angle_array_mrad,angular_distribution_p,
@@ -256,7 +256,7 @@ class S4BendingMagnetLightSource(S4LightSource):
             self.fm_s = fm_s
             self.fm_p = fm_p
 
-            if is_verbose():
+            if is_debug():
                 print(angle_array_mrad.shape, photon_energy_array.shape, fm_s.shape, fm_p.shape)
                 print("    DONE : calculating energy distribution",photon_energy_array.shape,fm.shape)
                 from srxraylib.plot.gol import plot,plot_image
@@ -360,7 +360,7 @@ class S4BendingMagnetLightSource(S4LightSource):
                 E_BEAMZZZ_array[itik] = ZZZ
 
 
-            if is_verbose():
+            if is_debug():
                 from srxraylib.plot.gol import plot_scatter
                 plot_scatter(E_BEAMXXX_array,E_BEAM1_array,title="sampled electron X Xp")
                 plot_scatter(E_BEAMZZZ_array,E_BEAM3_array,title="sampled electron Z Zp")

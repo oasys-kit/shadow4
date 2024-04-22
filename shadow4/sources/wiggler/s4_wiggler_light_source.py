@@ -1007,7 +1007,6 @@ class S4WigglerLightSource(S4LightSource):
             EPSI_DZ                               = self.get_magnetic_structure()._EPSI_DZ,
             psi_interval_in_units_one_over_gamma = psi_interval_in_units_one_over_gamma,
             psi_interval_number_of_points        = self.get_magnetic_structure()._psi_interval_number_of_points,
-            verbose                              = verbose,
         ))
 
     def calculate_spectrum(self, output_file=""):
