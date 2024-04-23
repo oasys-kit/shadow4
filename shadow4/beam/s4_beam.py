@@ -1451,6 +1451,92 @@ class S4Beam(object):
         self.rays[:, 17-1] = AP_OUT_2
         self.rays[:, 18-1] = AP_OUT_3
 
+    def focnew_coeffs(self, nolost=1, mode=0, center=[0.0, 0.0]):
+        """
+        This is used by the "focnew" tool. Calculate 6 CHI-Square coefficients for the beam array referred to a
+        given origin, in the directions X, Z and combined X-Z. For the X direction we define d = Vy/Vx. The 6
+        coefficients are: <d**2>, <x d>, <x**2>, <x>**2, <x><d>, <d>**2.
+
+        Parameters
+        ----------
+        nolost : int, optional
+            * 0=uses all rays,
+            * 1=uses only good rays (non-lost rays),
+            * 2=uses only lost rays.
+        mode : int, optional
+            A flag to define the center:
+            * 0 = center at origin,
+            * 1 = Center at barycenter (coordinate mean),
+            * 2 = External center.
+        center : list or tuple, optional
+            The (x,z) coordinates of the center. Used if mode=2.
+
+        Returns
+        -------
+        tuple
+            (AX, AZ, AT) The 6 coefficients for the durections X, Z, and average X+Z.
+        """
+        ray = self.get_rays(nolost=nolost).T
+        N = ray.shape[1]
+
+        if mode == 0:
+            x_mean = 0
+            z_mean = 0
+        elif mode == 1:
+            x_mean = ray[0, :].mean()
+            z_mean = ray[2, :].mean()
+        elif mode == 2:
+            x_mean = center[0]
+            z_mean = center[1]
+
+        # for col3=Z
+        AZ = numpy.zeros(6)
+        DVECTOR = ray[5, :] / ray[4, :]      # d = Vz / Vy
+        AZ[0] = (DVECTOR ** 2).sum()         # <d^2>
+        AZ[1] = ( (ray[2, :] - z_mean) * DVECTOR).sum()  # <d z>
+        AZ[2] = ( (ray[2, :] - z_mean) ** 2).sum()       # <z^2>
+        AZ[3] = ( (ray[2, :] - z_mean) ).sum()            # <z>
+        AZ[5] = DVECTOR.sum()                # <d>
+
+        AZ[0] = AZ[0] / N
+        AZ[1] = AZ[1] / N
+        AZ[2] = AZ[2] / N
+        AZ[3] = AZ[3] / N
+        AZ[5] = AZ[5] / N
+
+        AZ[4] = AZ[5] * AZ[3]  # <z><d>
+        AZ[3] = AZ[3] ** 2     # <z>^2
+        AZ[5] = AZ[5] ** 2     # <d>^2
+
+        # for col1=X
+        AX = numpy.zeros(6)
+        DVECTOR = ray[3, :] / ray[4, :]
+        AX[0] = (DVECTOR ** 2).sum()
+        AX[1] = ( (ray[0, :]- x_mean)  * DVECTOR).sum()
+        AX[2] = ( (ray[0, :]- x_mean)  ** 2).sum()
+        AX[3] = ( (ray[0, :]- x_mean) ).sum()
+        AX[5] = DVECTOR.sum()
+
+        AX[0] = AX[0] / N
+        AX[1] = AX[1] / N
+        AX[2] = AX[2] / N
+        AX[3] = AX[3] / N
+        AX[5] = AX[5] / N
+
+        AX[4] = AX[5] * AX[3]
+        AX[3] = AX[3] ** 2
+        AX[5] = AX[5] ** 2
+
+        # for T
+        AT = numpy.zeros(6)
+        AT[0] = AX[0] + AZ[0]
+        AT[1] = AX[1] + AZ[1]
+        AT[2] = AX[2] + AZ[2]
+        AT[3] = AX[3] + AZ[3]
+        AT[4] = AX[4] + AZ[4]
+        AT[5] = AX[5] + AZ[5]
+
+        return AX, AZ, AT
 
     #
     # crop & boundaries
@@ -2358,13 +2444,15 @@ if __name__ == "__main__":
     print(S4Beam.column_names_formatted_with_column_number())
     print(S4Beam.get_UVW())
 
-    B = S4Beam.initialize_as_pencil(N=1)
-    print(B.info())
+    B = S4Beam.initialize_as_pencil(N=1000)
+    # print(B.info())
+    #
+    # print("number of rays : ", B.N, B.get_number_of_rays())
+    # print("number of good rays : ", B.Ngood, B.get_number_of_rays(nolost=1))
+    # print("number of bad rays : ", B.Nbad, B.get_number_of_rays(nolost=2))
+    # B = S4Beam.initialize_as_pencil(N=100)
+    # print("all : ", (B.get_rays(nolost=0)).shape, B.rays.shape)
+    # print("good: ", (B.get_rays(nolost=1)).shape, B.rays_good.shape)
+    # print("bad : ", (B.get_rays(nolost=2)).shape, B.rays_bad.shape)
 
-    print("number of rays : ", B.N, B.get_number_of_rays())
-    print("number of good rays : ", B.Ngood, B.get_number_of_rays(nolost=1))
-    print("number of bad rays : ", B.Nbad, B.get_number_of_rays(nolost=2))
-    B = S4Beam.initialize_as_pencil(N=100)
-    print("all : ", (B.get_rays(nolost=0)).shape, B.rays.shape)
-    print("good: ", (B.get_rays(nolost=1)).shape, B.rays_good.shape)
-    print("bad : ", (B.get_rays(nolost=2)).shape, B.rays_bad.shape)
+    print(B.focnew_coeffs())

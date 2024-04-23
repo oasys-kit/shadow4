@@ -231,6 +231,202 @@ def flux_summary(beamline, spectrum_energy=None, spectrum_flux=None, e_min=None,
 
     return(txt)
 
+#
+#focnew
+#
+# def focnew_summary(beamline):
+#     return focnew(beamline)['text']
+
+def focnew(beamline=None, beam=None, nolost=1, mode=0, center=[0.0,0.0]):
+    """
+    FocNew tool that finds the best focus looking at the evolution of the beam calculated after the standard deviation
+    of some beam variables.
+
+    It locates the waist of the beam by minimizing the variance in real space with respect to the optical axis in the
+    X, Z planes and for the circle of least confusion.
+    For many purposes, the focus can be defined as the position where the beam spread is minimum. Thus we have to find
+    the minimum of the variance.
+    If x_i is the coordinate-vector of the i-th ray, and v_i is its direction vector then the variance will be:
+    var_x(t) = (1/N) Sum[(x_i + v_i t)^2]. Expanding the sum, and taking the derivative equal to zero we obtain "t", or
+    location of the beast focus: t = Sum[x_i v_i] / Sum[v_i^2].
+
+    The user may also choose a center of the distribution other than the optical axis. This utility is very important
+    in the study of monochromators and spectrographs, since it allows the user to verify the real location of the
+    focal position.
+
+
+    Parameters
+    ----------
+    beamline : instance of S4beamline or None, optional
+        The beamline instance. Note that either beamline or beam should be defined.
+    beam : instance of S4Beam or None
+        The beam instance. Note that either beamline or beam should be defined.
+    nolost : int, optional
+        * 0=uses all rays,
+        * 1=uses only good rays (non-lost rays),
+        * 2=uses only lost rays.
+    mode : int, optional
+        A flag to define the center:
+        * 0 = center at origin,
+        * 1 = Center at barycenter (coordinate mean),
+        * 2 = External center.
+    center : list or tuple, optional
+        The (x,z) coordinates of the center. Used if mode=2.
+
+    Returns
+    -------
+    dict
+        A dictionary (ticket) with the calculation results:
+        * ticket['nolost']         # input flag
+        * ticket['mode']           # input flag
+        * ticket['center_at']      #  text of mode: 'Origin','Baricenter' or 'External'
+        * ticket['AX']             # \
+        * ticket['AZ']             #  focnew coefficients (to be used by focnew_scan)
+        * ticket['AT']             # /
+        * ticket['x_waist']        # position of waist X
+        * ticket['z_waist']        # position of waist Z
+        * ticket['t_waist']        # position of waist T (averaged)
+        * ticket['text'] = txt     # a text with focnew info
+
+    Notes
+    -----
+    One must be careful in using FOCNEW and verify with PLOTXY that the calculations are correct. This is because with
+    strongly asymmetric or multimodel distribution the standard deviation is not a good measure of the image “size”.
+    Also, if the beam are not Gaussian, the relation between the FWHM and sigma is not defined (It is FWHM=2.355 sigma
+    for beams that follow Gaussian distributions).
+
+    """
+    if beam is not None:
+        beam1 = beam
+    else:
+        if beamline is not None:
+            beam1 = beamline_get_last_beam(beamline)
+        else:
+            raise Exception("Empty beam. Please define either beamline or beam.")
+
+    AX, AZ, AT = beam1.focnew_coeffs(nolost=nolost, mode=mode, center=center)
+
+
+    # store versors
+    ZBAR = AZ[3]
+    VZBAR = AZ[5]
+    #
+    XBAR = AX[3]
+    VXBAR = AX[5]
+    #
+    TBAR = ZBAR + XBAR
+    VTBAR = VZBAR + VXBAR
+
+    # #reset coeffs
+    # if mode != 1:
+    #     AZ[3] = 0.0
+    #     AZ[4] = 0.0
+    #     AZ[5] = 0.0
+    #
+    #     AX[3] = 0.0
+    #     AX[4] = 0.0
+    #     AX[5] = 0.0
+    #
+    #     AT[3] = 0.0
+    #     AT[4] = 0.0
+    #     AT[5] = 0.0
+
+    #get Y coordinate of the three waists
+
+    if numpy.abs(AZ[0]-AZ[5]) > 1e-30:
+        TPARZ = (AZ[4] - AZ[1]) / (AZ[0] - AZ[5])
+    else:
+        TPARZ = 0.0
+
+    if numpy.abs(AX[0]-AX[5]) > 1e-30:
+        TPARX = (AX[4] - AX[1]) / (AX[0] - AX[5])
+    else:
+        TPARX = 0.0
+
+    if numpy.abs(AT[0]-AX[5]) > 1e-30:
+        TPART = (AT[4] - AT[1]) / (AT[0] - AT[5])
+    else:
+        TPART = 0.0
+
+    #prepare text output
+
+    NMODE = ['Origin','Baricenter','External']
+    txt = ""
+    txt += '-----------------------------------------------------------------------------\n'
+    txt += 'Center at : %s\n'%(NMODE[mode])
+    if mode == 2: txt += 'X = %f    Z = %f\n'%(center[0],center[1])
+    txt += '-----------------------------------------------------------------------------\n'
+
+    SIGX = numpy.sqrt(numpy.abs( AX[0] * TPARX**2 + 2.0 * AX[1] * TPARX + AX[2] - ( AX[3] + 2.0 * AX[4] * TPARX + AX[5] * TPARX**2)))
+    SIGZ = numpy.sqrt(numpy.abs( AZ[0] * TPARZ**2 + 2.0 * AZ[1] * TPARZ + AZ[2] - ( AZ[3] + 2.0 * AZ[4] * TPARZ + AZ[5] * TPARZ**2)))
+    SIGT = numpy.sqrt(numpy.abs( AT[0] * TPART**2 + 2.0 * AT[1] * TPART + AT[2] - ( AT[3] + 2.0 * AT[4] * TPART + AT[5] * TPART**2)))
+
+    SIGX0 = numpy.sqrt(numpy.abs(AX[2] - AX[3]))
+    SIGZ0 = numpy.sqrt(numpy.abs(AZ[2] - AZ[3]))
+    SIGT0 = numpy.sqrt(numpy.abs(AT[2] - AT[3]))
+
+    txt += '.............   X AXIS (column 1)    ............\n'
+    txt += 'X coefficients :   %g %g %g\n'%(AX[0],AX[1],AX[2])
+    txt += 'Center : %g   Average versor : %g\n'%(numpy.sqrt(numpy.abs(XBAR)),numpy.sqrt(numpy.abs(VXBAR)))
+    txt += 'Focus along X at       :  %g\n'%(TPARX)
+    txt += 'Waist size at best focus (rms)	:  %g\n'%(SIGX)
+    txt += 'Waist size at origin                :  %g\n'%(SIGX0)
+
+    txt += '.............   Z AXIS (column 3)    ............\n'
+    txt += 'Z coefficients :   %g %g %g\n'%(AZ[0],AZ[1],AZ[2])
+    txt += 'Center : %g   Average versor : %g\n'%(numpy.sqrt(numpy.abs(ZBAR)),numpy.sqrt(numpy.abs(VZBAR)))
+    txt += 'Focus along Z at       :  %g\n'%(TPARZ)
+    txt += 'Waist size at best focus (rms)	:  %g\n'%(SIGZ)
+    txt += 'Waist size at origin                :  %g\n'%(SIGZ0)
+
+    txt += '.............  L E A S T  C O N F U S I O N  ...............\n'
+    txt += 'XZ coefficients :   %g %g %g\n'%(AT[0],AT[1],AT[2])
+    txt += 'Center : %g   Average versor : %g\n'%(numpy.sqrt(numpy.abs(TBAR)),numpy.sqrt(numpy.abs(VTBAR)))
+    txt += 'Circle of least confusion :  %g\n'%(TPART)
+    txt += 'Waist size at best focus (rms)	:  %g\n'%(SIGT)
+    txt += 'Waist size at origin                :  %g\n'%(SIGT0)
+
+    #store all outputs
+    ticket = {}
+    # copy the inputs
+    ticket['nolost'] = nolost
+    ticket['mode'] = mode
+    ticket['center_at'] = NMODE[mode]
+    # coefficients
+    ticket['AX'] = AX
+    ticket['AZ'] = AZ
+    ticket['AT'] = AT
+    # position of waists
+    ticket['x_waist'] = TPARX
+    ticket['z_waist'] = TPARZ
+    ticket['t_waist'] = TPART
+    # text output
+    ticket['text'] = txt
+
+    return ticket
+
+
+
+def focnew_scan(A, x):
+    """
+    Scans the RMS of the beam size along the optical axis using the focnew coefficients.
+
+    Parameters
+    ----------
+    A : numpy array or list or tuple
+        array of 6 coefficients as a result of S4beam.focnew_coeffs().
+    x : numpy array
+        the abscissas array.
+
+    Returns
+    -------
+    numpy array
+        the array with RMS values.
+    """
+    x1 = numpy.array(x)
+    y = numpy.sqrt(numpy.abs( A[0] * x1**2 + 2.0 * A[1] * x1 + A[2] - (A[3] + 2.0 * A[4] * x1 + A[5] * x1**2)))
+    return y
+
 
 if __name__ == "__main__":
 
@@ -257,14 +453,17 @@ if __name__ == "__main__":
         beamline = S4Beamline()
         beamline.set_light_source(light_source)
 
-        return beamline
+        return beamline, beam
 
 
-    beamline = get_beamline()
+    beamline, beam = get_beamline()
     a = numpy.loadtxt("/home/srio/Oasys/spectrum.dat.csv")
     print(a.shape)
     # print(flux_summary(beamline, spectrum_energy=a[:,0], spectrum_flux=a[:,1]))
     print(flux_summary(beamline))
+
+    # print(focnew_summary(beamline))
+
 
     if 0:
         from srxraylib.plot.gol import plot_scatter, plot
@@ -283,3 +482,8 @@ if __name__ == "__main__":
         plot_scatter(1e6 * beam1.get_column(1, nolost=1), 1e6 * beam1.get_column(3, nolost=1), title='LAST RESTORED (X,Z) in microns')
 
         plot(spectrum_energy, spectrum_flux)
+
+    print(beamline.get_beamline_elements_number())
+    # print(focnew(beam=beam))
+    # print(focnew(beam=beamline_get_last_beam(beamline)))
+    print(focnew(beamline=beamline))
