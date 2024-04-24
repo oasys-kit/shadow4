@@ -1,9 +1,11 @@
-# todo: DELETE? this class is not used... use crystalpy instead...
-#
-# Bragg() a class to manipulate the shadow bragg preprocessor file v1
-#
-#  uses xoppylib that contains bragg preprocessor readers
-#
+"""
+Obsolete class to manipulate crystal data and create the Bragg preprocessor file v1 using xraylib.
+
+This class is not used. We now use crystalpy instead.
+
+"""
+# todo: DELETE this class is not longer used.
+
 import numpy
 import scipy.constants as codata
 try:
@@ -258,7 +260,6 @@ class Bragg(object):
 
 
 if __name__ == "__main__":
-    import numpy
     import xraylib
 
     try:

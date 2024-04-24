@@ -1,38 +1,38 @@
 """
-
-python version of the mlayer code in shadow for reflectivity scans
-
-TODO: graded multilayers
-TODO: vectorization
-
+python version of the multilayer code in shadow.
 """
 
+# TODO: graded multilayers
 
-__author__ = 'srio'
-
-
-#
 import numpy
 import scipy.constants as codata
-
-tocm = codata.h*codata.c/codata.e*1e2 # 12398.419739640718e-8
-
 from srxraylib.util.h5_simple_writer import H5SimpleWriter
 
-try:
-    import xraylib
-except:
-    pass
+tocm = codata.h * codata.c / codata.e*1e2 # 12398.419739640718e-8
 
 class MLayer(object):
+    """
+    Constructor.
 
+    Several ways of using MLayer:
+    * ml = MLayer.pre_mlayer(<keywords>)
+    * ml = MLayer(); ml.read_preprocessor_file('mymlayer.dat')
+    * ml = MLayer.initialize_from_bilayer_stack(<keywords>)
+
+    """
     def __init__(self):
-
-        self.using_pre_mlayer = False
+        self.using_pre_mlayer = False # False=use craylib, True=use preprocessor
         self.pre_mlayer_dict = None
 
-    def read_preprocessor_file(self,filename):
+    def read_preprocessor_file(self, filename):
+        """
+        Reads a preprocessor (pre_mlayer) file. The same as in shadow3.
 
+        Parameters
+        ----------
+        filename : str
+            The name of the filename.
+        """
         out_dict = {}
 
         fp = open(filename) # Open file on read mode
@@ -45,7 +45,6 @@ class MLayer(object):
         energy = numpy.zeros(np)
 
         index_pointer += 1
-        # mylist = lines[index_pointer].split(" ")
         mylist = lines[index_pointer].split()
         for i in range(np):
                 energy[i] = float(mylist[i])
@@ -97,7 +96,6 @@ class MLayer(object):
         index_pointer += 1
         npair = int(lines[index_pointer])
 
-
         out_dict["npair"] = npair
 
         thick = numpy.zeros(numpy.abs(npair))
@@ -144,22 +142,95 @@ class MLayer(object):
             out_dict["a3"] = a3
 
         self.pre_mlayer_dict = out_dict
+        self.using_pre_mlayer = True
 
-    #
     # this is copied from shadow3 python preprocessors
-    #
     @classmethod
-    def pre_mlayer(cls, interactive=False, FILE="pre_mlayer.dat",E_MIN=5000.0,E_MAX=20000.0,
-                   S_DENSITY=2.33,S_MATERIAL="Si",
-                   E_DENSITY=2.40,E_MATERIAL="B4C",
-                   O_DENSITY=9.40,O_MATERIAL="Ru",
-                   GRADE_DEPTH=0,N_PAIRS=70,THICKNESS=33.1,GAMMA=0.483,
-                   ROUGHNESS_EVEN=3.3,ROUGHNESS_ODD=3.1,
-                   FILE_DEPTH="myfile_depth.dat",GRADE_SURFACE=0,FILE_SHADOW="mlayer1.sha",
-                   FILE_THICKNESS="mythick.dat",FILE_GAMMA="mygamma.dat",AA0=1.0,AA1=0.0,AA2=0.0,AA3=0.0):
-
+    def pre_mlayer(cls,
+                   interactive=False,
+                   FILE="pre_mlayer.dat",
+                   E_MIN=5000.0, E_MAX=20000.0,
+                   S_DENSITY=2.33, S_MATERIAL="Si",
+                   E_DENSITY=2.40, E_MATERIAL="B4C",
+                   O_DENSITY=9.40, O_MATERIAL="Ru",
+                   GRADE_DEPTH=0,
+                   N_PAIRS=70,
+                   THICKNESS=33.1,
+                   GAMMA=0.483,
+                   ROUGHNESS_EVEN=3.3, ROUGHNESS_ODD=3.1,
+                   FILE_DEPTH="myfile_depth.dat",
+                   GRADE_SURFACE=0,
+                   FILE_SHADOW="mlayer1.sha",
+                   FILE_THICKNESS="mythick.dat",
+                   FILE_GAMMA="mygamma.dat",
+                   AA0=1.0, AA1=0.0, AA2=0.0, AA3=0.0):
         """
-         SHADOW preprocessor for multilayers - python+xraylib version
+        Creates an instance of MLayer with parameters initialized from the keyword parameters and the
+        pre_mlayer preprocessor file. It uses xraylib for accessing the optical constants.
+
+        Parameters
+        ----------
+        interactive : bool, optional
+            Set True for running interactively in the terminal and answer the questions (like in shadow2).
+        FILE : str, optional
+            File name to be created (preprocessor pre_mlayer file).
+        E_MIN : float, optional
+            The minimum photon energy in eV (for creating the tabulated refraction index).
+        E_MAX : float, optional
+            The maximum photon energy in eV (for creating the tabulated refraction index).
+        S_DENSITY : float, optional
+            Density (in g/cm3) for the SUBSTRATE material.
+        S_MATERIAL : float, optional
+            Material formula for the SUBSTRATE material.
+        E_DENSITY : float, optional
+            Density (in g/cm3) for the EVEN material.
+        E_MATERIAL : float, optional
+            Material formula for the EVEN material.
+        O_DENSITY : float, optional
+            Density (in g/cm3) for the ODD material.
+        O_MATERIAL : float, optional
+            Material formula for the ODD material.
+        GRADE_DEPTH : int, optional
+            Flag to indicated that the multilayes has a graded depth.
+        N_PAIRS : int, optional
+            The number of bilayers of the multilayer.
+        THICKNESS : float, optional
+            The thickness of a bilayer in Angstroms.
+        GAMMA : float, optional
+            The gamma factor thickness(even) / (thickness(odd) + thickness(even)) for the multilayer.
+        ROUGHNESS_EVEN : float, optional
+            The rounghness of the EVEN layers in A.
+        ROUGHNESS_ODD : float, optional
+            The rounghness of the ODD layers in A.
+        FILE_DEPTH : str, optional
+            ????
+        GRADE_SURFACE : int, optional
+            Flag for multilayer graded over the surface:
+             * 0: No.
+             * 1: t and/or gamma graded over the surface (input spline files with t and gamma gradient).
+             * 2: t graded over the surface (input quadratic fit to t gradient).
+        FILE_SHADOW : str, optional
+            ????
+        FILE_THICKNESS : str, optional
+            ????
+        FILE_GAMMA : str, optional
+            ????
+        AA0 : float, optional
+            Coefficient when GRADED_SURFACE=1
+        AA1 : float, optional
+            Coefficient when GRADED_SURFACE=1
+        AA2 : float, optional
+            Coefficient when GRADED_SURFACE=1
+        AA3 : float, optional
+            Coefficient when GRADED_SURFACE=1
+
+        Returns
+        -------
+        instance of MLayer
+
+        Notes
+        -----
+        This method requires xraylib to access to the optical constants.
         """
 
         import xraylib
@@ -429,26 +500,61 @@ class MLayer(object):
             bilayer_thickness=33.1,
             bilayer_gamma=0.483,
             ):
+        """
+        Creates an instance of MLayer with the main parameters of a multilater. In this case, the calculations
+        are done without using the preprocessor data, and the optical constants are supplied by xraylib at run time.
+
+        Parameters
+        ----------
+        material_S : str, optional
+            The symbol of the SUBSTRATE material.
+        density_S : float, optional
+            The density in g/cm3 for the SUBSTRATE layers.
+        roughness_S : float, optional
+            The roughness in A for the SUBSTRATE layers.
+        material_E : str, optional
+            The symbol of the EVEN layer material.
+        density_E : float, optional
+            The density in g/cm3 for the EVEN layers.
+        roughness_E : float, optional
+            The roughness in A for the EVEN layers.
+        material_O : str, optional
+            The symbol of the ODD layer material.
+        density_O : float, optional
+            The density in g/cm3 for the ODD layers.
+        roughness_O : float, optional
+            The roughness in A for the ODD layers.
+        bilayer_pairs : int, optional
+            The number of bilayers.
+        bilayer_thickness : float, optional
+            The thickness in A of the bilayers.
+        bilayer_gamma : float, optional
+            The gamma factor of the bilayer thickness(even) / (thichness(odd) + thichness(even)).
+
+        Returns
+        -------
+        instance of MLayer
+        """
+
+        import xraylib
 
         npair = int(bilayer_pairs)
 
         #define variables
-        thick        = []  #[0e0]*npair
-        gamma1       = []  #[0e0]*npair
-        mlroughness1 = []  #[0e0]*npair
-        mlroughness2 = []  #[0e0]*npair
+        thick        = []
+        gamma1       = []
+        mlroughness1 = []
+        mlroughness2 = []
 
         for i in range(npair):
-            thick.append(bilayer_thickness)    #  float(BILAYER_THICKNESS)
-            gamma1.append(bilayer_gamma)       #  float(BILAYER_GAMMA)
-            mlroughness1.append(roughness_E)   #  float(ROUGHNESS_E)
-            mlroughness2.append(roughness_O)   #  float(ROUGHNESS_O)
+            thick.append(bilayer_thickness)
+            gamma1.append(bilayer_gamma)
+            mlroughness1.append(roughness_E)
+            mlroughness2.append(roughness_O)
 
         pre_mlayer_dict = {}
 
         pre_mlayer_dict["np"] = bilayer_pairs
-
-
 
 
         #! srio@esrf.eu 2012-06-07 Nevot-Croce ML roughness model implemented.
@@ -467,9 +573,7 @@ class MLayer(object):
         pre_mlayer_dict["material2"] = material_O
         pre_mlayer_dict["materialS"] = material_S
 
-
         pre_mlayer_dict["roughnessS"] = roughness_S
-
 
         pre_mlayer_dict["density1"] = density_E
         pre_mlayer_dict["density2"] = density_O
@@ -529,7 +633,6 @@ class MLayer(object):
         return out
 
 
-
     # !
     # ! PRE_MLAYER_SCAN
     # !
@@ -541,9 +644,36 @@ class MLayer(object):
     # ! It can be used for testing pre_mlayer, or for simple calculations of
     # ! ML reflectivity.
     # !
-    def scan(self,h5file="",
-            energyN = 51,energy1 = 5000.0,energy2 = 20000.0,
-            thetaN = 1,theta1 = 0.75,theta2 = 0.75):
+    def scan(self, h5file="",
+            energyN=51, energy1=5000.0, energy2=20000.0,
+            thetaN=1, theta1=0.75, theta2=0.75):
+        """
+        this method computes the multilayer reflectivity vs photon energy and/or angle.
+        The reflectivity values are for intensity (not amplitude).
+
+        Parameters
+        ----------
+        h5file : str, optional
+            Name of the h5 file to dump calculated data. Set to "" to avoid creating file.
+        energyN : int, optional
+            Number of points in photon energy.
+        energy1 : float, optional
+            The minimum photon energy in eV.
+        energy2 : float, optional
+            The maximum photon energy in eV.
+        thetaN : int, optional
+            Number of points in incident grazing angle.
+        theta1 : float, optional
+            The minimum value of the incident grazing angle in deg.
+        theta2 : float, optional
+            The minimum value of the incident grazing angle in deg.
+
+        Returns
+        -------
+        tuple
+            (R_S_array, R_P_array, energy_array, theta_array) numpy arrays for the sigma reflectivity (energyN, thetaN),
+            pi reflectivity (energyN, thetaN), photon energy (energyN) and incident grazing angle (thetaN).
+        """
 
         if self.pre_mlayer_dict is None:
             raise Exception("load preprocessor file before!")
@@ -551,12 +681,12 @@ class MLayer(object):
         # !calculate
         k_what = 1
         if (energyN > 1):
-            energyS = (energy2-energy1)/float(energyN-1)
+            energyS = (energy2 - energy1) / float(energyN - 1)
         else:
             energyS = 0.0
 
         if (thetaN > 1):
-            thetaS = (theta2-theta1)/float(thetaN-1)
+            thetaS = (theta2 - theta1) / float(thetaN - 1)
         else:
             thetaS = 0.0
 
@@ -566,31 +696,31 @@ class MLayer(object):
         theta_array = numpy.zeros(thetaN)
         energy_array = numpy.zeros(energyN)
 
-        for i in range(1,1+thetaN):
-            for j in range(1,1+energyN):
+        for i in range(1, 1 + thetaN):
+            for j in range(1, 1 + energyN):
 
-                theta = theta1 + float(i-1) * thetaS
-                energy = energy1+ float(j-1)*energyS
-                sin_ref = numpy.sin ( theta * numpy.pi/180)
+                theta = theta1 + float(i - 1) * thetaS
+                energy = energy1+ float(j - 1) * energyS
+                sin_ref = numpy.sin (theta * numpy.pi/180)
                 wnum = 2 * numpy.pi * energy / tocm
 
                 COS_POLE = 1.0
 
-                R_S,R_P,tmp,phases,phasep = self.reflec(wnum,sin_ref,COS_POLE,k_what)
+                R_S, R_P, tmp, phases, phasep = self._reflec(wnum, sin_ref, COS_POLE, k_what)
 
-                R_S_array[j-1,i-1] = R_S
-                R_P_array[j-1,i-1] = R_P
-                theta_array[i-1] = theta
-                energy_array[j-1] = energy
+                R_S_array[j - 1, i - 1] = R_S
+                R_P_array[j - 1, i - 1] = R_P
+                theta_array[i - 1] = theta
+                energy_array[j - 1] = energy
 
-                if ( (thetaN  ==  1) and (energyN == 1) ):
+                if ((thetaN  ==  1) and (energyN == 1)):
                     print("------------------------------------------------------------------------")
                     print("Inputs: ")
                     print("   for E=",energy1,"eV: ")
-                    print("   energy [eV]:                       ",energy)
-                    print("   grazing angle [deg]:               ",theta)
-                    print("   wavelength [A]:                    ",(1e0/wnum)*2*numpy.pi*1e8)
-                    print("   wavenumber (2 pi/lambda) [cm^-1]:  ",wnum)
+                    print("   energy [eV]:                       ", energy)
+                    print("   grazing angle [deg]:               ", theta)
+                    print("   wavelength [A]:                    ", (1e0 / wnum) * 2 * numpy.pi * 1e8)
+                    print("   wavenumber (2 pi/lambda) [cm^-1]:  ", wnum)
                     print("Outputs: ")
                     print("   R_S:                          ",R_S)
                     print("   R_P:                          ",R_P)
@@ -598,13 +728,13 @@ class MLayer(object):
 
         if h5file != "":
             h5_initialize = True
-            if True: #try:
+            try:
                 if h5_initialize:
                     h5w = H5SimpleWriter.initialize_file(h5file, creator="xoppy_multilayer.py")
                 else:
                     h5w = H5SimpleWriter(h5file, None)
                 h5_entry_name = "MLayer"
-                h5w.create_entry(h5_entry_name,nx_default="reflectivity-s")
+                h5w.create_entry(h5_entry_name, nx_default="reflectivity-s")
                 if energyN == 1:
                     h5w.add_dataset(theta_array, R_S_array[0], dataset_name="reflectivity-s", entry_name=h5_entry_name,
                                     title_x="Grazing angle [deg]", title_y="Reflectivity-s")
@@ -626,15 +756,14 @@ class MLayer(object):
                         pass
 
                 print("File written to disk: %s" % h5file)
-            # except:
-            #     raise Exception("ERROR writing h5 file")
+            except:
+                raise Exception("ERROR writing h5 file")
 
 
-        return R_S_array,R_P_array,energy_array,theta_array
+        return R_S_array, R_P_array, energy_array, theta_array
 
 
-    def reflec(self,WNUM,SIN_REF,COS_POLE,K_WHAT):
-
+    def _reflec(self, WNUM, SIN_REF, COS_POLE, K_WHAT):
         # ! C+++
         # ! C	SUBROUTINE	REFLEC
         # ! C
@@ -669,6 +798,7 @@ class MLayer(object):
         mlroughness2 = self.pre_mlayer_dict["mlroughness2"]
 
         if self.using_pre_mlayer:
+            # print(">>>> reflec, using preprocessor data")
             ENER = self.pre_mlayer_dict["energy"]
             wnum = 2 * numpy.pi * ENER / tocm
             QMIN = wnum[0]
@@ -680,8 +810,6 @@ class MLayer(object):
             BETA_S = self.pre_mlayer_dict["beta_s"]
             BETA_E = self.pre_mlayer_dict["beta_e"]
             BETA_O = self.pre_mlayer_dict["beta_o"]
-
-
 
             i_grade = self.pre_mlayer_dict["igrade"]
 
@@ -747,16 +875,6 @@ class MLayer(object):
             # END IF
 
 
-
-
-
-            #         ! C
-            #         ! C Multilayers reflectivity.
-            #         ! C First interpolate for all the refractive indices.
-            #         ! C
-
-
-
             ELFACTOR  = numpy.log10(1.0e4/30.0e0)/300.0e0
 
             index1  = numpy.log10(PHOT_ENER/ENER[0])/ELFACTOR
@@ -769,13 +887,14 @@ class MLayer(object):
             DELO  = DELTA_O[index1] + (DELTA_O[index1+1] - DELTA_O[index1]) *(PHOT_ENER - ENER[index1])/(ENER[index1+1] - ENER[index1])
             BETO  =  BETA_O[index1] + ( BETA_O[index1+1] -  BETA_O[index1]) *(PHOT_ENER - ENER[index1])/(ENER[index1+1] - ENER[index1])
         else: # not using preprocessor, using xraylib
+            # print(">>>> reflec, using xraylib")
+            import xraylib
             DELS  = 1.0 - xraylib.Refractive_Index_Re(self.pre_mlayer_dict["materialS"],1e-3*PHOT_ENER,self.pre_mlayer_dict["densityS"])
             BETS  =       xraylib.Refractive_Index_Im(self.pre_mlayer_dict["materialS"],1e-3*PHOT_ENER,self.pre_mlayer_dict["densityS"])
             DELE  = 1.0 - xraylib.Refractive_Index_Re(self.pre_mlayer_dict["material1"],1e-3*PHOT_ENER,self.pre_mlayer_dict["density1"])
             BETE  =       xraylib.Refractive_Index_Im(self.pre_mlayer_dict["material1"],1e-3*PHOT_ENER,self.pre_mlayer_dict["density1"])
             DELO  = 1.0 - xraylib.Refractive_Index_Re(self.pre_mlayer_dict["material2"],1e-3*PHOT_ENER,self.pre_mlayer_dict["density2"])
             BETO  =       xraylib.Refractive_Index_Im(self.pre_mlayer_dict["material2"],1e-3*PHOT_ENER,self.pre_mlayer_dict["density2"])
-
 
 
         TFACT = 1.0
@@ -808,15 +927,150 @@ class MLayer(object):
         #
         #
 
-        R_S,R_P,PHASES,PHASEP = self.fresnel(TFACT,GFACT,NPAIR,SIN_REF,COS_POLE,XLAM,
-                                             DELO,DELE,DELS,BETO,BETE,BETS,t_o,t_e,mlroughness1,mlroughness2)
+        R_S, R_P, PHASES,PHASEP = self._fresnel(TFACT, GFACT, NPAIR, SIN_REF, COS_POLE, XLAM,
+                                             DELO, DELE, DELS, BETO, BETE, BETS, t_o, t_e, mlroughness1, mlroughness2)
 
-        return R_S,R_P,0,phases,phasep
+        return R_S, R_P, 0, phases, phasep
+
+
+    def _reflec_vectorized(self, WNUM, SIN_REF, COS_POLE, K_WHAT):
+        # ! C+++
+        # ! C	SUBROUTINE	REFLEC
+        # ! C
+        # ! C	PURPOSE		To compute the local reflectivity of a mirror or
+        # ! C                     multilayer. Also compute filter transmittivity.
+        # ! C
+        # ! C
+        # ! C	ARGUMENTS	[ I ] PIN	: (x,y,z) of the intercept
+        # ! C			[ I ] wnum 	: wavenumber (cm-1)
+        # ! C			[ I ] sin_ref	: sine of angle from surface
+        # ! C			[ I ] cos_pole  : cosine of angle of normal from pole
+        # ! C			[ O ] R_P 	: p-pol reflection coefficient
+        # ! C			[ O ] R_S 	: s-pol    "  "
+        # ! C
+        # ! C---
+
+        nn = WNUM.size
+
+        DELS = numpy.zeros(nn)
+        BETS = numpy.zeros(nn)
+        DELE = numpy.zeros(nn)
+        BETE = numpy.zeros(nn)
+        DELO = numpy.zeros(nn)
+        BETO = numpy.zeros(nn)
+
+        phases = 0.0
+        phasep = 0.0
+
+        NIN = self.pre_mlayer_dict["np"]
+        PHOT_ENER = WNUM * tocm / (2 * numpy.pi)  # eV
+        NPAIR = numpy.abs(self.pre_mlayer_dict["npair"])
+        XLAM = 2 * numpy.pi / WNUM * 1.0e8  # Angstrom
+        gamma1 = self.pre_mlayer_dict["gamma1"]
+        t_oe = self.pre_mlayer_dict["thick"]
+
+        # gamma1 = ratio t(even)/(t(odd)+t(even))  of each layer pair
+        t_e = gamma1 * t_oe
+        t_o = (1.0 - gamma1) * t_oe
+
+        mlroughness1 = self.pre_mlayer_dict["mlroughness1"]
+        mlroughness2 = self.pre_mlayer_dict["mlroughness2"]
+
+        if self.using_pre_mlayer:
+            # print(">>>> reflec, using preprocessor data")
+            ENER = self.pre_mlayer_dict["energy"]
+            wnum = 2 * numpy.pi * ENER / tocm
+            QMIN = wnum[0]
+            QSTEP = wnum[1] - wnum[0]
+
+            DELTA_S = self.pre_mlayer_dict["delta_s"]
+            DELTA_E = self.pre_mlayer_dict["delta_e"]
+            DELTA_O = self.pre_mlayer_dict["delta_o"]
+            BETA_S = self.pre_mlayer_dict["beta_s"]
+            BETA_E = self.pre_mlayer_dict["beta_e"]
+            BETA_O = self.pre_mlayer_dict["beta_o"]
+
+            i_grade = self.pre_mlayer_dict["igrade"]
+
+            ELFACTOR = numpy.log10(1.0e4 / 30.0e0) / 300.0e0
+
+            for i in range(nn):
+                index1  = numpy.log10(PHOT_ENER[i]/ENER[0])/ELFACTOR
+                index1 = int(index1)
+
+                DELS[i]  = DELTA_S[index1] + (DELTA_S[index1+1] - DELTA_S[index1]) *(PHOT_ENER[i] - ENER[index1])/(ENER[index1+1] - ENER[index1])
+                BETS[i]  =  BETA_S[index1] + ( BETA_S[index1+1] -  BETA_S[index1]) *(PHOT_ENER[i] - ENER[index1])/(ENER[index1+1] - ENER[index1])
+                DELE[i]  = DELTA_E[index1] + (DELTA_E[index1+1] - DELTA_E[index1]) *(PHOT_ENER[i] - ENER[index1])/(ENER[index1+1] - ENER[index1])
+                BETE[i]  =  BETA_E[index1] + ( BETA_E[index1+1] -  BETA_E[index1]) *(PHOT_ENER[i] - ENER[index1])/(ENER[index1+1] - ENER[index1])
+                DELO[i]  = DELTA_O[index1] + (DELTA_O[index1+1] - DELTA_O[index1]) *(PHOT_ENER[i] - ENER[index1])/(ENER[index1+1] - ENER[index1])
+                BETO[i]  =  BETA_O[index1] + ( BETA_O[index1+1] -  BETA_O[index1]) *(PHOT_ENER[i] - ENER[index1])/(ENER[index1+1] - ENER[index1])
+        else: # not using preprocessor, using xraylib
+            # print(">>>> reflec, using xraylib")
+            import xraylib
+            for i in range(nn):
+                DELS[i]  = 1.0 - xraylib.Refractive_Index_Re(self.pre_mlayer_dict["materialS"],1e-3*PHOT_ENER[i],self.pre_mlayer_dict["densityS"])
+                BETS[i]  =       xraylib.Refractive_Index_Im(self.pre_mlayer_dict["materialS"],1e-3*PHOT_ENER[i],self.pre_mlayer_dict["densityS"])
+                DELE[i]  = 1.0 - xraylib.Refractive_Index_Re(self.pre_mlayer_dict["material1"],1e-3*PHOT_ENER[i],self.pre_mlayer_dict["density1"])
+                BETE[i]  =       xraylib.Refractive_Index_Im(self.pre_mlayer_dict["material1"],1e-3*PHOT_ENER[i],self.pre_mlayer_dict["density1"])
+                DELO[i]  = 1.0 - xraylib.Refractive_Index_Re(self.pre_mlayer_dict["material2"],1e-3*PHOT_ENER[i],self.pre_mlayer_dict["density2"])
+                BETO[i]  =       xraylib.Refractive_Index_Im(self.pre_mlayer_dict["material2"],1e-3*PHOT_ENER[i],self.pre_mlayer_dict["density2"])
 
 
 
-    def fresnel(self,TFACT,GFACT,NPAIR,SIN_REF,COS_POLE,XLAM,
-                delo,dele,dels,beto,bete,bets,t_o,t_e,mlroughness1,mlroughness2):
+        TFACT = 1.0
+        GFACT = 1.0
+
+        R_S, R_P, PHASES, PHASEP = self._fresnel(TFACT, GFACT, NPAIR, SIN_REF, COS_POLE, XLAM,
+                                             DELO, DELE, DELS, BETO, BETE, BETS, t_o, t_e, mlroughness1, mlroughness2)
+
+        return R_S, R_P, 0, phases, phasep
+
+
+    def reflectivity(self, grazing_angle_deg, photon_energy_ev):
+        """
+        Computes the reflectivity (in intensity) as a function of the incident angle and photon energy.
+
+        Parameters
+        ----------
+        grazing_angle_deg : numpy array
+            The array with the incident gracing angle in deg.
+        photon_energy_ev : numpy array
+            The array with the photon energy in eV.
+
+        Returns
+        -------
+        tuple
+            (R_S_array, R_P_array) arrays with reflectivities.
+        """
+        if self.pre_mlayer_dict is None:
+            raise Exception("load preprocessor file before!")
+
+        R_S_array = numpy.zeros_like(grazing_angle_deg)
+        R_P_array = numpy.zeros_like(grazing_angle_deg)
+        k_what = 1
+
+        vectorized = 1
+        if vectorized == 0:
+            for i in range(grazing_angle_deg.size):
+                theta = grazing_angle_deg[i]
+                energy = photon_energy_ev[i]
+                sin_ref = numpy.sin(theta * numpy.pi / 180)
+                wnum = 2 * numpy.pi * energy / tocm
+                COS_POLE = 1.0
+                R_S, R_P, tmp, phases, phasep = self._reflec(wnum, sin_ref, COS_POLE, k_what)
+                R_S_array[i] = R_S
+                R_P_array[i] = R_P
+        else:
+            wnum = 2 * numpy.pi * photon_energy_ev / tocm
+            sin_ref = numpy.sin(grazing_angle_deg * numpy.pi / 180)
+            COS_POLE = 1.0
+            R_S_array, R_P_array, _, _, _ = self._reflec_vectorized(wnum, sin_ref, COS_POLE, k_what)  # todo: not working
+
+        return R_S_array, R_P_array
+
+    @classmethod
+    def _fresnel(cls, TFACT, GFACT, NPAIR, SIN_REF, COS_POLE, XLAM,
+                delo, dele, dels, beto, bete, bets, t_o, t_e, mlroughness1, mlroughness2):
 
         # !C------------------------------------------------------------------------------
         # !C  subroutine FRESNEL
@@ -1018,61 +1272,167 @@ class MLayer(object):
 
         PHASEP = numpy.arctan2(rp.imag,rp.real)
         anp = numpy.abs(rp)
-        return ans,anp,PHASES,PHASEP
+
+        # print("\>>>>>> fresnel inputs\n TFACT, GFACT, NPAIR, SIN_REF, COS_POLE, XLAM, delo, dele, dels, beto, bete, bets, t_o, t_e, mlroughness1, mlroughness2 = ",
+        #       TFACT, GFACT, NPAIR, SIN_REF, COS_POLE, XLAM,
+        #       delo, dele, dels, beto, bete, bets, t_o[0], t_e[0], mlroughness1[0], mlroughness2[0])
+        #
+        # print(">>>>>> fresnel output\n ans, anp, PHASES, PHASEP = ", ans, anp, PHASES, PHASEP)
+        return ans, anp, PHASES, PHASEP
 
 if __name__ == "__main__":
 
     from srxraylib.plot.gol import plot
 
+    if 1:
+        a = MLayer.pre_mlayer(
+            interactive=False,
+            FILE="pre_mlayer.dat",
+            E_MIN=110.0, E_MAX=500.0,
+            O_DENSITY=7.19, O_MATERIAL="Cr",  # odd: closer to vacuum
+            E_DENSITY=3.00, E_MATERIAL="Sc",  # even: closer to substrate
+            S_DENSITY=2.33, S_MATERIAL="Si",  # substrate
+            GRADE_DEPTH=0,
+            N_PAIRS=50,
+            THICKNESS=22.0,
+            GAMMA=10.0/22.0,  #  gamma ratio  =  t(even) / (t(odd) + t(even))")
+            ROUGHNESS_EVEN=0.0,
+            ROUGHNESS_ODD=0.0,
+            FILE_DEPTH="myfile_depth.dat",
+            GRADE_SURFACE=0,
+            FILE_SHADOW="mlayer1.sha",
+            FILE_THICKNESS="mythick.dat",
+            FILE_GAMMA="mygamma.dat",
+            AA0=1.0,AA1=0.0,AA2=0.0,AA3=0.0)
 
-    a = MLayer.pre_mlayer(
-        interactive=False,
-        FILE="pre_mlayer.dat",
-        E_MIN=110.0, E_MAX=500.0,
-        O_DENSITY=7.19, O_MATERIAL="Cr",  # odd: closer to vacuum
-        E_DENSITY=3.00, E_MATERIAL="Sc",  # even: closer to substrate
-        S_DENSITY=2.33, S_MATERIAL="Si",  # substrate
-        GRADE_DEPTH=0,
-        N_PAIRS=50,
-        THICKNESS=22.0,
-        GAMMA=10.0/22.0,  #  gamma ratio  =  t(even) / (t(odd) + t(even))")
-        ROUGHNESS_EVEN=0.0,
-        ROUGHNESS_ODD=0.0,
-        FILE_DEPTH="myfile_depth.dat",
-        GRADE_SURFACE=0,
-        FILE_SHADOW="mlayer1.sha",
-        FILE_THICKNESS="mythick.dat",
-        FILE_GAMMA="mygamma.dat",
-        AA0=1.0,AA1=0.0,AA2=0.0,AA3=0.0)
-
-    b = MLayer()
-    b.read_preprocessor_file("pre_mlayer.dat")
+        b = MLayer()
+        b.read_preprocessor_file("pre_mlayer.dat")
 
 
-    #
-    # energy scan
-    #
-    rs, rp, e, t = a.scan(h5file="",
-            energyN=100,energy1=300.0,energy2=500.0,
-            thetaN=1,theta1=45.0,theta2=45.0)
+        #
+        # energy scan
+        #
+        rs, rp, e, t = a.scan(h5file="",
+                energyN=100,energy1=300.0,energy2=500.0,
+                thetaN=1,theta1=45.0,theta2=45.0)
 
-    print(rs.shape,rp.shape,e.shape,t.shape)
+        print(rs.shape,rp.shape,e.shape,t.shape)
 
-    plot(e,rs[:,0],xtitle="Photon energy [eV]",ytitle="Reflectivity")
+        plot(e,rs[:,0],xtitle="Photon energy [eV]",ytitle="Reflectivity")
 
-    #
-    # theta scan
-    #
-    rs, rp, e, t = a.scan(h5file="",
-            energyN=1,energy1=400.0,energy2=401.0,
-            thetaN=1000,theta1=40.0,theta2=50.0)
+        #
+        # theta scan
+        #
+        rs, rp, e, t = a.scan(h5file="",
+                energyN=1,energy1=400.0,energy2=401.0,
+                thetaN=1000,theta1=40.0,theta2=50.0)
 
-    print(rs.shape,rp.shape,e.shape,t.shape)
+        print(rs.shape,rp.shape,e.shape,t.shape)
 
-    plot(t,rs[0],xtitle="angle [deg]",ytitle="Reflectivity",ylog=False)
+        plot(t,rs[0],xtitle="angle [deg]",ytitle="Reflectivity",ylog=False)
 
-    #
-    # single point
-    #
-    a.scan(h5file="",
-            energyN=1,energy1=398.0,thetaN=1,theta1=45.0)
+        #
+        # single point
+        #
+        a.scan(h5file="",
+                energyN=1,energy1=398.0,thetaN=1,theta1=45.0)
+
+
+    if 1: # prepate optical element: MLayer.reflectivity()
+        if 1:
+            b = MLayer.pre_mlayer(
+                interactive=False,
+                FILE="mlayer1.dat",
+                E_MIN=30000.0, E_MAX=100000.0,
+                O_DENSITY=19.3, O_MATERIAL="W",  # odd: closer to vacuum
+                E_DENSITY=2.37, E_MATERIAL="B",  # even: closer to substrate
+                S_DENSITY=2.33, S_MATERIAL="Si",  # substrate
+                GRADE_DEPTH=0,
+                N_PAIRS=350,
+                THICKNESS=30.19,
+                GAMMA=0.666,  #  gamma ratio  =  t(even) / (t(odd) + t(even))")
+                ROUGHNESS_EVEN=0.0,
+                ROUGHNESS_ODD=0.0,
+                FILE_DEPTH="myfile_depth.dat",
+                GRADE_SURFACE=0,
+                FILE_SHADOW="tmp.sha",
+                FILE_THICKNESS="tmp.thi",
+                FILE_GAMMA="tmp.gam",
+                AA0=1.0, AA1=0.0, AA2=0.0, AA3=0.0)
+
+            # b = MLayer()
+            # # b.read_preprocessor_file("mlayer1.dat") # "/home/srio/Oasys/mlayer.dat")
+            # b.read_preprocessor_file("/home/srio/Oasys/mlayer.dat")
+
+        else:
+
+            b = MLayer.initialize_from_bilayer_stack(
+                                              material_S="Si", density_S=None, roughness_S=0.0,
+                                              material_E="B", density_E=None, roughness_E=0.0,
+                                              material_O="W", density_O=None, roughness_O=0.0,
+                                              bilayer_pairs=350,
+                                              bilayer_thickness=30.19,
+                                              bilayer_gamma=0.666,
+                                              )
+
+
+        print(">>>> using preprocessor data: ", b.using_pre_mlayer)
+
+        #
+        # energy scan
+        #
+        rs, rp, e, t = b.scan(h5file="",
+                              energyN=501, energy1=41000, energy2=49000,
+                              thetaN=1, theta1=0.26356, theta2=0.26356)
+        plot(e, rs[:, 0], xtitle="Photon energy [eV]", ytitle="Reflectivity", title="ENERGY scan", )
+        energy = e.copy()
+        #
+        # theta scan
+        #
+        rs, rp, e, t = b.scan(h5file="",
+                              energyN=1, energy1=45000, energy2=45000,
+                              thetaN=1000, theta1=0.001, theta2=1.100)
+
+        print(rs.shape, rp.shape, e.shape, t.shape)
+
+        plot(t, rs[0], xtitle="angle [deg]", ytitle="Reflectivity", title="THETA scan", ylog=False)
+
+        #
+        # single point
+        #
+        b.scan(h5file="",
+               energyN=1, energy1=45000, thetaN=1, theta1=0.26356)
+
+        #
+        # MLayer.reflectivity() scan (for shadow4) scan
+        #
+        import time
+        t0 = time.time()
+        rs1, rp1 = b.reflectivity(numpy.ones_like(energy) * 0.26356, energy)
+        t1 = time.time()
+
+        print(">>>>>>> time", t1-t0)
+        plot(energy, rs1, xtitle="Photon energy [eV]", ytitle="Reflectivity", title="MIXED scan", )
+
+    if 0: # test if fresnel is vectorized
+        #         """
+        #         >>>>>> fresnel inputs
+        #  TFACT, GFACT, NPAIR, SIN_REF, COS_POLE, XLAM, delo, dele, dels, beto, bete, bets, t_o, t_e, mlroughness1, mlroughness2 =  1.0 1.0 350 0.004599973554014915 1.0 0.2530289763942863 1.3195526860076967e-06 1.8951717106752142e-07 2.008483345194989e-07 2.4369587945764543e-08 7.99372703554642e-11 2.1384903148049165e-10 10.083459999999999 20.106540000000003 0.0 0.0
+        # >>>>>> fresnel output
+        #  ans, anp, PHASES, PHASEP =  0.0892405492412737 0.08923914509013628 -0.7352850221702067 -0.7351653426127979
+        #         """
+        TFACT, GFACT, NPAIR, SIN_REF, COS_POLE, XLAM = 1.0, 1.0, 350, 0.004599973554014915, 1.0, 0.2530289763942863
+        delo, dele, dels, beto, bete, bets =  1.3195526860076967e-06, 1.8951717106752142e-07, 2.008483345194989e-07, 2.4369587945764543e-08, 7.99372703554642e-11, 2.1384903148049165e-10
+        t_o, t_e, mlroughness1, mlroughness2 = [10.083459999999999] * 350,  [20.106540000000003] * 350,  [0.0] * 350,  [0.0] * 350
+
+        o = MLayer._fresnel(TFACT, GFACT, NPAIR, SIN_REF, COS_POLE, XLAM, delo, dele, dels, beto, bete, bets, t_o, t_e, mlroughness1, mlroughness2)
+        print(o)
+
+        o = MLayer._fresnel(TFACT, GFACT, NPAIR, SIN_REF * 3, COS_POLE, XLAM * 1.5, delo, dele, dels, beto, bete, bets, t_o, t_e,
+                           mlroughness1, mlroughness2)
+        print(o)
+
+        o = MLayer._fresnel(TFACT, GFACT, NPAIR, numpy.array([SIN_REF, SIN_REF * 3]), COS_POLE,
+                            numpy.array([XLAM, XLAM * 1.5]), delo, dele, dels, beto, bete, bets, t_o, t_e,
+                            mlroughness1, mlroughness2)
+        print(o)

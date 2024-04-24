@@ -1,11 +1,7 @@
 """
-
-python version of the mirror reflectivity code and refractive index calculations in shadow
-
-TODO: vectorization
-
+python version of the mirror reflectivity code and refractive index calculations in shadow.
 """
-
+# TODO: vectorization
 import numpy
 import scipy.constants as codata
 from shadow4.tools.logger import is_verbose, is_debug
@@ -15,11 +11,26 @@ tocm = codata.h * codata.c / codata.e * 1e2 # 12398.419739640718e-8
 class PreRefl(object):
 
     def __init__(self):
+        """
+        Constructor.
 
+        Get reflectivities using one of these options:
+        * Using preprocessor file: ref = PreRefl(); ref.read_preprocessor_file('myprerefl.dat') ; ref.get_refraction_index() ; ref;get_attenuation_coefficient().
+        * PreRefl.get_refraction_index_external_xraylib(<kwds>) PreRefl.get_attenuation_coefficient_external_xraylib(<kwds>)
+        * PreRefl.get_refraction_index_external_dabax(<kwds>) PreRefl.get_attenuation_coefficient_external_dabax(<kwds>)
+
+        """
         self.prerefl_dict = None
 
-    def read_preprocessor_file(self,filename):
+    def read_preprocessor_file(self, filename):
+        """
+        Reads a preprocessor (prerefl) file. The same as in shadow3.
 
+        Parameters
+        ----------
+        filename : str
+            The name of the filename.
+        """
         fp = open(filename) # Open file on read mode
         lines = fp.read().split("\n") # Create a list containing all lines
         fp.close() # Close file
@@ -47,7 +58,9 @@ class PreRefl(object):
         self.prerefl_dict = {"QMIN":QMIN,"QMAX":QMAX,"QSTEP":QSTEP,"DEPTH0":DEPTH0,"NREFL":NREFL,"ZF1":ZF1,"ZF2":ZF2}
 
     def preprocessor_info(self):
-
+        """
+        Prints some information.
+        """
         print("\n========================================")
         print("         preprocesor PreRefl info         ")
         for k in self.prerefl_dict.keys():
@@ -61,9 +74,25 @@ class PreRefl(object):
         print("========================================")
 
     def info(self):
+        """
+        Prints some information.
+        """
         return self.preprocessor_info()
 
     def get_refraction_index(self,energy1):
+        """
+        Returns the complex refraction index.
+
+        Parameters
+        ----------
+        energy1 : float or numpy array
+            The photon energy or array of energies in eV.
+
+        Returns
+        -------
+        complex or numpy array
+            The complex refraction index.
+        """
 
         wnum = 2*numpy.pi * energy1 / tocm
 
@@ -86,8 +115,8 @@ class PreRefl(object):
 
         # index1 = int(index1)
 
-        ALFA = self.prerefl_dict["ZF1"][index1] + (self.prerefl_dict["ZF1"][index1+1]-self.prerefl_dict["ZF1"][index1]) * DEL_X
-        GAMMA = self.prerefl_dict["ZF2"][index1] + (self.prerefl_dict["ZF2"][index1+1]-self.prerefl_dict["ZF2"][index1]) * DEL_X
+        ALFA = self.prerefl_dict["ZF1"][index1] + (self.prerefl_dict["ZF1"][index1 + 1] - self.prerefl_dict["ZF1"][index1]) * DEL_X
+        GAMMA = self.prerefl_dict["ZF2"][index1] + (self.prerefl_dict["ZF2"][index1 + 1] - self.prerefl_dict["ZF2"][index1]) * DEL_X
 
         refraction_index = (1.0 - ALFA / 2) + (GAMMA / 2)*1j
 
@@ -98,26 +127,39 @@ class PreRefl(object):
 
             print("------------------------------------------------------------------------" )
             print("Inputs: " )
-            print("   energy [eV]:                       ",wnum * tocm / (2*numpy.pi))
-            print("   wavelength [A]:                    ",(1.0/wnum) * 2 * numpy.pi*1e8 )
+            print("   energy [eV]:                       ",wnum * tocm / (2 * numpy.pi))
+            print("   wavelength [A]:                    ",(1.0 / wnum) * 2 * numpy.pi * 1e8 )
             print("   wavenumber (2 pi/lambda) [cm^-1]:  ",wnum )
             # wnum = 2*numpy.pi * energy1 / tocm
             print("Outputs: " )
             print("   refraction index = (1-delta) + i*beta : " )
-            print("   delta:                          ",1.0-refraction_index.real )#1.0-rr_ind )
-            print("   beta:                           ",refraction_index.imag) #rr_attenuation / (2*wnum) )
-            print("   real(n):                        ",refraction_index.real )
-            print("   attenuation coef [cm^-1]:       ",2*refraction_index.imag*wnum )
+            print("   delta:                          ", 1.0 - refraction_index.real )
+            print("   beta:                           ", refraction_index.imag)
+            print("   real(n):                        ", refraction_index.real )
+            print("   attenuation coef [cm^-1]:       ", 2*refraction_index.imag*wnum )
             print("------------------------------------------------------------------------" )
 
 
         return refraction_index
 
-    def get_attenuation_coefficient(self,energy1):
+    def get_attenuation_coefficient(self, energy1):
+        """
+        Returns the attenuation coefficient.
+
+        Parameters
+        ----------
+        energy1 : float or numpy array
+            The photon energy or array of energies in eV.
+
+        Returns
+        -------
+        float or numpy array
+            The attenuation coefficient in cm^-1.
+        """
         refraction_index = self.get_refraction_index(energy1)
         wnum = 2 * numpy.pi * energy1 / tocm
 
-        return 2*refraction_index.imag*wnum
+        return 2 * refraction_index.imag * wnum
 
     @classmethod
     def get_attenuation_coefficient_external_xraylib(self,
@@ -140,7 +182,24 @@ class PreRefl(object):
                                                      density=3.217,
                                                      dabax=None,
                                                      ):
+        """
+        Standalone method to return the attenuation coefficient.
 
+        Parameters
+        ----------
+        photon_energy_ev : float or numpy array
+            The photon energy or array of energies in eV.
+        material : str, optional
+            The symbol/formula of the material.
+        density : float, optional
+            The material density in g/cm3.
+        dabax : None or instance of DabaxXraylib
+            A pointer to the dabax library. Use None for default.
+        Returns
+        -------
+        float or numpy array
+            The array with attenuation coefficient in cm^-1.
+        """
         from dabax.dabax_xraylib import DabaxXraylib
         if isinstance(dabax, DabaxXraylib):
             dx = dabax
@@ -149,14 +208,28 @@ class PreRefl(object):
 
         return dx.CS_Total_CP(material, photon_energy_ev*1e-3) * density
 
-#######################
-
     @classmethod
     def get_refraction_index_external_xraylib(self,
                                                      photon_energy_ev=10000.0,
                                                      material="SiC",
                                                      density=3.217,):
+        """
+        Standalone method to return the complex refraction index using xraylib.
 
+        Parameters
+        ----------
+        photon_energy_ev : float or numpy array
+            The photon energy or array of energies in eV.
+        material : str, optional
+            The symbol/formula of the material.
+        density : float, optional
+            The material density in g/cm3.
+
+        Returns
+        -------
+        float or numpy array
+            The array with attenuation coefficient in cm^-1.
+        """
         import xraylib
         if isinstance(photon_energy_ev, (float, int)):
             return xraylib.Refractive_Index(material, photon_energy_ev * 1e-3, density)
@@ -173,6 +246,23 @@ class PreRefl(object):
                                                      photon_energy_ev=10000.0,
                                                      material="SiC",
                                                      density=3.217,):
+        """
+        Standalone method to return the real part of the refraction index using xraylib.
+
+        Parameters
+        ----------
+        photon_energy_ev : float or numpy array
+            The photon energy or array of energies in eV.
+        material : str, optional
+            The symbol/formula of the material.
+        density : float, optional
+            The material density in g/cm3.
+
+        Returns
+        -------
+        float or numpy array
+            The array with attenuation coefficient in cm^-1.
+        """
 
         return cls.get_refraction_index_external_xraylib(
                                                      photon_energy_ev=photon_energy_ev,
@@ -203,7 +293,25 @@ class PreRefl(object):
                                                      density=3.217,
                                                      dabax=None,
                                                      ):
+        """
+        Standalone method to return the complex refraction index using dabax.
 
+        Parameters
+        ----------
+        photon_energy_ev : float or numpy array
+            The photon energy or array of energies in eV.
+        material : str, optional
+            The symbol/formula of the material.
+        density : float, oprional
+            The material density in g/cm3.
+        dabax : None or instance of DabaxXraylib
+            A pointer to the dabax library. Use None for default.
+
+        Returns
+        -------
+        float or numpy array
+            The array with attenuation coefficient in cm^-1.
+        """
         from dabax.dabax_xraylib import DabaxXraylib
         if isinstance(dabax, DabaxXraylib):
             dx = dabax
@@ -212,22 +320,31 @@ class PreRefl(object):
 
         return dx.Refractive_Index_Re(material, photon_energy_ev * 1e-3, density)
 
-#######################
-    def reflectivity_fresnel(self,photon_energy_ev=10000.0,grazing_angle_mrad=3.0,
-                             roughness_rms_A=0.0, method=2):
+    def reflectivity_fresnel(self,
+                             photon_energy_ev=10000.0,
+                             grazing_angle_mrad=3.0,
+                             roughness_rms_A=0.0,
+                             method=2,
+                             ):
         """
-        Calculates the reflectivity of an interface using Fresnel formulas.
+        Calculates the reflectivity (intensity) of an interface using Fresnel formulas.
 
-        Code adapted from XOP and SHADOW
+        Parameters
+        ----------
+        photon_energy_ev : float or numpy array
+            The photon energy in eV.
+        grazing_angle_mrad : float or numpy array
+            The grazing incident angle in mrad.
+        roughness_rms_A : float or numpy array
+            The rouughness RMS in Angstroms,
+        method : int, optional
+            0=Born&Wolf, 1=Parratt, 2=shadow3  (avoid using 0 or 1, experimental!!)
 
-        :param grazing_angle_mrad: scalar with grazing angle in mrad
-        :param roughness_rms_A: scalar with roughness rms in Angstroms
-        :param photon_energy_ev: scalar or array with photon energies in eV
-        :param method: 0=Born&Wolf, 1=Parratt, 2=shadow3  (avoid using 0 or 1, experimental!!)
-        :return: (rs,rp,runp) the s-polarized, p-pol and unpolarized reflectivities
+        Returns
+        -------
+        tuple
+            (rs, rp, runp) the s-polarized, p-pol and unpolarized reflectivities
         """
-
-
         rs, rp = self.reflectivity_amplitudes_fresnel(photon_energy_ev=photon_energy_ev,
                                                       grazing_angle_mrad=grazing_angle_mrad,
                                                       roughness_rms_A=roughness_rms_A,
@@ -235,10 +352,31 @@ class PreRefl(object):
 
         return numpy.abs(rs)**2, numpy.abs(rp)**2, numpy.abs(0.5 * (rs + rp))**2,
 
-    def reflectivity_amplitudes_fresnel(self, photon_energy_ev=10000.0, grazing_angle_mrad=3.0, roughness_rms_A=0.0,
+    def reflectivity_amplitudes_fresnel(self,
+                                        photon_energy_ev=10000.0,
+                                        grazing_angle_mrad=3.0,
+                                        roughness_rms_A=0.0,
                                         method=2 # 0=born & wolf, 1=parratt, 2=shadow3 (avoid using 0 or 1, experimental!!)
                                         ):
+        """
+        Calculates the reflectivity (amplitude) of an interface using Fresnel formulas.
 
+        Parameters
+        ----------
+        photon_energy_ev : float or numpy array
+            The photon energy in eV.
+        grazing_angle_mrad : float or numpy array
+            The grazing incident angle in mrad.
+        roughness_rms_A : float or numpy array
+            The rouughness RMS in Angstroms,
+        method : int, optional
+            0=Born&Wolf, 1=Parratt, 2=shadow3  (avoid using 0 or 1, experimental!!)
+
+        Returns
+        -------
+        tuple
+            (rs, rp, runp) the s-polarized, p-pol and unpolarized reflectivities
+        """
         refraction_index_2 = self.get_refraction_index(photon_energy_ev)
         refraction_index_1 = numpy.ones_like(refraction_index_2)
 
@@ -261,7 +399,28 @@ class PreRefl(object):
                                                          method=2,
                                                          # 0=born & wolf, 1=parratt, 2=shadow3 (avoid using 0 or 1, experimental!!) ):
                                                          ):
+        """
+        Standalone method to calculate the reflectivity (amplitude) of an interface using Fresnel formulas using xraylib.
 
+        Parameters
+        ----------
+        photon_energy_ev : float or numpy array
+            The photon energy in eV.
+        grazing_angle_mrad : float or numpy array
+            The grazing incident angle in mrad.
+        roughness_rms_A : float or numpy array
+            The rouughness RMS in Angstroms,
+        method : int, optional
+            0=Born&Wolf, 1=Parratt, 2=shadow3  (avoid using 0 or 1, experimental!!)
+        coating_material : int, optional
+            The symbol/formula of the coating material.
+        coating_density : int, optional
+            The density in g/cm3 of the coating material.
+        Returns
+        -------
+        tuple
+            (rs, rp, runp) the s-polarized, p-pol and unpolarized reflectivities
+        """
         import xraylib
         photon_energy_ev_array = numpy.array(photon_energy_ev)
         refraction_index_2 = numpy.zeros_like(photon_energy_ev_array, dtype=complex)
@@ -290,7 +449,30 @@ class PreRefl(object):
                                                          method=2, # 0=born & wolf, 1=parratt, 2=shadow3 (avoid using 0 or 1, experimental!!) ):
                                                          dabax=None,
                                                        ):
+        """
+        Standalone method to calculate the reflectivity (amplitude) of an interface using Fresnel formulas using dabax.
 
+        Parameters
+        ----------
+        photon_energy_ev : float or numpy array
+            The photon energy in eV.
+        grazing_angle_mrad : float or numpy array
+            The grazing incident angle in mrad.
+        roughness_rms_A : float or numpy array
+            The rouughness RMS in Angstroms,
+        method : int, optional
+            0=Born&Wolf, 1=Parratt, 2=shadow3  (avoid using 0 or 1, experimental!!)
+        dabax : None or instance of DabaxXraylib
+            A pointer to the dabax library. Use None for default.
+        coating_material : int, optional
+            The symbol/formula of the coating material.
+        coating_density : int, optional
+            The density in g/cm3 of the coating material.
+        Returns
+        -------
+        tuple
+            (rs, rp, runp) the s-polarized, p-pol and unpolarized reflectivities
+        """
         from dabax.dabax_xraylib import DabaxXraylib
         if isinstance(dabax, DabaxXraylib):
             dx = dabax
@@ -311,7 +493,6 @@ class PreRefl(object):
                                                  method=method)
 
 
-
     @classmethod
     def reflectivity_amplitudes_fresnel_external(cls,
                                                  photon_energy_ev=10000.0,
@@ -321,7 +502,34 @@ class PreRefl(object):
                                                  roughness_rms_A=0.0,
                                                  method=2, # 0=born & wolf, 1=parratt, 2=shadow3 (avoid using 0 or 1, experimental!!) ):
                                                  ):
+        """
+        Standalone method to calculate the reflectivity (amplitude) of an interface using Fresnel formulas using optical
+        constants entered by user.
 
+        Parameters
+        ----------
+        photon_energy_ev : float or numpy array
+            The photon energy in eV.
+        grazing_angle_mrad : float or numpy array
+            The grazing incident angle in mrad.
+        roughness_rms_A : float or numpy array
+            The rouughness RMS in Angstroms,
+        method : int, optional
+            0=Born&Wolf, 1=Parratt, 2=shadow3  (avoid using 0 or 1, experimental!!)
+        coating_material : int, optional
+            The symbol/formula of the coating material.
+        coating_density : int, optional
+            The density in g/cm3 of the coating material.
+        refraction_index_1 : float or numpy array
+            the refraction index (complex) for medium 1 (object).
+        refraction_index_2 : float or numpy array
+            the refraction index (complex) for medium 2 (image).
+
+        Returns
+        -------
+        tuple
+            (rs, rp) the s-polarized and p-pol and amplitude reflectivities
+        """
 
         theta1g = grazing_angle_mrad * 1e-3     # in rad
         theta1 = numpy.pi / 2 - theta1g
@@ -355,10 +563,6 @@ class PreRefl(object):
             rp = rs
 
         elif method == 2:
-            # ; epsi = 1 - alpha - i gamma
-            # alpha = 2.0D0*k*f1
-            # gamma = 2.0D0*k*f2
-
             alpha = 2 * (1.0 - refraction_index_2.real)
             gamma = 2 * refraction_index_2.imag
 
@@ -381,8 +585,6 @@ class PreRefl(object):
             rs = numpy.sqrt(rs, dtype = complex)
             rp = numpy.sqrt(rp, dtype = complex)
 
-
-
         wavelength_m = codata.h * codata.c / codata.e / photon_energy_ev
 
         debyewaller = numpy.exp( -(4.0 * numpy.pi * numpy.sin(theta1g) * rough1 / (wavelength_m * 1e10))**2 )
@@ -397,20 +599,41 @@ class PreRefl(object):
     # this is copied (ans sligtly ceaned) from shadow3 python preprocessors
     #
     @classmethod
-    def prerefl(cls, interactive=True, SYMBOL="SiC", DENSITY=3.217, FILE="prerefl.dat", E_MIN=100.0, E_MAX=20000.0,
-                E_STEP=100.0):
+    def prerefl(cls,
+                interactive=True,
+                SYMBOL="SiC",
+                DENSITY=3.217,
+                FILE="prerefl.dat",
+                E_MIN=100.0,
+                E_MAX=20000.0,
+                E_STEP=100.0,
+                ):
         """
-         Preprocessor for mirrors - python+xraylib version
+        Creates an instance of PreRefl with parameters initialized from the keyword parameters and the
+        prerefl preprocessor file. It uses xraylib for accessing the optical constants.
 
-         -"""
+        Parameters
+        ----------
+        interactive : bool, optional
+            Set True for running interactively in the terminal and answer the questions (like in shadow2).
+        SYMBOL : str, optional
+            The material symbol/formula.
+        DENSITY : float, optional
+            The density of the material in g/cm3.
+        FILE : str, optional
+            The file name (output) for the prerefl preprocessor file.
+        E_MIN : float, optional
+            The minimum photon energy in eV (for creating the tabulated refraction index).
+        E_MAX : float, optional
+            The maximum photon energy in eV (for creating the tabulated refraction index).
+        E_STEP : float optional
+            The photon energy step in eV.
 
-        # retrieve physical constants needed
-        import scipy
+        Returns
+        -------
+        instance of PreRefl
+        """
         import xraylib
-
-        import scipy.constants as codata
-
-        tocm = codata.h * codata.c / codata.e * 1e2
 
         if interactive:
             # input section
@@ -483,17 +706,26 @@ class PreRefl(object):
     def prerefl_cxro(cls, input_file="https://henke.lbl.gov/tmp/xray8378.dat", output_file="prerefl.dat",
                      E_MIN=None, E_MAX=None, NPOINTS=1000):
         """
-         Preprocessor for mirrors - data from file downloaded from https://henke.lbl.gov/ (refractio)
+        Creates an instance of PreRefl with parameters initialized from the keyword parameters and the
+        prerefl preprocessor file. It uses the CXRO web site for accessing the optical constants.
 
-         -"""
+        Parameters
+        ----------
+        input_file : str, optional
+            The URL from where the data is downloaded.
+        output_file : str, optional
+            The file name (output) for the prerefl preprocessor file.
+        E_MIN : float, optional
+            The minimum photon energy in eV (for creating the tabulated refraction index).
+        E_MAX : float, optional
+            The maximum photon energy in eV (for creating the tabulated refraction index).
+        NPOINTS : int optional
+            The number of points for the photon energy array.
 
-        # retrieve physical constants needed
-        import scipy
-
-        import scipy.constants as codata
-
-        tocm = codata.h * codata.c / codata.e * 1e2
-
+        Returns
+        -------
+        instance of PreRefl
+        """
         a = numpy.loadtxt(input_file, skiprows=2)
 
         energy0 = a[:,0]
@@ -512,7 +744,6 @@ class PreRefl(object):
         if energy0[-1] < E_MAX:
             raise Exception("File max(energy) = %g smaller than limit %g, cannot interpolate" % (energy0[-1], E_MAX))
 
-
         # read density from header
         if "http" in input_file:
             import urllib.request as urllib
@@ -526,8 +757,6 @@ class PreRefl(object):
             fp.close() # Close file
             mylist = lines[0].split("=")
             density = float(mylist[1])
-
-
 
         energy = numpy.linspace(E_MIN, E_MAX, int(NPOINTS))
         delta = numpy.interp(energy, energy0, delta0)
@@ -553,7 +782,6 @@ class PreRefl(object):
             f.write("%e \n" % tmp2)
         print("File written to disk: %s" % output_file)
         f.close()
-
 
         return None
 
