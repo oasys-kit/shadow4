@@ -45,6 +45,10 @@ class MLayer(object):
         self.using_pre_mlayer = False # False=use craylib, True=use preprocessor
         self.pre_mlayer_dict = None
 
+    def is_laterally_graded(self):
+        return self.pre_mlayer_dict["igrade"] > 0
+
+
     def read_preprocessor_file(self, filename):
         """
         Reads a preprocessor (pre_mlayer) file. The same as in shadow3.
@@ -148,14 +152,23 @@ class MLayer(object):
 
             out_dict["fgrade"] = fgrade
 
+            raise Exception("** Error ** SHADOW4 does not support graded definitions from file (igrade cannot be 1).")
+
         elif igrade == 2:  # igrade=2,
 
             index_pointer += 1
-            mylist = lines[index_pointer].strip().split("   ")
-            a0 = float(mylist[0])
-            a1 = float(mylist[1])
-            a2 = float(mylist[2])
-            a3 = float(mylist[3])
+            line = lines[index_pointer]
+            line2 = " ".join(line.split())
+            mylist = line2.split(" ")
+            a0 = 0.0
+            a1 = 0.0
+            a2 = 0.0
+            a3 = 0.0
+            n = len(mylist)
+            if n > 0: a0 = float(mylist[0])
+            if n > 1: a1 = float(mylist[1])
+            if n > 2: a2 = float(mylist[2])
+            if n > 3: a3 = float(mylist[3])
 
             out_dict["a0"] = a0
             out_dict["a1"] = a1
@@ -178,12 +191,12 @@ class MLayer(object):
                    THICKNESS=33.1,
                    GAMMA=0.483,
                    ROUGHNESS_EVEN=3.3, ROUGHNESS_ODD=3.1,
-                   GRADE_DEPTH=0,
-                   GRADE_SURFACE=0,
-                   FILE_DEPTH="myfile_depth.dat",
-                   FILE_SHADOW="mlayer1.sha",
-                   FILE_THICKNESS="mythick.dat",
-                   FILE_GAMMA="mygamma.dat",
+                   GRADE_SURFACE=0, # igrade  0=No, 1=files (depth and lateral), not supported in S4, 2=laterally graded coeffs
+                   FILE_THICKNESS="mythick.dat",  # fgrade
+                   # GRADE_DEPTH=0,
+                   # FILE_DEPTH="myfile_depth.dat",
+                   # FILE_SHADOW="mlayer1.sha",
+                   # FILE_GAMMA="mygamma.dat",
                    AA0=1.0, AA1=0.0, AA2=0.0, AA3=0.0):
         """
         Creates an instance of MLayer with parameters initialized from the keyword parameters and the
@@ -221,21 +234,12 @@ class MLayer(object):
             The rounghness of the EVEN layers in A.
         ROUGHNESS_ODD : float, optional
             The rounghness of the ODD layers in A.
-        GRADE_DEPTH : int, optional
-            Flag to indicated that the multilayes has a graded depth.
         GRADE_SURFACE : int, optional
             Flag for multilayer graded over the surface:
              * 0: No.
              * 1: t and/or gamma graded over the surface (input spline files with t and gamma gradient).
              * 2: t graded over the surface (input quadratic fit to t gradient).
-
-        FILE_DEPTH : str, optional
-            ????
-        FILE_SHADOW : str, optional
-            ????
         FILE_THICKNESS : str, optional
-            ????
-        FILE_GAMMA : str, optional
             ????
         AA0 : float, optional
             Coefficient when GRADED_SURFACE=1
@@ -912,7 +916,167 @@ class MLayer(object):
 
         return R_S_array, R_P_array, energy_array, theta_array
 
-    def _reflec(self, PHOT_ENER, SIN_REF, COS_POLE=1.0, K_WHAT=1.0):
+
+    def reflectivity(self, grazing_angle_deg, photon_energy_ev, Y=0.0):
+        """
+        Computes the reflectivity (in amplitude) as a function of the incident angle and photon energy.
+
+        Parameters
+        ----------
+        grazing_angle_deg : numpy array
+            The array with the incident gracing angle in deg.
+        photon_energy_ev : numpy array
+            The array with the photon energy in eV.
+        Y : numpy array
+            The array of coordinates along the Y direction (tangential). This is used only in the case of
+            laterally graded multilayers.
+
+        Returns
+        -------
+        tuple
+            (R_S_array, R_P_array, phase_S, phase_P) arrays with reflectivities (in amplitude) and phases.
+        """
+        if self.pre_mlayer_dict is None:
+            raise Exception("load preprocessor file before!")
+
+        R_S_array = numpy.zeros_like(grazing_angle_deg)
+        R_P_array = numpy.zeros_like(grazing_angle_deg)
+        k_what = 1
+
+        igrade = self.pre_mlayer_dict["igrade"]
+
+        if igrade == 0:
+            TFACT = 1.0
+            GFACT = 1.0
+        elif igrade == 2: # coeffs are for cm, as in shadow3
+            GFACT = 1.0
+            TFACT = self.pre_mlayer_dict['a0'] +  \
+                    self.pre_mlayer_dict['a1'] * (Y * 100) + \
+                    self.pre_mlayer_dict['a2'] * (Y * 100)**2 + \
+                    self.pre_mlayer_dict['a3'] * (Y * 100)**3
+
+            # print(">>>>>>>>>>>>>>> USING GRADED MULTILAYER <<<<<<<<<<<<<<<<")
+            # print(">>>>> a0: ", self.pre_mlayer_dict['a0'])
+            # print(">>>>> a1: ", self.pre_mlayer_dict['a1'])
+            # print(">>>>> a2: ", self.pre_mlayer_dict['a2'])
+            # print(">>>>> a3: ", self.pre_mlayer_dict['a3'])
+            # print(">>>>> Y: ", Y)
+            # print(">>>>> TFACT: ", TFACT)
+            # from srxraylib.plot.gol import plot
+            # plot(Y * 100, TFACT, marker='+', linestyle='')
+        else:
+            raise Exception("Bad igrade value.")
+
+        # TODO graded ml
+        #         ! C
+        #         ! C Is the multilayer thickness graded ?
+        #         ! C
+        #         read    (iunit,*)   i_grade
+        #         ! 0=None
+        #         ! 1=spline files
+        #         ! 2=quadic coefficients
+        #
+        #         ! spline
+        #         if (i_grade.eq.1) then
+        #           read  (iunit,'(a)') file_grade
+        #           OPEN  (45, FILE=adjustl(FILE_GRADE), STATUS='OLD', &
+        #                 FORM='UNFORMATTED', IOSTAT=iErr)
+        #           ! srio added test
+        #           if (iErr /= 0 ) then
+        #             print *,"REFLEC: File not found: "//trim(adjustl(file_grade))
+        #             print *,'Error: REFLEC: File not found. Aborted.'
+        #             ! stop 'File not found. Aborted.'
+        #           end if
+        #
+        #           READ  (45) NTX, NTY
+        #           READ  (45) TX,TY
+        #           !DO 205 I = 1, NTX
+        #           !DO 205 J = 1, NTY
+        #           DO I = 1, NTX
+        #             DO J = 1, NTY
+        #               READ  (45) TSPL(1,I,1,J),TSPL(1,I,2,J),    & ! spline for t
+        #                          TSPL(2,I,1,J),TSPL(2,I,2,J)
+        #             END DO
+        #           END DO
+        #
+        #           READ (45) NGX, NGY
+        #           READ (45) GX,GY
+        #           DO I = 1, NGX
+        #             DO J = 1, NGY
+        #               READ (45) GSPL(1,I,1,J),GSPL(1,I,2,J),    & ! spline for gamma
+        #                         GSPL(2,I,1,J),GSPL(2,I,2,J)
+        #             END DO
+        #           END DO
+        #
+        #           CLOSE (45)
+        #         end if
+        #
+        #         if (i_grade.eq.2) then  ! quadric coefficients
+        #           !
+        #           ! laterally gradded multilayer
+        #           !
+        #
+        #           ! srio@esrf.eu added cubic term (requested B Meyer, LNLS)
+        #           read(iunit,*,IOSTAT=iErr) lateral_grade_constant,lateral_grade_slope, &
+        #                         lateral_grade_quadratic,lateral_grade_cubic
+        #
+        #         end if
+        #
+        #         close(unit=iunit)
+        #         tfilm = absor
+        #         RETURN
+        #     END IF
+        # END IF
+
+        #TODO graded multilayers
+        #         IF (I_GRADE.EQ.1) THEN
+        #             XIN = PIN(1)
+        #             YIN = PIN(2)
+        #             CALL DBCEVL (TX,NTX,TY,NTY,TSPL,i101,XIN,YIN,PDS,IER)
+        #             IF (IER.NE.0) THEN
+        #               CALL      MSSG ('REFLEC','Spline error # ',IER)
+        #               RETURN
+        #             END IF
+        #             TFACT = PDS(1)
+        #             ! C
+        #             CALL DBCEVL (GX,NGX,GY,NGY,GSPL,i101,XIN,YIN,PDS,IER)
+        #             IF (IER.NE.0) THEN
+        #               CALL MSSG ('REFLEC','Spline error # ',IER)
+        #               RETURN
+        #             END IF
+        #             GFACT = PDS(1)
+        #         ELSE IF (I_GRADE.EQ.2) THEN
+        #             TFACT = lateral_grade_constant+ &
+        #                     lateral_grade_slope*pin(2) + &
+        #                     lateral_grade_quadratic*pin(2)*pin(2) + &
+        #                     lateral_grade_cubic*pin(2)*pin(2)*pin(2)
+        #         ELSE
+        #         END IF
+
+        vectorized = 1
+        if vectorized == 0:
+            for i in range(grazing_angle_deg.size):
+                theta = grazing_angle_deg[i]
+                energy = photon_energy_ev[i]
+                sin_ref = numpy.sin(theta * numpy.pi / 180)
+                wnum = 2 * numpy.pi * energy / tocm
+                COS_POLE = 1.0
+                R_S, R_P, tmp, phases, phasep = self._reflec(wnum, sin_ref, COS_POLE, k_what)
+                R_S_array[i] = R_S
+                R_P_array[i] = R_P
+        else:
+            sin_ref = numpy.sin(grazing_angle_deg * numpy.pi / 180)
+            COS_POLE = 1.0
+            R_S_array, R_P_array, phase_S, phase_P = self._reflec(photon_energy_ev, sin_ref, COS_POLE,
+                                                                  TFACT=TFACT, GFACT=GFACT)
+
+        return R_S_array, R_P_array, phase_S, phase_P
+
+    def _reflec(self, PHOT_ENER, SIN_REF, COS_POLE=1.0,
+                K_WHAT=1.0,
+                TFACT=1.0, # thickness grading factor
+                GFACT=1.0, # gamma grading factor
+                ):
         # ! C+++
         # ! C	SUBROUTINE	REFLEC
         # ! C
@@ -943,10 +1107,10 @@ class MLayer(object):
 
         XLAM = tocm / PHOT_ENER * 1.0e8  # Angstrom
 
+        # gamma1 = ratio t(even)/(t(odd)+t(even))  of each layer pair
         gamma1 = self.pre_mlayer_dict["gamma1"]
         t_oe = self.pre_mlayer_dict["thick"]
-
-        # gamma1 = ratio t(even)/(t(odd)+t(even))  of each layer pair
+        # get the thickness arrays
         t_e = gamma1 * t_oe
         t_o = (1.0 - gamma1) * t_oe
 
@@ -967,69 +1131,6 @@ class MLayer(object):
             BETA_S = self.pre_mlayer_dict["beta_s"]
             BETA_E = self.pre_mlayer_dict["beta_e"]
             BETA_O = self.pre_mlayer_dict["beta_o"]
-
-            i_grade = self.pre_mlayer_dict["igrade"]
-
-            # TODO graded ml
-            #         ! C
-            #         ! C Is the multilayer thickness graded ?
-            #         ! C
-            #         read    (iunit,*)   i_grade
-            #         ! 0=None
-            #         ! 1=spline files
-            #         ! 2=quadic coefficients
-            #
-            #         ! spline
-            #         if (i_grade.eq.1) then
-            #           read  (iunit,'(a)') file_grade
-            #           OPEN  (45, FILE=adjustl(FILE_GRADE), STATUS='OLD', &
-            #                 FORM='UNFORMATTED', IOSTAT=iErr)
-            #           ! srio added test
-            #           if (iErr /= 0 ) then
-            #             print *,"REFLEC: File not found: "//trim(adjustl(file_grade))
-            #             print *,'Error: REFLEC: File not found. Aborted.'
-            #             ! stop 'File not found. Aborted.'
-            #           end if
-            #
-            #           READ  (45) NTX, NTY
-            #           READ  (45) TX,TY
-            #           !DO 205 I = 1, NTX
-            #           !DO 205 J = 1, NTY
-            #           DO I = 1, NTX
-            #             DO J = 1, NTY
-            #               READ  (45) TSPL(1,I,1,J),TSPL(1,I,2,J),    & ! spline for t
-            #                          TSPL(2,I,1,J),TSPL(2,I,2,J)
-            #             END DO
-            #           END DO
-            #
-            #           READ (45) NGX, NGY
-            #           READ (45) GX,GY
-            #           DO I = 1, NGX
-            #             DO J = 1, NGY
-            #               READ (45) GSPL(1,I,1,J),GSPL(1,I,2,J),    & ! spline for gamma
-            #                         GSPL(2,I,1,J),GSPL(2,I,2,J)
-            #             END DO
-            #           END DO
-            #
-            #           CLOSE (45)
-            #         end if
-            #
-            #         if (i_grade.eq.2) then  ! quadric coefficients
-            #           !
-            #           ! laterally gradded multilayer
-            #           !
-            #
-            #           ! srio@esrf.eu added cubic term (requested B Meyer, LNLS)
-            #           read(iunit,*,IOSTAT=iErr) lateral_grade_constant,lateral_grade_slope, &
-            #                         lateral_grade_quadratic,lateral_grade_cubic
-            #
-            #         end if
-            #
-            #         close(unit=iunit)
-            #         tfilm = absor
-            #         RETURN
-            #     END IF
-            # END IF
 
             ELFACTOR = numpy.log10(1.0e4 / 30.0e0) / 300.0e0
 
@@ -1069,82 +1170,10 @@ class MLayer(object):
                     DELO[i]  = 1.0 - xraylib.Refractive_Index_Re(self.pre_mlayer_dict["material2"], 1e-3 * PHOT_ENER[i], self.pre_mlayer_dict["density2"])
                     BETO[i]  =       xraylib.Refractive_Index_Im(self.pre_mlayer_dict["material2"], 1e-3 * PHOT_ENER[i], self.pre_mlayer_dict["density2"])
 
-
-
-        TFACT = 1.0
-        GFACT = 1.0
-
-        #TODO graded multilayers
-        #         IF (I_GRADE.EQ.1) THEN
-        #             XIN = PIN(1)
-        #             YIN = PIN(2)
-        #             CALL DBCEVL (TX,NTX,TY,NTY,TSPL,i101,XIN,YIN,PDS,IER)
-        #             IF (IER.NE.0) THEN
-        #               CALL      MSSG ('REFLEC','Spline error # ',IER)
-        #               RETURN
-        #             END IF
-        #             TFACT = PDS(1)
-        #             ! C
-        #             CALL DBCEVL (GX,NGX,GY,NGY,GSPL,i101,XIN,YIN,PDS,IER)
-        #             IF (IER.NE.0) THEN
-        #               CALL MSSG ('REFLEC','Spline error # ',IER)
-        #               RETURN
-        #             END IF
-        #             GFACT = PDS(1)
-        #         ELSE IF (I_GRADE.EQ.2) THEN
-        #             TFACT = lateral_grade_constant+ &
-        #                     lateral_grade_slope*pin(2) + &
-        #                     lateral_grade_quadratic*pin(2)*pin(2) + &
-        #                     lateral_grade_cubic*pin(2)*pin(2)*pin(2)
-        #         ELSE
-        #         END IF
-
         R_S, R_P, PHASES, PHASEP = self._fresnel(TFACT, GFACT, NPAIR, SIN_REF, COS_POLE, XLAM,
                                              DELO, DELE, DELS, BETO, BETE, BETS, t_o, t_e, mlroughness1, mlroughness2)
 
         return R_S, R_P, PHASES, PHASEP
-
-
-    def reflectivity(self, grazing_angle_deg, photon_energy_ev):
-        """
-        Computes the reflectivity (in amplitude) as a function of the incident angle and photon energy.
-
-        Parameters
-        ----------
-        grazing_angle_deg : numpy array
-            The array with the incident gracing angle in deg.
-        photon_energy_ev : numpy array
-            The array with the photon energy in eV.
-
-        Returns
-        -------
-        tuple
-            (R_S_array, R_P_array, phase_S, phase_P) arrays with reflectivities (in amplitude) and phases.
-        """
-        if self.pre_mlayer_dict is None:
-            raise Exception("load preprocessor file before!")
-
-        R_S_array = numpy.zeros_like(grazing_angle_deg)
-        R_P_array = numpy.zeros_like(grazing_angle_deg)
-        k_what = 1
-
-        vectorized = 1
-        if vectorized == 0:
-            for i in range(grazing_angle_deg.size):
-                theta = grazing_angle_deg[i]
-                energy = photon_energy_ev[i]
-                sin_ref = numpy.sin(theta * numpy.pi / 180)
-                wnum = 2 * numpy.pi * energy / tocm
-                COS_POLE = 1.0
-                R_S, R_P, tmp, phases, phasep = self._reflec(wnum, sin_ref, COS_POLE, k_what)
-                R_S_array[i] = R_S
-                R_P_array[i] = R_P
-        else:
-            sin_ref = numpy.sin(grazing_angle_deg * numpy.pi / 180)
-            COS_POLE = 1.0
-            R_S_array, R_P_array, phase_S, phase_P = self._reflec(photon_energy_ev, sin_ref, COS_POLE, k_what)
-
-        return R_S_array, R_P_array, phase_S, phase_P
 
     @classmethod
     def _fresnel(cls, TFACT, GFACT, NPAIR, SIN_REF, COS_POLE, XLAM,
@@ -1250,10 +1279,6 @@ class MLayer(object):
             ffvp = (fv - fo / ro2) / (fv + fo / ro2)
             ffsp = (fe / re2 - fs / rs2) / (fe / re2 + fs / rs2)
 
-
-
-
-
         # ! another way
         # ! ro=(1.0D0-delo-ci*beto)
         # ! re=(1.0D0-dele-ci*bete)
@@ -1302,6 +1327,12 @@ class MLayer(object):
         sigma_s2 = 0.0 # ! sigma_s**2.0 !roughn. substrate
         sigma_v2 = 0.0 # ! sigma_v**2.0!roughn. vacuum
 
+        # print(">>>> t_e: ", t_e)
+        # print(">>>> t_o: ", t_o)
+        # print(">>>> TFACT: ", TFACT)
+        # print(">>>> SIN_REF: ", SIN_REF.size, TFACT.size)
+        # if isinstance(TFACT, float): TFACT = numpy.zeros_like(t_e) + TFACT
+        # print(">>>> TFACT.size: ", TFACT.size)
 
         # ! loop over the bilayers
         # ! remember that "even" is the bottom sublayer
@@ -1309,8 +1340,8 @@ class MLayer(object):
             # ! C
             # ! C compute the thickness for the odd and even material :
             # ! C
-            ao = -ci * (numpy.pi * fo * t_o[j] * COS_POLE / XLAM)
-            ae = -ci * (numpy.pi * fe * t_e[j] * COS_POLE / XLAM)
+            ao = -ci * (numpy.pi * fo * (t_o[j] * TFACT) * COS_POLE / XLAM)
+            ae = -ci * (numpy.pi * fe * (t_e[j] * TFACT) * COS_POLE / XLAM)
             ao = numpy.exp(ao)
             ae = numpy.exp(ae)
 
@@ -1370,17 +1401,17 @@ if __name__ == "__main__":
             O_DENSITY=7.19, O_MATERIAL="Cr",  # odd: closer to vacuum
             E_DENSITY=3.00, E_MATERIAL="Sc",  # even: closer to substrate
             S_DENSITY=2.33, S_MATERIAL="Si",  # substrate
-            GRADE_DEPTH=0,
+            # GRADE_DEPTH=0,
             N_PAIRS=50,
             THICKNESS=22.0,
             GAMMA=10.0/22.0,  #  gamma ratio  =  t(even) / (t(odd) + t(even))")
             ROUGHNESS_EVEN=0.0,
             ROUGHNESS_ODD=0.0,
-            FILE_DEPTH="myfile_depth.dat",
+            # FILE_DEPTH="myfile_depth.dat",
             GRADE_SURFACE=0,
-            FILE_SHADOW="mlayer1.sha",
+            # FILE_SHADOW="mlayer1.sha",
             FILE_THICKNESS="mythick.dat",
-            FILE_GAMMA="mygamma.dat",
+            # FILE_GAMMA="mygamma.dat",
             AA0=1.0,AA1=0.0,AA2=0.0,AA3=0.0)
 
         b = MLayer()
@@ -1425,17 +1456,17 @@ if __name__ == "__main__":
                 O_DENSITY=19.3, O_MATERIAL="W",  # odd: closer to vacuum
                 E_DENSITY=2.37, E_MATERIAL="B",  # even: closer to substrate
                 S_DENSITY=2.33, S_MATERIAL="Si",  # substrate
-                GRADE_DEPTH=0,
+                # GRADE_DEPTH=0,
                 N_PAIRS=350,
                 THICKNESS=30.19,
                 GAMMA=0.666,  #  gamma ratio  =  t(even) / (t(odd) + t(even))")
                 ROUGHNESS_EVEN=0.0,
                 ROUGHNESS_ODD=0.0,
-                FILE_DEPTH="myfile_depth.dat",
+                # FILE_DEPTH="myfile_depth.dat",
                 GRADE_SURFACE=0,
-                FILE_SHADOW="tmp.sha",
+                # FILE_SHADOW="tmp.sha",
                 FILE_THICKNESS="tmp.thi",
-                FILE_GAMMA="tmp.gam",
+                # FILE_GAMMA="tmp.gam",
                 AA0=1.0, AA1=0.0, AA2=0.0, AA3=0.0)
 
             # b = MLayer()
@@ -1545,22 +1576,33 @@ if __name__ == "__main__":
 
 
 
-    if 1: #
+    if 0: # energy scan from preprocessor data
         b = MLayer()
         b.read_preprocessor_file("/home/srio/Oasys/mlayer.dat")
         print(">>>> using preprocessor data: ", b.using_pre_mlayer)
-
-        #
-        # energy scan
-        #
         npoints = 1000
         energy = numpy.linspace(41000, 49000, npoints)
         theta = numpy.zeros(npoints) + 0.26356
         rs1, rp1, phase_s1, phase_p1 = b.reflectivity(theta, energy)
-
-        # rs, rp, e, t = b.scan(h5file="",
-        #                       energyN=501, energy1=41000, energy2=49000,
-        #                       thetaN=1, theta1=0.26356, theta2=0.26356)
-        # plot(e, rs[:, 0], xtitle="Photon energy [eV]", ytitle="Reflectivity", title="ENERGY scan", )
-
         plot(energy, rs1**2, xtitle="Photon energy [eV]", ytitle="Reflectivity", title="ENERGY scan", )
+
+    if 0: # angle scan from preprocessor data
+        b = MLayer()
+        b.read_preprocessor_file("/home/srio/Oasys/mlayer_id28_old.dat")
+        print(">>>> using preprocessor data: ", b.using_pre_mlayer)
+        npoints = 1000
+        theta = numpy.linspace(0.6,1, npoints)
+        energy =  theta * 0 + 12400
+        rs1, rp1, phase_s1, phase_p1 = b.reflectivity(theta, energy)
+        plot(theta, rs1**2, xtitle="Angle [deg]", ytitle="Reflectivity", title="THETA scan", )
+
+    if 1: # angle scan from preprocessor data
+        b = MLayer()
+        b.read_preprocessor_file("/home/srio/Oasys/mymultilayer_new2.dat")
+        print(">>>> using preprocessor data? graded?: ", b.using_pre_mlayer, b.is_laterally_graded())
+        print(">>>> coeffs?: ", b.pre_mlayer_dict['a0'], b.pre_mlayer_dict['a1'], b.pre_mlayer_dict['a2'], b.pre_mlayer_dict['a3'])
+        npoints = 1000
+        theta = numpy.linspace(0.6,1, npoints)
+        energy =  theta * 0 + 12400
+        rs1, rp1, phase_s1, phase_p1 = b.reflectivity(theta, energy)
+        plot(theta, rs1**2, xtitle="Angle [deg]", ytitle="Reflectivity", title="THETA scan", )

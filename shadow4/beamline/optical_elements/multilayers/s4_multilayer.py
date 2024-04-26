@@ -301,7 +301,9 @@ class S4MultilayerElement(S4BeamlineElement):
             print(">>>> grazing angle deg: ", numpy.degrees(grazing_angle_mrad * 1e-3) )
             print(">>>> energy eV: ", input_beam.get_column(26))
             # grazing_angle_deg, photon_energy_ev
-            Rs, Rp, phase_s, phase_p = pr.reflectivity(numpy.degrees(grazing_angle_mrad*1e-3), input_beam.get_column(26))
+            Rs, Rp, phase_s, phase_p = pr.reflectivity(numpy.degrees(grazing_angle_mrad*1e-3),
+                                                       input_beam.get_column(26),
+                                                       Y=footprint.get_column(2))
             # from srxraylib.plot.gol import plot
             # plot(input_beam.get_column(26), Rs**2)
             footprint.apply_reflectivities(Rs, Rp)
