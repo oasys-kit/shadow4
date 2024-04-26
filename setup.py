@@ -67,6 +67,7 @@ PACKAGES = [
     "shadow4.beamline.optical_elements.ideal_elements",
     "shadow4.beamline.optical_elements.absorbers",
     "shadow4.beamline.optical_elements.mirrors",
+    "shadow4.beamline.optical_elements.multilayers",
     "shadow4.beamline.optical_elements.crystals",
     "shadow4.beamline.optical_elements.gratings",
     "shadow4.beamline.optical_elements.refractors",
@@ -79,7 +80,6 @@ INSTALL_REQUIRES = (
     'scipy',
     'syned>=1.0.30',
     'srxraylib>=1.0.52',
-    'wofryimpl>=1.0.21', # todo: may be remove this dependency after reviewing S4UndulatorLightSource
     'crystalpy>=0.0.23',
 )
 

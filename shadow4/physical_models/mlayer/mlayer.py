@@ -1362,7 +1362,7 @@ if __name__ == "__main__":
 
     from srxraylib.plot.gol import plot
 
-    if 1:
+    if 0:
         a = MLayer.pre_mlayer(
             interactive=False,
             FILE="pre_mlayer.dat",
@@ -1416,7 +1416,7 @@ if __name__ == "__main__":
                 energyN=1,energy1=398.0,thetaN=1,theta1=45.0)
 
 
-    if 1: # prepate optical element: MLayer.reflectivity()
+    if 0: # prepate optical element: MLayer.reflectivity()
         if 1:
             b = MLayer.pre_mlayer(
                 interactive=False,
@@ -1487,7 +1487,7 @@ if __name__ == "__main__":
         rs1, rp1, phase_s1, phase_p1= b.reflectivity(numpy.ones_like(energy) * 0.26356, energy)
         plot(energy, rs1, xtitle="Photon energy [eV]", ytitle="Reflectivity", title="MIXED scan", )
 
-    if 1: # compressed format
+    if 0: # compressed format
 
         b = MLayer.initialize_from_bilayer_stack_in_compressed_format(
         structure='[Pd/B4C]x150+Si',
@@ -1545,3 +1545,22 @@ if __name__ == "__main__":
 
 
 
+    if 1: #
+        b = MLayer()
+        b.read_preprocessor_file("/home/srio/Oasys/mlayer.dat")
+        print(">>>> using preprocessor data: ", b.using_pre_mlayer)
+
+        #
+        # energy scan
+        #
+        npoints = 1000
+        energy = numpy.linspace(41000, 49000, npoints)
+        theta = numpy.zeros(npoints) + 0.26356
+        rs1, rp1, phase_s1, phase_p1 = b.reflectivity(theta, energy)
+
+        # rs, rp, e, t = b.scan(h5file="",
+        #                       energyN=501, energy1=41000, energy2=49000,
+        #                       thetaN=1, theta1=0.26356, theta2=0.26356)
+        # plot(e, rs[:, 0], xtitle="Photon energy [eV]", ytitle="Reflectivity", title="ENERGY scan", )
+
+        plot(energy, rs1**2, xtitle="Photon energy [eV]", ytitle="Reflectivity", title="ENERGY scan", )
