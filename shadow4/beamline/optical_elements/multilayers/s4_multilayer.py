@@ -123,12 +123,12 @@ class S4Multilayer(Multilayer):
         try:
             sc = self._surface_calculation
             if sc == 0:
-                txt += "Mirror parameters COMPUTED\n"
+                txt += "Multilayer optical surface parameters COMPUTED\n"
                 txt += "    Objective focus at p: %f m\n" % ss.get_p_focus()
                 txt += "    Image focus at p: %f m\n" % ss.get_q_focus()
                 txt += "    Incidence angle (grazing): %f mrad\n" % (1e3 * ss.get_grazing_angle())
             else:
-                txt += "Mirror parameters EXTERNAL\n"
+                txt += "Multilayer optical surface parameters EXTERNAL\n"
         except:
             pass
 

@@ -1,24 +1,34 @@
-"""
-The s4 plane multilayer (optical element and beamline element).
-"""
-from syned.beamline.shape import Plane, Rectangle, Ellipse
-from syned.beamline.element_coordinates import ElementCoordinates
+from syned.beamline.shape import Toroid
 from shadow4.beam.s4_beam import S4Beam
-
-from shadow4.beamline.s4_optical_element_decorators import S4PlaneOpticalElementDecorator
-from shadow4.beamline.optical_elements.multilayers.s4_multilayer import S4MultilayerElement, S4Multilayer
+from shadow4.beamline.optical_elements.multilayers.s4_multilayer import S4MultilayerElement, S4Multilayer, ElementCoordinates
+from shadow4.beamline.s4_optical_element_decorators import SurfaceCalculation, S4ToroidOpticalElementDecorator
 from shadow4.beamline.s4_beamline_element_movements import S4BeamlineElementMovements
 
-class S4PlaneMultilayer(S4Multilayer, S4PlaneOpticalElementDecorator):
+class S4ToroidMultilayer(S4Multilayer, S4ToroidOpticalElementDecorator):
     """
     Constructor.
 
     Parameters
     ----------
     name : str, optional
-        The name of the mirror.
+        The name of the multilayer.
     boundary_shape : instance of BoundaryShape, optional
-        The boundary shape of the mirror.
+        The boundary shape of the multilayer.
+    surface_calculation : int, optional
+        flag:
+            0 = SurfaceCalculation.INTERNAL,
+            1 = SurfaceCalculation.EXTERNAL.
+    min_radius : float, optional
+        The minor axis of the toroid in m. This corresponds to the sagittal optical surface.
+    maj_radius : float, optional
+        The optical surface major radius in m. This corresponds to the tangential optical surface
+        (it is **not** the radius of the toroid).
+    f_torus : int, optional
+        Flag to indicate which optical surface is in use (where the multilayer pole is located). Values are:
+            * 0=lower/outer (tangential: concave / sagittal:concave),
+            * 1=lower/inner (tangential: concave / sagittal:convex) ,
+            * 2=upper/inner (tangential: convex  / sagittal:concave),
+            * 3=upper/outer (tangential: convex  / sagittal:convex).
     f_reflec : int, optional
          the reflectivity of surface:
             - 0=no reflectivity,
@@ -41,11 +51,22 @@ class S4PlaneMultilayer(S4Multilayer, S4PlaneOpticalElementDecorator):
 
     Returns
     -------
-    instance of S4PlaneMirror.
+    instance of S4ToroidMultilayer.
     """
     def __init__(self,
-                 name="Plane Multilayer",
+                 name="Toroid Multilayer",
                  boundary_shape=None,
+                 surface_calculation=SurfaceCalculation.EXTERNAL,
+                 min_radius=0.1,
+                 maj_radius=1.0,
+                 f_torus=0, # multilayer pole location:
+                            #  lower/outer (concave/concave) (0),
+                            # lower/inner (concave/convex) (1),
+                            # upper/inner (convex/concave) (2),
+                            # upper/outer (convex/convex) (3).
+                 p_focus=0.0,
+                 q_focus=0.0,
+                 grazing_angle=0.0,
                  # inputs related to multilayer reflectivity
                  f_refl=0,   # 0=pre_mlayer file
                              # 1=user defined file (1D reflectivity vs angle)
@@ -58,7 +79,8 @@ class S4PlaneMultilayer(S4Multilayer, S4PlaneOpticalElementDecorator):
                  period=25.0,
                  Gamma=0.5,
                  ):
-        S4PlaneOpticalElementDecorator.__init__(self)
+        S4ToroidOpticalElementDecorator.__init__(self, surface_calculation,
+                                                 min_radius, maj_radius, f_torus, p_focus, q_focus, grazing_angle)
         S4Multilayer.__init__(self,
                               name=name,
                               boundary_shape=boundary_shape,
@@ -73,6 +95,15 @@ class S4PlaneMultilayer(S4Multilayer, S4PlaneOpticalElementDecorator):
         self.__inputs = {
             "name": name,
             "boundary_shape": boundary_shape,
+            "surface_calculation": surface_calculation,
+            "min_radius" : min_radius,
+            "maj_radius" : maj_radius,
+            "f_torus": f_torus,
+            "p_focus": p_focus,
+            "q_focus": q_focus,
+            "grazing_angle": grazing_angle,
+            "f_refl": f_refl,
+            "file_refl": file_refl,
             "f_refl": f_refl,
             "file_refl": file_refl,
             "structure": structure,
@@ -95,16 +126,21 @@ class S4PlaneMultilayer(S4Multilayer, S4PlaneOpticalElementDecorator):
         """
         txt = self.to_python_code_boundary_shape()
         txt_pre = """
-   
-from shadow4.beamline.optical_elements.multilayers.s4_plane_multilayer import S4PlaneMultilayer
-optical_element = S4PlaneMultilayer(name='{name:s}',boundary_shape=boundary_shape,
+        
+from shadow4.beamline.optical_elements.multilayers.s4_toroid_multilayer import S4ToroidMultilayer
+optical_element = S4ToroidMultilayer(name='{name:s}',boundary_shape=boundary_shape,
+    surface_calculation={surface_calculation:d},
+    min_radius={min_radius:.6g},  # min_radius = sagittal
+    maj_radius={maj_radius:.6g},  # maj_radius = tangential
+    f_torus={f_torus},
+    p_focus={p_focus:.6g},q_focus={q_focus:.6g},grazing_angle={grazing_angle:g},
     f_refl={f_refl:d},file_refl='{file_refl:s}', structure='{structure:s}', period={period:f}, Gamma={Gamma:f})
 """
         txt += txt_pre.format(**self.__inputs)
         return txt
 
 
-class S4PlaneMultilayerElement(S4MultilayerElement):
+class S4ToroidMultilayerElement(S4MultilayerElement):
     """
     Constructor.
 
@@ -121,19 +157,19 @@ class S4PlaneMultilayerElement(S4MultilayerElement):
 
     Returns
     -------
-    instance of S4PlaneMirrorElement
+    instance of S4ToroidMultilayerElement
     """
     def __init__(self,
-                 optical_element: S4PlaneMultilayer = None,
-                 coordinates: ElementCoordinates = None,
+                 optical_element : S4ToroidMultilayer = None,
+                 coordinates : ElementCoordinates = None,
                  movements: S4BeamlineElementMovements = None,
-                 input_beam: S4Beam = None):
-        super().__init__(optical_element=optical_element if optical_element is not None else S4PlaneMultilayer(),
+                 input_beam : S4Beam = None):
+        super().__init__(optical_element=optical_element if optical_element is not None else S4ToroidMultilayer(),
                          coordinates=coordinates if coordinates is not None else ElementCoordinates(),
                          movements=movements,
                          input_beam=input_beam)
-        if not isinstance(self.get_optical_element().get_surface_shape(), Plane):
-            raise ValueError("Wrong Optical Element: only Plane shape is accepted")
+        if not isinstance(self.get_optical_element().get_surface_shape(), Toroid):
+            raise ValueError("Wrong Optical Element: only Toroid shape is accepted")
 
     def to_python_code(self, **kwargs):
         """
@@ -152,15 +188,12 @@ class S4PlaneMultilayerElement(S4MultilayerElement):
         txt += self.get_optical_element().to_python_code()
         txt += self.to_python_code_coordinates()
         txt += self.to_python_code_movements()
-        txt += "\nfrom shadow4.beamline.optical_elements.multilayers.s4_plane_multilayer import S4PlaneMultilayerElement"
-        txt += "\nbeamline_element = S4PlaneMultilayerElement(optical_element=optical_element, coordinates=coordinates, movements=movements, input_beam=beam)"
+        txt += "\nfrom shadow4.beamline.optical_elements.multilayers.s4_toroid_multilayer import S4ToroidMultilayerElement"
+        txt += "\nbeamline_element = S4ToroidMultilayerElement(optical_element=optical_element, coordinates=coordinates, movements=movements, input_beam=beam)"
         txt += "\n\nbeam, footprint = beamline_element.trace_beam()"
         return txt
 
 if __name__ == "__main__":
-    m = S4PlaneMultilayer(boundary_shape=Ellipse())
-    me = S4PlaneMultilayerElement(optical_element=m, coordinates=ElementCoordinates(p=10, q=20, angle_radial=30, angle_azimuthal=40))
-    print(me.info())
-    print(me.to_python_code())
-    print(me.duplicate().to_python_code())
-
+    a = S4ToroidMultilayer()
+    b= S4ToroidMultilayerElement(optical_element=a, coordinates=ElementCoordinates(1.11111111111111111111111111111111,2,3,4))
+    print(b.to_python_code())

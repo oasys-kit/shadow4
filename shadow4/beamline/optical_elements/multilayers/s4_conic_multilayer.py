@@ -1,24 +1,23 @@
-"""
-The s4 plane multilayer (optical element and beamline element).
-"""
-from syned.beamline.shape import Plane, Rectangle, Ellipse
-from syned.beamline.element_coordinates import ElementCoordinates
+import numpy
+from syned.beamline.shape import Conic
 from shadow4.beam.s4_beam import S4Beam
+from shadow4.beamline.optical_elements.multilayers.s4_multilayer import S4MultilayerElement, S4Multilayer, ElementCoordinates
 
-from shadow4.beamline.s4_optical_element_decorators import S4PlaneOpticalElementDecorator
-from shadow4.beamline.optical_elements.multilayers.s4_multilayer import S4MultilayerElement, S4Multilayer
+from shadow4.beamline.s4_optical_element_decorators import S4ConicOpticalElementDecorator
 from shadow4.beamline.s4_beamline_element_movements import S4BeamlineElementMovements
 
-class S4PlaneMultilayer(S4Multilayer, S4PlaneOpticalElementDecorator):
+class S4ConicMultilayer(S4Multilayer, S4ConicOpticalElementDecorator):
     """
     Constructor.
 
     Parameters
     ----------
     name : str, optional
-        The name of the mirror.
+        The name of the multilayer.
     boundary_shape : instance of BoundaryShape, optional
-        The boundary shape of the mirror.
+        The boundary shape of the multilayer.
+    conic_coefficients : list, ndarray, optional
+        The list of the 10 conic coefficients.
     f_reflec : int, optional
          the reflectivity of surface:
             - 0=no reflectivity,
@@ -41,24 +40,25 @@ class S4PlaneMultilayer(S4Multilayer, S4PlaneOpticalElementDecorator):
 
     Returns
     -------
-    instance of S4PlaneMirror.
+    instance of S4ConicMultilayer.
     """
     def __init__(self,
-                 name="Plane Multilayer",
+                 name="Conic Multilayer",
                  boundary_shape=None,
+                 conic_coefficients=[0.0]*10,
                  # inputs related to multilayer reflectivity
-                 f_refl=0,   # 0=pre_mlayer file
-                             # 1=user defined file (1D reflectivity vs angle)
-                             # 2=user defined file (1D reflectivity vs energy)
-                             # 3=user defined file (2D reflectivity vs energy and angle)
-                             # 4=direct calculation using xraylib
-                             # 5=direct calculation using dabax
+                 f_refl=0,  # 0=pre_mlayer file
+                 # 1=user defined file (1D reflectivity vs angle)
+                 # 2=user defined file (1D reflectivity vs energy)
+                 # 3=user defined file (2D reflectivity vs energy and angle)
+                 # 4=direct calculation using xraylib
+                 # 5=direct calculation using dabax
                  file_refl="",  # preprocessor file fir f_refl=0
                  structure='[B/W]x50+Si',
                  period=25.0,
                  Gamma=0.5,
                  ):
-        S4PlaneOpticalElementDecorator.__init__(self)
+        S4ConicOpticalElementDecorator.__init__(self, conic_coefficients)
         S4Multilayer.__init__(self,
                               name=name,
                               boundary_shape=boundary_shape,
@@ -67,12 +67,12 @@ class S4PlaneMultilayer(S4Multilayer, S4PlaneOpticalElementDecorator):
                               file_refl=file_refl,
                               structure=structure,
                               period=period,
-                              Gamma=Gamma,
-                              )
+                              Gamma=Gamma,)
 
         self.__inputs = {
             "name": name,
             "boundary_shape": boundary_shape,
+            "conic_coefficients": repr(conic_coefficients),
             "f_refl": f_refl,
             "file_refl": file_refl,
             "structure": structure,
@@ -95,16 +95,17 @@ class S4PlaneMultilayer(S4Multilayer, S4PlaneOpticalElementDecorator):
         """
         txt = self.to_python_code_boundary_shape()
         txt_pre = """
-   
-from shadow4.beamline.optical_elements.multilayers.s4_plane_multilayer import S4PlaneMultilayer
-optical_element = S4PlaneMultilayer(name='{name:s}',boundary_shape=boundary_shape,
+        
+from shadow4.beamline.optical_elements.multilayers.s4_conic_multilayer import S4ConicMultilayer
+optical_element = S4ConicMultilayer(name='{name:s}',boundary_shape=boundary_shape,
+    conic_coefficients={conic_coefficients:s},
     f_refl={f_refl:d},file_refl='{file_refl:s}', structure='{structure:s}', period={period:f}, Gamma={Gamma:f})
 """
         txt += txt_pre.format(**self.__inputs)
         return txt
 
 
-class S4PlaneMultilayerElement(S4MultilayerElement):
+class S4ConicMultilayerElement(S4MultilayerElement):
     """
     Constructor.
 
@@ -121,19 +122,19 @@ class S4PlaneMultilayerElement(S4MultilayerElement):
 
     Returns
     -------
-    instance of S4PlaneMirrorElement
+    instance of S4ConicMultilayerElement
     """
     def __init__(self,
-                 optical_element: S4PlaneMultilayer = None,
+                 optical_element: S4ConicMultilayer = None,
                  coordinates: ElementCoordinates = None,
                  movements: S4BeamlineElementMovements = None,
                  input_beam: S4Beam = None):
-        super().__init__(optical_element=optical_element if optical_element is not None else S4PlaneMultilayer(),
+        super().__init__(optical_element=optical_element if optical_element is not None else S4ConicMultilayer(),
                          coordinates=coordinates if coordinates is not None else ElementCoordinates(),
                          movements=movements,
                          input_beam=input_beam)
-        if not isinstance(self.get_optical_element().get_surface_shape(), Plane):
-            raise ValueError("Wrong Optical Element: only Plane shape is accepted")
+        if not isinstance(self.get_optical_element().get_surface_shape(), Conic):
+            raise ValueError("Wrong Optical Element: only Conic shape is accepted")
 
     def to_python_code(self, **kwargs):
         """
@@ -152,15 +153,10 @@ class S4PlaneMultilayerElement(S4MultilayerElement):
         txt += self.get_optical_element().to_python_code()
         txt += self.to_python_code_coordinates()
         txt += self.to_python_code_movements()
-        txt += "\nfrom shadow4.beamline.optical_elements.multilayers.s4_plane_multilayer import S4PlaneMultilayerElement"
-        txt += "\nbeamline_element = S4PlaneMultilayerElement(optical_element=optical_element, coordinates=coordinates, movements=movements, input_beam=beam)"
+        txt += "\nfrom shadow4.beamline.optical_elements.multilayers.s4_conic_multilayer import S4ConicMultilayerElement"
+        txt += "\nbeamline_element = S4ConicMultilayerElement(optical_element=optical_element, coordinates=coordinates, movements=movements, input_beam=beam)"
         txt += "\n\nbeam, footprint = beamline_element.trace_beam()"
         return txt
 
 if __name__ == "__main__":
-    m = S4PlaneMultilayer(boundary_shape=Ellipse())
-    me = S4PlaneMultilayerElement(optical_element=m, coordinates=ElementCoordinates(p=10, q=20, angle_radial=30, angle_azimuthal=40))
-    print(me.info())
-    print(me.to_python_code())
-    print(me.duplicate().to_python_code())
-
+    print(S4ConicMultilayerElement().to_python_code())

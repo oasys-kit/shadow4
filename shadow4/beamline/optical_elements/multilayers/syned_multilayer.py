@@ -34,7 +34,7 @@ class Multilayer(OpticalElementsWithSurfaceShape):
         super().__init__(name, surface_shape, boundary_shape)
         self._structure = structure
         self._period = period
-        self._Gama = Gamma
+        self._Gamma = Gamma
         # support text containg name of variable, help text and unit. Will be stored in self._support_dictionary
         self._set_support_text([
                     ("name",                "Name" ,                                          "" ),
