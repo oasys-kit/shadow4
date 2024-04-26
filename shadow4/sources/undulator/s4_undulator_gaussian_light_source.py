@@ -431,12 +431,15 @@ class S4UndulatorGaussianLightSource(S4LightSource):
         u = self.get_magnetic_structure()
         syned_electron_beam = self.get_electron_beam()
         current = syned_electron_beam.current()
-        wavelength = codata.c * codata.h / codata.e / u._photon_energy
+        if u._flag_energy_spread:
+            wavelength = codata.c * codata.h / codata.e / (u._photon_energy / u._harmonic_number)
+        else:
+            wavelength = codata.c * codata.h / codata.e / u._photon_energy
         if K is None:
             K = numpy.sqrt( 2 * (2 * wavelength * syned_electron_beam.gamma()**2 / u.period_length() - 1))
 
             if numpy.isnan(K):
-                print("Warning: impossible to get K")
+                print("\n\n*** Warning: impossible to get K ***\n")
                 K = 0.0
 
 
