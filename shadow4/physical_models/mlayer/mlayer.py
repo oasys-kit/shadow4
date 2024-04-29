@@ -154,7 +154,7 @@ class MLayer(object):
 
             raise Exception("** Error ** SHADOW4 does not support graded definitions from file (igrade cannot be 1).")
 
-        elif igrade == 2:  # igrade=2,
+        elif igrade in [2, 3]:  # igrade=2,
 
             index_pointer += 1
             line = lines[index_pointer]
@@ -175,6 +175,18 @@ class MLayer(object):
             out_dict["a2"] = a2
             out_dict["a3"] = a3
 
+        elif igrade == 4:
+            index_pointer += 1
+            line = lines[index_pointer]
+            line2 = " ".join(line.split())
+            mylist = line2.split(" ")
+
+            out_dict["ell_p"] = float(mylist[0])
+            out_dict["ell_q"] = float(mylist[1])
+            out_dict["ell_theta_grazing_deg"] = float(mylist[2])
+            out_dict["ell_length"] = float(mylist[3])
+            out_dict["ell_photon_energy"] = float(mylist[4])
+
         self.pre_mlayer_dict = out_dict
         self.using_pre_mlayer = True
 
@@ -191,13 +203,25 @@ class MLayer(object):
                    THICKNESS=33.1,
                    GAMMA=0.483,
                    ROUGHNESS_EVEN=3.3, ROUGHNESS_ODD=3.1,
-                   GRADE_SURFACE=0, # igrade  0=No, 1=files (depth and lateral), not supported in S4, 2=laterally graded coeffs
+                   GRADE_SURFACE=0, # igrade  0=No,
+                                    #         1=files (depth and lateral), used in S3 but not supported in S4
+                                    #         2=lateral coeffs in cm (for compatibility with S3)
+                                    #         3=lateral coeffs in m (S4)
+                                    #         4=ellipse parameters used  to compute coeffs.
+
                    FILE_THICKNESS="mythick.dat",  # fgrade
                    # GRADE_DEPTH=0,
                    # FILE_DEPTH="myfile_depth.dat",
                    # FILE_SHADOW="mlayer1.sha",
                    # FILE_GAMMA="mygamma.dat",
-                   AA0=1.0, AA1=0.0, AA2=0.0, AA3=0.0):
+                   AA0=1.0, AA1=0.0, AA2=0.0, AA3=0.0,
+                   ell_p=10.0,
+                   ell_q=3.0,
+                   ell_theta_grazing_deg=0.1,
+                   ell_length=0.1,  # m
+                   ell_photon_energy=10000.0,  # eV
+
+                   ):
         """
         Creates an instance of MLayer with parameters initialized from the keyword parameters and the
         pre_mlayer preprocessor file. It uses xraylib for accessing the optical constants.
@@ -237,18 +261,29 @@ class MLayer(object):
         GRADE_SURFACE : int, optional
             Flag for multilayer graded over the surface:
              * 0: No.
-             * 1: t and/or gamma graded over the surface (input spline files with t and gamma gradient).
-             * 2: t graded over the surface (input quadratic fit to t gradient).
-        FILE_THICKNESS : str, optional
-            ????
+             * 1: Not used (for compatibility with SHADOW3).
+             * 2: Not used (for compatibility with SHADOW3).
+             * 3: t graded over the surface (input quadratic fit to t gradient in meters).
+             * 4: t graded over the surface for an elliptical multilayer (quadratic coefficients are calculated from
+                the ellipse design parameters).
         AA0 : float, optional
-            Coefficient when GRADED_SURFACE=1
+            Coefficient (constant); used when GRADED_SURFACE=2
         AA1 : float, optional
-            Coefficient when GRADED_SURFACE=1
+            Coefficient (linear) in m^-1; used when GRADED_SURFACE=2
         AA2 : float, optional
-            Coefficient when GRADED_SURFACE=1
+            Coefficient (quadratic) in m^-2; used when GRADED_SURFACE=2
         AA3 : float, optional
-            Coefficient when GRADED_SURFACE=1
+            Coefficient (cubic) in m^-3; used when GRADED_SURFACE=2
+        ell_p : float, optional
+            The ellipse design parameters p in m; used when GRADED_SURFACE=3.
+        ell_q : float, optional
+            The ellipse design parameters q in m; used when GRADED_SURFACE=3.
+        ell_theta_grazing_deg : float, optional
+            The ellipse design grazing angle in deg; used when GRADED_SURFACE=3.
+        ell_length : float, optional
+            The ellipse length in m; used when GRADED_SURFACE=3.
+        ell_photon_energy : float, optional
+            The photon energy in eV at the center of the ellipse; used when GRADED_SURFACE=3.
 
         Returns
         -------
@@ -350,9 +385,12 @@ class MLayer(object):
             print("  Is the multilayer graded over the surface? ")
             print("      0: No ")
             print("      1: t and/or gamma graded over the surface ")
-            print("         (input spline files with t and gamma gradient")
+            print("         (input spline files with t and gamma gradient **not supported in SHADOW4**")
             print("      2: t graded over the surface ")
-            print("         (input quadratic fit to t gradient)")
+            print("         (input quadratic fit to t gradient in centimeters)")
+            print("      3: t graded over the surface ")
+            print("         (input quadratic fit to t gradient in meters)")
+            print("      4: automatic calculate the quadratic coefficients for an ellipse")
             print("      ")
 
             igrade = input("Is t and/or gamma graded over the surface [0=No/1=Yes] ? ")
@@ -371,15 +409,44 @@ class MLayer(object):
                 print("t(y) = BILATER_THICHNESS(y)/BILAYER_THICKNESS(y=0)")
                 print("t(y) = a0 + a1*y + a2*(y^2) + a3*(y^3)  ")
                 print("a0 (constant term) ")
-                print("a1 (slope term) ")
-                print("a2 (quadratic term) ")
-                print("a3 (cubic term) ")
+                print("a1 (slope term) in cm^-1")
+                print("a2 (quadratic term) in cm^-2")
+                print("a3 (cubic term) in cm^-2")
                 tmp = input("Enter a0, a1, a2, a3: ")
                 tmp = tmp.split()
                 a0 = float(tmp[0])
                 a1 = float(tmp[1])
                 a2 = float(tmp[2])
                 a3 = float(tmp[3])
+            elif igrade == 3:  # igrade=3, coefficients in m
+                print("A second degree polynomial fit of the thickness grading")
+                print("must be available:")
+                print("t(y) = BILATER_THICHNESS(y)/BILAYER_THICKNESS(y=0)")
+                print("t(y) = a0 + a1*y + a2*(y^2) + a3*(y^3)  ")
+                print("a0 (constant term) ")
+                print("a1 (slope term) in m^-1")
+                print("a2 (quadratic term) in m^-2")
+                print("a3 (cubic term) in m^-2")
+                tmp = input("Enter a0, a1, a2, a3: ")
+                tmp = tmp.split()
+                a0 = float(tmp[0])
+                a1 = float(tmp[1])
+                a2 = float(tmp[2])
+                a3 = float(tmp[3])
+            elif igrade == 4:  # igrade=3, coefficients in m
+                print("A second degree polynomial fit of the thickness grading")
+                print("must be available:")
+                print("Enter the ellipse design parameters [p [m], q[m], grazing angle [deg]")
+                tmp = input("Enter p [m], q[m], theta [deg]: ")
+                tmp = tmp.split()
+                ell_p = float(tmp[0])
+                ell_q = float(tmp[1])
+                ell_theta_grazing_deg = float(tmp[2])
+                print("Enter the ellipse multilater setting [length [m], photon_energy at center [m]")
+                tmp = input("Enter length [m], photon energy [eV]: ")
+                tmp = tmp.split()
+                ell_length = float(tmp[0])
+                ell_photon_energy = float(tmp[1])
         else:
             #--- From input keywords...
             fileout = FILE
@@ -496,15 +563,28 @@ class MLayer(object):
 
         f.write("%i \n" % igrade)
         pre_mlayer_dict["igrade"] = igrade
-        if igrade == 1:
+        if igrade == 1: # old SHADOW3 file
             f.write("%s \n" % fgrade)
             pre_mlayer_dict["fgrade"] = fgrade
-        elif igrade == 2:  # igrade=2, coefficients
-            f.write("%f  %f  %f  %f\n"%(a0,a1,a2,a3))
+        elif igrade == 2:  # igrade=2, coefficients (in cm, old SHADOW3)
+            f.write("%f  %f  %f  %f\n" % (a0, a1, a2, a3))
             pre_mlayer_dict["a0"] = a0
             pre_mlayer_dict["a1"] = a1
             pre_mlayer_dict["a2"] = a2
             pre_mlayer_dict["a3"] = a3
+        elif igrade == 3:  # igrade=3, coefficients in m
+            f.write("%f  %f  %f  %f\n" % (a0, a1, a2, a3))
+            pre_mlayer_dict["a0"] = a0
+            pre_mlayer_dict["a1"] = a1
+            pre_mlayer_dict["a2"] = a2
+            pre_mlayer_dict["a3"] = a3
+        elif igrade == 4:  # igrade=4, ellipse parameters
+            f.write("%f  %f  %f  %f %f\n" % (ell_p, ell_q, ell_theta_grazing_deg, ell_length, ell_photon_energy))
+            pre_mlayer_dict["ell_p"] = ell_q
+            pre_mlayer_dict["ell_q"] = ell_q
+            pre_mlayer_dict["ell_theta_grazing_deg"] = ell_theta_grazing_deg
+            pre_mlayer_dict["ell_length"] = ell_length
+            pre_mlayer_dict["ell_photon_energy"] = ell_photon_energy
 
         f.close()
         print("File written to disk: %s" % fileout)
@@ -948,24 +1028,30 @@ class MLayer(object):
         if igrade == 0:
             TFACT = 1.0
             GFACT = 1.0
+        elif igrade == 1:
+            raise Exception("Bad igrade value 2 not supported in SHADOW4.")
         elif igrade == 2: # coeffs are for cm, as in shadow3
             GFACT = 1.0
             TFACT = self.pre_mlayer_dict['a0'] +  \
                     self.pre_mlayer_dict['a1'] * (Y * 100) + \
                     self.pre_mlayer_dict['a2'] * (Y * 100)**2 + \
                     self.pre_mlayer_dict['a3'] * (Y * 100)**3
-
-            # print(">>>>>>>>>>>>>>> USING GRADED MULTILAYER <<<<<<<<<<<<<<<<")
-            # print(">>>>> a0: ", self.pre_mlayer_dict['a0'])
-            # print(">>>>> a1: ", self.pre_mlayer_dict['a1'])
-            # print(">>>>> a2: ", self.pre_mlayer_dict['a2'])
-            # print(">>>>> a3: ", self.pre_mlayer_dict['a3'])
-            # print(">>>>> Y: ", Y)
-            # print(">>>>> TFACT: ", TFACT)
-            # from srxraylib.plot.gol import plot
-            # plot(Y * 100, TFACT, marker='+', linestyle='')
+        elif igrade == 3: # coeffs are for m, as in shadow4
+            GFACT = 1.0
+            TFACT = self.pre_mlayer_dict['a0'] +  \
+                    self.pre_mlayer_dict['a1'] * Y + \
+                    self.pre_mlayer_dict['a2'] * Y**2 + \
+                    self.pre_mlayer_dict['a3'] * Y**3
+        elif igrade == 4:  # coeffs fitted from ellipse
+            a0, a1, a2, a3 = self._fit_ellipse_laterally_graded_coeffs()
+            GFACT = 1.0
+            TFACT = a0 +  \
+                    a1 * Y + \
+                    a2 * Y**2 + \
+                    a3 * Y**3
         else:
-            raise Exception("Bad igrade value.")
+
+            raise Exception("Bad igrade value %d ." % igrade)
 
         # TODO graded ml
         #         ! C
@@ -1072,27 +1158,8 @@ class MLayer(object):
 
         return R_S_array, R_P_array, phase_S, phase_P
 
-    def _reflec(self, PHOT_ENER, SIN_REF, COS_POLE=1.0,
-                K_WHAT=1.0,
-                TFACT=1.0, # thickness grading factor
-                GFACT=1.0, # gamma grading factor
-                ):
-        # ! C+++
-        # ! C	SUBROUTINE	REFLEC
-        # ! C
-        # ! C	PURPOSE		To compute the local reflectivity of a mirror or
-        # ! C                     multilayer. Also compute filter transmittivity.
-        # ! C
-        # ! C
-        # ! C	ARGUMENTS	[ I ] PIN	: (x,y,z) of the intercept
-        # ! C			[ I ] wnum 	: wavenumber (cm-1) => changed to PHOT_ENER array in eV
-        # ! C			[ I ] sin_ref	: sine of angle from surface
-        # ! C			[ I ] cos_pole  : cosine of angle of normal from pole
-        # ! C			[ O ] R_P 	: p-pol reflection coefficient
-        # ! C			[ O ] R_S 	: s-pol    "  "
-        # ! C
-        # ! C---
-
+    def _interpolate_refraction_index(self, PHOT_ENER):
+        if isinstance(PHOT_ENER, float): PHOT_ENER = numpy.array([PHOT_ENER])
         nn = PHOT_ENER.size
 
         DELS = numpy.zeros(nn)
@@ -1101,21 +1168,6 @@ class MLayer(object):
         BETE = numpy.zeros(nn)
         DELO = numpy.zeros(nn)
         BETO = numpy.zeros(nn)
-
-        NIN = self.pre_mlayer_dict["np"]
-        NPAIR = numpy.abs(self.pre_mlayer_dict["npair"])
-
-        XLAM = tocm / PHOT_ENER * 1.0e8  # Angstrom
-
-        # gamma1 = ratio t(even)/(t(odd)+t(even))  of each layer pair
-        gamma1 = self.pre_mlayer_dict["gamma1"]
-        t_oe = self.pre_mlayer_dict["thick"]
-        # get the thickness arrays
-        t_e = gamma1 * t_oe
-        t_o = (1.0 - gamma1) * t_oe
-
-        mlroughness1 = self.pre_mlayer_dict["mlroughness1"]
-        mlroughness2 = self.pre_mlayer_dict["mlroughness2"]
 
         is_monochromatic = numpy.all(PHOT_ENER == PHOT_ENER[0])
 
@@ -1170,10 +1222,166 @@ class MLayer(object):
                     DELO[i]  = 1.0 - xraylib.Refractive_Index_Re(self.pre_mlayer_dict["material2"], 1e-3 * PHOT_ENER[i], self.pre_mlayer_dict["density2"])
                     BETO[i]  =       xraylib.Refractive_Index_Im(self.pre_mlayer_dict["material2"], 1e-3 * PHOT_ENER[i], self.pre_mlayer_dict["density2"])
 
+        return DELO, BETO, DELE, BETE, DELS, BETS
+
+    def _reflec(self, PHOT_ENER, SIN_REF, COS_POLE=1.0,
+                K_WHAT=1.0,
+                TFACT=1.0, # thickness grading factor
+                GFACT=1.0, # gamma grading factor
+                ):
+        # ! C+++
+        # ! C	SUBROUTINE	REFLEC
+        # ! C
+        # ! C	PURPOSE		To compute the local reflectivity of a mirror or
+        # ! C                     multilayer. Also compute filter transmittivity.
+        # ! C
+        # ! C
+        # ! C	ARGUMENTS	[ I ] PIN	: (x,y,z) of the intercept
+        # ! C			[ I ] wnum 	: wavenumber (cm-1) => changed to PHOT_ENER array in eV
+        # ! C			[ I ] sin_ref	: sine of angle from surface
+        # ! C			[ I ] cos_pole  : cosine of angle of normal from pole
+        # ! C			[ O ] R_P 	: p-pol reflection coefficient
+        # ! C			[ O ] R_S 	: s-pol    "  "
+        # ! C
+        # ! C---
+
+        DELO, BETO, DELE, BETE, DELS, BETS = self._interpolate_refraction_index(PHOT_ENER)
+
+        # nn = PHOT_ENER.size
+        #
+        # DELS = numpy.zeros(nn)
+        # BETS = numpy.zeros(nn)
+        # DELE = numpy.zeros(nn)
+        # BETE = numpy.zeros(nn)
+        # DELO = numpy.zeros(nn)
+        # BETO = numpy.zeros(nn)
+
+        NIN = self.pre_mlayer_dict["np"]
+        NPAIR = numpy.abs(self.pre_mlayer_dict["npair"])
+
+        XLAM = tocm / PHOT_ENER * 1.0e8  # Angstrom
+
+        # gamma1 = ratio t(even)/(t(odd)+t(even))  of each layer pair
+        gamma1 = self.pre_mlayer_dict["gamma1"]
+        t_oe = self.pre_mlayer_dict["thick"]
+        # get the thickness arrays
+        t_e = gamma1 * t_oe
+        t_o = (1.0 - gamma1) * t_oe
+
+        mlroughness1 = self.pre_mlayer_dict["mlroughness1"]
+        mlroughness2 = self.pre_mlayer_dict["mlroughness2"]
+
+        # is_monochromatic = numpy.all(PHOT_ENER == PHOT_ENER[0])
+        #
+        # if self.using_pre_mlayer:
+        #     ENER = self.pre_mlayer_dict["energy"]
+        #     wnum = 2 * numpy.pi * ENER / tocm
+        #     QMIN = wnum[0]
+        #     QSTEP = wnum[1] - wnum[0]
+        #
+        #     DELTA_S = self.pre_mlayer_dict["delta_s"]
+        #     DELTA_E = self.pre_mlayer_dict["delta_e"]
+        #     DELTA_O = self.pre_mlayer_dict["delta_o"]
+        #     BETA_S = self.pre_mlayer_dict["beta_s"]
+        #     BETA_E = self.pre_mlayer_dict["beta_e"]
+        #     BETA_O = self.pre_mlayer_dict["beta_o"]
+        #
+        #     ELFACTOR = numpy.log10(1.0e4 / 30.0e0) / 300.0e0
+        #
+        #     if is_monochromatic: # just avoid the loop
+        #         i = 0
+        #         index1  = int(numpy.log10(PHOT_ENER[i]/ENER[0])/ELFACTOR)
+        #         DELS[:]  = DELTA_S[index1] + (DELTA_S[index1 + 1] - DELTA_S[index1]) * (PHOT_ENER[i] - ENER[index1]) / (ENER[index1 + 1] - ENER[index1])
+        #         BETS[:]  =  BETA_S[index1] + ( BETA_S[index1 + 1] -  BETA_S[index1]) * (PHOT_ENER[i] - ENER[index1]) / (ENER[index1 + 1] - ENER[index1])
+        #         DELE[:]  = DELTA_E[index1] + (DELTA_E[index1 + 1] - DELTA_E[index1]) * (PHOT_ENER[i] - ENER[index1]) / (ENER[index1 + 1] - ENER[index1])
+        #         BETE[:]  =  BETA_E[index1] + ( BETA_E[index1 + 1] -  BETA_E[index1]) * (PHOT_ENER[i] - ENER[index1]) / (ENER[index1 + 1] - ENER[index1])
+        #         DELO[:]  = DELTA_O[index1] + (DELTA_O[index1 + 1] - DELTA_O[index1]) * (PHOT_ENER[i] - ENER[index1]) / (ENER[index1 + 1] - ENER[index1])
+        #         BETO[:]  =  BETA_O[index1] + ( BETA_O[index1 + 1] -  BETA_O[index1]) * (PHOT_ENER[i] - ENER[index1]) / (ENER[index1 + 1] - ENER[index1])
+        #     else:
+        #         for i in range(nn):
+        #             index1  = int(numpy.log10(PHOT_ENER[i]/ENER[0])/ELFACTOR)
+        #             DELS[i]  = DELTA_S[index1] + (DELTA_S[index1+1] - DELTA_S[index1]) * (PHOT_ENER[i] - ENER[index1]) / (ENER[index1 + 1] - ENER[index1])
+        #             BETS[i]  =  BETA_S[index1] + ( BETA_S[index1+1] -  BETA_S[index1]) * (PHOT_ENER[i] - ENER[index1]) / (ENER[index1 + 1] - ENER[index1])
+        #             DELE[i]  = DELTA_E[index1] + (DELTA_E[index1+1] - DELTA_E[index1]) * (PHOT_ENER[i] - ENER[index1]) / (ENER[index1 + 1] - ENER[index1])
+        #             BETE[i]  =  BETA_E[index1] + ( BETA_E[index1+1] -  BETA_E[index1]) * (PHOT_ENER[i] - ENER[index1]) / (ENER[index1 + 1] - ENER[index1])
+        #             DELO[i]  = DELTA_O[index1] + (DELTA_O[index1+1] - DELTA_O[index1]) * (PHOT_ENER[i] - ENER[index1]) / (ENER[index1 + 1] - ENER[index1])
+        #             BETO[i]  =  BETA_O[index1] + ( BETA_O[index1+1] -  BETA_O[index1]) * (PHOT_ENER[i] - ENER[index1]) / (ENER[index1 + 1] - ENER[index1])
+        # else: # not using preprocessor, using xraylib
+        #     import xraylib
+        #     if is_monochromatic:
+        #         DELS[:]  = 1.0 - xraylib.Refractive_Index_Re(self.pre_mlayer_dict["materialS"], 1e-3 * PHOT_ENER[0], self.pre_mlayer_dict["densityS"])
+        #         BETS[:]  =       xraylib.Refractive_Index_Im(self.pre_mlayer_dict["materialS"], 1e-3 * PHOT_ENER[0], self.pre_mlayer_dict["densityS"])
+        #         DELE[:]  = 1.0 - xraylib.Refractive_Index_Re(self.pre_mlayer_dict["material1"], 1e-3 * PHOT_ENER[0], self.pre_mlayer_dict["density1"])
+        #         BETE[:]  =       xraylib.Refractive_Index_Im(self.pre_mlayer_dict["material1"], 1e-3 * PHOT_ENER[0], self.pre_mlayer_dict["density1"])
+        #         DELO[:]  = 1.0 - xraylib.Refractive_Index_Re(self.pre_mlayer_dict["material2"], 1e-3 * PHOT_ENER[0], self.pre_mlayer_dict["density2"])
+        #         BETO[:]  =       xraylib.Refractive_Index_Im(self.pre_mlayer_dict["material2"], 1e-3 * PHOT_ENER[0], self.pre_mlayer_dict["density2"])
+        #     else:
+        #         for i in range(nn):
+        #             DELS[i]  = 1.0 - xraylib.Refractive_Index_Re(self.pre_mlayer_dict["materialS"], 1e-3 * PHOT_ENER[i], self.pre_mlayer_dict["densityS"])
+        #             BETS[i]  =       xraylib.Refractive_Index_Im(self.pre_mlayer_dict["materialS"], 1e-3 * PHOT_ENER[i], self.pre_mlayer_dict["densityS"])
+        #             DELE[i]  = 1.0 - xraylib.Refractive_Index_Re(self.pre_mlayer_dict["material1"], 1e-3 * PHOT_ENER[i], self.pre_mlayer_dict["density1"])
+        #             BETE[i]  =       xraylib.Refractive_Index_Im(self.pre_mlayer_dict["material1"], 1e-3 * PHOT_ENER[i], self.pre_mlayer_dict["density1"])
+        #             DELO[i]  = 1.0 - xraylib.Refractive_Index_Re(self.pre_mlayer_dict["material2"], 1e-3 * PHOT_ENER[i], self.pre_mlayer_dict["density2"])
+        #             BETO[i]  =       xraylib.Refractive_Index_Im(self.pre_mlayer_dict["material2"], 1e-3 * PHOT_ENER[i], self.pre_mlayer_dict["density2"])
+
         R_S, R_P, PHASES, PHASEP = self._fresnel(TFACT, GFACT, NPAIR, SIN_REF, COS_POLE, XLAM,
                                              DELO, DELE, DELS, BETO, BETE, BETS, t_o, t_e, mlroughness1, mlroughness2)
 
         return R_S, R_P, PHASES, PHASEP
+
+    def _fit_ellipse_laterally_graded_coeffs(self, verbose=0):
+
+        ph = self.pre_mlayer_dict['ell_photon_energy']
+        delta_odd, BETO, delta_even, BETE, DELS, BETS = self._interpolate_refraction_index(ph)
+
+        if verbose: print("_fit_ellipse_laterally_graded_coeffs: delta_odd, delta_even: ", delta_odd, delta_even)
+
+        # kev = ph * 1e-3
+        lambda1 = codata.h * codata.c / codata.e / ph * 1e10  # A
+        #
+        # # ; ellipse axes and eccentricity
+        pp = self.pre_mlayer_dict['ell_p']
+        qq = self.pre_mlayer_dict['ell_q']
+        theta = self.pre_mlayer_dict['ell_theta_grazing_deg']
+        mirrorlength = self.pre_mlayer_dict['ell_length']
+        gamma1 = self.pre_mlayer_dict['gamma1']
+
+        aa = 0.5 * (pp + qq)
+        bb = numpy.sqrt(pp * qq) * numpy.sin(theta * numpy.pi / 180)
+        cc = numpy.sqrt(aa * aa - bb * bb)
+        ee = cc / aa
+
+        # ; ellipse center
+        ycen = (pp - qq) / 2 / ee
+        zcen = bb * numpy.sqrt(1 - (ycen / aa) ** 2)
+
+        # print('wavelength [A]: ',lambda)
+        if verbose: print('_fit_ellipse_laterally_graded_coeffs: ellipse a, b, c: ', aa, bb, cc)
+        if verbose: print('_fit_ellipse_laterally_graded_coeffs: ellipse ycen, zcen: ', ycen, zcen)
+
+        nn = gamma1[0] * (1 - delta_even) + (1 - gamma1[0]) * (1 - delta_odd)
+
+        # ; bilayer dspacing at the surface pole
+        bigLambda0 = lambda1 / 2 / numpy.sqrt(nn * nn - (numpy.cos(theta * numpy.pi / 180)) ** 2)
+        if verbose: print('_fit_ellipse_laterally_graded_coeffs: bigLambda at y=0 [A] = ', bigLambda0)
+
+        # ; coordinates along the mirror
+        y1 = numpy.linspace(ycen - mirrorlength, ycen + mirrorlength, 100)
+        z1 = bb * numpy.sqrt(1 - (y1 * y1 / aa / aa))
+        p1 = numpy.sqrt((cc + y1) ** 2 + z1 ** 2)
+        q1 = numpy.sqrt((cc - y1) ** 2 + z1 ** 2)
+        beta1 = numpy.arccos((4 * cc * cc - p1 * p1 - q1 * q1) / (-2) / p1 / q1)
+        alpha1 = (numpy.pi - beta1) / 2
+        # ; bilayer dspacing along the surface
+        bigLambda = lambda1 / 2 / numpy.sqrt(nn * nn - (numpy.cos(alpha1)) ** 2)
+
+        # ; 2nd-degree polynomial fit of gradient
+        cc = numpy.polyfit((y1 - ycen), bigLambda / bigLambda0, 3)
+        cc = numpy.flip(cc)
+        if verbose: print('_fit_ellipse_laterally_graded_coeffs: bigLambda(y) / bigLambda(y=0) = a0 + a1 * y + a2 * y^2 + a3 * y^3')
+        if verbose: print('                       a=' + repr(cc))
+
+        return cc[0], cc[1], cc[2], cc[3]
 
     @classmethod
     def _fresnel(cls, TFACT, GFACT, NPAIR, SIN_REF, COS_POLE, XLAM,
@@ -1596,7 +1804,7 @@ if __name__ == "__main__":
         rs1, rp1, phase_s1, phase_p1 = b.reflectivity(theta, energy)
         plot(theta, rs1**2, xtitle="Angle [deg]", ytitle="Reflectivity", title="THETA scan", )
 
-    if 1: # angle scan from preprocessor data
+    if 0: # angle scan from preprocessor data
         b = MLayer()
         b.read_preprocessor_file("/home/srio/Oasys/mymultilayer_new2.dat")
         print(">>>> using preprocessor data? graded?: ", b.using_pre_mlayer, b.is_laterally_graded())
@@ -1606,3 +1814,94 @@ if __name__ == "__main__":
         energy =  theta * 0 + 12400
         rs1, rp1, phase_s1, phase_p1 = b.reflectivity(theta, energy)
         plot(theta, rs1**2, xtitle="Angle [deg]", ytitle="Reflectivity", title="THETA scan", )
+
+        print(">>> igrade: ", b.pre_mlayer_dict['igrade'])
+        print(">>> coeffs: ", b.pre_mlayer_dict['a0'], b.pre_mlayer_dict['a1'], b.pre_mlayer_dict['a2'], b.pre_mlayer_dict['a3'])
+
+    if 0: # angle scan from preprocessor data
+        b = MLayer.pre_mlayer(
+            interactive=False,
+            FILE="/home/srio/Oasys/mlayer_pdb4c_graded.dat",
+            E_MIN=5000.0, E_MAX=20000.0,
+            O_DENSITY=12.02, O_MATERIAL="Pd",  # odd: closer to vacuum
+            E_DENSITY=2.52, E_MATERIAL="B4C",  # even: closer to substrate
+            S_DENSITY=2.33, S_MATERIAL="Si",  # substrate
+            # GRADE_DEPTH=0,
+            N_PAIRS=60,
+            THICKNESS=40.0,
+            GAMMA=0.5,  # gamma ratio  =  t(even) / (t(odd) + t(even))")
+            ROUGHNESS_EVEN=0.0,
+            ROUGHNESS_ODD=0.0,
+            # FILE_DEPTH="myfile_depth.dat",
+            GRADE_SURFACE=4,
+            # FILE_SHADOW="tmp.sha",
+            # FILE_THICKNESS="tmp.thi",
+            # FILE_GAMMA="tmp.gam",
+            AA0=1.0, AA1=-0.3547, AA2=0.0, AA3=0.0,
+            ell_p=33.5,  # m
+            ell_q=1.50,  # m
+            ell_theta_grazing_deg=0.75,  # deg
+            ell_length=0.30,  # m
+            ell_photon_energy=12400.0,  # eV
+        )
+        print(">>>> using preprocessor data? graded?: ", b.using_pre_mlayer, b.is_laterally_graded())
+        # print(">>>> coeffs?: ", b.pre_mlayer_dict['a0'], b.pre_mlayer_dict['a1'], b.pre_mlayer_dict['a2'], b.pre_mlayer_dict['a3'])
+        npoints = 1000
+        theta = numpy.linspace(0.6,1, npoints)
+        energy =  theta * 0 + 12400
+        rs1, rp1, phase_s1, phase_p1 = b.reflectivity(theta, energy)
+        plot(theta, rs1**2, xtitle="Angle [deg]", ytitle="Reflectivity", title="THETA scan", )
+
+        print(">>> igrade: ", b.pre_mlayer_dict['igrade'])
+        # print(">>> coeffs: ", b.pre_mlayer_dict['a0'], b.pre_mlayer_dict['a1'], b.pre_mlayer_dict['a2'], b.pre_mlayer_dict['a3'])
+
+
+    if 1: # thick graded
+        b = MLayer.pre_mlayer(
+            interactive=False,
+            FILE="/home/srio/Oasys/mlayer_t.dat",
+            E_MIN=1000.0, E_MAX=100000.0,
+            O_DENSITY=21.45, O_MATERIAL="Pt",  # odd: closer to vacuum
+            E_DENSITY=2.0, E_MATERIAL="C",  # even: closer to substrate
+            S_DENSITY=2.33, S_MATERIAL="Si",  # substrate
+            # GRADE_DEPTH=0,
+            N_PAIRS=30,
+            THICKNESS=50.0,
+            GAMMA=0.6,  # gamma ratio  =  t(even) / (t(odd) + t(even))")
+            ROUGHNESS_EVEN=0.0,
+            ROUGHNESS_ODD=0.0,
+            # FILE_DEPTH="myfile_depth.dat",
+            GRADE_SURFACE=0,
+            # FILE_SHADOW="tmp.sha",
+            # FILE_THICKNESS="tmp.thi",
+            # FILE_GAMMA="tmp.gam",
+        )
+
+        print(">>>> using preprocessor data? laterally graded?: ", b.using_pre_mlayer, b.is_laterally_graded())
+        npoints = 1000
+        energy = numpy.linspace(1000,80000, npoints)
+        theta =  energy * 0 + 0.208
+        rs1, rp1, phase_s1, phase_p1 = b.reflectivity(theta, energy)
+        plot(energy, rs1**2, xtitle="Energy [eV]", ytitle="Reflectivity", title="ENERGY scan", )
+
+        print(">>> igrade: ", b.pre_mlayer_dict['igrade'])
+
+        block_from_top_N_thick_Gamma_rough_rough = [
+            [1 ,  6.67,  0.5,  0,  0],
+            [1 ,  6.00,  0.5,  0,  0],
+            [2 ,  5.45,  0.5,  0,  0],
+            [3 ,  5.00,  0.5,  0,  0],
+            [4 ,  4.62,  0.5,  0,  0],
+            [5 ,  4.29,  0.6,  0,  0],
+            [6 ,  4.00,  0.6,  0,  0],
+            [7 ,  3.75,  0.6,  0,  0],
+            [8 ,  3.53,  0.6,  0,  0],
+            [9 ,  3.33,  0.6,  0,  0],
+            [10,  3.16,  0.6,  0,  0],
+            [11,  3.00,  0.6,  0,  0],
+            [12,  2.86,  0.6,  0,  0],
+            [13,  2.73,  0.6,  0,  0],
+            [14,  2.61,  0.6,  0,  0],
+            [15,  2.50,  0.6,  0,  0],
+            [16,  2.40,  0.6,  0,  0],
+            ]
