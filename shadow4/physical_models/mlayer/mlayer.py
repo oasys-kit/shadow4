@@ -41,8 +41,9 @@ class MLayer(object):
 
     """
     def __init__(self):
-        self.using_pre_mlayer = False # False=use craylib, True=use preprocessor
+        self.using_pre_mlayer = 0 # 0=use xraylib, 1=use preprocessor, 2 use dabax
         self.pre_mlayer_dict = None
+        self.dabax = None
 
     def is_laterally_graded(self):
         return self.pre_mlayer_dict["igrade"] > 0
@@ -189,7 +190,7 @@ class MLayer(object):
             out_dict["ell_photon_energy"] = float(mylist[4])
 
         self.pre_mlayer_dict = out_dict
-        self.using_pre_mlayer = True
+        self.using_pre_mlayer = 1
 
     @classmethod
     def pre_mlayer(cls,
@@ -453,7 +454,7 @@ class MLayer(object):
 
         out = MLayer()
         out.pre_mlayer_dict = pre_mlayer_dict
-        out.using_pre_mlayer = True
+        out.using_pre_mlayer = 1
 
         return out
 
@@ -478,6 +479,8 @@ class MLayer(object):
         ell_photon_energy=10000.0,  # eV
         GRADE_DEPTH=0,
         LIST_N_THICK_GAMMA_ROUGHE_ROUGHO_FROM_TOP_TO_BOTTOM=None,
+        use_xraylib_or_dabax=0,
+        dabax=None,
         ):
         """
         Creates an instance of MLayer with the main parameters of a multilater. In this case, the calculations
@@ -535,7 +538,10 @@ class MLayer(object):
             The ellipse length in m; used when GRADED_SURFACE=3.
         ell_photon_energy : float, optional
             The photon energy in eV at the center of the ellipse; used when GRADED_SURFACE=3.
-
+        use_xraylib_or_dabax : int, optional
+            0=use xraylib, 1=use dabax for the optical constabrs.
+        dabax : None or instance of DabaxXraylib,
+            The pointer to the dabax library  (used for use_xraylib_or_dabax = 1).
         Returns
         -------
         instance of MLayer
@@ -644,7 +650,11 @@ class MLayer(object):
         # return
         out = MLayer()
         out.pre_mlayer_dict = pre_mlayer_dict
-        out.using_pre_mlayer = False
+        if use_xraylib_or_dabax == 0:
+            out.using_pre_mlayer = 0
+        elif use_xraylib_or_dabax == 1:
+            out.using_pre_mlayer = 2
+            out.dabax = dabax
         return out
 
     @classmethod
@@ -668,6 +678,8 @@ class MLayer(object):
         ell_photon_energy=10000.0,  # eV
         GRADE_DEPTH=0,
         LIST_N_THICK_GAMMA_ROUGHE_ROUGHO_FROM_TOP_TO_BOTTOM=None,
+        use_xraylib_or_dabax=0,
+        dabax=None,
         ):
         """
         Creates an instance of MLayer with the main parameters of a multilater. In this case, the calculations
@@ -725,6 +737,10 @@ class MLayer(object):
             The ellipse length in m; used when GRADED_SURFACE=3.
         ell_photon_energy : float, optional
             The photon energy in eV at the center of the ellipse; used when GRADED_SURFACE=3.
+        use_xraylib_or_dabax : int, optional
+            0=use xraylib, 1=use dabax for the optical constabrs.
+        dabax : None or instance of DabaxXraylib,
+            The pointer to the dabax library  (used for use_xraylib_or_dabax = 1).
 
         Returns
         -------
@@ -853,7 +869,11 @@ class MLayer(object):
         # return
         out = MLayer()
         out.pre_mlayer_dict = pre_mlayer_dict
-        out.using_pre_mlayer = False
+        if use_xraylib_or_dabax == 0:
+            out.using_pre_mlayer = 0
+        elif use_xraylib_or_dabax == 1:
+            out.using_pre_mlayer = 2
+            out.dabax = dabax
         return out
 
     @classmethod
@@ -1063,7 +1083,7 @@ class MLayer(object):
 
         is_monochromatic = numpy.all(PHOT_ENER == PHOT_ENER[0])
 
-        if self.using_pre_mlayer:
+        if self.using_pre_mlayer == 1:
             ENER = self.pre_mlayer_dict["energy"]
             wnum = 2 * numpy.pi * ENER / tocm
             QMIN = wnum[0]
@@ -1096,7 +1116,7 @@ class MLayer(object):
                     BETE[i]  =  BETA_E[index1] + ( BETA_E[index1+1] -  BETA_E[index1]) * (PHOT_ENER[i] - ENER[index1]) / (ENER[index1 + 1] - ENER[index1])
                     DELO[i]  = DELTA_O[index1] + (DELTA_O[index1+1] - DELTA_O[index1]) * (PHOT_ENER[i] - ENER[index1]) / (ENER[index1 + 1] - ENER[index1])
                     BETO[i]  =  BETA_O[index1] + ( BETA_O[index1+1] -  BETA_O[index1]) * (PHOT_ENER[i] - ENER[index1]) / (ENER[index1 + 1] - ENER[index1])
-        else: # not using preprocessor, using xraylib
+        elif self.using_pre_mlayer == 0: # not using preprocessor, using xraylib
             import xraylib
             if is_monochromatic:
                 DELS[:]  = 1.0 - xraylib.Refractive_Index_Re(self.pre_mlayer_dict["materialS"], 1e-3 * PHOT_ENER[0], self.pre_mlayer_dict["densityS"])
@@ -1113,6 +1133,16 @@ class MLayer(object):
                     BETE[i]  =       xraylib.Refractive_Index_Im(self.pre_mlayer_dict["material1"], 1e-3 * PHOT_ENER[i], self.pre_mlayer_dict["density1"])
                     DELO[i]  = 1.0 - xraylib.Refractive_Index_Re(self.pre_mlayer_dict["material2"], 1e-3 * PHOT_ENER[i], self.pre_mlayer_dict["density2"])
                     BETO[i]  =       xraylib.Refractive_Index_Im(self.pre_mlayer_dict["material2"], 1e-3 * PHOT_ENER[i], self.pre_mlayer_dict["density2"])
+        elif self.using_pre_mlayer == 2: # not using preprocessor, using dabax
+            from dabax.dabax_xraylib import DabaxXraylib
+            dx = DabaxXraylib()
+            DELS  = 1.0 - dx.Refractive_Index_Re(self.pre_mlayer_dict["materialS"], 1e-3 * PHOT_ENER, self.pre_mlayer_dict["densityS"])
+            BETS  =       dx.Refractive_Index_Im(self.pre_mlayer_dict["materialS"], 1e-3 * PHOT_ENER, self.pre_mlayer_dict["densityS"])
+            DELE  = 1.0 - dx.Refractive_Index_Re(self.pre_mlayer_dict["material1"], 1e-3 * PHOT_ENER, self.pre_mlayer_dict["density1"])
+            BETE  =       dx.Refractive_Index_Im(self.pre_mlayer_dict["material1"], 1e-3 * PHOT_ENER, self.pre_mlayer_dict["density1"])
+            DELO  = 1.0 - dx.Refractive_Index_Re(self.pre_mlayer_dict["material2"], 1e-3 * PHOT_ENER, self.pre_mlayer_dict["density2"])
+            BETO  =       dx.Refractive_Index_Im(self.pre_mlayer_dict["material2"], 1e-3 * PHOT_ENER, self.pre_mlayer_dict["density2"])
+
 
         return DELO, BETO, DELE, BETE, DELS, BETS
 
@@ -1139,15 +1169,6 @@ class MLayer(object):
 
         DELO, BETO, DELE, BETE, DELS, BETS = self._interpolate_refraction_index(PHOT_ENER)
 
-        # nn = PHOT_ENER.size
-        #
-        # DELS = numpy.zeros(nn)
-        # BETS = numpy.zeros(nn)
-        # DELE = numpy.zeros(nn)
-        # BETE = numpy.zeros(nn)
-        # DELO = numpy.zeros(nn)
-        # BETO = numpy.zeros(nn)
-
         NIN = self.pre_mlayer_dict["np"]
         NPAIR = numpy.abs(self.pre_mlayer_dict["npair"])
 
@@ -1162,59 +1183,6 @@ class MLayer(object):
 
         mlroughness1 = self.pre_mlayer_dict["mlroughness1"]
         mlroughness2 = self.pre_mlayer_dict["mlroughness2"]
-
-        # is_monochromatic = numpy.all(PHOT_ENER == PHOT_ENER[0])
-        #
-        # if self.using_pre_mlayer:
-        #     ENER = self.pre_mlayer_dict["energy"]
-        #     wnum = 2 * numpy.pi * ENER / tocm
-        #     QMIN = wnum[0]
-        #     QSTEP = wnum[1] - wnum[0]
-        #
-        #     DELTA_S = self.pre_mlayer_dict["delta_s"]
-        #     DELTA_E = self.pre_mlayer_dict["delta_e"]
-        #     DELTA_O = self.pre_mlayer_dict["delta_o"]
-        #     BETA_S = self.pre_mlayer_dict["beta_s"]
-        #     BETA_E = self.pre_mlayer_dict["beta_e"]
-        #     BETA_O = self.pre_mlayer_dict["beta_o"]
-        #
-        #     ELFACTOR = numpy.log10(1.0e4 / 30.0e0) / 300.0e0
-        #
-        #     if is_monochromatic: # just avoid the loop
-        #         i = 0
-        #         index1  = int(numpy.log10(PHOT_ENER[i]/ENER[0])/ELFACTOR)
-        #         DELS[:]  = DELTA_S[index1] + (DELTA_S[index1 + 1] - DELTA_S[index1]) * (PHOT_ENER[i] - ENER[index1]) / (ENER[index1 + 1] - ENER[index1])
-        #         BETS[:]  =  BETA_S[index1] + ( BETA_S[index1 + 1] -  BETA_S[index1]) * (PHOT_ENER[i] - ENER[index1]) / (ENER[index1 + 1] - ENER[index1])
-        #         DELE[:]  = DELTA_E[index1] + (DELTA_E[index1 + 1] - DELTA_E[index1]) * (PHOT_ENER[i] - ENER[index1]) / (ENER[index1 + 1] - ENER[index1])
-        #         BETE[:]  =  BETA_E[index1] + ( BETA_E[index1 + 1] -  BETA_E[index1]) * (PHOT_ENER[i] - ENER[index1]) / (ENER[index1 + 1] - ENER[index1])
-        #         DELO[:]  = DELTA_O[index1] + (DELTA_O[index1 + 1] - DELTA_O[index1]) * (PHOT_ENER[i] - ENER[index1]) / (ENER[index1 + 1] - ENER[index1])
-        #         BETO[:]  =  BETA_O[index1] + ( BETA_O[index1 + 1] -  BETA_O[index1]) * (PHOT_ENER[i] - ENER[index1]) / (ENER[index1 + 1] - ENER[index1])
-        #     else:
-        #         for i in range(nn):
-        #             index1  = int(numpy.log10(PHOT_ENER[i]/ENER[0])/ELFACTOR)
-        #             DELS[i]  = DELTA_S[index1] + (DELTA_S[index1+1] - DELTA_S[index1]) * (PHOT_ENER[i] - ENER[index1]) / (ENER[index1 + 1] - ENER[index1])
-        #             BETS[i]  =  BETA_S[index1] + ( BETA_S[index1+1] -  BETA_S[index1]) * (PHOT_ENER[i] - ENER[index1]) / (ENER[index1 + 1] - ENER[index1])
-        #             DELE[i]  = DELTA_E[index1] + (DELTA_E[index1+1] - DELTA_E[index1]) * (PHOT_ENER[i] - ENER[index1]) / (ENER[index1 + 1] - ENER[index1])
-        #             BETE[i]  =  BETA_E[index1] + ( BETA_E[index1+1] -  BETA_E[index1]) * (PHOT_ENER[i] - ENER[index1]) / (ENER[index1 + 1] - ENER[index1])
-        #             DELO[i]  = DELTA_O[index1] + (DELTA_O[index1+1] - DELTA_O[index1]) * (PHOT_ENER[i] - ENER[index1]) / (ENER[index1 + 1] - ENER[index1])
-        #             BETO[i]  =  BETA_O[index1] + ( BETA_O[index1+1] -  BETA_O[index1]) * (PHOT_ENER[i] - ENER[index1]) / (ENER[index1 + 1] - ENER[index1])
-        # else: # not using preprocessor, using xraylib
-        #     import xraylib
-        #     if is_monochromatic:
-        #         DELS[:]  = 1.0 - xraylib.Refractive_Index_Re(self.pre_mlayer_dict["materialS"], 1e-3 * PHOT_ENER[0], self.pre_mlayer_dict["densityS"])
-        #         BETS[:]  =       xraylib.Refractive_Index_Im(self.pre_mlayer_dict["materialS"], 1e-3 * PHOT_ENER[0], self.pre_mlayer_dict["densityS"])
-        #         DELE[:]  = 1.0 - xraylib.Refractive_Index_Re(self.pre_mlayer_dict["material1"], 1e-3 * PHOT_ENER[0], self.pre_mlayer_dict["density1"])
-        #         BETE[:]  =       xraylib.Refractive_Index_Im(self.pre_mlayer_dict["material1"], 1e-3 * PHOT_ENER[0], self.pre_mlayer_dict["density1"])
-        #         DELO[:]  = 1.0 - xraylib.Refractive_Index_Re(self.pre_mlayer_dict["material2"], 1e-3 * PHOT_ENER[0], self.pre_mlayer_dict["density2"])
-        #         BETO[:]  =       xraylib.Refractive_Index_Im(self.pre_mlayer_dict["material2"], 1e-3 * PHOT_ENER[0], self.pre_mlayer_dict["density2"])
-        #     else:
-        #         for i in range(nn):
-        #             DELS[i]  = 1.0 - xraylib.Refractive_Index_Re(self.pre_mlayer_dict["materialS"], 1e-3 * PHOT_ENER[i], self.pre_mlayer_dict["densityS"])
-        #             BETS[i]  =       xraylib.Refractive_Index_Im(self.pre_mlayer_dict["materialS"], 1e-3 * PHOT_ENER[i], self.pre_mlayer_dict["densityS"])
-        #             DELE[i]  = 1.0 - xraylib.Refractive_Index_Re(self.pre_mlayer_dict["material1"], 1e-3 * PHOT_ENER[i], self.pre_mlayer_dict["density1"])
-        #             BETE[i]  =       xraylib.Refractive_Index_Im(self.pre_mlayer_dict["material1"], 1e-3 * PHOT_ENER[i], self.pre_mlayer_dict["density1"])
-        #             DELO[i]  = 1.0 - xraylib.Refractive_Index_Re(self.pre_mlayer_dict["material2"], 1e-3 * PHOT_ENER[i], self.pre_mlayer_dict["density2"])
-        #             BETO[i]  =       xraylib.Refractive_Index_Im(self.pre_mlayer_dict["material2"], 1e-3 * PHOT_ENER[i], self.pre_mlayer_dict["density2"])
 
         R_S, R_P, PHASES, PHASEP = self._fresnel(TFACT, GFACT, NPAIR, SIN_REF, COS_POLE, XLAM,
                                              DELO, DELE, DELS, BETO, BETE, BETS, t_o, t_e, mlroughness1, mlroughness2)
@@ -1615,6 +1583,7 @@ if __name__ == "__main__":
         density_S=None,  roughness_S=0.0,
         bilayer_thickness=25.14,
         bilayer_gamma=0.5,
+        use_xraylib_or_dabax=1,
         )
 
         # b = MLayer()
@@ -1716,7 +1685,7 @@ if __name__ == "__main__":
         print(">>> igrade: ", b.pre_mlayer_dict['igrade'])
 
 
-    if 1: # thick graded
+    if 0: # thick graded
         #
         # Example inspited from https://doi.org/10.1117/1.JATIS.4.1.011209  (structure in Table1, reflectivity in Fig. 9.)
         #

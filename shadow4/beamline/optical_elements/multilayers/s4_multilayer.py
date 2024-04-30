@@ -387,30 +387,53 @@ class S4MultilayerElement(S4BeamlineElement):
             footprint.apply_reflectivities(numpy.sqrt(Rs), numpy.sqrt(Rp))
 
         elif soe._f_refl == 4: # xraylib
-            raise NotImplementedError()
-            # rs, rp = PreRefl.reflectivity_amplitudes_fresnel_external_xraylib(
-            #         photon_energy_ev=input_beam.get_column(-11),
-            #         coating_material=soe._coating,
-            #         coating_density=soe._coating_density,
-            #         grazing_angle_mrad=grazing_angle_mrad,
-            #         roughness_rms_A=soe._coating_roughness,
-            #         method=2,  # 0=born & wolf, 1=parratt, 2=shadow3
-            #     )
-            # footprint.apply_reflectivities(numpy.abs(rs), numpy.abs(rp))
+            print(">>>>>>>>>>>>>>>>>>>>>>> xraylib")
+            pr = MLayer.initialize_from_bilayer_stack_in_compressed_format(
+                                    structure=soe._structure,
+                                    density_O=None,  roughness_O=0.0,
+                                    density_E=None,  roughness_E=0.0,
+                                    density_S=None,  roughness_S=0.0,
+                                    bilayer_thickness=soe._period,
+                                    bilayer_gamma=soe._Gamma,
+                                    use_xraylib_or_dabax=0,
+                                    )
 
-        elif soe._f_refl == 5: # xraylib
-            raise NotImplementedError()
-            #
-            # rs, rp = PreRefl.reflectivity_amplitudes_fresnel_external_dabax(
-            #         photon_energy_ev=input_beam.get_column(-11),
-            #         coating_material=soe._coating,
-            #         coating_density=soe._coating_density,
-            #         grazing_angle_mrad=grazing_angle_mrad,
-            #         roughness_rms_A=soe._coating_roughness,
-            #         method=2,  # 0=born & wolf, 1=parratt, 2=shadow3
-            #         dabax=None,
-            #     )
-            # footprint.apply_reflectivities(numpy.abs(rs),numpy.abs(rp))
+            print(">>>> grazing angle mrad: ", grazing_angle_mrad)
+            print(">>>> grazing angle deg: ", numpy.degrees(grazing_angle_mrad * 1e-3) )
+            print(">>>> energy eV: ", input_beam.get_column(26))
+            # grazing_angle_deg, photon_energy_ev
+            Rs, Rp, phase_s, phase_p = pr.reflectivity(numpy.degrees(grazing_angle_mrad*1e-3),
+                                                       input_beam.get_column(26),
+                                                       Y=footprint.get_column(2))
+            # from srxraylib.plot.gol import plot
+            # plot(input_beam.get_column(26), Rs**2)
+            footprint.apply_reflectivities(Rs, Rp)
+            # todo: apply phases
+
+        elif soe._f_refl == 5: # dabax
+            print(">>>>>>>>>>>>>>>>>>>>>>> dabax")
+            pr = MLayer.initialize_from_bilayer_stack_in_compressed_format(
+                                    structure=soe._structure,
+                                    density_O=None,  roughness_O=0.0,
+                                    density_E=None,  roughness_E=0.0,
+                                    density_S=None,  roughness_S=0.0,
+                                    bilayer_thickness=soe._period,
+                                    bilayer_gamma=soe._Gamma,
+                                    use_xraylib_or_dabax=1,
+                                    dabax=None,
+                                    )
+
+            print(">>>> grazing angle mrad: ", grazing_angle_mrad)
+            print(">>>> grazing angle deg: ", numpy.degrees(grazing_angle_mrad * 1e-3) )
+            print(">>>> energy eV: ", input_beam.get_column(26))
+            # grazing_angle_deg, photon_energy_ev
+            Rs, Rp, phase_s, phase_p = pr.reflectivity(numpy.degrees(grazing_angle_mrad*1e-3),
+                                                       input_beam.get_column(26),
+                                                       Y=footprint.get_column(2))
+            # from srxraylib.plot.gol import plot
+            # plot(input_beam.get_column(26), Rs**2)
+            footprint.apply_reflectivities(Rs, Rp)
+            # todo: apply phases
 
         else:
             raise Exception("Not implemented source of multilayer reflectivity")
