@@ -21,9 +21,8 @@ The stack is as follows: Vacuum+[Odd,Even]xn+Substrate
 >>> #       |///////// substrate //////////|
 >>> #       |                              |
 
+>>> #      gamma = thickness_even / (thickness_even + thickness_odd)
 """
-
-# TODO: graded multilayers
 
 import numpy
 import scipy.constants as codata
@@ -48,6 +47,8 @@ class MLayer(object):
     def is_laterally_graded(self):
         return self.pre_mlayer_dict["igrade"] > 0
 
+    def is_depth_graded(self):
+        return self.pre_mlayer_dict["tgrade"] > 0
 
     def read_preprocessor_file(self, filename):
         """
@@ -190,10 +191,8 @@ class MLayer(object):
         self.pre_mlayer_dict = out_dict
         self.using_pre_mlayer = True
 
-    # this is copied from shadow3 python preprocessors
     @classmethod
     def pre_mlayer(cls,
-                   interactive=False,
                    FILE="pre_mlayer.dat",
                    E_MIN=5000.0, E_MAX=20000.0,
                    S_DENSITY=2.33, S_MATERIAL="Si",
@@ -208,19 +207,14 @@ class MLayer(object):
                                     #         2=lateral coeffs in cm (for compatibility with S3)
                                     #         3=lateral coeffs in m (S4)
                                     #         4=ellipse parameters used  to compute coeffs.
-
-                   FILE_THICKNESS="mythick.dat",  # fgrade
-                   # GRADE_DEPTH=0,
-                   # FILE_DEPTH="myfile_depth.dat",
-                   # FILE_SHADOW="mlayer1.sha",
-                   # FILE_GAMMA="mygamma.dat",
                    AA0=1.0, AA1=0.0, AA2=0.0, AA3=0.0,
                    ell_p=10.0,
                    ell_q=3.0,
                    ell_theta_grazing_deg=0.1,
                    ell_length=0.1,  # m
                    ell_photon_energy=10000.0,  # eV
-
+                   GRADE_DEPTH=0,
+                   LIST_N_THICK_GAMMA_ROUGHE_ROUGHO_FROM_TOP_TO_BOTTOM=None,
                    ):
         """
         Creates an instance of MLayer with parameters initialized from the keyword parameters and the
@@ -228,8 +222,6 @@ class MLayer(object):
 
         Parameters
         ----------
-        interactive : bool, optional
-            Set True for running interactively in the terminal and answer the questions (like in shadow2).
         FILE : str, optional
             File name to be created (preprocessor pre_mlayer file).
         E_MIN : float, optional
@@ -249,15 +241,16 @@ class MLayer(object):
         O_MATERIAL : float, optional
             Material formula for the ODD material.
         N_PAIRS : int, optional
-            The number of bilayers of the multilayer.
+            The number of bilayers of the multilayer. Not used if GRADE_DEPTH=1.
         THICKNESS : float, optional
-            The thickness of a bilayer in Angstroms.
+            The thickness of a bilayer in Angstroms. Not used if GRADE_DEPTH=1.
         GAMMA : float, optional
             The gamma factor thickness(even) / (thickness(odd) + thickness(even)) for the multilayer.
+            Not used if GRADE_DEPTH=1.
         ROUGHNESS_EVEN : float, optional
-            The rounghness of the EVEN layers in A.
+            The rounghness of the EVEN layers in A. Not used if GRADE_DEPTH=1.
         ROUGHNESS_ODD : float, optional
-            The rounghness of the ODD layers in A.
+            The rounghness of the ODD layers in A. Not used if GRADE_DEPTH=1.
         GRADE_SURFACE : int, optional
             Flag for multilayer graded over the surface:
              * 0: No.
@@ -284,10 +277,33 @@ class MLayer(object):
             The ellipse length in m; used when GRADED_SURFACE=3.
         ell_photon_energy : float, optional
             The photon energy in eV at the center of the ellipse; used when GRADED_SURFACE=3.
-
+        GRADE_DEPTH : int, optional
+            Flag to indicate if the multilayes has a graded thickness (1) or not (0).
+        LIST_N_THICK_GAMMA_ROUGHE_ROUGHO_FROM_TOP_TO_BOTTOM : None or str
+            A str with a list definition of multilayers blocks in the form: [block1, block2, ...]
+            with each block defined as [Nbilayers, BilayerThickness, BilayerGamma, roughnessEven, roughnessOdd].
         Returns
         -------
         instance of MLayer
+            It contains a dictionary in MLayer.pre_mlayer_dict with the data in the following keys:
+
+            * np            :  number of photon energy points,
+            * energy        :  numpy array with photon energy,
+            * delta_s       :  numpy array with refraction index (delta) for substrate,
+            * beta_s        :  numpy array with refraction index (beta) for substrate,
+            * delta_e       :  numpy array with refraction index (delta) for even sublayer,
+            * beta_e        :  numpy array with refraction index (beta) for even sublayer,
+            * delta_o       :  numpy array with refraction index (delta) for odd sublayer,
+            * beta_o        :  numpy array with refraction index (beta) for odd sublayer,
+            * npair         :  number of bilayer paits,
+            * thick         :  numpy array with bilayer thicknesses,
+            * gamma1        :  numpy array with bilayer gamma,
+            * mlroughness1  :  numpy array with roughness for even sublayer,
+            * mlroughness2  :  numpy array with roughness for odd sublayer,
+            * igrade        :  GRADE_SURFACE flag,
+            * a0, a1, a2, a3 : polynomial coefficients for laterally graded multilayers (GRADE_SURFACE=3),
+            * ell_p, ell_q, ell_theta_grazing_deg, ell_length, ell_photon_energy : ellipse settings for laterally
+                               graded multilayers (GRADE_SURFACE=4).
 
         Notes
         -----
@@ -295,212 +311,58 @@ class MLayer(object):
         """
         import xraylib
 
-        # input section
-        if interactive:
-            print("pre_mlayer: SHADOW preprocessor for multilayers - python+xraylib version")
-            fileout = input("Name of output file : ")
-            estart = input("Photon energy (eV) from : ")
-            estart = float(estart)
-            efinal = input("                     to : ")
-            efinal = float(efinal)
+        #--- From input keywords...
+        fileout = FILE
+        estart = float(E_MIN)
+        efinal = float(E_MAX)
 
-            print("  ")
-            print("The stack is as follows: ")
-            print("      ")
-            print("                 vacuum   ")
-            print("      |------------------------------|  \   ")
-            print("      |          odd (n)             |  |   ")
-            print("      |------------------------------|  | BILAYER # n   ")
-            print("      |          even (n)            |  |   ")
-            print("      |------------------------------|  /   ")
-            print("      |          .                   |   ")
-            print("      |          .                   |   ")
-            print("      |          .                   |   ")
-            print("      |------------------------------|  \   ")
-            print("      |          odd (1)             |  |   ")
-            print("      |------------------------------|  | BILAYER # 1   ")
-            print("      |          even (1)            |  |   ")
-            print("      |------------------------------|  /   ")
-            print("      |                              |   ")
-            print("      |///////// substrate //////////|   ")
-            print("      |                              |   ")
-            print("      ")
-            print(" ")
+        # substrate
+        matSubstrate = S_MATERIAL
+        denSubstrate = float(S_DENSITY)
 
-            # substrate
-            matSubstrate = input("Specify the substrate material : ")
-            denSubstrate = input("Specify the substrate density [g/cm^3] : ")
-            denSubstrate = float(denSubstrate)
+        matEven = E_MATERIAL
+        denEven = float(E_DENSITY)
 
-            print("Right above the substrate is the even layer material")
-            matEven = input("Specify the even layer material : ")
-            denEven = input("Specify the even layer density [g/cm^3] : ")
-            denEven = float(denEven)
+        matOdd = O_MATERIAL
+        denOdd = float(O_DENSITY)
 
-            print("Odd layer material is on top of the even layer.")
-            matOdd = input("Specify the odd layer material : ")
-            denOdd = input("Specify the odd layer density [g/cm^3] : ")
-            denOdd = float(denOdd)
 
-            #! By convention, starting from the version that includes ML roughness
-            #! we set NPAR negative, in order to assure compatibility with old
-            #! versions. If NPAR<0, roughness data are read, if NPAR>0 no roughness.
-            npair = input("No. of layer pairs : ")
-            npair = int(npair)
-
-            print(" ")
-            print("Starting from the substrate surface, specify the thickness t :")
-            print("      t = t(odd) + t(even)        in Angstroms,")
-            print("and the gamma ratio :")
-            print("      t(even) / (t(odd) + t(even))")
-            print("for EACH bilayer.")
-            print(" ")
-            print("Type two -1 whenever you want the remaining layers ")
-            print("to assume the thickness, gamma ratio and roughnesses of the previous one.")
-            print(" ")
-
-            #define variables
-            thick=[0e0]*npair
-            gamma1=[0e0]*npair
-            mlroughness1=[0e0]*npair
-            mlroughness2=[0e0]*npair
-
-            for i in range(npair):
-                tmps = ("thickness [A], gamma ratio, roughness even [A] and roughness odd [A] of bilayer %i: \n"% (i+1) )
-                tmp = input(tmps)
-                tmp1 = tmp.split()
-                if ((i != 0) and (int(float(tmp1[0])) == -1)):
-                    thick[i:(npair-1)] = [thick[i-1]] * (npair-i)
-                    gamma1[i:(npair-1)] = [gamma1[i-1]] * (npair-i)
-                    mlroughness1[i:(npair-1)] = [mlroughness1[i-1]] * (npair-i)
-                    mlroughness2[i:(npair-1)] = [mlroughness2[i-1]] * (npair-i)
-                    break
-                else:
-                    thick[i] = float(tmp1[0])
-                    gamma1[i] = float(tmp1[1])
-                    mlroughness1[i] = float(tmp1[2])
-                    mlroughness2[i] = float(tmp1[3])
-
-            print("***************************************************")
-            print("  Is the multilayer graded over the surface? ")
-            print("      0: No ")
-            print("      1: t and/or gamma graded over the surface ")
-            print("         (input spline files with t and gamma gradient **not supported in SHADOW4**")
-            print("      2: t graded over the surface ")
-            print("         (input quadratic fit to t gradient in centimeters)")
-            print("      3: t graded over the surface ")
-            print("         (input quadratic fit to t gradient in meters)")
-            print("      4: automatic calculate the quadratic coefficients for an ellipse")
-            print("      ")
-
-            igrade = input("Is t and/or gamma graded over the surface [0=No/1=Yes] ? ")
-            igrade = int(igrade)
-            if igrade == 1:
-                print("Generation of the spline coefficients for the t and gamma factors")
-                print("over the surface.")
-                print("Then GRADE_MLAYER should be run to generate the spline ")
-                print("coefficients for the t and gamma factors over the surface.")
-                print("Here just type in the file name that WILL be used to store")
-                print("the spline coefficients :")
-                fgrade = input("File name (output from grade_mlayer: ")
-            elif igrade == 2:  # igrade=2, coefficients
-                print("A second degree polynomial fit of the thickness grading")
-                print("must be available:")
-                print("t(y) = BILATER_THICHNESS(y)/BILAYER_THICKNESS(y=0)")
-                print("t(y) = a0 + a1*y + a2*(y^2) + a3*(y^3)  ")
-                print("a0 (constant term) ")
-                print("a1 (slope term) in cm^-1")
-                print("a2 (quadratic term) in cm^-2")
-                print("a3 (cubic term) in cm^-2")
-                tmp = input("Enter a0, a1, a2, a3: ")
-                tmp = tmp.split()
-                a0 = float(tmp[0])
-                a1 = float(tmp[1])
-                a2 = float(tmp[2])
-                a3 = float(tmp[3])
-            elif igrade == 3:  # igrade=3, coefficients in m
-                print("A second degree polynomial fit of the thickness grading")
-                print("must be available:")
-                print("t(y) = BILATER_THICHNESS(y)/BILAYER_THICKNESS(y=0)")
-                print("t(y) = a0 + a1*y + a2*(y^2) + a3*(y^3)  ")
-                print("a0 (constant term) ")
-                print("a1 (slope term) in m^-1")
-                print("a2 (quadratic term) in m^-2")
-                print("a3 (cubic term) in m^-2")
-                tmp = input("Enter a0, a1, a2, a3: ")
-                tmp = tmp.split()
-                a0 = float(tmp[0])
-                a1 = float(tmp[1])
-                a2 = float(tmp[2])
-                a3 = float(tmp[3])
-            elif igrade == 4:  # igrade=3, coefficients in m
-                print("A second degree polynomial fit of the thickness grading")
-                print("must be available:")
-                print("Enter the ellipse design parameters [p [m], q[m], grazing angle [deg]")
-                tmp = input("Enter p [m], q[m], theta [deg]: ")
-                tmp = tmp.split()
-                ell_p = float(tmp[0])
-                ell_q = float(tmp[1])
-                ell_theta_grazing_deg = float(tmp[2])
-                print("Enter the ellipse multilater setting [length [m], photon_energy at center [m]")
-                tmp = input("Enter length [m], photon energy [eV]: ")
-                tmp = tmp.split()
-                ell_length = float(tmp[0])
-                ell_photon_energy = float(tmp[1])
-        else:
-            #--- From input keywords...
-            fileout = FILE
-            estart = float(E_MIN)
-            efinal = float(E_MAX)
-
-            # substrate
-            matSubstrate = S_MATERIAL
-            denSubstrate = float(S_DENSITY)
-
-            matEven = E_MATERIAL
-            denEven = float(E_DENSITY)
-
-            matOdd = O_MATERIAL
-            denOdd = float(O_DENSITY)
-
+        if GRADE_DEPTH == 0:
             npair = int(N_PAIRS)
-
-            #define variables
-            thick=[0e0]*npair
-            gamma1=[0e0]*npair
-            mlroughness1=[0e0]*npair
-            mlroughness2=[0e0]*npair
-
+            # define variables
+            thick = [0e0] * npair
+            gamma1 = [0e0] * npair
+            mlroughness1 = [0e0] * npair
+            mlroughness2 = [0e0] * npair
             for i in range(npair):
                 thick[i] = float(THICKNESS)
                 gamma1[i] = float(GAMMA)
                 mlroughness1[i] = float(ROUGHNESS_EVEN)
                 mlroughness2[i] = float(ROUGHNESS_ODD)
+        elif GRADE_DEPTH == 1:
+            npair, thick, gamma1, mlroughness1, mlroughness2 = cls.__extract_arrays(LIST_N_THICK_GAMMA_ROUGHE_ROUGHO_FROM_TOP_TO_BOTTOM)
 
-            igrade = int(GRADE_SURFACE)
+        igrade = int(GRADE_SURFACE)
 
-            #TODO: check if needed file_gamma
-            fgrade = FILE_THICKNESS # raw_input("File name (output from grade_mlayer: ")
-
-            a0 = float(AA0)
-            a1 = float(AA1)
-            a2 = float(AA2)
-            a3 = float(AA3)
+        a0 = float(AA0)
+        a1 = float(AA1)
+        a2 = float(AA2)
+        a3 = float(AA3)
 
         elfactor = numpy.log10(1.0e4/30.0)/300.0
         istart = int(numpy.log10(estart/30.0e0)/elfactor + 1)
         ifinal = int(numpy.log10(efinal/30.0e0)/elfactor + 2)
         np = int(ifinal - istart) + 1
 
-
+        #
+        # write preprocessor file and define data dictionary
+        #
         f = open(fileout, 'wt')
-
 
         pre_mlayer_dict = {}
 
         f.write("%i \n" % np)
         pre_mlayer_dict["np"] = np
-
 
         ENERGY = numpy.zeros(np)
         for i in range(np):
@@ -546,7 +408,6 @@ class MLayer(object):
         pre_mlayer_dict["delta_o"] = DELTA
         pre_mlayer_dict["beta_o"] = BETA
 
-
         #! srio@esrf.eu 2012-06-07 Nevot-Croce ML roughness model implemented.
         #! By convention, starting from the version that includes ML roughness
         #! we set NPAR negative, in order to assure compatibility with old
@@ -586,25 +447,38 @@ class MLayer(object):
             pre_mlayer_dict["ell_length"] = ell_length
             pre_mlayer_dict["ell_photon_energy"] = ell_photon_energy
 
+        pre_mlayer_dict["tgrade"] = GRADE_DEPTH
         f.close()
         print("File written to disk: %s" % fileout)
-
 
         out = MLayer()
         out.pre_mlayer_dict = pre_mlayer_dict
         out.using_pre_mlayer = True
-        return out
 
+        return out
 
     @classmethod
     def initialize_from_bilayer_stack(cls,
-            material_S="Si", density_S=None, roughness_S=0.0,
-            material_E="B4C",density_E=None, roughness_E=0.0,
-            material_O="Ru", density_O=None, roughness_O=0.0,
-            bilayer_pairs=70,
-            bilayer_thickness=33.1,
-            bilayer_gamma=0.483,
-            ):
+        material_S="Si", density_S=None, roughness_S=0.0,
+        material_E="B4C",density_E=None, roughness_E=0.0,
+        material_O="Ru", density_O=None, roughness_O=0.0,
+        bilayer_pairs=70,
+        bilayer_thickness=33.1,
+        bilayer_gamma=0.483,
+        GRADE_SURFACE=0,  # igrade  0=No,
+        #         1=files (depth and lateral), used in S3 but not supported in S4
+        #         2=lateral coeffs in cm (for compatibility with S3)
+        #         3=lateral coeffs in m (S4)
+        #         4=ellipse parameters used  to compute coeffs.
+        AA0=1.0, AA1=0.0, AA2=0.0, AA3=0.0,
+        ell_p=10.0,
+        ell_q=3.0,
+        ell_theta_grazing_deg=0.1,
+        ell_length=0.1,  # m
+        ell_photon_energy=10000.0,  # eV
+        GRADE_DEPTH=0,
+        LIST_N_THICK_GAMMA_ROUGHE_ROUGHO_FROM_TOP_TO_BOTTOM=None,
+        ):
         """
         Creates an instance of MLayer with the main parameters of a multilater. In this case, the calculations
         are done without using the preprocessor data, and the optical constants are supplied by xraylib at run time.
@@ -635,6 +509,32 @@ class MLayer(object):
             The thickness in A of the bilayers.
         bilayer_gamma : float, optional
             The gamma factor of the bilayer thickness(even) / (thichness(odd) + thichness(even)).
+        GRADE_SURFACE : int, optional
+            Flag for multilayer graded over the surface:
+             * 0: No.
+             * 1: Not used (for compatibility with SHADOW3).
+             * 2: Not used (for compatibility with SHADOW3).
+             * 3: t graded over the surface (input quadratic fit to t gradient in meters).
+             * 4: t graded over the surface for an elliptical multilayer (quadratic coefficients are calculated from
+                the ellipse design parameters).
+        AA0 : float, optional
+            Coefficient (constant); used when GRADED_SURFACE=2
+        AA1 : float, optional
+            Coefficient (linear) in m^-1; used when GRADED_SURFACE=2
+        AA2 : float, optional
+            Coefficient (quadratic) in m^-2; used when GRADED_SURFACE=2
+        AA3 : float, optional
+            Coefficient (cubic) in m^-3; used when GRADED_SURFACE=2
+        ell_p : float, optional
+            The ellipse design parameters p in m; used when GRADED_SURFACE=3.
+        ell_q : float, optional
+            The ellipse design parameters q in m; used when GRADED_SURFACE=3.
+        ell_theta_grazing_deg : float, optional
+            The ellipse design grazing angle in deg; used when GRADED_SURFACE=3.
+        ell_length : float, optional
+            The ellipse length in m; used when GRADED_SURFACE=3.
+        ell_photon_energy : float, optional
+            The photon energy in eV at the center of the ellipse; used when GRADED_SURFACE=3.
 
         Returns
         -------
@@ -643,24 +543,29 @@ class MLayer(object):
 
         import xraylib
 
-        npair = int(bilayer_pairs)
+        if GRADE_DEPTH == 0:
+            npair = int(bilayer_pairs)
+            # define variables
+            thick = []
+            gamma1 = []
+            mlroughness1 = []
+            mlroughness2 = []
 
-        #define variables
-        thick        = []
-        gamma1       = []
-        mlroughness1 = []
-        mlroughness2 = []
+            for i in range(npair):
+                thick.append(bilayer_thickness)
+                gamma1.append(bilayer_gamma)
+                mlroughness1.append(roughness_E)
+                mlroughness2.append(roughness_O)
+        elif GRADE_DEPTH == 1:
+            npair, thick, gamma1, mlroughness1, mlroughness2 = cls.__extract_arrays(
+                LIST_N_THICK_GAMMA_ROUGHE_ROUGHO_FROM_TOP_TO_BOTTOM)
 
-        for i in range(npair):
-            thick.append(bilayer_thickness)
-            gamma1.append(bilayer_gamma)
-            mlroughness1.append(roughness_E)
-            mlroughness2.append(roughness_O)
-
+        #
+        # define output dict
+        #
         pre_mlayer_dict = {}
 
-        pre_mlayer_dict["np"] = bilayer_pairs
-
+        pre_mlayer_dict["np"] = None
 
         #! srio@esrf.eu 2012-06-07 Nevot-Croce ML roughness model implemented.
         #! By convention, starting from the version that includes ML roughness
@@ -722,14 +627,19 @@ class MLayer(object):
         pre_mlayer_dict["beta_e"] = None
         pre_mlayer_dict["delta_o"] = None
         pre_mlayer_dict["beta_o"] = None
-        pre_mlayer_dict["igrade"] = None
-        if pre_mlayer_dict["igrade"] == 1:
-            pre_mlayer_dict["fgrade"] = None
-        elif pre_mlayer_dict["igrade"] == 2:  # igrade=2, coefficients
-            pre_mlayer_dict["a0"] = None
-            pre_mlayer_dict["a1"] = None
-            pre_mlayer_dict["a2"] = None
-            pre_mlayer_dict["a3"] = None
+
+        pre_mlayer_dict["igrade"] = GRADE_SURFACE
+
+        pre_mlayer_dict["a0"] = AA0
+        pre_mlayer_dict["a1"] = AA1
+        pre_mlayer_dict["a2"] = AA2
+        pre_mlayer_dict["a3"] = AA3
+
+        pre_mlayer_dict["ell_p"]                 = ell_p
+        pre_mlayer_dict["ell_q"]                 = ell_q
+        pre_mlayer_dict["ell_theta_grazing_deg"] = ell_theta_grazing_deg
+        pre_mlayer_dict["ell_length"]            = ell_length
+        pre_mlayer_dict["ell_photon_energy"]     = ell_photon_energy
 
         # return
         out = MLayer()
@@ -739,13 +649,26 @@ class MLayer(object):
 
     @classmethod
     def initialize_from_bilayer_stack_in_compressed_format(cls,
-            structure='[Pd/B4C]x150+Si',
-            density_O=None, roughness_O=0.0,
-            density_E=None, roughness_E=0.0,
-            density_S=None, roughness_S=0.0,
-            bilayer_thickness=33.1,
-            bilayer_gamma=0.483,
-            ):
+        structure='[Pd/B4C]x150+Si',
+        density_O=None, roughness_O=0.0,
+        density_E=None, roughness_E=0.0,
+        density_S=None, roughness_S=0.0,
+        bilayer_thickness=33.1,
+        bilayer_gamma=0.483,
+        GRADE_SURFACE=0,  # igrade  0=No,
+        #         1=files (depth and lateral), used in S3 but not supported in S4
+        #         2=lateral coeffs in cm (for compatibility with S3)
+        #         3=lateral coeffs in m (S4)
+        #         4=ellipse parameters used  to compute coeffs.
+        AA0=1.0, AA1=0.0, AA2=0.0, AA3=0.0,
+        ell_p=10.0,
+        ell_q=3.0,
+        ell_theta_grazing_deg=0.1,
+        ell_length=0.1,  # m
+        ell_photon_energy=10000.0,  # eV
+        GRADE_DEPTH=0,
+        LIST_N_THICK_GAMMA_ROUGHE_ROUGHO_FROM_TOP_TO_BOTTOM=None,
+        ):
         """
         Creates an instance of MLayer with the main parameters of a multilater. In this case, the calculations
         are done without using the preprocessor data, and the optical constants are supplied by xraylib at run time.
@@ -776,6 +699,32 @@ class MLayer(object):
             The thickness in A of the bilayers.
         bilayer_gamma : float, optional
             The gamma factor of the bilayer thickness(even) / (thichness(odd) + thichness(even)).
+        GRADE_SURFACE : int, optional
+            Flag for multilayer graded over the surface:
+             * 0: No.
+             * 1: Not used (for compatibility with SHADOW3).
+             * 2: Not used (for compatibility with SHADOW3).
+             * 3: t graded over the surface (input quadratic fit to t gradient in meters).
+             * 4: t graded over the surface for an elliptical multilayer (quadratic coefficients are calculated from
+                the ellipse design parameters).
+        AA0 : float, optional
+            Coefficient (constant); used when GRADED_SURFACE=2
+        AA1 : float, optional
+            Coefficient (linear) in m^-1; used when GRADED_SURFACE=2
+        AA2 : float, optional
+            Coefficient (quadratic) in m^-2; used when GRADED_SURFACE=2
+        AA3 : float, optional
+            Coefficient (cubic) in m^-3; used when GRADED_SURFACE=2
+        ell_p : float, optional
+            The ellipse design parameters p in m; used when GRADED_SURFACE=3.
+        ell_q : float, optional
+            The ellipse design parameters q in m; used when GRADED_SURFACE=3.
+        ell_theta_grazing_deg : float, optional
+            The ellipse design grazing angle in deg; used when GRADED_SURFACE=3.
+        ell_length : float, optional
+            The ellipse length in m; used when GRADED_SURFACE=3.
+        ell_photon_energy : float, optional
+            The photon energy in eV at the center of the ellipse; used when GRADED_SURFACE=3.
 
         Returns
         -------
@@ -789,7 +738,7 @@ class MLayer(object):
         #
 
         i0 = structure.find('[')
-        i1 = structure.find('/')
+        i1 = structure.find(',')
         i2 = structure.find(']')
         i3 = structure.find('x')
         i4 = structure.find('+')
@@ -800,20 +749,28 @@ class MLayer(object):
         npair =  int(structure[(i3+1):(i4)])
         material_S = structure[(i4+1)::]
 
-        print("[%s,%s]x%d+%s" % (material_O, material_E, npair, material_S))
+        print("***[%s,%s]x%d+%s***" % (material_O, material_E, npair, material_S))
+        print("odd, even, substrate", material_O, material_E, material_S)
 
-        #define variables
-        thick        = []
-        gamma1       = []
-        mlroughness1 = []
-        mlroughness2 = []
+        if GRADE_DEPTH == 0:
+            #define variables
+            thick        = []
+            gamma1       = []
+            mlroughness1 = []
+            mlroughness2 = []
 
-        for i in range(npair):
-            thick.append(bilayer_thickness)
-            gamma1.append(bilayer_gamma)
-            mlroughness1.append(roughness_E)
-            mlroughness2.append(roughness_O)
+            for i in range(npair):
+                thick.append(bilayer_thickness)
+                gamma1.append(bilayer_gamma)
+                mlroughness1.append(roughness_E)
+                mlroughness2.append(roughness_O)
+        else:
+            npair, thick, gamma1, mlroughness1, mlroughness2 = cls.__extract_arrays(
+                LIST_N_THICK_GAMMA_ROUGHE_ROUGHO_FROM_TOP_TO_BOTTOM)
 
+        #
+        # dict
+        #
         pre_mlayer_dict = {}
 
         pre_mlayer_dict["np"] = npair
@@ -879,20 +836,53 @@ class MLayer(object):
         pre_mlayer_dict["beta_e"] = None
         pre_mlayer_dict["delta_o"] = None
         pre_mlayer_dict["beta_o"] = None
-        pre_mlayer_dict["igrade"] = None
-        if pre_mlayer_dict["igrade"] == 1:
-            pre_mlayer_dict["fgrade"] = None
-        elif pre_mlayer_dict["igrade"] == 2:  # igrade=2, coefficients
-            pre_mlayer_dict["a0"] = None
-            pre_mlayer_dict["a1"] = None
-            pre_mlayer_dict["a2"] = None
-            pre_mlayer_dict["a3"] = None
+
+        pre_mlayer_dict["igrade"] = GRADE_SURFACE
+
+        pre_mlayer_dict["a0"] = AA0
+        pre_mlayer_dict["a1"] = AA1
+        pre_mlayer_dict["a2"] = AA2
+        pre_mlayer_dict["a3"] = AA3
+
+        pre_mlayer_dict["ell_p"]                 = ell_p
+        pre_mlayer_dict["ell_q"]                 = ell_q
+        pre_mlayer_dict["ell_theta_grazing_deg"] = ell_theta_grazing_deg
+        pre_mlayer_dict["ell_length"]            = ell_length
+        pre_mlayer_dict["ell_photon_energy"]     = ell_photon_energy
 
         # return
         out = MLayer()
         out.pre_mlayer_dict = pre_mlayer_dict
         out.using_pre_mlayer = False
         return out
+
+    @classmethod
+    def __extract_arrays(cls, LIST_N_THICK_GAMMA_ROUGHE_ROUGHO_FROM_TOP_TO_BOTTOM):
+        try:
+            lblocks = eval(LIST_N_THICK_GAMMA_ROUGHE_ROUGHO_FROM_TOP_TO_BOTTOM)
+        except:
+            raise Exception(
+                "Error retrieving a list from this text: %s " % LIST_N_THICK_GAMMA_ROUGHE_ROUGHO_FROM_TOP_TO_BOTTOM)
+        nblocks = len(lblocks)
+        npair = 0
+        for block in lblocks:
+            npair += block[0]
+
+        thick = [0e0] * npair
+        gamma1 = [0e0] * npair
+        mlroughness1 = [0e0] * npair
+        mlroughness2 = [0e0] * npair
+        i = 0
+        for jj in range(nblocks):
+            block = lblocks[-(1 + jj)]  # blocks stored from bottom to top as in S4
+            for kk in range(block[0]):
+                thick[i] = block[1]
+                gamma1[i] = block[2]
+                mlroughness1[i] = block[3]
+                mlroughness2[i] = block[4]
+                i += 1
+
+        return npair, thick, gamma1, mlroughness1, mlroughness2
 
     def scan(self, h5file="",
             energyN=51, energy1=5000.0, energy2=20000.0,
@@ -1053,108 +1043,10 @@ class MLayer(object):
 
             raise Exception("Bad igrade value %d ." % igrade)
 
-        # TODO graded ml
-        #         ! C
-        #         ! C Is the multilayer thickness graded ?
-        #         ! C
-        #         read    (iunit,*)   i_grade
-        #         ! 0=None
-        #         ! 1=spline files
-        #         ! 2=quadic coefficients
-        #
-        #         ! spline
-        #         if (i_grade.eq.1) then
-        #           read  (iunit,'(a)') file_grade
-        #           OPEN  (45, FILE=adjustl(FILE_GRADE), STATUS='OLD', &
-        #                 FORM='UNFORMATTED', IOSTAT=iErr)
-        #           ! srio added test
-        #           if (iErr /= 0 ) then
-        #             print *,"REFLEC: File not found: "//trim(adjustl(file_grade))
-        #             print *,'Error: REFLEC: File not found. Aborted.'
-        #             ! stop 'File not found. Aborted.'
-        #           end if
-        #
-        #           READ  (45) NTX, NTY
-        #           READ  (45) TX,TY
-        #           !DO 205 I = 1, NTX
-        #           !DO 205 J = 1, NTY
-        #           DO I = 1, NTX
-        #             DO J = 1, NTY
-        #               READ  (45) TSPL(1,I,1,J),TSPL(1,I,2,J),    & ! spline for t
-        #                          TSPL(2,I,1,J),TSPL(2,I,2,J)
-        #             END DO
-        #           END DO
-        #
-        #           READ (45) NGX, NGY
-        #           READ (45) GX,GY
-        #           DO I = 1, NGX
-        #             DO J = 1, NGY
-        #               READ (45) GSPL(1,I,1,J),GSPL(1,I,2,J),    & ! spline for gamma
-        #                         GSPL(2,I,1,J),GSPL(2,I,2,J)
-        #             END DO
-        #           END DO
-        #
-        #           CLOSE (45)
-        #         end if
-        #
-        #         if (i_grade.eq.2) then  ! quadric coefficients
-        #           !
-        #           ! laterally gradded multilayer
-        #           !
-        #
-        #           ! srio@esrf.eu added cubic term (requested B Meyer, LNLS)
-        #           read(iunit,*,IOSTAT=iErr) lateral_grade_constant,lateral_grade_slope, &
-        #                         lateral_grade_quadratic,lateral_grade_cubic
-        #
-        #         end if
-        #
-        #         close(unit=iunit)
-        #         tfilm = absor
-        #         RETURN
-        #     END IF
-        # END IF
-
-        #TODO graded multilayers
-        #         IF (I_GRADE.EQ.1) THEN
-        #             XIN = PIN(1)
-        #             YIN = PIN(2)
-        #             CALL DBCEVL (TX,NTX,TY,NTY,TSPL,i101,XIN,YIN,PDS,IER)
-        #             IF (IER.NE.0) THEN
-        #               CALL      MSSG ('REFLEC','Spline error # ',IER)
-        #               RETURN
-        #             END IF
-        #             TFACT = PDS(1)
-        #             ! C
-        #             CALL DBCEVL (GX,NGX,GY,NGY,GSPL,i101,XIN,YIN,PDS,IER)
-        #             IF (IER.NE.0) THEN
-        #               CALL MSSG ('REFLEC','Spline error # ',IER)
-        #               RETURN
-        #             END IF
-        #             GFACT = PDS(1)
-        #         ELSE IF (I_GRADE.EQ.2) THEN
-        #             TFACT = lateral_grade_constant+ &
-        #                     lateral_grade_slope*pin(2) + &
-        #                     lateral_grade_quadratic*pin(2)*pin(2) + &
-        #                     lateral_grade_cubic*pin(2)*pin(2)*pin(2)
-        #         ELSE
-        #         END IF
-
-        vectorized = 1
-        if vectorized == 0:
-            for i in range(grazing_angle_deg.size):
-                theta = grazing_angle_deg[i]
-                energy = photon_energy_ev[i]
-                sin_ref = numpy.sin(theta * numpy.pi / 180)
-                wnum = 2 * numpy.pi * energy / tocm
-                COS_POLE = 1.0
-                R_S, R_P, tmp, phases, phasep = self._reflec(wnum, sin_ref, COS_POLE, k_what)
-                R_S_array[i] = R_S
-                R_P_array[i] = R_P
-        else:
-            sin_ref = numpy.sin(grazing_angle_deg * numpy.pi / 180)
-            COS_POLE = 1.0
-            R_S_array, R_P_array, phase_S, phase_P = self._reflec(photon_energy_ev, sin_ref, COS_POLE,
-                                                                  TFACT=TFACT, GFACT=GFACT)
+        sin_ref = numpy.sin(grazing_angle_deg * numpy.pi / 180)
+        COS_POLE = 1.0
+        R_S_array, R_P_array, phase_S, phase_P = self._reflec(photon_energy_ev, sin_ref, COS_POLE,
+                                                              TFACT=TFACT, GFACT=GFACT)
 
         return R_S_array, R_P_array, phase_S, phase_P
 
@@ -1603,23 +1495,17 @@ if __name__ == "__main__":
 
     if 0:
         a = MLayer.pre_mlayer(
-            interactive=False,
             FILE="pre_mlayer.dat",
             E_MIN=110.0, E_MAX=500.0,
             O_DENSITY=7.19, O_MATERIAL="Cr",  # odd: closer to vacuum
             E_DENSITY=3.00, E_MATERIAL="Sc",  # even: closer to substrate
             S_DENSITY=2.33, S_MATERIAL="Si",  # substrate
-            # GRADE_DEPTH=0,
             N_PAIRS=50,
             THICKNESS=22.0,
             GAMMA=10.0/22.0,  #  gamma ratio  =  t(even) / (t(odd) + t(even))")
             ROUGHNESS_EVEN=0.0,
             ROUGHNESS_ODD=0.0,
-            # FILE_DEPTH="myfile_depth.dat",
             GRADE_SURFACE=0,
-            # FILE_SHADOW="mlayer1.sha",
-            FILE_THICKNESS="mythick.dat",
-            # FILE_GAMMA="mygamma.dat",
             AA0=1.0,AA1=0.0,AA2=0.0,AA3=0.0)
 
         b = MLayer()
@@ -1658,23 +1544,17 @@ if __name__ == "__main__":
     if 0: # prepate optical element: MLayer.reflectivity()
         if 1:
             b = MLayer.pre_mlayer(
-                interactive=False,
                 FILE="mlayer1.dat",
                 E_MIN=30000.0, E_MAX=100000.0,
                 O_DENSITY=19.3, O_MATERIAL="W",  # odd: closer to vacuum
                 E_DENSITY=2.37, E_MATERIAL="B",  # even: closer to substrate
                 S_DENSITY=2.33, S_MATERIAL="Si",  # substrate
-                # GRADE_DEPTH=0,
                 N_PAIRS=350,
                 THICKNESS=30.19,
                 GAMMA=0.666,  #  gamma ratio  =  t(even) / (t(odd) + t(even))")
                 ROUGHNESS_EVEN=0.0,
                 ROUGHNESS_ODD=0.0,
-                # FILE_DEPTH="myfile_depth.dat",
                 GRADE_SURFACE=0,
-                # FILE_SHADOW="tmp.sha",
-                FILE_THICKNESS="tmp.thi",
-                # FILE_GAMMA="tmp.gam",
                 AA0=1.0, AA1=0.0, AA2=0.0, AA3=0.0)
 
             # b = MLayer()
@@ -1726,10 +1606,10 @@ if __name__ == "__main__":
         rs1, rp1, phase_s1, phase_p1= b.reflectivity(numpy.ones_like(energy) * 0.26356, energy)
         plot(energy, rs1, xtitle="Photon energy [eV]", ytitle="Reflectivity", title="MIXED scan", )
 
-    if 0: # compressed format
+    if 1: # compressed format
 
         b = MLayer.initialize_from_bilayer_stack_in_compressed_format(
-        structure='[Pd/B4C]x150+Si',
+        structure='[Pd,B4C]x150+Si',
         density_O=None,  roughness_O=0.0,
         density_E=2.52,  roughness_E=0.0,
         density_S=None,  roughness_S=0.0,
@@ -1782,18 +1662,6 @@ if __name__ == "__main__":
              xtitle="angle [deg]", ytitle="Phase P [rad]", title="THETA scan", ylog=0,
              legend=['S4 reflectivity s-pol','IMD s-pol'])
 
-
-
-    if 0: # energy scan from preprocessor data
-        b = MLayer()
-        b.read_preprocessor_file("/home/srio/Oasys/mlayer.dat")
-        print(">>>> using preprocessor data: ", b.using_pre_mlayer)
-        npoints = 1000
-        energy = numpy.linspace(41000, 49000, npoints)
-        theta = numpy.zeros(npoints) + 0.26356
-        rs1, rp1, phase_s1, phase_p1 = b.reflectivity(theta, energy)
-        plot(energy, rs1**2, xtitle="Photon energy [eV]", ytitle="Reflectivity", title="ENERGY scan", )
-
     if 0: # angle scan from preprocessor data
         b = MLayer()
         b.read_preprocessor_file("/home/srio/Oasys/mlayer_id28_old.dat")
@@ -1820,23 +1688,17 @@ if __name__ == "__main__":
 
     if 0: # angle scan from preprocessor data
         b = MLayer.pre_mlayer(
-            interactive=False,
             FILE="/home/srio/Oasys/mlayer_pdb4c_graded.dat",
             E_MIN=5000.0, E_MAX=20000.0,
             O_DENSITY=12.02, O_MATERIAL="Pd",  # odd: closer to vacuum
             E_DENSITY=2.52, E_MATERIAL="B4C",  # even: closer to substrate
             S_DENSITY=2.33, S_MATERIAL="Si",  # substrate
-            # GRADE_DEPTH=0,
             N_PAIRS=60,
             THICKNESS=40.0,
             GAMMA=0.5,  # gamma ratio  =  t(even) / (t(odd) + t(even))")
             ROUGHNESS_EVEN=0.0,
             ROUGHNESS_ODD=0.0,
-            # FILE_DEPTH="myfile_depth.dat",
             GRADE_SURFACE=4,
-            # FILE_SHADOW="tmp.sha",
-            # FILE_THICKNESS="tmp.thi",
-            # FILE_GAMMA="tmp.gam",
             AA0=1.0, AA1=-0.3547, AA2=0.0, AA3=0.0,
             ell_p=33.5,  # m
             ell_q=1.50,  # m
@@ -1845,7 +1707,6 @@ if __name__ == "__main__":
             ell_photon_energy=12400.0,  # eV
         )
         print(">>>> using preprocessor data? graded?: ", b.using_pre_mlayer, b.is_laterally_graded())
-        # print(">>>> coeffs?: ", b.pre_mlayer_dict['a0'], b.pre_mlayer_dict['a1'], b.pre_mlayer_dict['a2'], b.pre_mlayer_dict['a3'])
         npoints = 1000
         theta = numpy.linspace(0.6,1, npoints)
         energy =  theta * 0 + 12400
@@ -1853,31 +1714,61 @@ if __name__ == "__main__":
         plot(theta, rs1**2, xtitle="Angle [deg]", ytitle="Reflectivity", title="THETA scan", )
 
         print(">>> igrade: ", b.pre_mlayer_dict['igrade'])
-        # print(">>> coeffs: ", b.pre_mlayer_dict['a0'], b.pre_mlayer_dict['a1'], b.pre_mlayer_dict['a2'], b.pre_mlayer_dict['a3'])
 
 
     if 1: # thick graded
+        #
+        # Example inspited from https://doi.org/10.1117/1.JATIS.4.1.011209  (structure in Table1, reflectivity in Fig. 9.)
+        #
+        LIST_N_THICK_GAMMA_ROUGHE_ROUGHO_FROM_TOP_TO_BOTTOM = """[
+            [1,   10.6,  0.35, 0, 0],
+            [1 ,  66.7,  0.5,  0,  0],
+            [1 ,  60.0,  0.5,  0,  0],
+            [2 ,  54.5,  0.5,  0,  0],
+            [3 ,  50.0,  0.5,  0,  0],
+            [4 ,  46.2,  0.5,  0,  0],
+            [5 ,  42.9,  0.6,  0,  0],
+            [6 ,  40.0,  0.6,  0,  0],
+            [7 ,  37.5,  0.6,  0,  0],
+            [8 ,  35.3,  0.6,  0,  0],
+            [9 ,  33.3,  0.6,  0,  0],
+            [10,  31.6,  0.6,  0,  0],
+            [11,  30.0,  0.6,  0,  0],
+            [12,  28.6,  0.6,  0,  0],
+            [13,  27.3,  0.6,  0,  0],
+            [14,  26.1,  0.6,  0,  0],
+            [15,  25.0,  0.6,  0,  0],
+            [16,  24.0,  0.6,  0,  0],
+            ]"""
+
         b = MLayer.pre_mlayer(
-            interactive=False,
             FILE="/home/srio/Oasys/mlayer_t.dat",
             E_MIN=1000.0, E_MAX=100000.0,
             O_DENSITY=21.45, O_MATERIAL="Pt",  # odd: closer to vacuum
             E_DENSITY=2.0, E_MATERIAL="C",  # even: closer to substrate
             S_DENSITY=2.33, S_MATERIAL="Si",  # substrate
-            # GRADE_DEPTH=0,
             N_PAIRS=30,
             THICKNESS=50.0,
             GAMMA=0.6,  # gamma ratio  =  t(even) / (t(odd) + t(even))")
             ROUGHNESS_EVEN=0.0,
             ROUGHNESS_ODD=0.0,
-            # FILE_DEPTH="myfile_depth.dat",
             GRADE_SURFACE=0,
-            # FILE_SHADOW="tmp.sha",
-            # FILE_THICKNESS="tmp.thi",
-            # FILE_GAMMA="tmp.gam",
+            GRADE_DEPTH=1,
+            LIST_N_THICK_GAMMA_ROUGHE_ROUGHO_FROM_TOP_TO_BOTTOM = LIST_N_THICK_GAMMA_ROUGHE_ROUGHO_FROM_TOP_TO_BOTTOM,
         )
 
         print(">>>> using preprocessor data? laterally graded?: ", b.using_pre_mlayer, b.is_laterally_graded())
+
+        for key in b.pre_mlayer_dict.keys():
+            print(key)
+
+        # print(">>>> tgrade: ", b.pre_mlayer_dict['tgrade'])
+        # print(">>>> npair: ", b.pre_mlayer_dict['npair'])
+        # print(">>>> thick: ", b.pre_mlayer_dict['thick'])
+        # print(">>>> gamma1: ", b.pre_mlayer_dict['gamma1'])
+        # print(">>>> mlroughness1: ", b.pre_mlayer_dict['mlroughness1'])
+        # print(">>>> mlroughness2: ", b.pre_mlayer_dict['mlroughness2'])
+
         npoints = 1000
         energy = numpy.linspace(1000,80000, npoints)
         theta =  energy * 0 + 0.208
@@ -1886,22 +1777,3 @@ if __name__ == "__main__":
 
         print(">>> igrade: ", b.pre_mlayer_dict['igrade'])
 
-        block_from_top_N_thick_Gamma_rough_rough = [
-            [1 ,  6.67,  0.5,  0,  0],
-            [1 ,  6.00,  0.5,  0,  0],
-            [2 ,  5.45,  0.5,  0,  0],
-            [3 ,  5.00,  0.5,  0,  0],
-            [4 ,  4.62,  0.5,  0,  0],
-            [5 ,  4.29,  0.6,  0,  0],
-            [6 ,  4.00,  0.6,  0,  0],
-            [7 ,  3.75,  0.6,  0,  0],
-            [8 ,  3.53,  0.6,  0,  0],
-            [9 ,  3.33,  0.6,  0,  0],
-            [10,  3.16,  0.6,  0,  0],
-            [11,  3.00,  0.6,  0,  0],
-            [12,  2.86,  0.6,  0,  0],
-            [13,  2.73,  0.6,  0,  0],
-            [14,  2.61,  0.6,  0,  0],
-            [15,  2.50,  0.6,  0,  0],
-            [16,  2.40,  0.6,  0,  0],
-            ]
