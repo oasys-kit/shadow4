@@ -111,6 +111,21 @@ beamline optical elements
       shadow4.beamline.optical_elements.crystals.s4_numerical_mesh_crystal
       shadow4.beamline.optical_elements.crystals.s4_additional_numerical_mesh_crystal
 
+* ``shadow4.beamline.optical_elements.multilayers`` The multilayers
+
+   .. autosummary::
+      :toctree: generated/
+
+      shadow4.beamline.optical_elements.multilayers.s4_plane_multilayer
+      shadow4.beamline.optical_elements.multilayers.s4_sphere_multilayer
+      shadow4.beamline.optical_elements.multilayers.s4_toroid_multilayer
+      shadow4.beamline.optical_elements.multilayers.s4_ellipsoid_multilayer
+      shadow4.beamline.optical_elements.multilayers.s4_paraboloid_multilayer
+      shadow4.beamline.optical_elements.multilayers.s4_hyperboloid_multilayer
+      shadow4.beamline.optical_elements.multilayers.s4_conic_multilayer
+      shadow4.beamline.optical_elements.multilayers.s4_numerical_mesh_multilayer
+      shadow4.beamline.optical_elements.multilayers.s4_additional_numerical_mesh_multilayer
+
 * ``shadow4.beamline.optical_elements.refractors`` The refractors
 
    .. autosummary::

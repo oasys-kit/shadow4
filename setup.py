@@ -61,7 +61,6 @@ PACKAGES = [
     "shadow4.optical_surfaces",
     "shadow4.physical_models.prerefl",
     "shadow4.physical_models.mlayer",
-    "shadow4.physical_models.bragg",
     "shadow4.beamline",
     "shadow4.beamline.optical_elements",
     "shadow4.beamline.optical_elements.ideal_elements",
@@ -87,7 +86,7 @@ README_FILE = os.path.join(os.path.dirname(__file__), 'README.rst')
 LONG_DESCRIPTION = open(README_FILE).read()
 
 setup(name='shadow4',
-      version='0.1.36',
+      version='0.1.37',
       description='shadow implementation in python',
       long_description=LONG_DESCRIPTION,
       long_description_content_type='text/x-rst',
