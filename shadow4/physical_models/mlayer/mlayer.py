@@ -46,14 +46,28 @@ class MLayer(object):
         self.dabax = None
 
     def is_laterally_graded(self):
+        """
+        Returns True if the multilayes is laterally-graded.
+
+        Returns
+        -------
+        bool
+        """
         return self.pre_mlayer_dict["igrade"] > 0
 
     def is_depth_graded(self):
+        """
+        Returns True if the multilayes is depth-graded.
+
+        Returns
+        -------
+        bool
+        """
         return self.pre_mlayer_dict["tgrade"] > 0
 
     def read_preprocessor_file(self, filename):
         """
-        Reads a preprocessor (pre_mlayer) file. The same as in shadow3.
+        Reads a preprocessor (pre_mlayer) file. It has the same file format as in shadow3.
 
         Parameters
         ----------
