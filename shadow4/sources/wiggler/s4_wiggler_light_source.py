@@ -20,7 +20,7 @@ from shadow4.sources.s4_light_source import S4LightSource
 from shadow4.sources.wiggler.s4_wiggler import S4Wiggler
 from shadow4.beam.s4_beam import S4Beam
 from shadow4.tools.arrayofvectors import vector_cross, vector_norm
-from shadow4.tools.sync_f_sigma_and_pi import sync_f_sigma_and_pi, sync_f_sigma_and_pi_approx
+from srxraylib.sources.srfunc import sync_f_sigma_and_pi, sync_f_sigma_and_pi_approx
 from shadow4.tools.logger import is_verbose, is_debug
 
 import time

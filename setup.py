@@ -77,8 +77,8 @@ INSTALL_REQUIRES = (
     'setuptools',
     'numpy',
     'scipy',
-    'syned>=1.0.30',
-    'srxraylib>=1.0.52',
+    'syned>=1.0.40',
+    'srxraylib>=1.0.54',
     'crystalpy>=0.0.23',
 )
 
@@ -86,7 +86,7 @@ README_FILE = os.path.join(os.path.dirname(__file__), 'README.rst')
 LONG_DESCRIPTION = open(README_FILE).read()
 
 setup(name='shadow4',
-      version='0.1.37',
+      version='0.1.38',
       description='shadow implementation in python',
       long_description=LONG_DESCRIPTION,
       long_description_content_type='text/x-rst',
