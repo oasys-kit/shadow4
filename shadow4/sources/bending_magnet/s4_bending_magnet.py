@@ -8,12 +8,17 @@ class S4BendingMagnet(BendingMagnet):
     """
     Defines a shadow4 bending magnet magnetic structure.
 
+    Note that the radius and magnetic_field are somewhat redundant but they must be correctly set here.
+    One can be calculated from the other if the electron energy is known (it is not known here).
+    Shadow will use the magnetic_radius to sample the trajectory. The radius is positive in a typical ring (clockwise, e-).
+    The sign of magnetic field indicates the direction of the arc: B>0 means x<0, and B<0 means x>0.
+
     Parameters
     ----------
     radius : float, optional
         Physical Radius/curvature of the magnet in m.
     magnetic_field : float, optional
-         Magnetic field strength in T.
+         Magnetic field strength (signed) in T.
     length : float, optional
         physical length of the bending magnet (along the arc) in m.
     emin : float, optional
@@ -24,6 +29,10 @@ class S4BendingMagnet(BendingMagnet):
         Number of points in energy.
     flag_emittance : int, optional
         Flag: 0=Zero emmitance (filament beam), 1=Use emittance.
+    epsi_dx : float, optional
+        coordinate y of the horizontal waist (X) measured from the orgin of the magnetic structure.
+    epsi_dz : float, optional
+        coordinate y of the vertical waist (Z) measured from the orgin of the magnetic structure.
     """
     def __init__(self,
                  radius=1.0,         # syned BM
@@ -33,6 +42,8 @@ class S4BendingMagnet(BendingMagnet):
                  emax=11000.0,       # Photon energy scan to energy (in eV)
                  ng_e=11,            # Photon energy scan number of points
                  flag_emittance=0,   # when sampling rays: Use emittance (0=No, 1=Yes)
+                 epsi_dx=0.0,  # distance from waist X
+                 epsi_dz=0.0,  # distance from waist Z
                  ):
         super().__init__(radius=radius, magnetic_field=magnetic_field, length=length)
 
@@ -43,12 +54,17 @@ class S4BendingMagnet(BendingMagnet):
         self._NG_E            = ng_e   # Photon energy scan number of points
         self._FLAG_EMITTANCE  =  flag_emittance # Yes  # Use emittance (0=No, 1=Yes) #todo kw in calculate rays
 
+        self._EPSI_DX           = epsi_dx
+        self._EPSI_DZ           = epsi_dz
+
         # support text containg name of variable, help text and unit. Will be stored in self._support_dictionary
         self._add_support_text([
                     ("EMIN", "minimum photon energy", "eV" ),
                     ("EMAX", "maximum photon energy", "eV"),
                     ("NG_E", "number of energy points", ""),
                     ("FLAG_EMITTANCE", "Use emittance (0=No, 1=Yes)", "" ),
+                    ("EPSI_DX", "position of waist X", "m"),
+                    ("EPSI_DZ", "position of waist Z", "m"),
             ] )
 
     def get_info(self):
@@ -129,6 +145,8 @@ class S4BendingMagnet(BendingMagnet):
                 emax=11000.0,
                 ng_e=11,  # Photon energy scan number of points
                 flag_emittance=0,
+                epsi_dx=0.0,  # distance from waist X
+                epsi_dz=0.0,  # distance from waist Z
                 ):
         """
         Constructor from magnetic field divergence and electron energy.
@@ -149,6 +167,10 @@ class S4BendingMagnet(BendingMagnet):
             Number of points in energy.
         flag_emittance : int, optional
             Flag: 0=Zero emmitance (filament beam), 1=Use emittance.
+        epsi_dx : float, optional
+            coordinate y of the horizontal waist (X) measured from the orgin of the magnetic structure.
+        epsi_dz : float, optional
+            coordinate y of the vertical waist (Z) measured from the orgin of the magnetic structure.
 
         Returns
         -------
@@ -160,7 +182,9 @@ class S4BendingMagnet(BendingMagnet):
                                emin=emin,
                                emax=emax,
                                ng_e=ng_e,
-                               flag_emittance=flag_emittance)
+                               flag_emittance=flag_emittance,
+                               epsi_dx=epsi_dx,
+                               epsi_dz=epsi_dz)
 
     @classmethod
     def initialize_from_magnetic_radius_divergence_and_electron_energy(cls,
@@ -171,6 +195,8 @@ class S4BendingMagnet(BendingMagnet):
                 emax=11000.0,
                 ng_e=11,  # Photon energy scan number of points
                 flag_emittance=0,
+                epsi_dx=0.0,  # distance from waist X
+                epsi_dz=0.0,  # distance from waist Z
                 ):
         """
         Constructor from  magnetic radius, divergence and electron energy.
@@ -191,6 +217,10 @@ class S4BendingMagnet(BendingMagnet):
             Number of points in energy.
         flag_emittance : int, optional
             Flag: 0=Zero emmitance (filament beam), 1=Use emittance.
+        epsi_dx : float, optional
+            coordinate y of the horizontal waist (X) measured from the orgin of the magnetic structure.
+        epsi_dz : float, optional
+            coordinate y of the vertical waist (Z) measured from the orgin of the magnetic structure.
 
         Returns
         -------
@@ -202,7 +232,10 @@ class S4BendingMagnet(BendingMagnet):
                                emin=emin,
                                emax=emax,
                                ng_e=ng_e,
-                               flag_emittance=flag_emittance)
+                               flag_emittance=flag_emittance,
+                               epsi_dx=epsi_dx,
+                               epsi_dz=epsi_dz,
+                               )
 
     def to_python_code(self):
         """
@@ -218,13 +251,15 @@ class S4BendingMagnet(BendingMagnet):
 #magnetic structure
 from shadow4.sources.bending_magnet.s4_bending_magnet import S4BendingMagnet
 source = S4BendingMagnet(
-                 radius={radius}, # from syned BM, can be obtained as S4BendingMagnet.calculate_magnetic_radius({magnetic_field}, electron_beam.energy())
+                 radius={radius}, # from syned BM, can be obtained as numpy.abs(S4BendingMagnet.calculate_magnetic_radius({magnetic_field}, electron_beam.energy()))
                  magnetic_field={magnetic_field}, # from syned BM
                  length={length}, # from syned BM = abs(BM divergence * magnetic_radius)
                  emin={emin},     # Photon energy scan from energy (in eV)
                  emax={emax},     # Photon energy scan to energy (in eV)
                  ng_e={ng_e},     # Photon energy scan number of points
                  flag_emittance={flag_emittance}, # when sampling rays: Use emittance (0=No, 1=Yes)
+                 epsi_dx={epsi_dx},  # position of X waist [m]
+                 epsi_dz={epsi_dz} , # position of Z waist [m]
                  )
 """
 
@@ -236,6 +271,8 @@ source = S4BendingMagnet(
             "emax": self._EMAX,
             "ng_e": self._NG_E,
             "flag_emittance": self._FLAG_EMITTANCE,
+            "epsi_dx": self._EPSI_DX,
+            "epsi_dz": self._EPSI_DZ,
         }
 
         script = script_template.format_map(script_dict)

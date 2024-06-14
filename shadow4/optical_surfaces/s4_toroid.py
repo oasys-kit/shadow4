@@ -422,10 +422,10 @@ class S4Toroid(S4OpticalSurface):
                 result2 = z ** 4 + AA[k] * z ** 3 + BB[k] * z ** 2 + CC[k] * z + DD[k]
                 z = t3[k]
                 result3 = z ** 4 + AA[k] * z ** 3 + BB[k] * z ** 2 + CC[k] * z + DD[k]
-                if numpy.abs(result0) > 1e-3: print("Error in solution 0 of ray: ", k, AA[k], BB[k], CC[k], DD[k])
-                if numpy.abs(result1) > 1e-3: print("Error in solution 1 of ray: ", k, AA[k], BB[k], CC[k], DD[k])
-                if numpy.abs(result2) > 1e-3: print("Error in solution 2 of ray: ", k, AA[k], BB[k], CC[k], DD[k])
-                if numpy.abs(result3) > 1e-3: print("Error in solution 3 of ray: ", k, AA[k], BB[k], CC[k], DD[k])
+                if numpy.abs(result0) > 1e-3: print("Error in solution 0: ray, Delta, A, B, C, D: ", k, numpy.abs(result0), AA[k], BB[k], CC[k], DD[k])
+                if numpy.abs(result1) > 1e-3: print("Error in solution 1: ray, Delta, A, B, C, D: ", k, numpy.abs(result1), AA[k], BB[k], CC[k], DD[k])
+                if numpy.abs(result2) > 1e-3: print("Error in solution 2: ray, Delta, A, B, C, D: ", k, numpy.abs(result2), AA[k], BB[k], CC[k], DD[k])
+                if numpy.abs(result3) > 1e-3: print("Error in solution 3: ray, Delta, A, B, C, D: ", k, numpy.abs(result3), AA[k], BB[k], CC[k], DD[k])
 
             return t0, t1, t2, t3
 
@@ -454,10 +454,10 @@ class S4Toroid(S4OpticalSurface):
                     result2 = z ** 4 + AA[k] * z ** 3 + BB[k] * z ** 2 + CC[k] * z + DD[k]
                     z = t3[k]
                     result3 = z ** 4 + AA[k] * z ** 3 + BB[k] * z ** 2 + CC[k] * z + DD[k]
-                    if numpy.abs(result0) > 1e-3: print("Error in solution 0 of ray: ", k, AA[k], BB[k], CC[k], DD[k])
-                    if numpy.abs(result1) > 1e-3: print("Error in solution 1 of ray: ", k, AA[k], BB[k], CC[k], DD[k])
-                    if numpy.abs(result2) > 1e-3: print("Error in solution 2 of ray: ", k, AA[k], BB[k], CC[k], DD[k])
-                    if numpy.abs(result3) > 1e-3: print("Error in solution 3 of ray: ", k, AA[k], BB[k], CC[k], DD[k])
+                    if numpy.abs(result0) > 1e-3: print("Error in solution 0: ray, Delta, A, B, C, D: ", k, numpy.abs(result0), AA[k], BB[k], CC[k], DD[k])
+                    if numpy.abs(result1) > 1e-3: print("Error in solution 1: ray, Delta, A, B, C, D: ", k, numpy.abs(result1), AA[k], BB[k], CC[k], DD[k])
+                    if numpy.abs(result2) > 1e-3: print("Error in solution 2: ray, Delta, A, B, C, D: ", k, numpy.abs(result2), AA[k], BB[k], CC[k], DD[k])
+                    if numpy.abs(result3) > 1e-3: print("Error in solution 3: ray, Delta, A, B, C, D: ", k, numpy.abs(result3), AA[k], BB[k], CC[k], DD[k])
 
             return t0, t1, t2, t3
 
@@ -593,24 +593,27 @@ class S4Toroid(S4OpticalSurface):
         Y : numpy 2D array
             The y coordinate(s).
         solution_index : int, optional
-            The index of the solution used for creating the height map.
+            The index of the solution used for creating the height map:
+            * -1 = take the solution according with f_torus,
+            * 0 = get the first solution,
+            * 1 = get the second solution,
+            * 2 = get the third solution,
+            * 3 = get the fourth solution.
         method : int, optional
-            0 = guess the solution with zero at pole,
-            1 = get first solution,
-            2 = get second solution.
-        return_solution : int, optional
-            Flag:
-                * -1 = take the solution according with f_torus,
-                * 0 = get the first solution,
-                * 1 = get the second solution,
-                * 2 = get the third solution,
-                * 3 = get the fourth solution.
+            0 = use a fast direct method,
+            1 = use self.calculate_intercept (TODO: most times it does not work, problems in finding the roots).
 
         Returns
         -------
         2D numpy array
             the height mesh.
         """
+        if numpy.abs(self.r_min) < numpy.abs(X).max():
+            raise Exception("Cannot calculate toroid height for points with X > r_min. Please check input parameters.")
+
+        if numpy.abs(self.r_maj) < numpy.abs(Y).max():
+            raise Exception("Cannot calculate toroid height for points with Y > r_maj. Please check input parameters.")
+
         if method == 0: # fast
             # memorandum: torus equation (x^2 + y^2 + z^2 + R^2 - r^2)^2 = 4 R^2 (y^2 + z^2)
             # solve the equation for x=y=0 to sort the solutions and get the shift value.
@@ -632,6 +635,7 @@ class S4Toroid(S4OpticalSurface):
             J = X**2 + Y**2 + self.r_maj**2 - self.r_min**2
             B = 2 * J - 4 * self.r_maj**2
             C = (J**2 - 4 * self.r_maj**2 * Y**2)
+
             t1 = 0.5 * (-B + numpy.sqrt(B**2 - 4 * C))
             t2 = 0.5 * (-B - numpy.sqrt(B**2 - 4 * C))
             z1 =  numpy.sqrt(t1)
@@ -667,6 +671,7 @@ class S4Toroid(S4OpticalSurface):
             VIN = numpy.vstack((numpy.zeros_like(xx), numpy.zeros_like(xx), numpy.ones_like(xx)))
 
             t0, t1, t2, t3 = self.calculate_intercept(XIN, VIN)
+            print(">>>>", t0, t1, t2, t3)
             nn = t0.size
             ZZ0 = numpy.array([t0[nn//2], t1[nn//2], t2[nn//2], t3[nn//2]])
             if solution_index == -1: # automatic

@@ -52,11 +52,17 @@ class S4BendingMagnetLightSource(S4LightSource):
                          seed=seed,
                          )
 
+        # store the 2D (psi, energy) distribution function (we store it for external plots)
+        self.tpt                 = None
+        self.s                   = None
+        self.p                   = None
+        self.angle_array_mrad    = None
+        self.photon_energy_array = None
+
     def get_beam(self, F_COHER=0,
-                       EPSI_DX=0.0,
-                       EPSI_DZ=0.0,
                        psi_interval_in_units_one_over_gamma=None,
                        psi_interval_number_of_points=1001,
+                       sample_emission_cone_in_horizontal=1,
                        ):
         """
         Creates the beam as emitted by the bending magnet.
@@ -65,10 +71,6 @@ class S4BendingMagnetLightSource(S4LightSource):
         ----------
         F_COHER : int, optional
             A flag for coherent (1) or incoherent (0) rays.
-        EPSI_DX : float, optional
-            The distance from waist in X.
-        EPSI_DZ : float, optional
-            The distance from waist in Z.
         psi_interval_in_units_one_over_gamma : int, optional
             The sampling interval for the vertical divergence in units if 1/gamma.
             If None, it is calculated automatically.
@@ -80,12 +82,113 @@ class S4BendingMagnetLightSource(S4LightSource):
         instance od S4beam
         """
         return S4Beam.initialize_from_array(self.__calculate_rays(F_COHER=F_COHER,
-                                                                  EPSI_DX=EPSI_DX,
-                                                                  EPSI_DZ=EPSI_DZ,
                                                                   psi_interval_in_units_one_over_gamma=psi_interval_in_units_one_over_gamma,
                                                                   psi_interval_number_of_points=psi_interval_number_of_points,
+                                                                  sample_emission_cone_in_horizontal=sample_emission_cone_in_horizontal,
                                                                   ))
 
+    def calculate_spectrum(self, photon_energy_array=None, shift_half_interval=0, output_file=""):
+        """
+                Calculates the spectrum.
+
+        Parameters
+        ----------
+        photon_energy_array : None, numpy array, optional
+            The array with the photon energy values (in eV) for calculating the spectrum. If None, it uses
+            the emin, emax and ng_e from the magnetic structure.
+        shift_half_interval : int, optional
+            For photon_energy_array=None, set this to 1 to shift the energy points a half-energy-interval (must be
+            uniform) to mimic histogramming arrays.
+        output_file : str, optional
+            Name of the file to write the spectrom (use "" for not writing file).
+
+
+        Returns
+        -------
+        tuple
+            (e, f, w) numpy arrays with photon energy (e), photon flux (f) and spectral power (w).
+        """
+        try:
+            bm = self.get_magnetic_structure()
+            ring = self.get_electron_beam()
+
+            if photon_energy_array is None:
+                if bm.is_monochromatic():
+                    photon_energy_array = numpy.array([bm._EMIN])
+                else:
+                    photon_energy_array = numpy.linspace(bm._EMIN,
+                                                         bm._EMAX,
+                                                         bm._NG_E)
+                if shift_half_interval:
+                    delta_e = photon_energy_array[1] - photon_energy_array[0]
+                    photon_energy_array += 0.5 * delta_e
+
+            hdiv = numpy.abs(bm.length() / bm.radius())
+
+            ec_ev = bm.get_critical_energy(ring.energy())
+            i_a = ring.current()
+            e_gev = ring.energy()
+
+            f = sync_ene(0,
+                         photon_energy_array,
+                         ec_ev=ec_ev,
+                         polarization=0,
+                         e_gev=e_gev,
+                         i_a=i_a,
+                         hdiv_mrad=1e3*hdiv,
+                         psi_min=0.0, # not needed
+                         # psi_max=0.0, # not needed
+                         # psi_npoints=1, # not needed
+                        )
+            return photon_energy_array, f, f * codata.e * 1e3
+        except:
+            raise Exception("Cannot compute spectrum")
+
+    def to_python_code(self, **kwargs):
+        """
+        Returns the python code for calculating the bending magnet source.
+
+        Returns
+        -------
+        str
+            The python code.
+        """
+        script = ''
+        try:
+            script += self.get_electron_beam().to_python_code()
+        except:
+            script += "\n\n#Error retrieving electron_beam code"
+
+        try:
+            script += self.get_magnetic_structure().to_python_code()
+        except:
+            script += "\n\n#Error retrieving magnetic structure code"
+
+        script += "\n\n\n#light source\nfrom shadow4.sources.bending_magnet.s4_bending_magnet_light_source import S4BendingMagnetLightSource"
+        script += "\nlight_source = S4BendingMagnetLightSource(name='%s', electron_beam=electron_beam, magnetic_structure=source, nrays=%d, seed=%s)" % \
+                                                          (self.get_name(),self.get_nrays(),self.get_seed())
+
+        script += "\nbeam = light_source.get_beam()"
+        return script
+
+    def get_pdf(self):
+        """
+        Returns the probability distribution function used to sample radiation angles and photon energy.
+
+        Returns
+        -------
+        tuple
+            (tot_intensity, s_intensity, p_intensity, angle_array_mrad, photon_energy_array)
+            - tot_intensity, s_intensity, p_intensity :   if monochromatic source: 1D arrays (vs) angle
+                                                        if polychromatic source: @D arrays (vs) angle, energy
+            - angle_array_mrad: 1D array
+            - photon_energy_array: 1D array if polychronatic source else None.
+
+        """
+        if self.tot is None:
+            raise Exception('Arrays not calculated. Run S4BendingMagnetLightSource.get_beam() first.')
+        else:
+            return self.tot, self.s, self.p, self.angle_array_mrad, self.photon_energy_array
 
     def get_info(self):
         """
@@ -113,10 +216,9 @@ class S4BendingMagnetLightSource(S4LightSource):
 
     def __calculate_rays(self,
                          F_COHER=0,
-                         EPSI_DX=0.0,
-                         EPSI_DZ=0.0,
                          psi_interval_in_units_one_over_gamma=None,
                          psi_interval_number_of_points=1001,
+                         sample_emission_cone_in_horizontal=1,
                          ):
         #
         # compute the rays in SHADOW matrix (shape (npoints,18) )
@@ -161,7 +263,7 @@ class S4BendingMagnetLightSource(S4LightSource):
 
 
         # initialize arrays
-        rays = numpy.zeros((NRAYS,18))
+        rays = numpy.zeros((NRAYS, 18))
         anglev_sign = numpy.zeros(NRAYS)
 
         # calculate the sampled_angle and sampled_photon_energy.
@@ -194,9 +296,9 @@ class S4BendingMagnetLightSource(S4LightSource):
 
             eene = energy / ec_ev
             gamma = e_gev * 1e3 / codata_mee
-            angular_distribution_s, angular_distribution_p = sync_f_sigma_and_pi(angle_mrad * gamma / 1e3, eene)
-
             a8 = codata.e / numpy.power(codata_mee, 2) / codata.h * (9e-2 / 2 / numpy.pi) # a8 = 1.3264d13
+
+            angular_distribution_s, angular_distribution_p = sync_f_sigma_and_pi(angle_mrad * gamma / 1e3, eene)
             angular_distribution_s *= eene**2 * a8 * i_a * hdiv_mrad * e_gev**2
             angular_distribution_p *= eene**2 * a8 * i_a * hdiv_mrad * e_gev**2
 
@@ -207,11 +309,20 @@ class S4BendingMagnetLightSource(S4LightSource):
                      xtitle="angle / mrad", legend=["s","p"])
 
             t3 = time.time()
+            # store the 2D (psi, energy) distribution function (we store it for external plots)
+            self.tot   = (angular_distribution_s + angular_distribution_p) / (energy * 0.001)  # in photons/ev
+            self.s     = (angular_distribution_s) / (energy * 0.001)  # in photons/ev
+            self.p     = (angular_distribution_p) / (energy * 0.001)  # in photons/ev
+            self.angle_array_mrad = angle_array_mrad
+
             sampler_angle = Sampler1D(angular_distribution_s + angular_distribution_p, angle_array_mrad * 1e-3)
 
             if is_verbose(): print("    calculate_rays: get_n_sampled_points (angle)")
             sampled_angle = sampler_angle.get_n_sampled_points(NRAYS)
-            sampled_angle_horizontal = sampler_angle.get_n_sampled_points(NRAYS)
+            if sample_emission_cone_in_horizontal:
+                sampled_angle_horizontal = sampler_angle.get_n_sampled_points(NRAYS)
+            else:
+                sampled_angle_horizontal = 0.0
             if is_verbose(): print("    calculate_rays: DONE get_n_sampled_points (angle)  %d points"%(sampled_angle.size))
 
             sampled_photon_energy = numpy.zeros_like(sampled_angle) + self.get_magnetic_structure()._EMIN
@@ -249,12 +360,6 @@ class S4BendingMagnetLightSource(S4LightSource):
 
             fm = fm_s + fm_p
 
-            # todo: remove? (we store it for external plots)
-            self.angle_array_mrad = angle_array_mrad
-            self.fm = fm
-            self.fm_s = fm_s
-            self.fm_p = fm_p
-
             if is_debug():
                 print(angle_array_mrad.shape, photon_energy_array.shape, fm_s.shape, fm_p.shape)
                 print("    DONE : calculating energy distribution",photon_energy_array.shape,fm.shape)
@@ -276,10 +381,24 @@ class S4BendingMagnetLightSource(S4LightSource):
                 plot_image(fm*0+1-fm_s/fm,angle_array_mrad,photon_energy_array,aspect='auto',title="polarization-p",xtitle="Psi / mrad",ytitle="Energy / eV")
 
             fm1 = numpy.zeros_like(fm)
+            fm1s = numpy.zeros_like(fm)
+            fm1p = numpy.zeros_like(fm)
+
             for i in range(fm.shape[0]):
                 fm1[i,:] = fm[i, :] / (photon_energy_array * 0.001)  # in photons/ev
+                fm1s[i, :] = fm_s[i, :] / (photon_energy_array * 0.001)  # in photons/ev
+                fm1p[i, :] = fm_p[i, :] / (photon_energy_array * 0.001)  # in photons/ev
 
-            sample_emission_cone_in_horizontal = 1 # use 0 to mimic shadow3 (it does not sample the cone in H)
+            # store the 2D (psi, energy) distribution function (we store it for external plots)
+            self.tot   = fm1
+            self.s = fm1s
+            self.p = fm1p
+            self.angle_array_mrad = angle_array_mrad
+            self.photon_energy_array = photon_energy_array
+
+
+
+            # sample_emission_cone_in_horizontal = 1 # use 0 to mimic shadow3 (it does not sample the cone in H)
             if sample_emission_cone_in_horizontal == 0:
                 sampler2 = Sampler2D(fm1, angle_array_mrad * 1e-3, photon_energy_array)
                 sampled_angle, sampled_photon_energy = sampler2.get_n_sampled_points(NRAYS)
@@ -295,13 +414,13 @@ class S4BendingMagnetLightSource(S4LightSource):
 
         t4 = time.time()
 
+        ANGLE_array = numpy.random.random(NRAYS) * (HDIV1 + HDIV2) - HDIV2
+
         # sample points in the electron phase space
         E_BEAM1_array = numpy.zeros(NRAYS)
         E_BEAM3_array = numpy.zeros(NRAYS)
         E_BEAMXXX_array = numpy.zeros(NRAYS)
         E_BEAMZZZ_array = numpy.zeros(NRAYS)
-
-        ANGLE_array = numpy.random.random(NRAYS) * (HDIV1 + HDIV2) - HDIV2
 
         if self.get_magnetic_structure()._FLAG_EMITTANCE:
             sigma_x, sigma_xp, sigma_z, sigma_zp = self.get_electron_beam().get_sigmas_all()
@@ -317,16 +436,15 @@ class S4BendingMagnetLightSource(S4LightSource):
                 EPSI_PATH = numpy.abs(r_aladdin) * ANGLE_array[itik]
 
                 # ! C Compute the actual distance (EPSI_W*) from the orbital focus
-                epsi_wX = EPSI_DX + EPSI_PATH
-                epsi_wZ = EPSI_DZ + EPSI_PATH
+                epsi_wX = self.get_magnetic_structure()._EPSI_DX + EPSI_PATH
+                epsi_wZ = self.get_magnetic_structure()._EPSI_DZ + EPSI_PATH
 
                 # ! calculation of the electrom beam moments at the current position
-                # ! (sX,sZ) = (epsi_wx,epsi_ez):
-                # ! <x2> = sX^2 + sigmaX^2
-                # ! <x x'> = sX sigmaXp^2
-                # ! <x'2> = sigmaXp^2                 (same for Z)
+                # ! (sX,sZ) = (epsi_wx, epsi_wz):
+                # ! <x2> = (sX * sigma_xp)^2+ sigma_x^2
+                # ! <x x'> = (sX sigma_xp) sigma_xp
+                # ! <x'2> = sigma_xp^2                 (same for Z)
                 rSigmaX = numpy.sqrt( (epsi_wX**2) * (sigma_xp**2) + sigma_x**2 )
-
                 rSigmaZ = numpy.sqrt( (epsi_wZ**2) * (sigma_zp**2) + sigma_z**2 )
 
 
@@ -340,8 +458,8 @@ class S4BendingMagnetLightSource(S4LightSource):
                 else:
                     rhoZ = 0.0
 
-                covX = [[rSigmaX**2, rhoX * rSigmaX * rSigmaXp], [rhoX * rSigmaX * rSigmaXp, rSigmaXp**2]]  # diagonal covariance
-                covZ = [[rSigmaZ**2, rhoZ * rSigmaZ * rSigmaZp], [rhoZ * rSigmaZ * rSigmaZp, rSigmaZp**2]]  # diagonal covariance
+                covX = [[rSigmaX**2, rhoX * rSigmaX * rSigmaXp], [rhoX * rSigmaX * rSigmaXp, rSigmaXp**2]]
+                covZ = [[rSigmaZ**2, rhoZ * rSigmaZ * rSigmaZp], [rhoZ * rSigmaZ * rSigmaZp, rSigmaZp**2]]
 
                 # sampling using a multivariare (2) normal distribution
                 # multivariate_normal is very slow.
@@ -363,7 +481,6 @@ class S4BendingMagnetLightSource(S4LightSource):
                 E_BEAMXXX_array[itik] = XXX
                 E_BEAMZZZ_array[itik] = ZZZ
 
-
             if is_debug():
                 from srxraylib.plot.gol import plot_scatter
                 plot_scatter(E_BEAMXXX_array,E_BEAM1_array,title="sampled electron X Xp")
@@ -376,12 +493,27 @@ class S4BendingMagnetLightSource(S4LightSource):
         ZZZ = E_BEAMZZZ_array
         # Synchrotron depth distribution
         # R_ALADDIN NEGATIVE FOR COUNTER-CLOCKWISE SOURCE
-        if r_aladdin < 0:
-            YYY = numpy.abs(r_aladdin + XXX) * numpy.sin(ANGLE_array)
-        else:
-            YYY = numpy.abs(r_aladdin - XXX) * numpy.sin(ANGLE_array)
+        # if r_aladdin < 0:
+        #     YYY = numpy.abs(r_aladdin + XXX) * numpy.sin(ANGLE_array)
+        # else:
+        #     YYY = numpy.abs(r_aladdin - XXX) * numpy.sin(ANGLE_array)
 
-        XXX = numpy.cos(ANGLE_array) * XXX + r_aladdin * (1.0 - numpy.cos(ANGLE_array))
+        YYY = numpy.abs(r_aladdin - XXX) * numpy.sin(ANGLE_array)
+
+        # for e- in a clockwise ring
+        # F = - v x B (minus for e-)
+        #       | z
+        #       |
+        #       |
+        #       |------y
+        #      /
+        #     /
+        #    / x
+        # v > 0 (along y) ; B > 0 (along z); F < 0 so x < 0
+        # v > 0 (along y) ; B < 0 (along z); F > 0 so x > 0
+
+        XXX = numpy.cos(ANGLE_array) * XXX +\
+              -numpy.sign(self.get_magnetic_structure().magnetic_field() ) * numpy.abs(r_aladdin) * (1.0 - numpy.cos(ANGLE_array))
 
         rays[:, 0] = XXX
         rays[:, 1] = YYY
@@ -403,7 +535,6 @@ class S4BendingMagnetLightSource(S4LightSource):
         if r_aladdin < 0:
             DIREC1 *= -1.0
         DIREC2 = numpy.ones_like(DIREC1) # 1.0
-        # ARG_ANG = numpy.random.random(NRAYS)
 
         # ! C In the case of SR, we take into account the fact that the electron
         # ! C trajectory is not orthogonal to the field. This will give a correction
@@ -465,7 +596,9 @@ class S4BendingMagnetLightSource(S4LightSource):
         #
         # obtain polarization for each ray (interpolation)
         #
-        fm_s, fm_p = sync_f_sigma_and_pi(rays[:,5] * gamma, sampled_photon_energy / critical_energy)
+        # changed to use psi_V instad of rays[:,5]
+        # fm_s, fm_p = sync_f_sigma_and_pi(rays[:,5] * gamma, sampled_photon_energy / critical_energy)
+        fm_s, fm_p = sync_f_sigma_and_pi(sampled_angle * gamma, sampled_photon_energy / critical_energy)
         POL_DEG = numpy.sqrt(fm_s) / (numpy.sqrt(fm_s) + numpy.sqrt(fm_p))
         DENOM = numpy.sqrt(1.0 - 2.0 * POL_DEG + 2.0 * POL_DEG**2)
         AX = POL_DEG/DENOM
@@ -478,7 +611,6 @@ class S4BendingMagnetLightSource(S4LightSource):
 
         rays[:, 6:9] =  A_VEC
         rays[:, 15:18] = AP_VEC
-
 
         # set flag (col 10)
         rays[:, 9] = 1.0
@@ -523,81 +655,6 @@ class S4BendingMagnetLightSource(S4LightSource):
             print("            Post: ",           (t7-t6), 100 * (t7-t6) / t)
 
         return rays
-
-
-
-    def calculate_spectrum(self, output_file=""):
-        """
-                Calculates the spectrum.
-
-        Parameters
-        ----------
-        output_file : str, optional
-            Name of the file to write the spectrom (use "" for not writing file).
-
-        Returns
-        -------
-        tuple
-            (e, f, w) numpy arrays with photon energy (e), photon flux (f) and spectral power (w).
-        """
-        try:
-            bm = self.get_magnetic_structure()
-            ring = self.get_electron_beam()
-
-            if bm.is_monochromatic():
-                photon_energy_array = numpy.array([bm._EMIN])
-            else:
-                photon_energy_array = numpy.linspace(bm._EMIN,
-                                                     bm._EMAX,
-                                                     bm._NG_E)
-
-            hdiv = numpy.abs(bm.length() / bm.radius())
-
-            ec_ev = bm.get_critical_energy(ring.energy())
-            i_a = ring.current()
-            e_gev = ring.energy()
-
-            f = sync_ene(0,
-                         photon_energy_array,
-                         ec_ev=ec_ev,
-                         polarization=0,
-                         e_gev=e_gev,
-                         i_a=i_a,
-                         hdiv_mrad=1e3*hdiv,
-                         psi_min=0.0, # not needed
-                         # psi_max=0.0, # not needed
-                         # psi_npoints=1, # not needed
-                        )
-            return photon_energy_array, f, f * codata.e * 1e3
-        except:
-            raise Exception("Cannot compute spectrum")
-
-    def to_python_code(self, **kwargs):
-        """
-        Returns the python code for calculating the bending magnet source.
-
-        Returns
-        -------
-        str
-            The python code.
-        """
-        script = ''
-        try:
-            script += self.get_electron_beam().to_python_code()
-        except:
-            script += "\n\n#Error retrieving electron_beam code"
-
-        try:
-            script += self.get_magnetic_structure().to_python_code()
-        except:
-            script += "\n\n#Error retrieving magnetic structure code"
-
-        script += "\n\n\n#light source\nfrom shadow4.sources.bending_magnet.s4_bending_magnet_light_source import S4BendingMagnetLightSource"
-        script += "\nlight_source = S4BendingMagnetLightSource(name='%s', electron_beam=electron_beam, magnetic_structure=source, nrays=%d, seed=%s)" % \
-                                                          (self.get_name(),self.get_nrays(),self.get_seed())
-
-        script += "\nbeam = light_source.get_beam()"
-        return script
 
 
 if __name__ == "__main__":
