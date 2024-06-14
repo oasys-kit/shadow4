@@ -52,9 +52,9 @@ class S4Wiggler(Wiggler):
     shift_betax_value : float, optional
         A displacement in X' to center or deplace the electron trajectory trajectory.
     epsi_dx : float, optional
-        distance from waist X.
+        coordinate y of the horizontal waist (X) measured from the orgin of the magnetic structure.
     epsi_dz : float, optional
-        distance from waist Z.
+        coordinate y of the vertical waist (Z) measured from the orgin of the magnetic structure.
     """
     def __init__(self,
                  magnetic_field_periodic=1, # 0=external, 1=periodic
@@ -113,8 +113,8 @@ class S4Wiggler(Wiggler):
                     ("shift_x_value", "shift value for X of the e trajectory", "m"),
                     ("shift_betax_flag", "Flag to center e trajectory X' (0=No, 1=Yes)", ""),
                     ("shift_betax_value", "shift value for X' of the e trajectory", "m"),
-                    ("EPSI_DX", "distance from waist X", "m"),
-                    ("EPSI_DZ", "distance from waist Z", "m"),
+                    ("EPSI_DX", "position of waist X", "m"),
+                    ("EPSI_DZ", "position of waist Z", "m"),
             ] )
 
     def get_info(self):
