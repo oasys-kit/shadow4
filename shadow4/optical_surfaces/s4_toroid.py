@@ -582,7 +582,10 @@ class S4Toroid(S4OpticalSurface):
                         answer[k] = Answers[0]
         return answer, i_res
 
-    def surface_height(self, X, Y, solution_index=-1, method=0):
+    # todo: method=1 does not work
+    #       method=0 does not give enough precision,
+    #       (now default sis method=3).
+    def surface_height(self, X, Y, solution_index=-1, method=2):
         """
         Calculates a 2D mesh array with the surface heights.
 
@@ -592,16 +595,17 @@ class S4Toroid(S4OpticalSurface):
             The x coordinate(s).
         Y : numpy 2D array
             The y coordinate(s).
+        method : int, optional
+            0 = use a fast direct method to solve the quartic equation,
+            1 = use self.calculate_intercept (TODO: most times it does not work, problems in finding the roots).
+            2 = Just add the tangential and sagittal circular profiles.
         solution_index : int, optional
-            The index of the solution used for creating the height map:
+            For method=0,1, the index of the solution used for creating the height map:
             * -1 = take the solution according with f_torus,
             * 0 = get the first solution,
             * 1 = get the second solution,
             * 2 = get the third solution,
             * 3 = get the fourth solution.
-        method : int, optional
-            0 = use a fast direct method,
-            1 = use self.calculate_intercept (TODO: most times it does not work, problems in finding the roots).
 
         Returns
         -------
@@ -644,9 +648,12 @@ class S4Toroid(S4OpticalSurface):
             z4 = -numpy.sqrt(t2)
             ZZ = numpy.array([z1, z2, z3, z4])
 
-            return ZZ[solution_index] - ZZ0[solution_index]
+            Zout = (ZZ[solution_index] - ZZ0[solution_index])
+            # from srxraylib.plot.gol import plot, plot_image
+            # plot_image(Zout, X[:,0], Y[0,:], aspect='auto')
+            return Zout
 
-        else: # using calculate_intercept
+        elif method == 1: # using calculate_intercept
             xx = X.flatten()
             yy = Y.flatten()
             zz = numpy.zeros_like(xx) + 10000.0
@@ -654,8 +661,6 @@ class S4Toroid(S4OpticalSurface):
             #
             # r_min and r_maj are like in shadow3
             #
-            r_min = self.r_min
-            r_maj = self.r_maj
 
             if self.f_torus == 0:
                 zz0 =  - r_maj - r_min
@@ -671,7 +676,6 @@ class S4Toroid(S4OpticalSurface):
             VIN = numpy.vstack((numpy.zeros_like(xx), numpy.zeros_like(xx), numpy.ones_like(xx)))
 
             t0, t1, t2, t3 = self.calculate_intercept(XIN, VIN)
-            print(">>>>", t0, t1, t2, t3)
             nn = t0.size
             ZZ0 = numpy.array([t0[nn//2], t1[nn//2], t2[nn//2], t3[nn//2]])
             if solution_index == -1: # automatic
@@ -683,6 +687,38 @@ class S4Toroid(S4OpticalSurface):
             height = zz + ZZ[solution_index]
             height.shape = X.shape
             return height
+
+        elif method == 2:
+
+            if self.f_torus == 0:
+                Rt =  self.r_maj + self.r_min
+                sg = 1.0
+            elif self.f_torus == 1:
+                Rt =  self.r_maj - self.r_min
+                sg = -1.0
+            elif self.f_torus == 2:
+                Rt =  self.r_maj - self.r_min
+                sg = 1.0
+            elif self.f_torus == 3:
+                Rt =  self.r_maj + self.r_min
+                sg = -1.0
+            Rs = self.r_min
+
+            x = X[:, 0]
+            y = Y[0, :]
+
+            height_tangential = Rt - numpy.sqrt(Rt ** 2 - y ** 2)
+            height_sagittal = Rs - numpy.sqrt(Rs ** 2 - x ** 2)
+
+            Z = numpy.zeros((x.size, y.size))
+
+            for i in range(x.size):
+                Z[i, :] = height_tangential
+
+            for i in range(y.size):
+                Z[:, i] += height_sagittal
+
+            return Z * sg
 
     #
     # calculations

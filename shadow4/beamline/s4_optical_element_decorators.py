@@ -502,8 +502,8 @@ class S4ToroidOpticalElementDecorator(S4CurvedOpticalElementDecorator):
             r_maj = surface_shape.get_maj_radius() - surface_shape.get_min_radius()
 
         if is_verbose():
-            print("Toroidal optical element (syned stored, optical radii) %.6g   %.6g" % (surface_shape.get_maj_radius(), surface_shape.get_min_radius()) )
-            print("Setting optical surface S4Toroid (toroid radii, not optical) r_maj=%.6f, r_min=%.6g, f_torus=%d" % (
+            print("Toroidal optical element (syned stored, optical radii) %.12g   %.12g" % (surface_shape.get_maj_radius(), surface_shape.get_min_radius()) )
+            print("Setting optical surface S4Toroid (toroid radii, not optical) r_maj=%.12g, r_min=%.12g, f_torus=%d" % (
             r_maj,
             surface_shape.get_min_radius(),
             self._f_torus))
