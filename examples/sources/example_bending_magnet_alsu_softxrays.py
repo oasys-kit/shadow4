@@ -12,6 +12,7 @@ Dtheta = 10e-3
 magnetic_field = -0.87
 radius = numpy.abs(S4BendingMagnet.calculate_magnetic_radius(-0.87, electron_beam.energy())) # radius = 7.668140119497748
 length = Dtheta * radius # 0.07668140119497747
+sample_emission_cone_in_horizontal = 1
 
 source = S4BendingMagnet(
                  radius=radius, # from syned BM, can be obtained as numpy.abs(S4BendingMagnet.calculate_magnetic_radius(-0.87, electron_beam.energy()))
@@ -30,7 +31,7 @@ source = S4BendingMagnet(
 #light source
 from shadow4.sources.bending_magnet.s4_bending_magnet_light_source import S4BendingMagnetLightSource
 light_source = S4BendingMagnetLightSource(name='BendingMagnet', electron_beam=electron_beam, magnetic_structure=source, nrays=50000, seed=5676561)
-beam = light_source.get_beam()
+beam = light_source.get_beam(sample_emission_cone_in_horizontal=sample_emission_cone_in_horizontal)
 
 # # test plot
 # from srxraylib.plot.gol import plot_scatter
@@ -48,17 +49,24 @@ if True:
     x = radius * theta**2 / 2
     y = radius * theta
     xp = theta
+    # plot(x, xp, color='r', show=0)
 
     fig, axScatter, axHistx, axHisty = plot_scatter(beam.get_column(2), beam.get_column(1), title="trajectory  (X,Y)", show=0)
     axScatter.plot(y, x, color='r')
 
-    fig, axScatter, axHistx, axHisty = plot_scatter(1e6 * beam.get_column(1), beam.get_column(4), title="1e6 * phase space (X,X')",
+    fig, axScatter, axHistx, axHisty = plot_scatter(1e6 * beam.get_column(1), 1e6 * beam.get_column(4), title="phase space (X,X')",
             xtitle=r"X [$\mu$m]", ytitle=r"X' [$\mu$rad]", show=0)
-    axScatter.plot(x, xp, color='r')
-    plt.savefig("alsu_phasespaceH.png")
+
+    if sample_emission_cone_in_horizontal:
+        axScatter.plot(1e6 * x, 1e6 * xp, color='r')
+        plt.savefig("alsu_phasespaceH.png")
+    else:
+        plt.savefig("alsu_phasespaceHnoemissioncone.png")
 
     fig, axScatter, axHistx, axHisty = plot_scatter(1e6 * beam.get_column(4), 1e6 * beam.get_column(6), title="phase space (Z,Z')",
             xtitle=r"Z [$\mu$m]", ytitle=r"Z' [$\mu$rad]", show=0)
-    plt.savefig("alsu_phasespaceV.png")
+
+    if sample_emission_cone_in_horizontal:
+        plt.savefig("alsu_phasespaceV.png")
 
     plot_show()
