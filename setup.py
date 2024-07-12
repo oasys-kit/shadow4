@@ -86,7 +86,7 @@ README_FILE = os.path.join(os.path.dirname(__file__), 'README.rst')
 LONG_DESCRIPTION = open(README_FILE).read()
 
 setup(name='shadow4',
-      version='0.1.39',
+      version='0.1.40',
       description='shadow implementation in python',
       long_description=LONG_DESCRIPTION,
       long_description_content_type='text/x-rst',

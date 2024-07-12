@@ -319,8 +319,8 @@ source = S4Wiggler(
     emax               = {emax},  # Photon energy scan to energy (in eV)
     ng_e               = {ng_e},  # Photon energy scan number of points for spectrum and internal calculation
     ng_j               = {ng_j} , # Number of points in electron trajectory (per period) for internal calculation only
-    epsi_dx            = {epsi_dx},  # distance to waist in X [m]
-    epsi_dz            = {epsi_dz} , # distance to waist in Z [m]
+    epsi_dx            = {epsi_dx},  # position y of waist X [m]
+    epsi_dz            = {epsi_dz},  # position y of waist Z [m]
     psi_interval_number_of_points = {psi_interval_number_of_points} , # the number psi (vertical angle) points for internal calculation only
     flag_interpolation = {flag_interpolation}, # Use interpolation to sample psi (0=No, 1=Yes)
     flag_emittance     = {flag_emittance}, # Use emittance (0=No, 1=Yes)

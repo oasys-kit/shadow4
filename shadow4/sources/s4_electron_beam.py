@@ -72,8 +72,8 @@ class S4ElectronBeam(ElectronBeam):
         moment_yy, moment_yyp, moment_ypyp = self.get_moments_vertical()
 
         if moment_yyp == 0 and moment_xxp == 0:
-            sigma_x, sigma_y, sigma_xp, sigma_yp = self.get_sigmas_all()
-            script += "\nelectron_beam.set_sigmas_all(sigma_x=%g,sigma_y=%g,sigma_xp=%g,sigma_yp=%g)" % \
+            sigma_x, sigma_xp, sigma_y, sigma_yp = self.get_sigmas_all()
+            script += "\nelectron_beam.set_sigmas_all(sigma_x=%g, sigma_y=%g, sigma_xp=%g, sigma_yp=%g)" % \
                       (sigma_x, sigma_y, sigma_xp, sigma_yp)
         else:
             script += "\nelectron_beam.set_moments_horizontal(%g,%g,%g)" % (

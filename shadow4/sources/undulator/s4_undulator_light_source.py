@@ -315,7 +315,7 @@ class S4UndulatorLightSource(S4LightSource):
         tuple
             (flux, photon_energy).
         """
-        flux, spectral_power, photon_energy = self.calculate_spectrum()
+        photon_energy, flux, spectral_power  = self.calculate_spectrum()
         return flux, photon_energy
 
     def get_spectral_power(self):
@@ -327,7 +327,7 @@ class S4UndulatorLightSource(S4LightSource):
         tuple
             (spectral_power, photon_energy).
         """
-        flux, spectral_power, photon_energy = self.calculate_spectrum()
+        photon_energy, flux, spectral_power = self.calculate_spectrum()
         return spectral_power, photon_energy
 
     def get_info(self, debug=False): # todo: clean and merge with S4Undulator.get_info()
