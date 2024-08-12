@@ -11,6 +11,7 @@ from shadow4.tools.arrayofvectors import vector_modulus_square, vector_modulus, 
 from shadow4.tools.arrayofvectors import vector_reflection
 from shadow4.tools.arrayofvectors import vector_refraction, vector_scattering
 from shadow4.tools.logger import is_verbose, is_debug
+from numpy import sqrt as Sqrt
 
 class S4Toroid(S4OpticalSurface):
     """
@@ -372,7 +373,7 @@ class S4Toroid(S4OpticalSurface):
         return t, i_res
 
 
-    def calculate_intercept(self, XIN, VIN, vectorize=1, do_test_solution=1): #todo vectorized=1 fails - search another solution...
+    def calculate_intercept(self, XIN, VIN, vectorize=0, do_test_solution=0): #todo vectorized=1,2 fail - search another solution...
         """
         Calculates the intercept point (or stack of points) for a given ray or stack of rays,
         given a point XIN and director vector VIN.
@@ -385,8 +386,9 @@ class S4Toroid(S4OpticalSurface):
             The coordinates of a director vector the ray: shape [3, NRAYS].
         vectorize : int, optional
             Flag:
-                * 1 use S4 new way to compute coefficients and vectorized-solutions,
-                * 0 use S3 equations and numpy iterative solutions.
+                * 2 use S4 new way to compute iterative-solutions,
+                * 1 use S4 new way to compute vectorized-solutions,
+                * 0 use numpy polynomial.polyroots iteratively to compute solutions.
         do_test_solution : int, optional
             Flag to test the solutions (substitute in the polynomial and check if result is zero): 0=No, 1=Yes.
 
@@ -429,8 +431,10 @@ class S4Toroid(S4OpticalSurface):
 
             return t0, t1, t2, t3
 
-        elif vectorize == 1:  # new method vectorized
-            if False: # iterative
+        elif vectorize >= 1:  # new method
+            if vectorize == 1: # new method, vectorized
+                t0, t1, t2, t3 = self._solve_quartic_vectorized(AA, BB, CC, DD)
+            elif vectorize == 2: # new method, iterative
                 t0 = numpy.zeros_like(AA, dtype=complex)
                 t1 = numpy.zeros_like(AA, dtype=complex)
                 t2 = numpy.zeros_like(AA, dtype=complex)
@@ -442,7 +446,7 @@ class S4Toroid(S4OpticalSurface):
                     t2[k] = h_output2[2]
                     t3[k] = h_output2[3]
             else:
-                t0, t1, t2, t3 = self._solve_quartic_vectorized(AA, BB, CC, DD)
+                raise Exception("Invalid value of vectorize=" % vectorize)
 
             if do_test_solution:
                 for k in range(AA.size):
@@ -793,10 +797,11 @@ class S4Toroid(S4OpticalSurface):
 
     @classmethod
     def _solve_quartic(cls, b, c, d, e):
+        # See General Formula for Roots in https://en.wikipedia.org/wiki/Quartic_function
         e += 0j
 
         D1 = 2 * c**3 - 9 * b * c * d + 27 * b**2 * e + 27 * d**2 - 72 * c * e
-        D0 = c**2 - 3 * b * d + 12 * e
+        D0 = c**2 - 3 * b * d + 12 * e # Delta0 in https://en.wikipedia.org/wiki/Quartic_function
         D = (D1**2 - 4 * D0**3) / (-27)
 
 
@@ -805,18 +810,111 @@ class S4Toroid(S4OpticalSurface):
 
         Q = numpy.power(2, -1.0/3) * numpy.power((D1 + numpy.sqrt(D1**2 - 4 * D0**3)), 1.0/3)
         S = 0.5 * numpy.sqrt((1.0/3) * (Q + D0 / Q) - 2 * k / 3)
-        if numpy.abs(S) < 1e-3: # print(">>>> changed sign of sqrt")
+        if numpy.abs(S) < 1e-3: #
+            # print(">>>> changed sign of sqrt", numpy.abs(S), numpy.abs(Q))
             Q = numpy.power(2, -1.0/3) * numpy.power((D1 - numpy.sqrt(D1**2 - 4 * D0**3)), 1.0/3)
             S = 0.5 * numpy.sqrt((1.0/3) * (Q + D0 / Q) - 2 * k / 3)
 
-        m = (b**3 - 4 * b * c + 8 * d) / 8
+        if numpy.abs(S) < 1e-6: # If after changing sign is still zero, the depressed quartic is biquadratic
+            # print(">>>> S~0: ", S)
+            # if numpy.abs(Q) < 1e-6: print("**** Q~0: ", Q)
 
-        z1 = -b / 4 - S + 0.5 * numpy.sqrt(-4 * S**2 - 2 * k + m / S)
-        z2 = -b / 4 - S - 0.5 * numpy.sqrt(-4 * S**2 - 2 * k + m / S)
-        z3 = -b / 4 + S + 0.5 * numpy.sqrt(-4 * S**2 - 2 * k - m / S)
-        z4 = -b / 4 + S - 0.5 * numpy.sqrt(-4 * S**2 - 2 * k - m / S)
+            # depressed quartic
+            p = (8 * c - 3 * b**2) / 8
+            q = (b**3 - 4 * b * c + 8 * d) / 8
+            r = (- 3 * b**4 + 256 * e - 64 * b * d + 16 * b**2 * c) / 256
+            # print(">>>> Depressed quartic y**4 + p y**2 + q y + r = 0: ")
+            # print(">>>>   p: ", p)
+            # print(">>>>   q: ", q)
+            # print(">>>>   r: ", r)
+
+            if True: # numpy.abs(q) < 1e-2: # supposed zero, biquadratic depressed equation
+                DD = p**2 - 4 * r
+                zz1 = 0.5 * (-p + numpy.sqrt(DD))
+                zz2 = 0.5 * (-p - numpy.sqrt(DD))
+                z1 =  numpy.sqrt(zz1) - b / 4
+                z2 = -numpy.sqrt(zz1) - b / 4
+                z3 =  numpy.sqrt(zz2) - b / 4
+                z4 = -numpy.sqrt(zz2) - b / 4
+            else:
+                print(">>>>   S: ", S)
+                print(">>>>   q: ", q)
+                raise Exception("Cannot treat S=0 and q != 0")
+
+        else:
+            m = (b**3 - 4 * b * c + 8 * d) / 8
+
+            z1 = -b / 4 - S + 0.5 * numpy.sqrt(-4 * S**2 - 2 * k + m / S)
+            z2 = -b / 4 - S - 0.5 * numpy.sqrt(-4 * S**2 - 2 * k + m / S)
+            z3 = -b / 4 + S + 0.5 * numpy.sqrt(-4 * S**2 - 2 * k - m / S)
+            z4 = -b / 4 + S - 0.5 * numpy.sqrt(-4 * S**2 - 2 * k - m / S)
 
         return z2, z3, z4, z1
+
+    @classmethod
+    def _solve_quartic_mathematica(cls, b, c, d, e):
+        # Solve[ x^4 + b x^3 + c x^2 + d x + e == 0, x]  // FortranForm
+
+        b += 0j
+        c += 0j
+        d += 0j
+        e += 0j
+
+        onethird = 1. / 3
+        z1 = -b/4. - Sqrt(b**2/4. - (2*c)/3. + (2**onethird*(c**2 - 3*b*d + 12*e))/
+              (3.*(2*c**3 - 9*b*c*d + 27*d**2 + 27*b**2*e - 72*c*e + Sqrt(-4*(c**2 - 3*b*d + 12*e)**3 + (2*c**3 - 9*b*c*d + 27*d**2 + 27*b**2*e - 72*c*e)**2))**onethird) +
+             (2*c**3 - 9*b*c*d + 27*d**2 + 27*b**2*e - 72*c*e + Sqrt(-4*(c**2 - 3*b*d + 12*e)**3 + (2*c**3 - 9*b*c*d + 27*d**2 + 27*b**2*e - 72*c*e)**2))**onethird/
+              (3.*2**onethird))/2. - Sqrt(b**2/2. - (4*c)/3. - (2**onethird*(c**2 - 3*b*d + 12*e))/
+              (3.*(2*c**3 - 9*b*c*d + 27*d**2 + 27*b**2*e - 72*c*e + Sqrt(-4*(c**2 - 3*b*d + 12*e)**3 + (2*c**3 - 9*b*c*d + 27*d**2 + 27*b**2*e - 72*c*e)**2))**onethird) -
+             (2*c**3 - 9*b*c*d + 27*d**2 + 27*b**2*e - 72*c*e + Sqrt(-4*(c**2 - 3*b*d + 12*e)**3 + (2*c**3 - 9*b*c*d + 27*d**2 + 27*b**2*e - 72*c*e)**2))**onethird/
+              (3.*2**onethird) - (-b**3 + 4*b*c - 8*d)/
+              (4.*Sqrt(b**2/4. - (2*c)/3. + (2**onethird*(c**2 - 3*b*d + 12*e))/
+                   (3.*(2*c**3 - 9*b*c*d + 27*d**2 + 27*b**2*e - 72*c*e + Sqrt(-4*(c**2 - 3*b*d + 12*e)**3 + (2*c**3 - 9*b*c*d + 27*d**2 + 27*b**2*e - 72*c*e)**2))**onethird) +
+                  (2*c**3 - 9*b*c*d + 27*d**2 + 27*b**2*e - 72*c*e + Sqrt(-4*(c**2 - 3*b*d + 12*e)**3 + (2*c**3 - 9*b*c*d + 27*d**2 + 27*b**2*e - 72*c*e)**2))**onethird/
+                   (3.*2**onethird))))/2.
+
+        z2 = -b/4. - Sqrt(b**2/4. - (2*c)/3. +
+              (2**onethird*(c**2 - 3*b*d + 12*e))/
+               (3.*(2*c**3 - 9*b*c*d + 27*d**2 + 27*b**2*e - 72*c*e + Sqrt(-4*(c**2 - 3*b*d + 12*e)**3 + (2*c**3 - 9*b*c*d + 27*d**2 + 27*b**2*e - 72*c*e)**2))**onethird) +
+              (2*c**3 - 9*b*c*d + 27*d**2 + 27*b**2*e - 72*c*e + Sqrt(-4*(c**2 - 3*b*d + 12*e)**3 + (2*c**3 - 9*b*c*d + 27*d**2 + 27*b**2*e - 72*c*e)**2))**onethird/
+               (3.*2**onethird))/2. + Sqrt(b**2/2. - (4*c)/3. - (2**onethird*(c**2 - 3*b*d + 12*e))/
+               (3.*(2*c**3 - 9*b*c*d + 27*d**2 + 27*b**2*e - 72*c*e + Sqrt(-4*(c**2 - 3*b*d + 12*e)**3 + (2*c**3 - 9*b*c*d + 27*d**2 + 27*b**2*e - 72*c*e)**2))**onethird) -
+              (2*c**3 - 9*b*c*d + 27*d**2 + 27*b**2*e - 72*c*e + Sqrt(-4*(c**2 - 3*b*d + 12*e)**3 + (2*c**3 - 9*b*c*d + 27*d**2 + 27*b**2*e - 72*c*e)**2))**onethird/
+               (3.*2**onethird) - (-b**3 + 4*b*c - 8*d)/
+               (4.*Sqrt(b**2/4. - (2*c)/3. + (2**onethird*(c**2 - 3*b*d + 12*e))/
+                    (3.*(2*c**3 - 9*b*c*d + 27*d**2 + 27*b**2*e - 72*c*e + Sqrt(-4*(c**2 - 3*b*d + 12*e)**3 + (2*c**3 - 9*b*c*d + 27*d**2 + 27*b**2*e - 72*c*e)**2))**onethird) +
+                   (2*c**3 - 9*b*c*d + 27*d**2 + 27*b**2*e - 72*c*e + Sqrt(-4*(c**2 - 3*b*d + 12*e)**3 + (2*c**3 - 9*b*c*d + 27*d**2 + 27*b**2*e - 72*c*e)**2))**onethird/
+                    (3.*2**onethird))))/2.
+
+        z3 = -b/4. + Sqrt(b**2/4. - (2*c)/3. +
+             (2**onethird*(c**2 - 3*b*d + 12*e))/
+              (3.*(2*c**3 - 9*b*c*d + 27*d**2 + 27*b**2*e - 72*c*e + Sqrt(-4*(c**2 - 3*b*d + 12*e)**3 + (2*c**3 - 9*b*c*d + 27*d**2 + 27*b**2*e - 72*c*e)**2))**onethird) +
+             (2*c**3 - 9*b*c*d + 27*d**2 + 27*b**2*e - 72*c*e + Sqrt(-4*(c**2 - 3*b*d + 12*e)**3 + (2*c**3 - 9*b*c*d + 27*d**2 + 27*b**2*e - 72*c*e)**2))**onethird/
+              (3.*2**onethird))/2. - Sqrt(b**2/2. - (4*c)/3. - (2**onethird*(c**2 - 3*b*d + 12*e))/
+              (3.*(2*c**3 - 9*b*c*d + 27*d**2 + 27*b**2*e - 72*c*e + Sqrt(-4*(c**2 - 3*b*d + 12*e)**3 + (2*c**3 - 9*b*c*d + 27*d**2 + 27*b**2*e - 72*c*e)**2))**onethird) -
+             (2*c**3 - 9*b*c*d + 27*d**2 + 27*b**2*e - 72*c*e + Sqrt(-4*(c**2 - 3*b*d + 12*e)**3 + (2*c**3 - 9*b*c*d + 27*d**2 + 27*b**2*e - 72*c*e)**2))**onethird/
+              (3.*2**onethird) + (-b**3 + 4*b*c - 8*d)/
+              (4.*Sqrt(b**2/4. - (2*c)/3. + (2**onethird*(c**2 - 3*b*d + 12*e))/
+                   (3.*(2*c**3 - 9*b*c*d + 27*d**2 + 27*b**2*e - 72*c*e + Sqrt(-4*(c**2 - 3*b*d + 12*e)**3 + (2*c**3 - 9*b*c*d + 27*d**2 + 27*b**2*e - 72*c*e)**2))**onethird) +
+                  (2*c**3 - 9*b*c*d + 27*d**2 + 27*b**2*e - 72*c*e + Sqrt(-4*(c**2 - 3*b*d + 12*e)**3 + (2*c**3 - 9*b*c*d + 27*d**2 + 27*b**2*e - 72*c*e)**2))**onethird/
+                   (3.*2**onethird))))/2.
+
+
+        z4 = -b/4. + Sqrt(b**2/4. - (2*c)/3. +
+             (2**onethird*(c**2 - 3*b*d + 12*e))/
+              (3.*(2*c**3 - 9*b*c*d + 27*d**2 + 27*b**2*e - 72*c*e + Sqrt(-4*(c**2 - 3*b*d + 12*e)**3 + (2*c**3 - 9*b*c*d + 27*d**2 + 27*b**2*e - 72*c*e)**2))**onethird) +
+             (2*c**3 - 9*b*c*d + 27*d**2 + 27*b**2*e - 72*c*e + Sqrt(-4*(c**2 - 3*b*d + 12*e)**3 + (2*c**3 - 9*b*c*d + 27*d**2 + 27*b**2*e - 72*c*e)**2))**onethird/
+              (3.*2**onethird))/2. + Sqrt(b**2/2. - (4*c)/3. - (2**onethird*(c**2 - 3*b*d + 12*e))/
+              (3.*(2*c**3 - 9*b*c*d + 27*d**2 + 27*b**2*e - 72*c*e + Sqrt(-4*(c**2 - 3*b*d + 12*e)**3 + (2*c**3 - 9*b*c*d + 27*d**2 + 27*b**2*e - 72*c*e)**2))**onethird) -
+             (2*c**3 - 9*b*c*d + 27*d**2 + 27*b**2*e - 72*c*e + Sqrt(-4*(c**2 - 3*b*d + 12*e)**3 + (2*c**3 - 9*b*c*d + 27*d**2 + 27*b**2*e - 72*c*e)**2))**onethird/
+              (3.*2**onethird) + (-b**3 + 4*b*c - 8*d)/
+              (4.*Sqrt(b**2/4. - (2*c)/3. + (2**onethird*(c**2 - 3*b*d + 12*e))/
+                   (3.*(2*c**3 - 9*b*c*d + 27*d**2 + 27*b**2*e - 72*c*e + Sqrt(-4*(c**2 - 3*b*d + 12*e)**3 + (2*c**3 - 9*b*c*d + 27*d**2 + 27*b**2*e - 72*c*e)**2))**onethird) +
+                  (2*c**3 - 9*b*c*d + 27*d**2 + 27*b**2*e - 72*c*e + Sqrt(-4*(c**2 - 3*b*d + 12*e)**3 + (2*c**3 - 9*b*c*d + 27*d**2 + 27*b**2*e - 72*c*e)**2))**onethird/
+                   (3.*2**onethird))))/2.
+
+
+        return z1, z4, z3, z2
 
     @classmethod
     def _solve_quartic_vectorized(cls, b, c, d, e):
@@ -825,7 +923,7 @@ class S4Toroid(S4OpticalSurface):
 
         D1 = 2 * c**3 - 9 * b * c * d + 27 * b**2 * e + 27 * d**2 - 72 * c * e
         D0 = c**2 - 3 * b * d + 12 * e
-        D = (D1**2 - 4 * D0**3) / (-27)
+        # D = (D1**2 - 4 * D0**3) / (-27)
 
         k = (8 * c - 3 * b**2) / 8
 
@@ -835,12 +933,27 @@ class S4Toroid(S4OpticalSurface):
         Q[mask] = numpy.power(2, -1.0 / 3) * numpy.power((D1[mask] - numpy.sqrt(D1[mask] ** 2 - 4 * D0[mask] ** 3)), 1.0 / 3)
         S[mask] = 0.5 * numpy.sqrt((1.0 / 3) * (Q[mask] + D0[mask] / Q[mask]) - 2 * k[mask] / 3)
 
+
         m = (b**3 - 4 * b * c + 8 * d) / 8
 
         z1 = -b / 4 - S + 0.5 * numpy.sqrt(-4 * S**2 - 2 * k + m / S)
         z2 = -b / 4 - S - 0.5 * numpy.sqrt(-4 * S**2 - 2 * k + m / S)
         z3 = -b / 4 + S + 0.5 * numpy.sqrt(-4 * S**2 - 2 * k - m / S)
         z4 = -b / 4 + S - 0.5 * numpy.sqrt(-4 * S**2 - 2 * k - m / S)
+
+        # fix the cases when the depressed quartic is biquadratic
+        newmask = numpy.abs(S) < 1e-6
+        p = (8 * c - 3 * b ** 2) / 8
+        q = (b ** 3 - 4 * b * c + 8 * d) / 8
+        r = (- 3 * b ** 4 + 256 * e - 64 * b * d + 16 * b ** 2 * c) / 256
+
+        DD = p ** 2 - 4 * r
+        zz1 = 0.5 * (-p + numpy.sqrt(DD))
+        zz2 = 0.5 * (-p - numpy.sqrt(DD))
+        z1[newmask] =  numpy.sqrt(zz1[newmask]) - b[newmask] / 4
+        z2[newmask] = -numpy.sqrt(zz1[newmask]) - b[newmask] / 4
+        z3[newmask] =  numpy.sqrt(zz2[newmask]) - b[newmask] / 4
+        z4[newmask] = -numpy.sqrt(zz2[newmask]) - b[newmask] / 4
 
         return z2, z3, z4, z1
 
@@ -930,24 +1043,31 @@ class S4Toroid(S4OpticalSurface):
 
 if __name__ == "__main__":
 
-    t = S4Toroid(r_maj=5000.0, r_min=100, f_torus=3)
-    # t.set_from_focal_distances(30.0, 10.0, 0.003)
-    print(t.info())
+    # t = S4Toroid(r_maj=5000.0, r_min=100, f_torus=3)
+    # # t.set_from_focal_distances(30.0, 10.0, 0.003)
+    # print(t.info())
+    #
+    # print("Rmaj, Rmin", t.get_toroid_radii())
+    # print("Rtan, Rsag", t.get_tangential_and_sagittal_radii())
+    # print("Rtan, Rsag (signed)", t.get_tangential_and_sagittal_radii(signed=1))
+    #
+    # from srxraylib.plot.gol import plot_surface
+    #
+    # x = numpy.linspace(-0.01, 0.01, 100)
+    # y = numpy.linspace(-0.03, 0.03, 200)
+    # X = numpy.outer(x,numpy.ones_like(y))
+    # Y = numpy.outer(numpy.ones_like(x),y)
+    #
+    # Z = t.surface_height(X, Y, method=0, solution_index=-1)
+    # plot_surface(Z, x, y, xtitle="x")
+    #
+    # x2 = numpy.zeros((3, 10))
+    # x2 = numpy.random.rand(30).reshape((3, 10))
+    # print("normal: ", t.get_normal(x2))
 
-    print("Rmaj, Rmin", t.get_toroid_radii())
-    print("Rtan, Rsag", t.get_tangential_and_sagittal_radii())
-    print("Rtan, Rsag (signed)", t.get_tangential_and_sagittal_radii(signed=1))
+    BB, CC, DD, EE = 20.246392743580742, 993.7703042220965, 9022.71585643664, -4285.150145292282
+    print("using numpy: ", numpy.polynomial.polynomial.polyroots([EE, DD, CC, BB, 1.0]))
+    print("using new (itemized): ", S4Toroid._solve_quartic(BB, CC, DD, EE))
+    print("using new (vectorized): ", S4Toroid._solve_quartic_vectorized(numpy.array([BB]), numpy.array([CC]), numpy.array([DD]), numpy.array([EE])))
+    print("using mathematica: ", S4Toroid._solve_quartic_mathematica(BB, CC, DD, EE))
 
-    from srxraylib.plot.gol import plot_surface
-
-    x = numpy.linspace(-0.01, 0.01, 100)
-    y = numpy.linspace(-0.03, 0.03, 200)
-    X = numpy.outer(x,numpy.ones_like(y))
-    Y = numpy.outer(numpy.ones_like(x),y)
-
-    Z = t.surface_height(X, Y, method=0, solution_index=-1)
-    plot_surface(Z, x, y, xtitle="x")
-
-    x2 = numpy.zeros((3, 10))
-    x2 = numpy.random.rand(30).reshape((3, 10))
-    print("normal: ", t.get_normal(x2))
