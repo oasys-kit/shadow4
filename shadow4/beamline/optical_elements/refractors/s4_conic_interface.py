@@ -138,9 +138,14 @@ class S4ConicInterface(S4Interface, S4ConicOpticalElementDecorator):
 
 from shadow4.beamline.optical_elements.refractors.s4_conic_interface import S4ConicInterface
 optical_element = S4ConicInterface(name='{name:s}', boundary_shape=boundary_shape,
+    f_r_ind={f_r_ind:g}, # source of optical constants:
+               # (0) cte in both object (O) and image (I) spaces,
+               # (1) file in O, cte in I, (2) cte in O, file in I, (3) file in O and I
+               # (4) xraylib in O, cte in I, (5) cte O, xraylib in I, (6) xraylib in O and I
+               # (7) dabax O, cte in I, (8) cte value in O, dabax in I, (9) dabax in O and I
     material_object='{material_object:s}', material_image='{material_image:s}',
-    density_object='{density_object:s}', density_image='{density_image:s}',
-    f_r_ind={f_r_ind:g}, r_ind_obj={r_ind_obj:g}, r_ind_ima={r_ind_ima:g},
+    density_object={density_object:g}, density_image={density_image:g},
+    r_ind_obj={r_ind_obj:g}, r_ind_ima={r_ind_ima:g},
     r_attenuation_obj={r_attenuation_obj:g}, r_attenuation_ima={r_attenuation_ima:g},
     file_r_ind_obj='{file_r_ind_obj:s}', file_r_ind_ima='{file_r_ind_ima:s}',
     dabax={dabax},
@@ -202,7 +207,7 @@ class S4ConicInterfaceElement(S4InterfaceElement):
 
 if __name__ == "__main__":
 
-    if True: # using external refraction index
+    if False: # using external refraction index
         from shadow4.sources.source_geometrical.source_geometrical import SourceGeometrical
 
         light_source = SourceGeometrical(name='SourceGeometrical', nrays=5000, seed=5676561)
@@ -254,7 +259,7 @@ if __name__ == "__main__":
             plot_scatter(1e6 * beam.get_column(4, nolost=1), 1e6 * beam.get_column(6, nolost=1), title="(X',Z') in microrads")
 
 
-    if False:  # using prerefl in image space
+    if True:  # using prerefl in image space
 
         from shadow4.sources.source_geometrical.source_geometrical import SourceGeometrical
 
@@ -312,3 +317,4 @@ if __name__ == "__main__":
 
 
 
+        print(ie.to_python_code())
