@@ -158,6 +158,36 @@ def vector_rotate_around_axis(u, rotation_axis, angle):
 
     return rotated_vector
 
+def vector_default_efields(DIREC, pol_deg=1.0):
+    # Generates the normalized electric vectors perpendicular to DIREC
+    # This is defined on the source plane, so that A_VEC is along the X-axis and AP_VEC is along Z-axis.
+    # Then care must be taken so that A will be perpendicular to the ray direction.
+
+    A_VEC = numpy.zeros_like(DIREC)
+    A_VEC[:, 0] = 1.0
+
+    # ! C   Rotate A_VEC so that it will be perpendicular to DIREC and with the
+    # ! C   right components on the plane.
+    A_TEMP = vector_cross(A_VEC, DIREC)
+    A_VEC = vector_cross(DIREC, A_TEMP)
+    A_VEC = vector_norm(A_VEC)
+    AP_VEC = vector_cross(A_VEC, DIREC)
+    AP_VEC = vector_norm(AP_VEC)
+
+    #
+    # obtain polarization for each ray (interpolation)
+    #
+    DENOM = numpy.sqrt(1.0 - 2.0 * pol_deg + 2.0 * pol_deg ** 2)
+    AX = pol_deg / DENOM
+    for i in range(3):
+        A_VEC[:, i] *= AX
+
+    AZ = (1.0 - pol_deg) / DENOM
+    for i in range(3):
+        AP_VEC[:, i] *= AZ
+
+    return A_VEC, AP_VEC
+
 if __name__ == "__main__":
 
     v1 = numpy.ones((200,3))

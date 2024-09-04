@@ -5,6 +5,8 @@ import numpy
 from shadow4.beam.s4_beam import S4Beam
 from shadow4.sources.s4_light_source_base import S4LightSourceBase
 
+from shadow4.tools.arrayofvectors import vector_default_efields
+
 class SourceGridPolar(S4LightSourceBase):
 
     def __init__(self,
@@ -20,6 +22,7 @@ class SourceGridPolar(S4LightSourceBase):
                  wavelength=1e-10,
                  polarization_degree=1.0,
                  polarization_phase_deg=0.0,
+                 coherent_beam=1,
                  ):
         """
         Defines a grid source, so points starting in a ellipsoid-like volume in real space and angularly gridded in X,Z.
@@ -50,6 +53,8 @@ class SourceGridPolar(S4LightSourceBase):
             The polarization degree (cos_s / (cos_s + cos_p).
         polarization_phase_deg : float, optional
             The polarization phase in degrees (0=linear).
+        coherent_beam : int, optional
+            (0) random (incoherent), or (1) constant (coherent) s-phases.
         """
         super().__init__(name=name, nrays=nrays, seed=seed)
 
@@ -65,6 +70,7 @@ class SourceGridPolar(S4LightSourceBase):
         self._wavelength = wavelength
         self._polarization_degree = polarization_degree
         self._polarization_phase_deg = polarization_phase_deg
+        self._coherent_beam = coherent_beam
 
 
     @classmethod
@@ -294,25 +300,28 @@ class SourceGridPolar(S4LightSourceBase):
         instance of S4Beam
 
         """
-        # obtain polarization
-        DENOM = numpy.sqrt(1.0 - 2.0 * self._polarization_degree + 2.0 * self._polarization_degree ** 2)
-        AX = self._polarization_degree / DENOM
-        AZ = (1.0 - self._polarization_degree) / DENOM
 
-        rays = numpy.zeros((self.get_number_of_points(),18))
+        N = self.get_number_of_points()
+        rays = numpy.zeros((N, 18))
         volume = self._get_volume()
-        rays[:, 0] = volume[0,:]
-        rays[:, 1] = volume[1,:]
-        rays[:, 2] = volume[2,:]
-        rays[:, 3] = volume[3,:]
-        rays[:, 4] = volume[4,:]
-        rays[:, 5] = volume[5,:]
-        rays[:,6] = AX # Es
+        rays[:, 0] = volume[0, :]
+        rays[:, 1] = volume[1, :]
+        rays[:, 2] = volume[2, :]
+        rays[:, 3] = volume[3, :]
+        rays[:, 4] = volume[4, :]
+        rays[:, 5] = volume[5, :]
         rays[:,9] = 1   # flag
         rays[:,10] = 2 * numpy.pi / (self._wavelength * 1e2) # wavenumber in cm**-1
         rays[:,11] = numpy.arange(self.get_number_of_points(),dtype=float) # index
-        rays[:, 14] = self._polarization_phase_deg # Phase p
-        rays[:, 17] = AZ # Ep
+
+        if not self._coherent_beam:
+            rays[:, 13] = numpy.random.random(N) * 2 * numpy.pi # Phase s
+        rays[:, 14] = rays[:, 13] + numpy.radians(self._polarization_phase_deg) # Phase p
+
+        DIREC = rays[:, 3:6]
+        A_VEC, AP_VEC = vector_default_efields(DIREC, pol_deg=self._polarization_degree)
+        rays[:, 6:9] = A_VEC
+        rays[:, 15:18] = AP_VEC
 
         return S4Beam.initialize_from_array(rays)
 
@@ -338,7 +347,8 @@ class SourceGridPolar(S4LightSourceBase):
         txt += "\n   direction_space_points = [%d, %d]," % (tuple(self._direction_space_points))
         txt += "\n   wavelength = %g," % self._wavelength
         txt += "\n   polarization_degree = %g," % self._polarization_degree
-        txt += "\n   polarization_phase_deg = %g)" % self._polarization_phase_deg
+        txt += "\n   polarization_phase_deg = %g," % self._polarization_phase_deg
+        txt += "\n   coherent_beam = %d)" % self._coherent_beam
 
         txt += "\nbeam = light_source.get_beam()"
 
@@ -356,10 +366,10 @@ if __name__ == "__main__":
 
         beam = a.get_beam()
         plot_scatter(beam.get_column(4) * 1e6, beam.get_column(6) * 1e6, title="Polar grid in direction space")
-
+        print("check orthogonality", beam.efields_orthogonal())
     #
     #
-    if True:
+    if False:
         a = SourceGridPolar.initialize_collimated_source(
             real_space_width=[2e-6, 0.0, 1e-6],
             real_space_points=[10, 4],
@@ -372,7 +382,7 @@ if __name__ == "__main__":
         plot_scatter(beam.get_column(1)*1e6, beam.get_column(3)*1e6, xrange=[-1,1], yrange=[-1,1],
                      title="Polar grid in real space")
 
-    if True:
+    if False:
         a = SourceGridPolar(
             real_space_width=[1e-6, 0.0, 1e-6],
             real_space_points=[2, 4],
@@ -394,7 +404,7 @@ if __name__ == "__main__":
         plot_scatter(beam.get_column(3)*1e6, beam.get_column(6)*1e6, xrange=[-1,1], yrange=[-1,1],
                      title="Phase space Z")
 
-    if True:
+    if False:
         a = SourceGridPolar(
             real_space_width=[2e-3, 0.0, 2e-3],
             real_space_points=[2, 8],
@@ -412,7 +422,7 @@ if __name__ == "__main__":
         plot_scatter(beam.get_column(1)*1e6, beam.get_column(4)*1e6, xrange=[-1.1e3,1.1e3], yrange=[-11e3,11e3], title="Phase space X")
         plot_scatter(beam.get_column(3)*1e6, beam.get_column(6)*1e6, xrange=[-1.1e3,1.1e3], yrange=[-11e3,11e3], title="Phase space Z")
 
-    if True:
+    if False:
         a = SourceGridPolar(
             real_space_width=[2e-3, 0.0, 2e-3],
             real_space_points=[2, 8],

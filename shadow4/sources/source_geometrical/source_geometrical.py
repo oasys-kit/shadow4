@@ -12,7 +12,7 @@ from shadow4.sources.source_geometrical.probability_distributions import Flat2D,
 from srxraylib.util.inverse_method_sampler import Sampler1D
 from shadow4.sources.s4_light_source_base import S4LightSourceBase
 
-from shadow4.tools.arrayofvectors import vector_cross, vector_norm
+from shadow4.tools.arrayofvectors import vector_cross, vector_norm, vector_default_efields
 from shadow4.tools.logger import is_verbose, is_debug
 
 class SourceGeometrical(S4LightSourceBase):
@@ -901,28 +901,7 @@ class SourceGeometrical(S4LightSourceBase):
         # ! C   direction.
 
         DIREC = rays[:, 3:6].copy()
-        A_VEC = numpy.zeros_like(DIREC)
-        A_VEC[:, 0] = 1.0
-
-        # ! C   Rotate A_VEC so that it will be perpendicular to DIREC and with the
-        # ! C   right components on the plane.
-        A_TEMP = vector_cross(A_VEC, DIREC)
-        A_VEC = vector_cross(DIREC, A_TEMP)
-        A_VEC = vector_norm(A_VEC)
-        AP_VEC = vector_cross(A_VEC, DIREC)
-        AP_VEC = vector_norm(AP_VEC)
-
-        #
-        # obtain polarization for each ray (interpolation)
-        #
-        DENOM = numpy.sqrt(1.0 - 2.0 * self._pol_deg + 2.0 * self._pol_deg ** 2)
-        AX = self._pol_deg / DENOM
-        for i in range(3):
-            A_VEC[:, i] *= AX
-
-        AZ = (1.0 - self._pol_deg) / DENOM
-        for i in range(3):
-            AP_VEC[:, i] *= AZ
+        A_VEC, AP_VEC = vector_default_efields(DIREC, self._pol_deg)
 
         rays[:, 6:9] = A_VEC
         rays[:, 15:18] = AP_VEC
@@ -1092,7 +1071,14 @@ class SourceGeometrical(S4LightSourceBase):
 
 if __name__ == "__main__":
     a = SourceGeometrical(depth_distribution="Gaussian")
+    a.set_polarization(0)
     print(a.to_python_code())
     print(a.info())
 
     print(a.get_info())
+    beam = a.get_beam()
+    print("check orthogonality", beam.efields_orthogonal())
+    print("intensity", beam.intensity())
+    for i in [7,8,9,16,17,18]:
+        print(i, beam.get_column(i))
+

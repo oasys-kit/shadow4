@@ -11,6 +11,7 @@ Not used in OASYS. Not creating python scripts.
 import numpy
 from shadow4.beam.s4_beam import S4Beam
 from shadow4.sources.s4_light_source_base import S4LightSourceBase
+from shadow4.tools.arrayofvectors import vector_default_efields
 
 class SourceGaussian(S4LightSourceBase):
     """
@@ -373,10 +374,16 @@ class SourceGaussian(S4LightSourceBase):
         """
         rays = numpy.zeros((self.get_number_of_points(),18))
         rays[:,0:6] = self._get_volume()
-        rays[:,6] = 1.0 # Es
+        # rays[:,6] = 1.0 # Es
         rays[:,9] = 1   # flag
         rays[:,10] = 2 * numpy.pi / (wavelength * 1e2) # wavenumber
         rays[:,11] = numpy.arange(self.get_number_of_points(),dtype=float) # index
+
+        DIREC = rays[:,3:6]
+        A_VEC, AP_VEC = vector_default_efields(DIREC)
+        rays[:, 6:9] = A_VEC
+        rays[:, 15:18] = AP_VEC
+
         return S4Beam.initialize_from_array(rays)
 
 
@@ -386,8 +393,8 @@ if __name__ == "__main__":
                  sigmaX=1.0e-6,
                  sigmaY=0.0,
                  sigmaZ=1.0e-6,
-                 sigmaXprime=0.0002,
-                 sigmaZprime=0.0002,
+                 sigmaXprime=0.02,
+                 sigmaZprime=0.02,
                  real_space_center=numpy.array([0.0,0.0,0.0]),
                  direction_space_center=[0.0,0.0]
                                  )
@@ -398,4 +405,4 @@ if __name__ == "__main__":
     beam.set_photon_energy_eV(1000.0)
     print(beam.info())
 
-    print(src.get_info())
+    print("check orthogonality", beam.efields_orthogonal())

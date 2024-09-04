@@ -5,6 +5,8 @@ import numpy
 from shadow4.beam.s4_beam import S4Beam
 from shadow4.sources.s4_light_source_base import S4LightSourceBase
 
+from shadow4.tools.arrayofvectors import vector_default_efields
+
 class SourceGridCartesian(S4LightSourceBase):
     """
     Defines a grid source, so points starting in a cube-like volume in real space and directions gridded in X,Z
@@ -35,6 +37,8 @@ class SourceGridCartesian(S4LightSourceBase):
         The polarization degree (cos_s / (cos_s + cos_p).
     polarization_phase_deg : float, optional
         The polarization phase in degrees (0=linear).
+    coherent_beam : int, optional
+        (0) random (incoherent), or (1) constant (coherent) s-phases.
     """
     def __init__(self,
                  real_space_width=[1e-3,1e-3,1e-3],
@@ -49,6 +53,7 @@ class SourceGridCartesian(S4LightSourceBase):
                  wavelength=1e-10,
                  polarization_degree=1.0,
                  polarization_phase_deg=0.0,
+                 coherent_beam=1,
                  ):
         super().__init__(name=name, nrays=nrays, seed=seed)
         self._real_space_width = real_space_width
@@ -60,6 +65,7 @@ class SourceGridCartesian(S4LightSourceBase):
         self._wavelength = wavelength
         self._polarization_degree = polarization_degree
         self._polarization_phase_deg = polarization_phase_deg
+        self._coherent_beam = coherent_beam
 
         # support text containg name of variable, help text and unit. Will be stored in self._support_dictionary
         self._set_support_text([
@@ -76,6 +82,7 @@ class SourceGridCartesian(S4LightSourceBase):
             ("wavelength", "The photon wavelength in m.", ""),
             ("polarization_degree", "The polarization degree (cos_s / (cos_s + cos_p).", ""),
             ("polarization_phase_deg", "The polarization phase in degrees (0=linear).", ""),
+            ("coherent_beam", "Random(incoherent) (0) or constant (coherent) s-phases.", ""),
         ] )
 
 
@@ -363,25 +370,25 @@ class SourceGridCartesian(S4LightSourceBase):
         instance of S4Beam
 
         """
-        # obtain polarization
-        DENOM = numpy.sqrt(1.0 - 2.0 * self._polarization_degree + 2.0 * self._polarization_degree ** 2)
-        AX = self._polarization_degree / DENOM
-        AZ = (1.0 - self._polarization_degree) / DENOM
-
-
-        rays = numpy.zeros((self.get_number_of_points(),18))
-        rays[:, 0] = self.get_volume()[0,:]
-        rays[:, 1] = self.get_volume()[1,:]
-        rays[:, 2] = self.get_volume()[2,:]
-        rays[:, 3] = self.get_volume()[3,:]
-        rays[:, 4] = self.get_volume()[4,:]
-        rays[:, 5] = self.get_volume()[5,:]
-        rays[:,6] = AX # Es
+        N = self.get_number_of_points()
+        rays = numpy.zeros((N, 18))
+        rays[:, 0] = self.get_volume()[0, :]
+        rays[:, 1] = self.get_volume()[1, :]
+        rays[:, 2] = self.get_volume()[2, :]
+        rays[:, 3] = self.get_volume()[3, :]
+        rays[:, 4] = self.get_volume()[4, :]
+        rays[:, 5] = self.get_volume()[5, :]
         rays[:,9] = 1   # flag
         rays[:,10] = 2 * numpy.pi / (self._wavelength * 1e2) # wavenumber in cm**-1
         rays[:,11] = numpy.arange(self.get_number_of_points(),dtype=float) # index
-        rays[:, 14] = self._polarization_phase_deg # Phase p
-        rays[:, 17] = AZ # Ep
+        if not self._coherent_beam:
+            rays[:, 13] = numpy.random.random(N) * 2 * numpy.pi # Phase s
+        rays[:, 14] = rays[:, 13] + numpy.radians(self._polarization_phase_deg) # Phase p
+
+        DIREC = rays[:,3:6]
+        A_VEC, AP_VEC = vector_default_efields(DIREC, pol_deg=self._polarization_degree)
+        rays[:, 6:9] = A_VEC
+        rays[:, 15:18] = AP_VEC
 
         return S4Beam.initialize_from_array(rays)
 
@@ -408,7 +415,8 @@ class SourceGridCartesian(S4LightSourceBase):
         txt += "\n   direction_space_points = [%d, %d]," % (tuple(self._direction_space_points))
         txt += "\n   wavelength = %g," % self._wavelength
         txt += "\n   polarization_degree = %g," % self._polarization_degree
-        txt += "\n   polarization_phase_deg = %g)" % self._polarization_phase_deg
+        txt += "\n   polarization_phase_deg = %g," % self._polarization_phase_deg
+        txt += "\n   coherent_beam = %d)" % self._coherent_beam
         txt += "\nbeam = light_source.get_beam()"
 
         return txt
@@ -446,6 +454,9 @@ if __name__ == "__main__":
     beam = a.get_beam()
     plot_scatter(beam.get_column(4), beam.get_column(6), plot_histograms=0, title="Point source. Cols 4,6")
 
+    print("check orthogonality", beam.efields_orthogonal())
+
+
     #
     #
     #
@@ -459,4 +470,7 @@ if __name__ == "__main__":
 
 
     print(a.to_python_code())
+
+
+
 

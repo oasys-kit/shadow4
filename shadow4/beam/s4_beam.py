@@ -15,6 +15,7 @@ import time
 import os
 
 from syned.beamline.shape import Rectangle, Ellipse, TwoEllipses, Circle
+from shadow4.tools.arrayofvectors import vector_modulus, vector_dot
 
 A2EV = 2.0 * numpy.pi / (codata.h * codata.c / codata.e * 1e2)
 
@@ -2435,7 +2436,45 @@ class S4Beam(object):
             else:
                 print("col %d, std: beam_tocheck %g, beam %g " % (i + 1, std0, std1))
 
+    def efields_orthogonal(self, accuracy=1e-10, verbose=0):
+        """
+        Checks orthogonality of electric vector sigma, electric vector pi and divection vector v
 
+        Returns
+        -------
+        int
+            1=They are orthogonal (correct), 0=not orthogonal (incorrect).
+
+        """
+        out = 1
+        Es = self.get_columns([7, 8, 9]).T
+        Ep = self.get_columns([16, 17, 18]).T
+        v = self.get_columns([4, 5, 6]).T
+        print(Es.shape, Ep.shape, v.shape)
+
+        if numpy.any(numpy.abs(vector_modulus(v) -1)  > accuracy):
+            out = 0
+            print("|v| != 1 ")
+
+        check_what = vector_dot(Es, Ep)
+        if verbose: print("Es.Ep=", check_what)
+        if numpy.any(numpy.abs(check_what) > accuracy):
+            out = 0
+            print("Es not perpendicular to Ep")
+
+        check_what = vector_dot(Es, v)
+        if verbose: print("Es.v=", check_what)
+        if numpy.any(numpy.abs(check_what) > accuracy):
+            out = 0
+            print("Es not perpendicular to v")
+
+        check_what = vector_dot(Ep, v)
+        if verbose: print("Ep.v=", check_what)
+        if numpy.any(numpy.abs(check_what) > accuracy):
+            out = 0
+            print("Ep not perpendicular to v" )
+
+        return out
 
 if __name__ == "__main__":
     print(S4Beam.column_names_with_column_number())
@@ -2454,5 +2493,9 @@ if __name__ == "__main__":
     # print("all : ", (B.get_rays(nolost=0)).shape, B.rays.shape)
     # print("good: ", (B.get_rays(nolost=1)).shape, B.rays_good.shape)
     # print("bad : ", (B.get_rays(nolost=2)).shape, B.rays_bad.shape)
+    #
+    # print(B.focnew_coeffs())
 
-    print(B.focnew_coeffs())
+    print(B.efields_orthogonal())
+
+
