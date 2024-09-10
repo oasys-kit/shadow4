@@ -2,11 +2,6 @@
 shadow4
 =======
 
-Under development
------------------
-
-This is a project under development, so it is advised not to use it. The previous version is https://github.com/oasys-kit/shadow3
-
 About
 -----
 
