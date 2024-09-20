@@ -108,7 +108,7 @@ class S4Wiggler(Wiggler):
                     ("NG_J", "number of points of the electron trajectory", ""),
                     ("psi_interval_number_of_points", "if flag_interpolation=1, number of points of psi", ""),
                     ("FLAG_EMITTANCE", "Use emittance (0=No, 1=Yes)", "" ),
-                    ("flag_interpolation", "Use interpolation for sampling psi (0=No, 1=Yes)", ""),
+                    ("flag_interpolation", "Use interpolation for sampling psi (0=No, 1=Yes, 2=Yes (ray by ray), -1=debug0+1)", ""),
                     ("shift_x_flag", "Flag to center e trajectory X (0=No, 1=Yes)", ""),
                     ("shift_x_value", "shift value for X of the e trajectory", "m"),
                     ("shift_betax_flag", "Flag to center e trajectory X' (0=No, 1=Yes)", ""),

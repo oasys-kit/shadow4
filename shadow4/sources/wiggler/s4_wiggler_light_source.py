@@ -578,6 +578,8 @@ class S4WigglerLightSource(S4LightSource):
         do_loop = 0
 
         if do_loop:
+            POL_ANGLE_array = numpy.radians(-90.0 * numpy.sign(CURV_array))
+            R_MAGNET_array = numpy.abs(1.0 / CURV_array)
             for itik in range(NRAYS):
 
 
@@ -626,7 +628,7 @@ class S4WigglerLightSource(S4LightSource):
             R_MAGNET_array[ibad] = 1.0e20
 
             ZZZ = E_BEAMZZZ_array
-            YYY = X_TRAJ_array - E_BEAMXXX_array * numpy.sin(ANGLE_array)
+            YYY = Y_TRAJ_array - E_BEAMXXX_array * numpy.sin(ANGLE_array)
             XXX = X_TRAJ_array + E_BEAMXXX_array * numpy.cos(ANGLE_array)
 
             rays[:, 0] = XXX
