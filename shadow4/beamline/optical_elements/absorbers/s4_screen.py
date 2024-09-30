@@ -101,17 +101,18 @@ class S4Screen(Absorber, S4OpticalElementDecorator):
                     txt += "   Calculated attenuation using dabax\n"
 
         boundary = self.get_boundary_shape()
-        if boundary is None:
-            txt += "Boundaries not considered (infinite screen)"
-        else:
+        try:
+            boundaries = boundary.get_boundaries()
             txt += "Boundaries are: %s\n" % boundary.__class__.__name__
             if self._i_stop == 0:
                 txt += "SLIT or APERTURE\n"
             else:
                 txt += "STOP or OBSTRUCTION\n"
             txt += "Boundaries not considered (infinite screen)"
-            txt += "    Limits: " + repr( boundary.get_boundaries()) + "\n"
+            txt += "    Limits: " + repr( boundaries ) + "\n"
             txt += boundary.info()
+        except:
+            txt += "Boundaries not considered (infinite screen)"
 
         return txt
 
@@ -307,3 +308,5 @@ if __name__ == "__main__":
     e = S4ScreenElement()
 
     print(e.to_python_code())
+
+    print(o.get_info())
