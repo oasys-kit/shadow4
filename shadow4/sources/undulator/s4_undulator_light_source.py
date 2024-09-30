@@ -670,7 +670,15 @@ class S4UndulatorLightSource(S4LightSource):
 
         syned_electron_beam = self.get_electron_beam()
         undulator = self.get_magnetic_structure()
+
         sigmas = syned_electron_beam.get_sigmas_all()
+        electron_beam_x_at_waist = 1
+        electron_beam_z_at_waist = 1
+
+        moment_xx, moment_xxp, moment_xpxp, moment_yy, moment_yyp, moment_ypyp = syned_electron_beam.get_moments_all()
+
+        if numpy.abs(moment_xxp) > 0.0: electron_beam_x_at_waist = 0
+        if numpy.abs(moment_yyp) > 0.0: electron_beam_z_at_waist = 0
 
         NRAYS = self.get_nrays()
         rays = numpy.zeros((NRAYS, 18))
@@ -688,9 +696,25 @@ class S4UndulatorLightSource(S4LightSource):
         # sample sizes (cols 1-3)
         #
         if undulator.get_flag_emittance():
-            x_electron = numpy.random.normal(loc=0.0, scale=sigmas[0], size=NRAYS)
+            if electron_beam_x_at_waist:
+                x_electron = numpy.random.normal(loc=0.0, scale=sigmas[0], size=NRAYS)
+            else: # TODO: in fact, this is valid for all cases and not slower...
+                meanX = [0, 0]
+                covX = [[moment_xx, moment_xxp],
+                        [moment_xxp, moment_xpxp]]
+                x_electron, EBEAM1 = numpy.random.multivariate_normal(meanX, covX, NRAYS).T
+                print()
+                print(x_electron*1e-6)
+
+
             y_electron = 0.0
-            z_electron = numpy.random.normal(loc=0.0, scale=sigmas[2], size=NRAYS)
+            if electron_beam_z_at_waist:
+                z_electron = numpy.random.normal(loc=0.0, scale=sigmas[2], size=NRAYS)
+            else:
+                meanZ = [0, 0]
+                covZ = [[moment_yy, moment_yyp],
+                        [moment_yyp, moment_ypyp]]  # covariance
+                z_electron, EBEAM3 = numpy.random.multivariate_normal(meanZ, covZ, NRAYS).T
         else:
             x_electron = 0.0
             y_electron = 0.0
@@ -723,8 +747,15 @@ class S4UndulatorLightSource(S4LightSource):
         PHI[numpy.where(myrand < 0.5)] *= -1.0
 
         if undulator.get_flag_emittance():
-            EBEAM1 = numpy.random.normal(loc=0.0, scale=sigmas[1], size=NRAYS)
-            EBEAM3 = numpy.random.normal(loc=0.0, scale=sigmas[3], size=NRAYS)
+            if electron_beam_x_at_waist:
+                EBEAM1 = numpy.random.normal(loc=0.0, scale=sigmas[1], size=NRAYS)
+            else:
+                pass # already computed
+            if electron_beam_z_at_waist:
+                EBEAM3 = numpy.random.normal(loc=0.0, scale=sigmas[3], size=NRAYS)
+            else:
+                pass # already computed
+
             ANGLEX = EBEAM1 + PHI
             ANGLEV = EBEAM3 + THETABM
         else:
@@ -911,29 +942,86 @@ if __name__ == "__main__":
 
     do_plots = True
 
-    su = S4Undulator(K_vertical=0.25,
-                     period_length=0.032,
-                     number_of_periods=50,
-                     code_undul_phot='internal',
-                     emin=10000.0,
-                     emax=15000.0,
-                     flag_energy_spread=0,
-                     )
+    su = S4Undulator(
+        K_vertical=1.341095,  # syned Undulator parameter
+        period_length=0.018,  # syned Undulator parameter
+        number_of_periods=111.111,  # syned Undulator parameter
+        emin=10000.001989244458,  # Photon energy scan from energy (in eV)
+        emax=10000.001989244458,  # Photon energy scan to energy (in eV)
+        ng_e=1,  # Photon energy scan number of points
+        maxangle=1.6298164274638088e-05,  # Maximum radiation semiaperture in RADIANS
+        ng_t=71,  # Number of points in angle theta
+        ng_p=11,  # Number of points in angle phi
+        ng_j=20,  # Number of points in electron trajectory (per period) for internal calculation only
+        code_undul_phot='internal',  # internal, pysru, srw
+        flag_emittance=1,  # when sampling rays: Use emittance (0=No, 1=Yes)
+        flag_size=0,  # when sampling rays: 0=point,1=Gaussian,2=FT(Divergences)
+        distance=100.0,  # distance to far field plane
+        srw_range=0.05,  # for SRW backpropagation, the range factor
+        srw_resolution=50,  # for SRW backpropagation, the resolution factor
+        srw_semianalytical=0,  # for SRW backpropagation, use semianalytical treatement of phase
+        magnification=0.025,  # for internal/wofry backpropagation, the magnification factor
+        flag_backprop_recalculate_source=1,
+        # for internal or pysru/wofry backpropagation: source reused (0) or recalculated (1)
+        flag_backprop_weight=1,  # for internal or pysru/wofry backpropagation: apply Gaussian weight to amplitudes
+        weight_ratio=0.5,  # for flag_backprop_recalculate_source=1, the ratio value sigma/window halfwidth
+        flag_energy_spread=1,  # for monochromatod sources, apply (1) or not (0) electron energy spread correction
+    )
 
-    ebeam = S4ElectronBeam(energy_in_GeV=6.04,
+    moment_xx   = (3.01836e-05) ** 2
+    moment_xxp  = 0.0
+    moment_xpxp = (4.36821e-06) ** 2
+    moment_yy   = (3.63641e-06) ** 2
+    moment_yyp  = 0.0
+    moment_ypyp = (1.37498e-06) ** 2
+
+
+    s = -1.0
+
+    # see e.g. https://indico.cern.ch/event/528094/contributions/2213316/attachments/1322590/1984069/L3-4-5_-_Transverse_Beam_Dynamics.pdf
+
+    propagated_moment_xx = moment_xx + 2 * s * moment_xxp + s**2 * moment_xpxp
+    propagated_moment_xxp = moment_xxp + s * moment_xpxp
+    propagated_moment_xpxp = moment_xpxp
+    propagated_moment_yy = moment_yy + 2 * s * moment_yyp + s**2 * moment_ypyp
+    propagated_moment_yyp = moment_yyp + s * moment_ypyp
+    propagated_moment_ypyp = moment_ypyp
+
+    print(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>")
+    print("moment_xx  ", moment_xx  )
+    print("moment_xxp ", moment_xxp )
+    print("moment_xpxp", moment_xpxp)
+    print("moment_yy  ", moment_yy  )
+    print("moment_yyp ", moment_yyp )
+    print("moment_ypyp", moment_ypyp)
+
+    print(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> s = ", s)
+    print("propagated_moment_xx  ", propagated_moment_xx  )
+    print("propagated_moment_xxp ", propagated_moment_xxp )
+    print("propagated_moment_xpxp", propagated_moment_xpxp)
+    print("propagated_moment_yy  ", propagated_moment_yy  )
+    print("propagated_moment_yyp ", propagated_moment_yyp )
+    print("propagated_moment_ypyp", propagated_moment_ypyp)
+
+
+    ebeam = S4ElectronBeam(energy_in_GeV=6.0,
                  energy_spread = 0.0,
                  current = 0.2,
                  number_of_bunches = 0,
-                 moment_xx=(400e-6)**2,
-                 moment_xxp=0.0,
-                 moment_xpxp=(10e-6)**2,
-                 moment_yy=(10e-6)**2,
-                 moment_yyp=0.0,
-                 moment_ypyp=(4e-6)**2 )
+                 moment_xx   = propagated_moment_xx  ,
+                 moment_xxp  = propagated_moment_xxp ,
+                 moment_xpxp = propagated_moment_xpxp,
+                 moment_yy   = propagated_moment_yy  ,
+                 moment_yyp  = propagated_moment_yyp ,
+                 moment_ypyp = propagated_moment_ypyp,
+                           )
 
-    ls = S4UndulatorLightSource(name="", electron_beam=ebeam, magnetic_structure=su)
+    ls = S4UndulatorLightSource(name="", electron_beam=ebeam, magnetic_structure=su, nrays=50000)
 
-    # beam =  ls.get_beam()
+    import time
+    t0 = time.time()
+    beam =  ls.get_beam()
+    print(">>>>>>>>>>>> time: ", time.time() - t0)
     # #
     # # print(ls.info())
     # # # print(ls.to_python_code())
@@ -958,4 +1046,13 @@ if __name__ == "__main__":
     # plot(traj[3] * codata.c, traj[4], xtitle="Z", ytitle="beta_x")
 
     print(ls.get_info())
+
+    # test plot
+    from srxraylib.plot.gol import plot_scatter
+    rays = beam.get_rays()
+    plot_scatter(1e6 * rays[:, 0], 1e6 * rays[:, 3], title='(X,Xp) in microns',
+                 xrange=[-100, 100], yrange=[-100, 100], plot_histograms=0, show=0)
+
+    plot_scatter(1e6 * rays[:, 2], 1e6 * rays[:, 5], title='(Z,Zp) in microns',
+                 xrange=[-100, 100], yrange=[-100, 100], plot_histograms=0)
 
