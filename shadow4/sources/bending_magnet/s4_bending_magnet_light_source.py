@@ -423,43 +423,60 @@ class S4BendingMagnetLightSource(S4LightSource):
         E_BEAMZZZ_array = numpy.zeros(NRAYS)
 
         if self.get_magnetic_structure()._FLAG_EMITTANCE:
-            sigma_x, sigma_xp, sigma_z, sigma_zp = self.get_electron_beam().get_sigmas_all()
+            # sigma_x, sigma_xp, sigma_z, sigma_zp = self.get_electron_beam().get_sigmas_all()
+            moment_xx, moment_xxp, moment_xpxp, moment_zz, moment_zzp, moment_zpzp = self.get_electron_beam().get_moments_all()
 
             # emittance loop
 
             # unchanged values of the covariance matrix
             meanX = [0, 0]
             meanZ = [0, 0]
-            rSigmaXp = sigma_xp
-            rSigmaZp = sigma_zp
+            # rSigmaXp = sigma_xp
+            # rSigmaZp = sigma_zp
             for itik in range(NRAYS):
                 EPSI_PATH = numpy.abs(r_aladdin) * ANGLE_array[itik]
 
-                # ! C Compute the actual distance (EPSI_W*) from the orbital focus
-                epsi_wX = self.get_magnetic_structure()._EPSI_DX + EPSI_PATH
-                epsi_wZ = self.get_magnetic_structure()._EPSI_DZ + EPSI_PATH
 
-                # ! calculation of the electrom beam moments at the current position
-                # ! (sX,sZ) = (epsi_wx, epsi_wz):
-                # ! <x2> = (sX * sigma_xp)^2+ sigma_x^2
-                # ! <x x'> = (sX sigma_xp) sigma_xp
-                # ! <x'2> = sigma_xp^2                 (same for Z)
-                rSigmaX = numpy.sqrt( (epsi_wX**2) * (sigma_xp**2) + sigma_x**2 )
-                rSigmaZ = numpy.sqrt( (epsi_wZ**2) * (sigma_zp**2) + sigma_z**2 )
+                # OBSOLETE PART USING THE WAIST POSITION. NOW WE USE THE MOMENTS <xx> <xx'> <x'x'>
+                # # ! C Compute the actual distance (EPSI_W*) from the orbital focus
+                # epsi_wX = self.get_magnetic_structure()._EPSI_DX + EPSI_PATH
+                # epsi_wZ = self.get_magnetic_structure()._EPSI_DZ + EPSI_PATH
+                #
+                # # ! calculation of the electrom beam moments at the current position
+                # # ! (sX,sZ) = (epsi_wx, epsi_wz):
+                # # ! <x2> = (sX * sigma_xp)^2+ sigma_x^2
+                # # ! <x x'> = (sX sigma_xp) sigma_xp
+                # # ! <x'2> = sigma_xp^2                 (same for Z)
+                # rSigmaX = numpy.sqrt( (epsi_wX**2) * (sigma_xp**2) + sigma_x**2 )
+                # rSigmaZ = numpy.sqrt( (epsi_wZ**2) * (sigma_zp**2) + sigma_z**2 )
+                #
+                # if rSigmaX * rSigmaXp != 0.0:
+                #     rhoX = epsi_wX * sigma_xp**2 / (rSigmaX * rSigmaXp)
+                # else:
+                #     rhoX = 0.0
+                #
+                # if rSigmaZ * rSigmaZp != 0.0:
+                #     rhoZ = epsi_wZ * sigma_zp**2 / (rSigmaZ * rSigmaZp)
+                # else:
+                #     rhoZ = 0.0
+                #
+                # covX = [[rSigmaX**2, rhoX * rSigmaX * rSigmaXp], [rhoX * rSigmaX * rSigmaXp, rSigmaXp**2]]
+                # covZ = [[rSigmaZ**2, rhoZ * rSigmaZ * rSigmaZp], [rhoZ * rSigmaZ * rSigmaZp, rSigmaZp**2]]
 
+                # new method
+                propagated_moment_xx   = moment_xx   + 2 * EPSI_PATH * moment_xxp + EPSI_PATH ** 2 * moment_xpxp
+                propagated_moment_xxp  = moment_xxp  + EPSI_PATH * moment_xpxp
+                propagated_moment_xpxp = moment_xpxp
+                propagated_moment_zz   = moment_zz   + 2 * EPSI_PATH * moment_zzp + EPSI_PATH ** 2 * moment_zpzp
+                propagated_moment_zzp  = moment_zzp  + EPSI_PATH * moment_zpzp
+                propagated_moment_zpzp = moment_zpzp
 
-                if rSigmaX * rSigmaXp != 0.0:
-                    rhoX = epsi_wX * sigma_xp**2 / (rSigmaX * rSigmaXp)
-                else:
-                    rhoX = 0.0
+                covX = [[propagated_moment_xx, propagated_moment_xxp],
+                        [propagated_moment_xxp, propagated_moment_xpxp]]
 
-                if rSigmaZ * rSigmaZp != 0.0:
-                    rhoZ = epsi_wZ * sigma_zp**2 / (rSigmaZ * rSigmaZp)
-                else:
-                    rhoZ = 0.0
+                covZ = [[propagated_moment_zz, propagated_moment_zzp],
+                        [propagated_moment_zzp, propagated_moment_zpzp]]
 
-                covX = [[rSigmaX**2, rhoX * rSigmaX * rSigmaXp], [rhoX * rSigmaX * rSigmaXp, rSigmaXp**2]]
-                covZ = [[rSigmaZ**2, rhoZ * rSigmaZ * rSigmaZp], [rhoZ * rSigmaZ * rSigmaZp, rSigmaZp**2]]
 
                 # sampling using a multivariare (2) normal distribution
                 # multivariate_normal is very slow.

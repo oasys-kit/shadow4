@@ -352,8 +352,6 @@ class S4WigglerLightSource(S4LightSource):
 
     def __calculate_rays(self, user_unit_to_m=1.0,
                          F_COHER=0,
-                         EPSI_DX=0.0,
-                         EPSI_DZ=0.0,
                          psi_interval_in_units_one_over_gamma=None,
                          psi_interval_number_of_points=1001,
                          ):
@@ -526,31 +524,49 @@ class S4WigglerLightSource(S4LightSource):
 
         t2 = time.time()
         if wiggler._FLAG_EMITTANCE:
-            sigmaX, sigmaXp, sigmaZ, sigmaZp = syned_electron_beam.get_sigmas_all()
+            moment_xx, moment_xxp, moment_xpxp, moment_zz, moment_zzp, moment_zpzp = syned_electron_beam.get_moments_all()
+            sigmaX, sigmaXp, sigmaZ, sigmaZp = sigmas
+
             meanX = [0, 0]
             meanZ = [0, 0]
-            rSigmaXp = sigmaXp
-            rSigmaZp = sigmaZp
+            # rSigmaXp = sigmaXp
+            # rSigmaZp = sigmaZp
 
             for itik in range(NRAYS):
                 EPSI_PATH = EPSI_PATH_array[itik] - PATH0  # now refer to wiggler's origin
-                # ! C
-                # ! C Compute the actual distance (EPSI_W*) from the orbital focus
-                # ! C
-                EPSI_WX = EPSI_DX + EPSI_PATH
-                EPSI_WZ = EPSI_DZ + EPSI_PATH
 
-                rSigmaX = numpy.sqrt((EPSI_WX ** 2) * (sigmaXp ** 2) + sigmaX ** 2)
-                rSigmaZ = numpy.sqrt((EPSI_WZ ** 2) * (sigmaZp ** 2) + sigmaZ ** 2)
-                rhoX = EPSI_WX * sigmaXp ** 2 / (rSigmaX * rSigmaXp)
-                rhoZ = EPSI_WZ * sigmaZp ** 2 / (rSigmaZ * rSigmaZp)
-                covX = [[sigmaX ** 2, rhoX * sigmaX * sigmaXp],
-                        [rhoX * sigmaX * sigmaXp, sigmaXp ** 2]]  # diagonal covariance
+                # OBSOLETE PART USING THE WAIST POSITION. NOW WE USE THE MOMENTS <xx> <xx'> <x'x'>
+                # # ! C
+                # # ! C Compute the actual distance (EPSI_W*) from the orbital focus
+                # # ! C
+                # EPSI_WX = EPSI_DX + EPSI_PATH
+                # EPSI_WZ = EPSI_DZ + EPSI_PATH
+                #
+                # rSigmaX = numpy.sqrt((EPSI_WX ** 2) * (sigmaXp ** 2) + sigmaX ** 2)
+                # rSigmaZ = numpy.sqrt((EPSI_WZ ** 2) * (sigmaZp ** 2) + sigmaZ ** 2)
+                # rhoX = EPSI_WX * sigmaXp ** 2 / (rSigmaX * rSigmaXp)
+                # rhoZ = EPSI_WZ * sigmaZp ** 2 / (rSigmaZ * rSigmaZp)
+                # covX = [[sigmaX ** 2, rhoX * sigmaX * sigmaXp],
+                #         [rhoX * sigmaX * sigmaXp, sigmaXp ** 2]]  # diagonal covariance
+                #
+                # covZ = [[sigmaZ ** 2, rhoZ * sigmaZ * sigmaZp],
+                #         [rhoZ * sigmaZ * sigmaZp, sigmaZp ** 2]]  # diagonal covariance
 
-                covZ = [[sigmaZ ** 2, rhoZ * sigmaZ * sigmaZp],
-                        [rhoZ * sigmaZ * sigmaZp, sigmaZp ** 2]]  # diagonal covariance
+                # new method
+                propagated_moment_xx   = moment_xx   + 2 * EPSI_PATH * moment_xxp + EPSI_PATH ** 2 * moment_xpxp
+                propagated_moment_xxp  = moment_xxp  + EPSI_PATH * moment_xpxp
+                propagated_moment_xpxp = moment_xpxp
+                propagated_moment_zz   = moment_zz   + 2 * EPSI_PATH * moment_zzp + EPSI_PATH ** 2 * moment_zpzp
+                propagated_moment_zzp  = moment_zzp  + EPSI_PATH * moment_zpzp
+                propagated_moment_zpzp = moment_zpzp
 
-                # sampling using a multivariare (2) normal distribution
+                covX = [[propagated_moment_xx, propagated_moment_xxp],
+                        [propagated_moment_xxp, propagated_moment_xpxp]]
+
+                covZ = [[propagated_moment_zz, propagated_moment_zzp],
+                        [propagated_moment_zzp, propagated_moment_zpzp]]
+
+                # sampling using a multivariate (2) normal distribution
                 # multivariate_normal is very slow.
                 # See https://github.com/numpy/numpy/issues/14193 and shadow4-tests/shadow4tests/devel/check_multivariate_normal.py
                 # for acceleration recipee. For 5k rays this emittance loop passed from 31% to 8% of the total time.
@@ -1005,8 +1021,6 @@ class S4WigglerLightSource(S4LightSource):
         return S4Beam.initialize_from_array(self.__calculate_rays(
             user_unit_to_m =1.0,
             F_COHER                               = F_COHER,
-            EPSI_DX                               = self.get_magnetic_structure()._EPSI_DX,
-            EPSI_DZ                               = self.get_magnetic_structure()._EPSI_DZ,
             psi_interval_in_units_one_over_gamma = psi_interval_in_units_one_over_gamma,
             psi_interval_number_of_points        = self.get_magnetic_structure()._psi_interval_number_of_points,
         ))

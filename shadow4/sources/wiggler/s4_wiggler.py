@@ -51,10 +51,6 @@ class S4Wiggler(Wiggler):
         Flag to deplace the X' of the electron trajectory trajectory.
     shift_betax_value : float, optional
         A displacement in X' to center or deplace the electron trajectory trajectory.
-    epsi_dx : float, optional
-        coordinate y of the horizontal waist (X) measured from the orgin of the magnetic structure.
-    epsi_dz : float, optional
-        coordinate y of the vertical waist (Z) measured from the orgin of the magnetic structure.
     """
     def __init__(self,
                  magnetic_field_periodic=1, # 0=external, 1=periodic
@@ -73,8 +69,6 @@ class S4Wiggler(Wiggler):
                  shift_x_value=0.0,     # for shift_x_flag=5, the x value
                  shift_betax_flag=0,    # Shift x'? 0:No, 1:Half excursion, 2:min, 3:max, 4:value at y=0, 5:user value
                  shift_betax_value=0.0, # for shift_betax_flag=5, the x' value
-                 epsi_dx=0.0, # distance from waist X
-                 epsi_dz=0.0, # distance from waist Z
                  ):
         self._magnetic_field_periodic = magnetic_field_periodic
         self._file_with_magnetic_field = file_with_magnetic_field
@@ -97,9 +91,6 @@ class S4Wiggler(Wiggler):
         self._shift_betax_flag  = shift_betax_flag
         self._shift_betax_value = shift_betax_value
 
-        self._EPSI_DX           = epsi_dx
-        self._EPSI_DZ           = epsi_dz
-
         # support text containg name of variable, help text and unit. Will be stored in self._support_dictionary
         self._add_support_text([
                     ("EMIN", "minimum photon energy", "eV" ),
@@ -113,8 +104,6 @@ class S4Wiggler(Wiggler):
                     ("shift_x_value", "shift value for X of the e trajectory", "m"),
                     ("shift_betax_flag", "Flag to center e trajectory X' (0=No, 1=Yes)", ""),
                     ("shift_betax_value", "shift value for X' of the e trajectory", "m"),
-                    ("EPSI_DX", "position of waist X", "m"),
-                    ("EPSI_DZ", "position of waist Z", "m"),
             ] )
 
     def get_info(self):
@@ -149,9 +138,6 @@ class S4Wiggler(Wiggler):
         txt += "        number of energy points: %d\n"%(self._NG_E)
         txt += "        number of points for the trajectory: %d\n"%(self._NG_J)
 
-        txt += "\n"
-        txt += "        distance from waist X: %f m\n" % (self._EPSI_DX)
-        txt += "        distance from waist Z: %f m\n" % (self._EPSI_DZ)
         return txt
 
     def get_flag_emittance(self):
@@ -319,8 +305,6 @@ source = S4Wiggler(
     emax               = {emax},  # Photon energy scan to energy (in eV)
     ng_e               = {ng_e},  # Photon energy scan number of points for spectrum and internal calculation
     ng_j               = {ng_j} , # Number of points in electron trajectory (per period) for internal calculation only
-    epsi_dx            = {epsi_dx},  # position y of waist X [m]
-    epsi_dz            = {epsi_dz},  # position y of waist Z [m]
     psi_interval_number_of_points = {psi_interval_number_of_points} , # the number psi (vertical angle) points for internal calculation only
     flag_interpolation = {flag_interpolation}, # Use interpolation to sample psi (0=No, 1=Yes)
     flag_emittance     = {flag_emittance}, # Use emittance (0=No, 1=Yes)
@@ -341,8 +325,6 @@ source = S4Wiggler(
             "emax"                     : self._EMAX            ,
             "ng_e"                     : self._NG_E            ,
             "ng_j"                     : self._NG_J            ,
-            "epsi_dx"                  : self._EPSI_DX,
-            "epsi_dz"                  : self._EPSI_DZ,
             "flag_interpolation"       :self._flag_interpolation,
             "psi_interval_number_of_points": self._psi_interval_number_of_points,
             "flag_emittance"           : self._FLAG_EMITTANCE  ,
