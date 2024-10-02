@@ -170,7 +170,8 @@ class S4NumericalMeshMirrorElement(S4MirrorElement):
 
 if __name__ == "__main__":
     a = S4NumericalMeshMirror(name="")
-    b = S4NumericalMeshMirrorElement(optical_element=a)
-    print(b.to_python_code())
+    print(a.info())
+    # b = S4NumericalMeshMirrorElement(optical_element=a)
+    # print(b.to_python_code())
 
 

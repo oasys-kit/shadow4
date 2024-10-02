@@ -17,7 +17,7 @@ from shadow4.physical_models.prerefl.prerefl import PreRefl
 class S4Interface(Interface):
     """
     Shadow4 refractive interface class
-    This is a base class for mirrors.
+    This is a base class for refractors.
     Use derived classes for Conic or other curved surfaces.
 
     Constructor.
@@ -70,21 +70,21 @@ class S4Interface(Interface):
     instance of S4Interface.
     """
     def __init__(self,
-                 name="Undefined",
-                 boundary_shape=None,
-                 surface_shape=None,
-                 material_object=None,
-                 material_image=None,
-                 density_object=1.0,
-                 density_image=1.0,
-                 f_r_ind = 0,
-                 r_ind_obj = 1.0,
-                 r_ind_ima = 1.0,
+                 name              = "Undefined",
+                 boundary_shape    = None,
+                 surface_shape     = None,
+                 material_object   = None,
+                 material_image    = None,
+                 density_object    = 1.0,
+                 density_image     = 1.0,
+                 f_r_ind           = 0,
+                 r_ind_obj         = 1.0,
+                 r_ind_ima         = 1.0,
                  r_attenuation_obj = 0.0,
                  r_attenuation_ima = 0.0,
-                 file_r_ind_obj = "",
-                 file_r_ind_ima = "",
-                 dabax=None,
+                 file_r_ind_obj    = "",
+                 file_r_ind_ima    = "",
+                 dabax             = None,
                  ):
         Interface.__init__(self,
                         name=name,
@@ -417,10 +417,8 @@ class S4Interface(Interface):
     def _apply_interface_refraction(self, beam,
                                     refraction_index_object, refraction_index_image, mu_object,
                                     apply_attenuation=1):
-        # refraction_index_object, refraction_index_image = self.get_refraction_indices(photon_energy_eV=beam.get_photon_energy_eV())
-        # mu_object, mu_image = self.get_attenuation_coefficients(photon_energy_eV=beam.get_photon_energy_eV())
-        ccc = self.get_optical_surface_instance()
-        footprint, normal = ccc.apply_refraction_on_beam(beam,
+        sur = self.get_optical_surface_instance()
+        footprint, normal = sur.apply_refraction_on_beam(beam,
                                                          refraction_index_object, refraction_index_image,
                                                          apply_attenuation=apply_attenuation,
                                                          linear_attenuation_coefficient=mu_object)
@@ -557,9 +555,8 @@ class S4InterfaceElement(S4BeamlineElement):
 
 if __name__ == "__main__":
     i = S4Interface()
-    e = S4InterfaceElement(optical_element=i)
-
-    print(i.get_surface_shape())
     print(i.info())
+    print(i.get_surface_shape())
 
+    e = S4InterfaceElement(optical_element=i)
     # print(i.to_python_code())
