@@ -341,7 +341,6 @@ class MLayer(object):
         matOdd = O_MATERIAL
         denOdd = float(O_DENSITY)
 
-
         if GRADE_DEPTH == 0:
             npair = int(N_PAIRS)
             # define variables
@@ -456,7 +455,7 @@ class MLayer(object):
             pre_mlayer_dict["a3"] = a3
         elif igrade == 4:  # igrade=4, ellipse parameters
             f.write("%f  %f  %f  %f %f\n" % (ell_p, ell_q, ell_theta_grazing_deg, ell_length, ell_photon_energy))
-            pre_mlayer_dict["ell_p"] = ell_q
+            pre_mlayer_dict["ell_p"] = ell_p
             pre_mlayer_dict["ell_q"] = ell_q
             pre_mlayer_dict["ell_theta_grazing_deg"] = ell_theta_grazing_deg
             pre_mlayer_dict["ell_length"] = ell_length
@@ -1217,6 +1216,7 @@ class MLayer(object):
         pp = self.pre_mlayer_dict['ell_p']
         qq = self.pre_mlayer_dict['ell_q']
         theta = self.pre_mlayer_dict['ell_theta_grazing_deg']
+        if verbose: print("_fit_ellipse_laterally_graded_coeffs: p, q, theta_grazing_deg: ", pp, qq, theta)
         mirrorlength = self.pre_mlayer_dict['ell_length']
         gamma1 = self.pre_mlayer_dict['gamma1']
 
@@ -1240,7 +1240,7 @@ class MLayer(object):
         if verbose: print('_fit_ellipse_laterally_graded_coeffs: bigLambda at y=0 [A] = ', bigLambda0)
 
         # ; coordinates along the mirror
-        y1 = numpy.linspace(ycen - mirrorlength, ycen + mirrorlength, 100)
+        y1 = numpy.linspace(ycen - mirrorlength / 2, ycen + mirrorlength / 2, 100)
         z1 = bb * numpy.sqrt(1 - (y1 * y1 / aa / aa))
         p1 = numpy.sqrt((cc + y1) ** 2 + z1 ** 2)
         q1 = numpy.sqrt((cc - y1) ** 2 + z1 ** 2)
@@ -1588,7 +1588,7 @@ if __name__ == "__main__":
         rs1, rp1, phase_s1, phase_p1= b.reflectivity(numpy.ones_like(energy) * 0.26356, energy)
         plot(energy, rs1, xtitle="Photon energy [eV]", ytitle="Reflectivity", title="MIXED scan", )
 
-    if 1: # compressed format
+    if 0: # compressed format
 
         b = MLayer.initialize_from_bilayer_stack_in_compressed_format(
         structure='[Pd,B4C]x150+Si',
@@ -1669,7 +1669,9 @@ if __name__ == "__main__":
         print(">>> igrade: ", b.pre_mlayer_dict['igrade'])
         print(">>> coeffs: ", b.pre_mlayer_dict['a0'], b.pre_mlayer_dict['a1'], b.pre_mlayer_dict['a2'], b.pre_mlayer_dict['a3'])
 
-    if 0: # angle scan from preprocessor data
+    if 1: # angle scan from preprocessor data
+        # a=array([ 1.00000544, -0.35375728, -0.04919996, -0.01776213])
+        # a=array([ 1.00000033, -0.35376397, -0.04875604, -0.01749082])
         b = MLayer.pre_mlayer(
             FILE="/home/srio/Oasys/mlayer_pdb4c_graded.dat",
             E_MIN=5000.0, E_MAX=20000.0,
