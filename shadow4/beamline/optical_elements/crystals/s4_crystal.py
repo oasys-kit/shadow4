@@ -7,6 +7,7 @@ from syned.beamline.shape import Rectangle, Ellipse
 from shadow4.beam.s4_beam import S4Beam
 from shadow4.beamline.s4_beamline_element import S4BeamlineElement
 from shadow4.beamline.s4_beamline_element_movements import S4BeamlineElementMovements
+from shadow4.tools.arrayofvectors import vector_modulus, vector_dot, vector_cross, vector_norm, vector_multiply_scalar
 
 from crystalpy.diffraction.DiffractionSetupXraylib import DiffractionSetupXraylib
 from crystalpy.diffraction.DiffractionSetupDabax import DiffractionSetupDabax
@@ -402,8 +403,12 @@ class S4CrystalElement(S4BeamlineElement):
         #
         # put beam in mirror reference system
         #
-        input_beam.rotate(alpha1, axis=2)
+        # print("\n\n\nE_S Before rotating alpha=", alpha1, input_beam.get_columns([7,8,9]))
+        # print("E_P Before rotating alpha=", alpha1, input_beam.get_columns([16,17,18]))
+        input_beam.rotate(alpha1,         axis=2)
         input_beam.rotate(theta_grazing1, axis=1)
+        # print("E_S After rotating alpha=", alpha1, input_beam.get_columns([7,8,9]))
+        # print("E_P After rotating alpha=", alpha1, input_beam.get_columns([16,17,18]))
         input_beam.translation([0.0, -p * numpy.cos(theta_grazing1), p * numpy.sin(theta_grazing1)])
 
         # mirror movement:
@@ -861,15 +866,9 @@ class S4CrystalElement(S4BeamlineElement):
         )
 
         # Calculate outgoing Photon.
-        apply_reflectivity = 1 # todo: set always  True
-        if apply_reflectivity:
-            outgoing_complex_amplitude_photon = perfect_crystal.calculatePhotonOut(photons_in,
-                                                                                    apply_reflectivity=True,
-                                                                                    calculation_method=1,
-                                                                                    is_thick=soe._is_thick,
-                                                                                    use_transfer_matrix=0
-                                                                                    )
-        else: # in two steps: todo delete
+        apply_reflectivity = 2 # 0: tew steps, 1: one step (default), 2: manage efields.
+        # print(">>>>>>> apply reflectivity: ", apply_reflectivity)
+        if apply_reflectivity == 0: # in two steps: todo delete
             outgoing_complex_amplitude_photon = perfect_crystal.calculatePhotonOut(photons_in,
                                                                                     apply_reflectivity=False,
                                                                                     calculation_method=1,
@@ -884,14 +883,202 @@ class S4CrystalElement(S4BeamlineElement):
             outgoing_complex_amplitude_photon.rescaleEsigma(coeffs["S"])
             outgoing_complex_amplitude_photon.rescaleEpi(coeffs["P"])
 
+            footprint.apply_reflectivities(
+                numpy.sqrt(outgoing_complex_amplitude_photon.getIntensityS()),
+                numpy.sqrt(outgoing_complex_amplitude_photon.getIntensityP()))
 
-        # copy/apply values from crystalpy photon stack to shadow4 beam
-        footprint.apply_reflectivities(
-            numpy.sqrt(outgoing_complex_amplitude_photon.getIntensityS()),
-            numpy.sqrt(outgoing_complex_amplitude_photon.getIntensityP()))
+            footprint.add_phases(outgoing_complex_amplitude_photon.getPhaseS(),
+                                 outgoing_complex_amplitude_photon.getPhaseP())
+        elif apply_reflectivity == 1: # in one step - but incorrect managing of the efields.
+            outgoing_complex_amplitude_photon = perfect_crystal.calculatePhotonOut(photons_in,
+                                                                                    apply_reflectivity=True,
+                                                                                    calculation_method=1,
+                                                                                    is_thick=soe._is_thick,
+                                                                                    use_transfer_matrix=0
+                                                                                    )
 
-        footprint.add_phases(outgoing_complex_amplitude_photon.getPhaseS(),
-                             outgoing_complex_amplitude_photon.getPhaseP())
+            footprint.apply_reflectivities(
+                numpy.sqrt(outgoing_complex_amplitude_photon.getIntensityS()),
+                numpy.sqrt(outgoing_complex_amplitude_photon.getIntensityP()))
+
+            footprint.add_phases(outgoing_complex_amplitude_photon.getPhaseS(),
+                                 outgoing_complex_amplitude_photon.getPhaseP())
+        elif apply_reflectivity == 2: # manages efields like in shadow3
+            outgoing_complex_amplitude_photon = perfect_crystal.calculatePhotonOut(photons_in,
+                                                                                    apply_reflectivity=True,
+                                                                                    calculation_method=1,
+                                                                                    is_thick=soe._is_thick,
+                                                                                    use_transfer_matrix=0
+                                                                                    )
+
+
+            # copy data to vectors
+            E_S = footprint.get_columns([7,8,9]).T
+            E_P = footprint.get_columns([16, 17, 18]).T
+            PhiS = footprint.get_column(14)
+            PhiP = footprint.get_column(15)
+
+            vNormal = normal.T
+            vIn = v1.T
+
+            #
+            # STEP 1: get local sigma and pi directions v_S and v_P (uS and uP unitary vectors)
+            #
+
+            uS, uP = footprint.get_local_directions_sigma_pi(vNormal, vIn=vIn)
+
+            # print("local direction uS", uS)
+            # print("local direction uP", uP)
+
+            #
+            # calculate the electric field in the local coordinate system
+            #
+
+            # CALL	DOT	(AS_VEC,AS_TEMP,A11)	! matrix element of rotation
+            # CALL	DOT	(AP_VEC,AS_TEMP,A12)	! matrix element of rotation
+            # CALL	DOT	(AS_VEC,AP_TEMP,A21)	! matrix element of rotation
+            # CALL	DOT	(AP_VEC,AP_TEMP,A22)	! matrix element of rotation
+            # ! ** Now recompute the ampltitude and phase of the local S- and P- component.
+            # AS_NEW	= SQRT(ABS(A11**2 + A12**2 +  &
+            #         2.0D0*A11*A12*COS(PHS-PHP)))
+            # AP_NEW	= SQRT(ABS(A21**2 + A22**2 +  &
+            #         2.0D0*A21*A22*COS(PHS-PHP)))
+            # CALL	SCALAR	(AS_TEMP,AS_NEW,AS_VEC)	! Local As vector
+            # CALL	SCALAR	(AP_TEMP,AP_NEW,AP_VEC)	! Local Ap vector
+            # PHTS	= A11*SIN(PHS) + A12*SIN(PHP)
+            # PHBS	= A11*COS(PHS) + A12*COS(PHP)
+            # PHTP	= A21*SIN(PHS) + A22*SIN(PHP)
+            # PHBP	= A21*COS(PHS) + A22*COS(PHP)
+            # CALL	ATAN_2	(PHTS,PHBS,PHS)		! Phase of local As vector
+            # CALL	ATAN_2	(PHTP,PHBP,PHP)		! Phase of local Ap vector
+            # ! C
+            # ! C
+            # CALL	DOT	(VVIN,VNOR,SIN_VAL)	! sin(graz. ang)
+            # CALL	DOT	(Q_OUT,VNOR,SIN_REF)	! sin(graz.ref.ang)
+
+            a11 = vector_dot(E_S, uS)
+            a12 = vector_dot(E_P, uS)
+            a21 = vector_dot(E_S, uP)
+            a22 = vector_dot(E_P, uP)
+
+            M2_S = a11 ** 2 + a12 ** 2 + 2 * a11 * a12 * numpy.cos(PhiS - PhiP)
+            M2_P = a21 ** 2 + a22 ** 2 + 2 * a21 * a22 * numpy.cos(PhiS - PhiP)
+
+            E_local_S = vector_multiply_scalar(uS, numpy.sqrt(M2_S))
+            E_local_P = vector_multiply_scalar(uP, numpy.sqrt(M2_P))
+
+            local_PhiS = numpy.arctan2((a11 * numpy.sin(PhiS) + a12 * numpy.sin(PhiP)) , (a11 * numpy.cos(PhiS) + a12 * numpy.cos(PhiP)))
+            local_PhiP = numpy.arctan2((a21 * numpy.sin(PhiS) + a22 * numpy.sin(PhiP)) , (a21 * numpy.cos(PhiS) + a22 * numpy.cos(PhiP)))
+            # END OF STEP 1
+
+            #
+            # STEP 2: now apply crystal reflectivity
+            #
+            crystal_reflectivity_S = numpy.sqrt(outgoing_complex_amplitude_photon.getIntensityS())
+            crystal_reflectivity_P = numpy.sqrt(outgoing_complex_amplitude_photon.getIntensityP())
+            crystal_phase_S = outgoing_complex_amplitude_photon.getPhaseS()
+            crystal_phase_P = outgoing_complex_amplitude_photon.getPhaseP()
+
+            # print("crystal_reflectivity_S: ", crystal_reflectivity_S)
+            # print("crystal_reflectivity_P: ", crystal_reflectivity_P)
+
+            E_diffracted_S = numpy.zeros_like(E_local_S)
+            E_diffracted_P = numpy.zeros_like(E_local_S)
+
+            E_diffracted_S[:, 0] = E_local_S[:, 0] * crystal_reflectivity_S
+            E_diffracted_S[:, 1] = E_local_S[:, 1] * crystal_reflectivity_S
+            E_diffracted_S[:, 2] = E_local_S[:, 2] * crystal_reflectivity_S
+
+            E_diffracted_P[:, 0] = E_local_P[:, 0] * crystal_reflectivity_P
+            E_diffracted_P[:, 1] = E_local_P[:, 1] * crystal_reflectivity_P
+            E_diffracted_P[:, 2] = E_local_P[:, 2] * crystal_reflectivity_P
+
+            Phi_diffracted_S = local_PhiS + crystal_phase_S
+            Phi_diffracted_P = local_PhiP + crystal_phase_P
+
+
+            #
+            # STEP 3
+            #
+
+            # ! Electric vectors are changed to assure orthogonality with the new direction VVOUT
+            # ! To conserve intensity, the moduli of Es and Ep must not change
+            # ! AS_VEC and VVOUT are not orthogonal so a projection of S and P coordinates into the
+            # ! new ones do not work as it may be a component of the electric field along VVOUT
+            #
+            # CALL CROSS_M_FLAG  (VVOUT,VNOR,AS_TEMP,M_FLAG) ! vector pp. to inc.pl.
+            # CALL DOT (AS_VEC,AS_VEC,AS2)
+            # CALL DOT (AP_VEC,AP_VEC,AP2)
+            #
+            # IF (M_FLAG.EQ.1) THEN
+            #  IF (AS2.NE.0) THEN
+            #    DO I=1,3
+            #      AS_TEMP(I) = AS_VEC(I)
+            #    END DO
+            #  ELSE
+            #   DO I=1,3
+            #    AS_TEMP(I) = AP_VEC(I)
+            #   END DO
+            #  END IF
+            # END IF
+            #
+            # CALL NORM   (AS_TEMP,AS_TEMP) ! Local unit As vector perp to vvout
+            # CALL CROSS (AS_TEMP,VVOUT,AP_TEMP)
+            # CALL NORM (AP_TEMP,AP_TEMP) ! Local unit Ap vector perp to vvout
+            #
+            # do i=1,3
+            #   as_vec(i) = as_temp(i) * sqrt(as2)
+            #   ap_vec(i) = ap_temp(i) * sqrt(ap2)
+            # end do
+
+            vOut = footprint.get_columns([4, 5, 6]).T
+
+            aS = vector_modulus(E_diffracted_S)
+            aP = vector_modulus(E_diffracted_P)
+
+            v_S = vector_cross(vOut, vNormal) # AS_TEMP
+            v_Smod = vector_modulus(v_S)
+            mask = (v_Smod == 0.0)
+            if mask.any():
+                print(">>>>>>>>>> FOUND A ZERO!!!!!")
+                if v_Smod.sum() > 0:
+                    v_S[mask, 0] = E_diffracted_S[mask, 0]
+                    v_S[mask, 1] = E_diffracted_S[mask, 1]
+                    v_S[mask, 2] = E_diffracted_S[mask, 2]
+                else:
+                    v_S[mask, 0] = E_diffracted_P[mask, 0]
+                    v_S[mask, 1] = E_diffracted_P[mask, 1]
+                    v_S[mask, 2] = E_diffracted_P[mask, 2]
+
+            v_P = vector_cross(v_S, vIn) # AP_TEMP
+
+            uS = vector_norm(v_S)
+            uP = vector_norm(v_P)
+
+            E_diffracted_S[:, 0] = uS[:, 0] * aS
+            E_diffracted_S[:, 1] = uS[:, 1] * aS
+            E_diffracted_S[:, 2] = uS[:, 2] * aS
+
+            E_diffracted_P[:, 0] = uP[:, 0] * aP
+            E_diffracted_P[:, 1] = uP[:, 1] * aP
+            E_diffracted_P[:, 2] = uP[:, 2] * aP
+
+            # END STEP 3
+
+            #
+            # replace electric fields and phases in footprint.
+            # Note that reflectivity_S affects the X components, and reflectivity_P the Z ones.
+            #
+            footprint.set_column(7, E_diffracted_S[:, 0])
+            footprint.set_column(8, E_diffracted_S[:, 1])
+            footprint.set_column(9, E_diffracted_S[:, 2])
+            footprint.set_column(16, E_diffracted_P[:, 0])
+            footprint.set_column(17, E_diffracted_P[:, 1])
+            footprint.set_column(18, E_diffracted_P[:, 2])
+            footprint.set_column(14, Phi_diffracted_S)
+            footprint.set_column(15, Phi_diffracted_P)
+
+            print("orthogonal AFTER: ", footprint.efields_orthogonal())
 
         footprint.set_column(4, outgoing_complex_amplitude_photon.unitDirectionVector().components()[0])
         footprint.set_column(5, outgoing_complex_amplitude_photon.unitDirectionVector().components()[1])

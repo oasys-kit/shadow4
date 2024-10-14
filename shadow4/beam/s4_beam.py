@@ -15,7 +15,7 @@ import time
 import os
 
 from syned.beamline.shape import Rectangle, Ellipse, TwoEllipses, Circle
-from shadow4.tools.arrayofvectors import vector_modulus, vector_dot
+from shadow4.tools.arrayofvectors import vector_modulus, vector_dot, vector_cross, vector_norm
 
 A2EV = 2.0 * numpy.pi / (codata.h * codata.c / codata.e * 1e2)
 
@@ -586,6 +586,76 @@ class S4Beam(object):
             rmin = -1.0
             rmax = 1.0
         return [rmin, rmax]
+
+    def get_local_directions_sigma_pi(self, vNormal, vIn=None):
+        """
+        Given a direction N (normal to a surface), this routine calculates the "local sigma and pi"
+        directions, or the unitary vectors perpendicular and parallel to the scattering plane, respectively.
+        The scattering plane is defines as the plane that contains N and the ray direction vIn.
+
+        Parameters
+        ----------
+        vNormal: numpy array
+            An array of vectors (npoints, 3) with the normal N.
+        vIn: numpy array, optional
+            The array of vectors with the incident direction. If None, it uses the direction in the S4Beam.
+
+        Returns
+        -------
+            tuple:
+            (direction_sigma, direction_pi) the two unitary array of vectors with the sigma and pi-directions.
+        """
+        if vNormal.shape[1] != 3:
+            raise Exception("vNormal must be an array of vectors (npoints, 3).")
+
+        if vIn is None: vIn = self.get_columns([4, 5, 6]).T
+
+        E_S = self.get_columns([7, 8, 9]).T
+        E_P = self.get_columns([16, 17, 18]).T
+
+        # ! * ... we have to compute
+        # ! * some angles, namely the sine of the incidence angle and the sine
+        # ! * of the A vector with the normal. Also, the polarized light is
+        # ! * treated as a superposition of two orthogonal A vectors with the appropriate
+        # ! * phase relation. These two incoming vectors have to be resolved into the
+        # ! * local S- and P- component with a new phase relation.
+        # ! * A_VEC will be rotated later, once the amplitude will have been determined.
+        #      	CALL	CROSS 	(VVIN,VNOR,AS_TEMP)	! vector pp. to inc.pl.
+        #      	IF (M_FLAG.EQ.1) THEN
+        # 	        CALL	DOT	(AS_VEC,AS_VEC,AS2)
+        # 	        CALL	DOT	(AP_VEC,AP_VEC,AP2)
+        # 	        IF (AS2.NE.0)	THEN
+        #              	 DO 499 I=1,3
+        #  499   	            AS_TEMP(I) = AS_VEC(I)
+        # 	        ELSE
+        # 	             DO 599 I=1,3
+        #  599	            AS_TEMP(I) = AP_VEC(I)
+        # 	        END IF
+        #      	END IF
+        #      	CALL	NORM  	(AS_TEMP,AS_TEMP)	! Local unit As vector
+        # CALL	CROSS	(AS_TEMP,VVIN,AP_TEMP)
+        # CALL	NORM	(AP_TEMP,AP_TEMP)	! Local unit Ap vector
+
+        v_S = vector_cross(vIn, vNormal)  # AS_TEMP
+        v_Smod = vector_modulus(v_S)
+        mask = (v_Smod == 0.0)
+        if mask.any():
+            print(">>>>>>>>>> FOUND A ZERO!!!!!")
+            if v_Smod.sum() > 0:
+                v_S[mask, 0] = E_S[mask, 0]
+                v_S[mask, 1] = E_S[mask, 1]
+                v_S[mask, 2] = E_S[mask, 2]
+            else:
+                v_S[mask, 0] = E_P[mask, 0]
+                v_S[mask, 1] = E_P[mask, 1]
+                v_S[mask, 2] = E_P[mask, 2]
+
+        v_P = vector_cross(v_S, vIn)
+        uS = vector_norm(v_S)
+        uP = vector_norm(v_P)
+
+        return vector_norm(v_S), vector_norm(v_P)
+
 
     def histo1(self, col, xrange=None, nbins=50, nolost=0, ref=0,
                write=None, factor=1.0, calculate_widths=1, calculate_hew=0):
