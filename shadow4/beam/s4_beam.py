@@ -15,7 +15,7 @@ import time
 import os
 
 from syned.beamline.shape import Rectangle, Ellipse, TwoEllipses, Circle
-from shadow4.tools.arrayofvectors import vector_modulus, vector_dot, vector_cross, vector_norm
+from shadow4.tools.arrayofvectors import vector_modulus, vector_dot, vector_cross, vector_norm, vector_multiply_scalar
 
 A2EV = 2.0 * numpy.pi / (codata.h * codata.c / codata.e * 1e2)
 
@@ -81,11 +81,11 @@ class S4Beam(object):
 
         """
         beam = S4Beam(N)
-        beam.set_column(5,1.0) # Vy
-        beam.set_column(7,1.0) # Es
-        beam.set_column(10,1.0) # flag
-        beam.set_column(11,2*numpy.pi/1e-8) # wavenumber (1 A)
-        beam.set_column(12,numpy.arange(N,dtype=float)) # index
+        beam.set_column(5, 1.0) # Vy
+        beam.set_column(7, 1.0) # Es
+        beam.set_column(10, 1.0) # flag
+        beam.set_column(11, 2 * numpy.pi / 1e-8) # wavenumber (1 A)
+        beam.set_column(12, numpy.arange(N, dtype=float)) # index
 
         return beam
 
@@ -124,19 +124,19 @@ class S4Beam(object):
         if nolost == 0:
             return self.rays.copy()
         elif nolost == 1:
-            f  = numpy.where(self.rays[:,9] > 0.0)
+            f  = numpy.where(self.rays[:, 9] > 0.0)
             if len(f[0])==0:
                 print ('S4Beam.get_rays: no GOOD rays, returning empty array')
                 return numpy.empty(0)
             else:
                 return self.rays[f[0],:].copy()
         elif nolost == 2:
-            f  = numpy.where(self.rays[:,9] < 0.0)
-            if len(f[0])==0:
+            f  = numpy.where(self.rays[:, 9] < 0.0)
+            if len(f[0]) == 0:
                 print ('S4Beam.get_rays: no BAD rays, returning empty array')
                 return numpy.empty(0)
             else:
-                return self.rays[f[0],:].copy()
+                return self.rays[f[0], :].copy()
 
     @property
     def rays_good(self):
@@ -656,7 +656,49 @@ class S4Beam(object):
 
         return vector_norm(v_S), vector_norm(v_P)
 
+    def get_jones(self, nolost=0):
+        intS = self.get_column(24, nolost=nolost)
+        intP = self.get_column(25, nolost=nolost)
+        phiS = self.get_column(14, nolost=nolost)
+        phiP = self.get_column(15, nolost=nolost)
+        J = numpy.zeros((phiS.size, 2), dtype=complex)
+        J[:, 0] = numpy.sqrt(intS) * numpy.exp(1j * phiS)
+        J[:, 1] = numpy.sqrt(intP) * numpy.exp(1j * phiP)
+        return J
 
+    def get_efield_directions(self):
+        vOut = self.get_columns([4, 5, 6]).T
+        E_S = self.get_columns([7, 8, 9]).T
+        E_P = self.get_columns([16, 17, 18]).T
+        modE_S = vector_modulus(E_S)
+        modE_P = vector_modulus(E_P)
+
+        e_S = numpy.zeros_like(E_S)
+        e_P = numpy.zeros_like(E_P)
+
+        for i in range(self.N): # TODO: vectorize? difficult for possible patological cases....
+            if modE_S[i] > 0:
+                e_S[i, :] = E_S[i, :] / modE_S[i]
+                tmp = vector_cross(e_S[numpy.newaxis, i, :], vOut[numpy.newaxis, i, :])
+                e_P[i, :] = tmp
+            else: # S intensity is zero
+                if modE_P[i] > 0:
+                    e_P[i, :] = E_P[i, :] / modE_P[i]
+                    tmp = vector_cross(vOut[numpy.newaxis, i, :], e_P[numpy.newaxis, i, :])
+                    e_S[i, :] = tmp
+                else: # both S and P intensities are zero
+                    tmp = vector_cross(vOut[numpy.newaxis, i, :], numpy.array([[0,0,1]]))
+                    e_S[i, :] = tmp
+                    tmp = vector_cross(e_S[numpy.newaxis, i, :], vOut[numpy.newaxis, i, :])
+                    e_P[i, :] = tmp
+
+        return e_S, e_P
+
+
+
+    #
+    # tools
+    #
     def histo1(self, col, xrange=None, nbins=50, nolost=0, ref=0,
                write=None, factor=1.0, calculate_widths=1, calculate_hew=0):
         """
@@ -1082,6 +1124,28 @@ class S4Beam(object):
 
         """
         self.rays[:,10] =  2*numpy.pi/(wavelength * 1e2)
+
+    def set_jones(self, J, e_S=None, e_P=None):
+        if self.N != J.shape[0]:
+            raise Exception("Incompatible dimension of J vector: it is (%d,%d), it must be (%d,2)" %
+                            (J.shape[0], J.shape[2], self.N))
+
+        if e_S is None or e_P is None:
+            ee_S, ee_P = self.get_efield_directions()
+            if e_S is None: e_S = ee_S
+            if e_P is None: e_P = ee_P
+
+        E_S = vector_multiply_scalar(e_S, numpy.abs(J[:, 0]))
+        E_P = vector_multiply_scalar(e_P, numpy.abs(J[:, 1]))
+
+        self.set_column( 7, E_S[:, 0])
+        self.set_column( 8, E_S[:, 1])
+        self.set_column( 9, E_S[:, 2])
+        self.set_column(16, E_P[:, 0])
+        self.set_column(17, E_P[:, 1])
+        self.set_column(18, E_P[:, 2])
+        self.set_column(14, numpy.angle(J[:, 0]))
+        self.set_column(15, numpy.angle(J[:, 1]))
 
     #
     # info

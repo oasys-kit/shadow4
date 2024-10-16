@@ -7,7 +7,8 @@ from syned.beamline.shape import Rectangle, Ellipse
 from shadow4.beam.s4_beam import S4Beam
 from shadow4.beamline.s4_beamline_element import S4BeamlineElement
 from shadow4.beamline.s4_beamline_element_movements import S4BeamlineElementMovements
-from shadow4.tools.arrayofvectors import vector_modulus, vector_dot, vector_cross, vector_norm, vector_multiply_scalar
+from shadow4.tools.arrayofvectors import vector_modulus, vector_dot, vector_cross, vector_norm
+from shadow4.tools.arrayofvectors import vector_multiply_scalar, vector_diff
 
 from crystalpy.diffraction.DiffractionSetupXraylib import DiffractionSetupXraylib
 from crystalpy.diffraction.DiffractionSetupDabax import DiffractionSetupDabax
@@ -791,6 +792,9 @@ class S4CrystalElement(S4BeamlineElement):
 
         normal = ccc.get_normal(x2)
 
+        #
+        # update footprint with the coordinates and other values that are not changed anymore.
+        #
         footprint.set_column(1, x2[0])
         footprint.set_column(2, x2[1])
         footprint.set_column(3, x2[2])
@@ -866,8 +870,8 @@ class S4CrystalElement(S4BeamlineElement):
         )
 
         # Calculate outgoing Photon.
-        apply_reflectivity = 2 # 0: tew steps, 1: one step (default), 2: manage efields.
-        # print(">>>>>>> apply reflectivity: ", apply_reflectivity)
+        apply_reflectivity = 2 # 0: two steps, 1: one step (default), 2: manage efields like S3, 3=new in S4
+
         if apply_reflectivity == 0: # in two steps: todo delete
             outgoing_complex_amplitude_photon = perfect_crystal.calculatePhotonOut(photons_in,
                                                                                     apply_reflectivity=False,
@@ -889,7 +893,12 @@ class S4CrystalElement(S4BeamlineElement):
 
             footprint.add_phases(outgoing_complex_amplitude_photon.getPhaseS(),
                                  outgoing_complex_amplitude_photon.getPhaseP())
-        elif apply_reflectivity == 1: # in one step - but incorrect managing of the efields.
+
+            footprint.set_column(4, outgoing_complex_amplitude_photon.unitDirectionVector().components()[0])
+            footprint.set_column(5, outgoing_complex_amplitude_photon.unitDirectionVector().components()[1])
+            footprint.set_column(6, outgoing_complex_amplitude_photon.unitDirectionVector().components()[2])
+
+        elif apply_reflectivity == 1: # in one step - but incorrect managing of the efields todo: delete
             outgoing_complex_amplitude_photon = perfect_crystal.calculatePhotonOut(photons_in,
                                                                                     apply_reflectivity=True,
                                                                                     calculation_method=1,
@@ -903,7 +912,13 @@ class S4CrystalElement(S4BeamlineElement):
 
             footprint.add_phases(outgoing_complex_amplitude_photon.getPhaseS(),
                                  outgoing_complex_amplitude_photon.getPhaseP())
+
+            footprint.set_column(4, outgoing_complex_amplitude_photon.unitDirectionVector().components()[0])
+            footprint.set_column(5, outgoing_complex_amplitude_photon.unitDirectionVector().components()[1])
+            footprint.set_column(6, outgoing_complex_amplitude_photon.unitDirectionVector().components()[2])
+
         elif apply_reflectivity == 2: # manages efields like in shadow3
+            print(">>> reflectivity method: traditional S3")
             outgoing_complex_amplitude_photon = perfect_crystal.calculatePhotonOut(photons_in,
                                                                                     apply_reflectivity=True,
                                                                                     calculation_method=1,
@@ -917,18 +932,15 @@ class S4CrystalElement(S4BeamlineElement):
             E_P = footprint.get_columns([16, 17, 18]).T
             PhiS = footprint.get_column(14)
             PhiP = footprint.get_column(15)
-
             vNormal = normal.T
             vIn = v1.T
+            vH = vNormal # todo: set for asymmetry!!!
 
             #
             # STEP 1: get local sigma and pi directions v_S and v_P (uS and uP unitary vectors)
             #
 
-            uS, uP = footprint.get_local_directions_sigma_pi(vNormal, vIn=vIn)
-
-            # print("local direction uS", uS)
-            # print("local direction uP", uP)
+            uS, uP = footprint.get_local_directions_sigma_pi(vH, vIn=vIn)
 
             #
             # calculate the electric field in the local coordinate system
@@ -979,9 +991,6 @@ class S4CrystalElement(S4BeamlineElement):
             crystal_phase_S = outgoing_complex_amplitude_photon.getPhaseS()
             crystal_phase_P = outgoing_complex_amplitude_photon.getPhaseP()
 
-            # print("crystal_reflectivity_S: ", crystal_reflectivity_S)
-            # print("crystal_reflectivity_P: ", crystal_reflectivity_P)
-
             E_diffracted_S = numpy.zeros_like(E_local_S)
             E_diffracted_P = numpy.zeros_like(E_local_S)
 
@@ -996,6 +1005,24 @@ class S4CrystalElement(S4BeamlineElement):
             Phi_diffracted_S = local_PhiS + crystal_phase_S
             Phi_diffracted_P = local_PhiP + crystal_phase_P
 
+            #
+            # update footprint with the new values (direction and phases)
+            # (electric vector are not updated as they will change in STEP 3)
+            #
+
+            footprint.set_column(14, Phi_diffracted_S)
+            footprint.set_column(15, Phi_diffracted_P)
+
+            # print("orthogonal INCIDENT: ", footprint.efields_orthogonal(verbose=1))
+
+            vv = outgoing_complex_amplitude_photon.unitDirectionVector().components() # (3, npoints)
+            footprint.set_column(4, vv[0])
+            footprint.set_column(5, vv[1])
+            footprint.set_column(6, vv[2])
+
+            # print("orthogonal BEFORE: ", footprint.efields_orthogonal(verbose=1))
+
+            vOut = vv.T # (npoints, 3)
 
             #
             # STEP 3
@@ -1031,12 +1058,10 @@ class S4CrystalElement(S4BeamlineElement):
             #   ap_vec(i) = ap_temp(i) * sqrt(ap2)
             # end do
 
-            vOut = footprint.get_columns([4, 5, 6]).T
-
             aS = vector_modulus(E_diffracted_S)
             aP = vector_modulus(E_diffracted_P)
 
-            v_S = vector_cross(vOut, vNormal) # AS_TEMP
+            v_S = vector_cross(vOut, vH) # AS_TEMP
             v_Smod = vector_modulus(v_S)
             mask = (v_Smod == 0.0)
             if mask.any():
@@ -1050,7 +1075,7 @@ class S4CrystalElement(S4BeamlineElement):
                     v_S[mask, 1] = E_diffracted_P[mask, 1]
                     v_S[mask, 2] = E_diffracted_P[mask, 2]
 
-            v_P = vector_cross(v_S, vIn) # AP_TEMP
+            v_P = vector_cross(v_S, vOut) # AP_TEMP
 
             uS = vector_norm(v_S)
             uP = vector_norm(v_P)
@@ -1075,14 +1100,67 @@ class S4CrystalElement(S4BeamlineElement):
             footprint.set_column(16, E_diffracted_P[:, 0])
             footprint.set_column(17, E_diffracted_P[:, 1])
             footprint.set_column(18, E_diffracted_P[:, 2])
-            footprint.set_column(14, Phi_diffracted_S)
-            footprint.set_column(15, Phi_diffracted_P)
 
-            print("orthogonal AFTER: ", footprint.efields_orthogonal())
+            # print("orthogonal AFTER: ", footprint.efields_orthogonal(verbose=1))
 
-        footprint.set_column(4, outgoing_complex_amplitude_photon.unitDirectionVector().components()[0])
-        footprint.set_column(5, outgoing_complex_amplitude_photon.unitDirectionVector().components()[1])
-        footprint.set_column(6, outgoing_complex_amplitude_photon.unitDirectionVector().components()[2])
+        elif apply_reflectivity == 3: # NEW
+            print(">>> reflectivity method: new in S4 using Jones calculus")
+            outgoing_complex_amplitude_photon = perfect_crystal.calculatePhotonOut(photons_in,
+                                                                                    apply_reflectivity=True,
+                                                                                    calculation_method=1,
+                                                                                    is_thick=soe._is_thick,
+                                                                                    use_transfer_matrix=0
+                                                                                    )
+            r_S = outgoing_complex_amplitude_photon.getComplexAmplitudeS()
+            r_P = outgoing_complex_amplitude_photon.getComplexAmplitudeP()
+            vv = outgoing_complex_amplitude_photon.unitDirectionVector().components()  # (3, npoints)
+            vOut = vv.T  # (npoints, 3)
+            vIn = v1.T
+
+            #
+            # Jones calculus of refletivity
+            #
+            J0 = footprint.get_jones()
+            e_S, e_P = footprint.get_efield_directions()
+
+            c = e_S[:, 0] # cos of angle between e_S and the x axis
+            s = numpy.sqrt(1 - c**2) # sin
+
+            #
+            # R(-alpha) J R(alpha) (reflectivity matrix with respect to the local element)
+            #
+            j11 =  r_S * c**2 + r_P * s**2
+            j12 = (r_S - r_P) * s * c
+            j21 = j12
+            j22 = r_S * s**2 + r_P * c**2
+
+            #
+            # multiply Jones matrix per Jones vector
+            #
+            J1 = numpy.zeros_like(J0, dtype=complex)
+            J1[:, 0] = j11 * J0[:, 0] + j12 * J0[:, 1]
+            J1[:, 1] = j21 * J0[:, 0] + j22 * J0[:, 1]
+
+            # calculate the new sigma and pi directions both perpendicular to vOut
+            # The sigma direction ee_S is perpendicular to the diffraction plane, defined as the
+            # plane that contains vIn and vOut.
+            vScatter = vector_diff(vOut, vIn)
+            ee_S = vector_cross(vScatter, vOut)
+            ee_P = vector_cross(ee_S, vOut)
+            ee_S = vector_norm(ee_S)
+            ee_P = vector_norm(ee_P)
+
+            # print("orthogonal INCIDENT: ", footprint.efields_orthogonal(verbose=0))
+
+            # set direction
+            footprint.set_column(4, vv[0])
+            footprint.set_column(5, vv[1])
+            footprint.set_column(6, vv[2])
+            # print("orthogonal BEFORE: ", footprint.efields_orthogonal(verbose=0))
+
+            # set electric fields
+            footprint.set_jones(J1, e_S=ee_S, e_P=ee_P)
+            # print("orthogonal AFTER: ", footprint.efields_orthogonal(verbose=0))
 
         return footprint, normal
 
