@@ -35,6 +35,7 @@ References
 
 A main publication is under preparation. Other notes or papers with methods and algorithms related to SHADOW4 are: 
 
+* Modelling undulators in ray tracing simulations https://doi.org/10.48550/arXiv.2410.13672
 * Ray tracing simulations of bending magnet sources with SHADOW4 https://doi.org/10.48550/arXiv.2406.16446
 * Conic Surfaces and Transformations for X-Ray Beamline Optics Modeling https://doi.org/10.48550/arXiv.2406.04079
 
