@@ -10,6 +10,7 @@ from shadow4.beamline.s4_beamline_element_movements import S4BeamlineElementMove
 from shadow4.beamline.optical_elements.refractors.s4_conic_interface import S4ConicInterfaceElement
 from shadow4.beamline.s4_optical_element_decorators import S4RefractiveLensOpticalElementDecorator
 from shadow4.beamline.optical_elements.refractors.s4_lens import _get_lens_interfaces
+from shadow4.beamline.optical_elements.absorbers.s4_screen import S4Screen, S4ScreenElement
 
 class S4CRL(CRL, S4RefractiveLensOpticalElementDecorator):
     """
@@ -22,7 +23,8 @@ class S4CRL(CRL, S4RefractiveLensOpticalElementDecorator):
     boundary_shape : instance of BoundaryShape, optional
         The boundary shape of the mirror.
     n_lens : int, optional
-        The number of (identical) lenses.
+        The number of (identical) lenses. Note: it is possible to set n_lens=0, in this case
+        empty screens are used in the place of the interfaces of the lens. Lens thickness is considered.
     piling_thickness : float, optional
         The distance from one lens to the next one in m.
     material : str, optional
@@ -404,29 +406,39 @@ class S4CRLElement(S4BeamlineElement):
         optical_surfaces = oe.get_lens_interfaces()
         p, q, angle_radial, angle_radial_out, angle_azimuthal = self.get_coordinates().get_positions()
         n_lens = oe.get_n_lens()
-        for lens_index in range(n_lens):
-            if lens_index==0: source_plane = p
-            else:             source_plane = oe.get_piling_thickness()
-            if lens_index==n_lens-1: image_plane = q
-            else:                    image_plane = 0.0
 
-            coordinates_1 = ElementCoordinates(p=source_plane, q=oe.get_thickness()*0.5, angle_radial=angle_radial, angle_radial_out=numpy.pi,          angle_azimuthal=angle_azimuthal)
-            coordinates_2 = ElementCoordinates(p=oe.get_thickness()*0.5, q=image_plane,  angle_radial=0.0,          angle_radial_out=angle_radial_out, angle_azimuthal=0.0)
+        if n_lens == 0: # use screens in the position of the interfaces
+            coordinates_1 = ElementCoordinates(p=p, q=oe.get_thickness()*0.5, angle_radial=angle_radial, angle_radial_out=numpy.pi,          angle_azimuthal=angle_azimuthal)
+            coordinates_2 = ElementCoordinates(p=oe.get_thickness()*0.5, q=q,  angle_radial=0.0,          angle_radial_out=angle_radial_out, angle_azimuthal=0.0)
 
-            beamline_element_1 = S4ConicInterfaceElement(optical_element=optical_surfaces[lens_index, 0], coordinates=coordinates_1, movements=movements, input_beam=input_beam)
-            if lens_index==0:
-                beam1, footprint1 = beamline_element_1.trace_beam()
-                n1, mu1, n2, mu2 = beamline_element_1.get_stored_optical_constants()
-            else:
-                beam1, _          = beamline_element_1.trace_beam(reused_stored_optical_constants=(n1, mu1, n2, mu2))
+            beamline_element = S4ScreenElement(optical_element=S4Screen(), coordinates=coordinates_1, input_beam=input_beam)
+            beam1, footprint1 = beamline_element.trace_beam()
+            beamline_element = S4ScreenElement(optical_element=S4Screen(), coordinates=coordinates_2, input_beam=beam1)
+            beam2, footprint2 = beamline_element.trace_beam()
+        else:
+            for lens_index in range(n_lens):
+                if lens_index==0: source_plane = p
+                else:             source_plane = oe.get_piling_thickness()
+                if lens_index==n_lens-1: image_plane = q
+                else:                    image_plane = 0.0
 
-            beamline_element_2 = S4ConicInterfaceElement(optical_element=optical_surfaces[lens_index, 1], coordinates=coordinates_2, movements=movements, input_beam=beam1)
-            if lens_index==n_lens-1:
-                beam2, footprint2 = beamline_element_2.trace_beam(reused_stored_optical_constants=(n2, mu2, n1, mu1))
-            else:
-                beam2, _          = beamline_element_2.trace_beam(reused_stored_optical_constants=(n2, mu2, n1, mu1))
+                coordinates_1 = ElementCoordinates(p=source_plane, q=oe.get_thickness()*0.5, angle_radial=angle_radial, angle_radial_out=numpy.pi,          angle_azimuthal=angle_azimuthal)
+                coordinates_2 = ElementCoordinates(p=oe.get_thickness()*0.5, q=image_plane,  angle_radial=0.0,          angle_radial_out=angle_radial_out, angle_azimuthal=0.0)
 
-            if lens_index < n_lens-1: input_beam = beam2.duplicate()
+                beamline_element_1 = S4ConicInterfaceElement(optical_element=optical_surfaces[lens_index, 0], coordinates=coordinates_1, movements=movements, input_beam=input_beam)
+                if lens_index==0:
+                    beam1, footprint1 = beamline_element_1.trace_beam()
+                    n1, mu1, n2, mu2 = beamline_element_1.get_stored_optical_constants()
+                else:
+                    beam1, _          = beamline_element_1.trace_beam(reused_stored_optical_constants=(n1, mu1, n2, mu2))
+
+                beamline_element_2 = S4ConicInterfaceElement(optical_element=optical_surfaces[lens_index, 1], coordinates=coordinates_2, movements=movements, input_beam=beam1)
+                if lens_index==n_lens-1:
+                    beam2, footprint2 = beamline_element_2.trace_beam(reused_stored_optical_constants=(n2, mu2, n1, mu1))
+                else:
+                    beam2, _          = beamline_element_2.trace_beam(reused_stored_optical_constants=(n2, mu2, n1, mu1))
+
+                if lens_index < n_lens-1: input_beam = beam2.duplicate()
 
         return beam2, [footprint1, footprint2]
 
