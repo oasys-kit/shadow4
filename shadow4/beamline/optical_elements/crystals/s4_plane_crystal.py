@@ -76,6 +76,7 @@ class S4PlaneCrystal(S4Crystal, S4PlaneOpticalElementDecorator):
                  material_constants_library_flag=0,  # 0=xraylib, 1=dabax
                                                      # 2=shadow preprocessor file v1
                                                      # 3=shadow preprocessor file v2
+                 method_efields_management=0,
                  ):
         S4PlaneOpticalElementDecorator.__init__(self)
         S4Crystal.__init__(self,
@@ -97,6 +98,7 @@ class S4PlaneCrystal(S4Crystal, S4PlaneOpticalElementDecorator):
                            f_bragg_a=f_bragg_a,
                            f_ext=f_ext,
                            material_constants_library_flag=material_constants_library_flag,
+                           method_efields_management=method_efields_management,
                            )
 
         self.__inputs = {
@@ -117,6 +119,7 @@ class S4PlaneCrystal(S4Crystal, S4PlaneOpticalElementDecorator):
             "f_bragg_a": f_bragg_a,
             "f_ext": f_ext,
             "material_constants_library_flag": material_constants_library_flag,
+            "method_efields_management": method_efields_management,
             }
 
     def to_python_code(self, **kwargs):
@@ -143,6 +146,7 @@ class S4PlaneCrystal(S4Crystal, S4PlaneOpticalElementDecorator):
     file_refl='{file_refl}',
     f_ext={f_ext},
     material_constants_library_flag={material_constants_library_flag}, # 0=xraylib,1=dabax,2=preprocessor v1,3=preprocessor v2
+    method_efields_management={method_efields_management}, # 0=new in S4; 1=like in S3
     )"""
         txt += txt_pre.format(**self.__inputs)
 

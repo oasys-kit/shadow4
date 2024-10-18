@@ -112,6 +112,7 @@ class S4Crystal(Crystal):
                                                     # 2=shadow preprocessor file v1
                                                     # 3=shadow preprocessor file v2
                  file_refl="",
+                 method_efields_management=0, # 0=S4, 1=S3
                  ):
 
 
@@ -138,6 +139,8 @@ class S4Crystal(Crystal):
         self._material_constants_library_flag = material_constants_library_flag
         self._file_refl = file_refl
 
+        self._method_efields_management = method_efields_management
+
         # self._f_mosaic = f_mosaic
         # self._r_johansson = r_johansson
         # self._f_johansson = f_johansson
@@ -153,6 +156,7 @@ class S4Crystal(Crystal):
                     ("f_ext",               "S4: autosetting curved surface parms.",       ""),
                     ("material_constants_library_flag", "S4: crystal data from: 0=xraylib, 1=dabax, 2=file v1, 3=file v1", ""),
                     ("file_refl",           "S4: preprocessor file name",                  ""),
+                    ("method_efields_management", "flag 0:new in S4; 1=like S3",           ""),
             ] )
 
 
@@ -870,55 +874,68 @@ class S4CrystalElement(S4BeamlineElement):
         )
 
         # Calculate outgoing Photon.
-        apply_reflectivity = 2 # 0: two steps, 1: one step (default), 2: manage efields like S3, 3=new in S4
-
-        if apply_reflectivity == 0: # in two steps: todo delete
-            outgoing_complex_amplitude_photon = perfect_crystal.calculatePhotonOut(photons_in,
-                                                                                    apply_reflectivity=False,
-                                                                                    calculation_method=1,
-                                                                                    is_thick=soe._is_thick,
-                                                                                    use_transfer_matrix=0
-                                                                                    )
-            coeffs = perfect_crystal.calculateDiffraction(photons_in,
-                                                          calculation_method=1,
-                                                          is_thick=1, #soe._is_thick,
-                                                          use_transfer_matrix=0)
-            print(coeffs["S"])
-            outgoing_complex_amplitude_photon.rescaleEsigma(coeffs["S"])
-            outgoing_complex_amplitude_photon.rescaleEpi(coeffs["P"])
-
-            footprint.apply_reflectivities(
-                numpy.sqrt(outgoing_complex_amplitude_photon.getIntensityS()),
-                numpy.sqrt(outgoing_complex_amplitude_photon.getIntensityP()))
-
-            footprint.add_phases(outgoing_complex_amplitude_photon.getPhaseS(),
-                                 outgoing_complex_amplitude_photon.getPhaseP())
-
-            footprint.set_column(4, outgoing_complex_amplitude_photon.unitDirectionVector().components()[0])
-            footprint.set_column(5, outgoing_complex_amplitude_photon.unitDirectionVector().components()[1])
-            footprint.set_column(6, outgoing_complex_amplitude_photon.unitDirectionVector().components()[2])
-
-        elif apply_reflectivity == 1: # in one step - but incorrect managing of the efields todo: delete
+        method_efields_management = soe._method_efields_management # 0=new in S4, 1: like S3, 2: one step (inexact), 2: two steps (inexact)
+        if method_efields_management == 0: # NEW
+            print(">> method_efields_management=0: new in S4 using Jones calculus")
             outgoing_complex_amplitude_photon = perfect_crystal.calculatePhotonOut(photons_in,
                                                                                     apply_reflectivity=True,
                                                                                     calculation_method=1,
                                                                                     is_thick=soe._is_thick,
                                                                                     use_transfer_matrix=0
                                                                                     )
+            r_S = outgoing_complex_amplitude_photon.getComplexAmplitudeS()
+            r_P = outgoing_complex_amplitude_photon.getComplexAmplitudeP()
+            vv = outgoing_complex_amplitude_photon.unitDirectionVector().components()  # (3, npoints)
+            vOut = vv.T  # (npoints, 3)
+            vIn = v1.T
 
-            footprint.apply_reflectivities(
-                numpy.sqrt(outgoing_complex_amplitude_photon.getIntensityS()),
-                numpy.sqrt(outgoing_complex_amplitude_photon.getIntensityP()))
+            #
+            # Jones calculus of refletivity
+            #
+            J0 = footprint.get_jones()
+            e_S, e_P = footprint.get_efield_directions()
 
-            footprint.add_phases(outgoing_complex_amplitude_photon.getPhaseS(),
-                                 outgoing_complex_amplitude_photon.getPhaseP())
+            c = e_S[:, 0] # cos of angle between e_S and the x axis
+            s = numpy.sqrt(1 - c**2) # sin
 
-            footprint.set_column(4, outgoing_complex_amplitude_photon.unitDirectionVector().components()[0])
-            footprint.set_column(5, outgoing_complex_amplitude_photon.unitDirectionVector().components()[1])
-            footprint.set_column(6, outgoing_complex_amplitude_photon.unitDirectionVector().components()[2])
+            #
+            # R(-alpha) J R(alpha) (reflectivity matrix with respect to the local element)
+            #
+            j11 =  r_S * c**2 + r_P * s**2
+            j12 = (r_S - r_P) * s * c
+            j21 = j12
+            j22 = r_S * s**2 + r_P * c**2
 
-        elif apply_reflectivity == 2: # manages efields like in shadow3
-            print(">>> reflectivity method: traditional S3")
+            #
+            # multiply Jones matrix per Jones vector
+            #
+            J1 = numpy.zeros_like(J0, dtype=complex)
+            J1[:, 0] = j11 * J0[:, 0] + j12 * J0[:, 1]
+            J1[:, 1] = j21 * J0[:, 0] + j22 * J0[:, 1]
+
+            # calculate the new sigma and pi directions both perpendicular to vOut
+            # The sigma direction ee_S is perpendicular to the diffraction plane, defined as the
+            # plane that contains vIn and vOut.
+            vScatter = vector_diff(vOut, vIn)
+            ee_S = vector_cross(vScatter, vOut)
+            ee_P = vector_cross(ee_S, vOut)
+            ee_S = vector_norm(ee_S)
+            ee_P = vector_norm(ee_P)
+
+            # print("orthogonal INCIDENT: ", footprint.efields_orthogonal(verbose=0))
+
+            # set direction
+            footprint.set_column(4, vv[0])
+            footprint.set_column(5, vv[1])
+            footprint.set_column(6, vv[2])
+            # print("orthogonal BEFORE: ", footprint.efields_orthogonal(verbose=0))
+
+            # set electric fields
+            footprint.set_jones(J1, e_S=ee_S, e_P=ee_P)
+            # print("orthogonal AFTER: ", footprint.efields_orthogonal(verbose=0))
+
+        elif method_efields_management == 1: # manages efields like in shadow3
+            print(">> method_efields_management=1: traditional S3")
             outgoing_complex_amplitude_photon = perfect_crystal.calculatePhotonOut(photons_in,
                                                                                     apply_reflectivity=True,
                                                                                     calculation_method=1,
@@ -1101,66 +1118,55 @@ class S4CrystalElement(S4BeamlineElement):
             footprint.set_column(17, E_diffracted_P[:, 1])
             footprint.set_column(18, E_diffracted_P[:, 2])
 
-            # print("orthogonal AFTER: ", footprint.efields_orthogonal(verbose=1))
-
-        elif apply_reflectivity == 3: # NEW
-            print(">>> reflectivity method: new in S4 using Jones calculus")
+        elif method_efields_management == 2:  # in one step - but incorrect managing of the efields todo: delete
             outgoing_complex_amplitude_photon = perfect_crystal.calculatePhotonOut(photons_in,
-                                                                                    apply_reflectivity=True,
-                                                                                    calculation_method=1,
-                                                                                    is_thick=soe._is_thick,
-                                                                                    use_transfer_matrix=0
-                                                                                    )
-            r_S = outgoing_complex_amplitude_photon.getComplexAmplitudeS()
-            r_P = outgoing_complex_amplitude_photon.getComplexAmplitudeP()
-            vv = outgoing_complex_amplitude_photon.unitDirectionVector().components()  # (3, npoints)
-            vOut = vv.T  # (npoints, 3)
-            vIn = v1.T
+                                                                                   apply_reflectivity=True,
+                                                                                   calculation_method=1,
+                                                                                   is_thick=soe._is_thick,
+                                                                                   use_transfer_matrix=0
+                                                                                   )
 
-            #
-            # Jones calculus of refletivity
-            #
-            J0 = footprint.get_jones()
-            e_S, e_P = footprint.get_efield_directions()
+            footprint.apply_reflectivities(
+                numpy.sqrt(outgoing_complex_amplitude_photon.getIntensityS()),
+                numpy.sqrt(outgoing_complex_amplitude_photon.getIntensityP()))
 
-            c = e_S[:, 0] # cos of angle between e_S and the x axis
-            s = numpy.sqrt(1 - c**2) # sin
+            footprint.add_phases(outgoing_complex_amplitude_photon.getPhaseS(),
+                                 outgoing_complex_amplitude_photon.getPhaseP())
 
-            #
-            # R(-alpha) J R(alpha) (reflectivity matrix with respect to the local element)
-            #
-            j11 =  r_S * c**2 + r_P * s**2
-            j12 = (r_S - r_P) * s * c
-            j21 = j12
-            j22 = r_S * s**2 + r_P * c**2
+            footprint.set_column(4, outgoing_complex_amplitude_photon.unitDirectionVector().components()[0])
+            footprint.set_column(5, outgoing_complex_amplitude_photon.unitDirectionVector().components()[1])
+            footprint.set_column(6, outgoing_complex_amplitude_photon.unitDirectionVector().components()[2])
 
-            #
-            # multiply Jones matrix per Jones vector
-            #
-            J1 = numpy.zeros_like(J0, dtype=complex)
-            J1[:, 0] = j11 * J0[:, 0] + j12 * J0[:, 1]
-            J1[:, 1] = j21 * J0[:, 0] + j22 * J0[:, 1]
+        elif method_efields_management == 3:  # in two steps: todo delete
+            outgoing_complex_amplitude_photon = perfect_crystal.calculatePhotonOut(photons_in,
+                                                                                   apply_reflectivity=False,
+                                                                                   calculation_method=1,
+                                                                                   is_thick=soe._is_thick,
+                                                                                   use_transfer_matrix=0
+                                                                                   )
+            coeffs = perfect_crystal.calculateDiffraction(photons_in,
+                                                          calculation_method=1,
+                                                          is_thick=1,  # soe._is_thick,
+                                                          use_transfer_matrix=0)
+            print(coeffs["S"])
+            outgoing_complex_amplitude_photon.rescaleEsigma(coeffs["S"])
+            outgoing_complex_amplitude_photon.rescaleEpi(coeffs["P"])
 
-            # calculate the new sigma and pi directions both perpendicular to vOut
-            # The sigma direction ee_S is perpendicular to the diffraction plane, defined as the
-            # plane that contains vIn and vOut.
-            vScatter = vector_diff(vOut, vIn)
-            ee_S = vector_cross(vScatter, vOut)
-            ee_P = vector_cross(ee_S, vOut)
-            ee_S = vector_norm(ee_S)
-            ee_P = vector_norm(ee_P)
+            footprint.apply_reflectivities(
+                numpy.sqrt(outgoing_complex_amplitude_photon.getIntensityS()),
+                numpy.sqrt(outgoing_complex_amplitude_photon.getIntensityP()))
 
-            # print("orthogonal INCIDENT: ", footprint.efields_orthogonal(verbose=0))
+            footprint.add_phases(outgoing_complex_amplitude_photon.getPhaseS(),
+                                 outgoing_complex_amplitude_photon.getPhaseP())
 
-            # set direction
-            footprint.set_column(4, vv[0])
-            footprint.set_column(5, vv[1])
-            footprint.set_column(6, vv[2])
-            # print("orthogonal BEFORE: ", footprint.efields_orthogonal(verbose=0))
+            footprint.set_column(4, outgoing_complex_amplitude_photon.unitDirectionVector().components()[0])
+            footprint.set_column(5, outgoing_complex_amplitude_photon.unitDirectionVector().components()[1])
+            footprint.set_column(6, outgoing_complex_amplitude_photon.unitDirectionVector().components()[2])
 
-            # set electric fields
-            footprint.set_jones(J1, e_S=ee_S, e_P=ee_P)
-            # print("orthogonal AFTER: ", footprint.efields_orthogonal(verbose=0))
+
+        # print("orthogonal AFTER: ", footprint.efields_orthogonal(verbose=1))
+
+
 
         return footprint, normal
 
