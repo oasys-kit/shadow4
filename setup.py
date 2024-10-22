@@ -79,7 +79,7 @@ INSTALL_REQUIRES = (
     'scipy',
     'syned>=1.0.40',
     'srxraylib>=1.0.54',
-    'crystalpy>=0.0.23',
+    'crystalpy>=0.0.24',
 )
 
 README_FILE = os.path.join(os.path.dirname(__file__), 'README.rst')
