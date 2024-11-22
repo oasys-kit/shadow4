@@ -296,7 +296,8 @@ class S4MirrorElement(S4BeamlineElement):
         #
 
         if soe._f_reflec == 0:
-            pass
+            rs = 1.0
+            rp = 1.0
         elif soe._f_reflec == 1: # full polarization
             v_out = input_beam.get_columns([4, 5, 6])
             angle_in = numpy.arccos(v_in[0,:] * normal[0,:] +
@@ -322,11 +323,11 @@ class S4MirrorElement(S4BeamlineElement):
                 Rs, Rp, Ru = pr.reflectivity_fresnel(grazing_angle_mrad=grazing_angle_mrad,
                                                      photon_energy_ev=input_beam.get_column(-11),
                                                      roughness_rms_A=0.0)
-                footprint.apply_reflectivities(numpy.sqrt(Rs), numpy.sqrt(Rp))
+                rs, rp = numpy.sqrt(Rs), numpy.sqrt(Rp)
 
             elif soe._f_refl == 1:  # alpha, gamma, electric susceptibilities
                 Rs, Rp, Ru = self.reflectivity_fresnel(soe._refraction_index , grazing_angle_mrad=grazing_angle_mrad)
-                footprint.apply_reflectivities(numpy.sqrt(Rs), numpy.sqrt(Rp))
+                rs, rp = numpy.sqrt(Rs), numpy.sqrt(Rp)
 
             elif soe._f_refl == 2:  # user angle, mrad ref
                 # raise Exception("Not implemented f_refl == 2")
@@ -352,7 +353,7 @@ class S4MirrorElement(S4BeamlineElement):
                                   left=mirror_reflectivities[0],
                                   right=mirror_reflectivities[-1])
                 Rp = Rs
-                footprint.apply_reflectivities(numpy.sqrt(Rs), numpy.sqrt(Rp))
+                rs, rp = numpy.sqrt(Rs), numpy.sqrt(Rp)
 
             elif soe._f_refl == 3:  # user energy
 
@@ -369,7 +370,7 @@ class S4MirrorElement(S4BeamlineElement):
                                   left=mirror_reflectivities[0],
                                   right=mirror_reflectivities[-1])
                 Rp = Rs
-                footprint.apply_reflectivities(numpy.sqrt(Rs), numpy.sqrt(Rp))
+                rs, rp = numpy.sqrt(Rs), numpy.sqrt(Rp)
 
             elif soe._f_refl == 4:  # user 2D
                 values = numpy.loadtxt(soe._file_refl)
@@ -400,8 +401,6 @@ class S4MirrorElement(S4BeamlineElement):
 
                     Rs = get_interpolator_weight_2D(mirror_energies, mirror_grazing_angles, mirror_reflectivities)
                     Rp = Rs
-                    footprint.apply_reflectivities(numpy.sqrt(Rs), numpy.sqrt(Rp))
-                    footprint.apply_reflectivities(numpy.sqrt(Rs), numpy.sqrt(Rp))
 
                 elif values.shape[1] == 4:
                     mirror_reflectivities_s = values[:, 2]
@@ -410,7 +409,7 @@ class S4MirrorElement(S4BeamlineElement):
                     Rs = get_interpolator_weight_2D(mirror_energies, mirror_grazing_angles, mirror_reflectivities_s)
                     Rp = get_interpolator_weight_2D(mirror_energies, mirror_grazing_angles, mirror_reflectivities_p)
 
-                footprint.apply_reflectivities(numpy.sqrt(Rs), numpy.sqrt(Rp))
+                rs, rp = numpy.sqrt(Rs), numpy.sqrt(Rp)
 
             elif soe._f_refl == 5: # xraylib
 
@@ -422,7 +421,6 @@ class S4MirrorElement(S4BeamlineElement):
                         roughness_rms_A=soe._coating_roughness,
                         method=2,  # 0=born & wolf, 1=parratt, 2=shadow3
                     )
-                footprint.apply_reflectivities(numpy.abs(rs), numpy.abs(rp))
 
             elif soe._f_refl == 6: # xraylib
 
@@ -435,12 +433,16 @@ class S4MirrorElement(S4BeamlineElement):
                         method=2,  # 0=born & wolf, 1=parratt, 2=shadow3
                         dabax=None,
                     )
-                footprint.apply_reflectivities(numpy.abs(rs),numpy.abs(rp))
 
             else:
                 raise Exception("Not implemented source of mirror reflectivity")
 
+        # TODO:
+        # WARNING This application of the rs and rp coefficients does not take into account:
+        # 1) The possible rotation of the sigma and pi directions by the oe orientation angle
+        # 2) The changes in phase due to the reflection
 
+        footprint.apply_reflectivities(numpy.abs(rs), numpy.abs(rp))
 
         #
         # TODO: write angle.xx for comparison

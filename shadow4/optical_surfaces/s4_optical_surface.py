@@ -76,6 +76,26 @@ class S4OpticalSurface(object):
         newbeam.set_column(4, v2[0])
         newbeam.set_column(5, v2[1])
         newbeam.set_column(6, v2[2])
+
+
+        if False:
+            #
+            # change the electric fields TODO: review and activate!
+            #
+            axis = vector_cross(v1.T, v2.T)
+            cos_angle = vector_dot(v1.T, v2.T)
+            Es = newbeam.get_columns([7, 8, 9]).T
+            Ep = newbeam.get_columns([16, 17, 18]).T
+            Esrot = vector_rotate_around_axis(Es, axis, numpy.arccos(cos_angle))
+            Eprot = vector_rotate_around_axis(Ep, axis, numpy.arccos(cos_angle))
+
+            newbeam.set_column(7, Esrot[:, 0])
+            newbeam.set_column(8, Esrot[:, 1])
+            newbeam.set_column(9, Esrot[:, 2])
+            newbeam.set_column(16, Eprot[:, 0])
+            newbeam.set_column(17, Eprot[:, 1])
+            newbeam.set_column(18, Eprot[:, 2])
+
         newbeam.set_column(10, flag)
         newbeam.set_column(13, optical_path + t)
 

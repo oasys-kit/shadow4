@@ -2584,7 +2584,6 @@ class S4Beam(object):
         Es = self.get_columns([7, 8, 9]).T
         Ep = self.get_columns([16, 17, 18]).T
         v = self.get_columns([4, 5, 6]).T
-        print(Es.shape, Ep.shape, v.shape)
 
         if numpy.any(numpy.abs(vector_modulus(v) -1)  > accuracy):
             out = 0
