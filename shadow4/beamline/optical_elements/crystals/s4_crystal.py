@@ -904,7 +904,186 @@ class S4CrystalElement(S4BeamlineElement):
         # Calculate outgoing Photon.
         method_efields_management = soe._method_efields_management # 0=new in S4, 1: like S3, 2: one step (inexact), 2: two steps (inexact)
         verbose = False
-        if method_efields_management == 0: # NEW
+        if method_efields_management == 0: # NEW USING JR
+            # print(">> method_efields_management=0: new in S4 using Jones calculus")
+            outgoing_complex_amplitude_photon = perfect_crystal.calculatePhotonOut(photons_in,
+                                                                                    apply_reflectivity=True,
+                                                                                    calculation_method=1,
+                                                                                    is_thick=soe._is_thick,
+                                                                                    use_transfer_matrix=0
+                                                                                    )
+            r_S = outgoing_complex_amplitude_photon.getComplexAmplitudeS()
+            r_P = outgoing_complex_amplitude_photon.getComplexAmplitudeP()
+
+            if verbose:
+                print(">> r_S: ", r_S[0], numpy.abs(r_S[0]) ** 2)
+                print(">> r_P: ", r_P[0], numpy.abs(r_P[0]) ** 2)
+            vv = outgoing_complex_amplitude_photon.unitDirectionVector().components()  # (3, npoints)
+            vOut = vv.T  # shape (npoints, 3)
+            vIn = v1.T
+
+            #
+            # Jones calculus of refletivity
+            #
+            J0 = footprint.get_jones()
+            e_S, e_P = footprint.get_efield_directions() # shape(npoints, 3)
+
+            c = e_S[:, 0] # cos of angle between e_S and the x axis
+            s = numpy.sqrt(1 - c**2) # sin
+
+
+            if verbose: print(">>> s, c, angle: ", s[0], c[0], numpy.degrees(numpy.arctan2(s[0], c[0])))
+            #
+            # J R(alpha) (reflectivity matrix with respect to the local element)
+            #
+            j11 =  r_S * c
+            j12 = -r_S * s
+            j21 = r_P * s
+            j22 = r_P * c
+
+            if verbose:
+                print(">>> J: ", j11[0], j12[0], j21[0], j22[0])
+                print(">>> |J|: ", numpy.abs(j11[0]), numpy.abs(j12[0]), numpy.abs(j21[0]), numpy.abs(j22[0]))
+
+            #
+            # multiply Jones matrix per Jones vector
+            #
+            J1 = numpy.zeros_like(J0, dtype=complex)
+            J1[:, 0] = j11 * J0[:, 0] + j12 * J0[:, 1]
+            J1[:, 1] = j21 * J0[:, 0] + j22 * J0[:, 1]
+
+
+            ######################################################
+            # calculate the new sigma and pi directions both perpendicular to vOut
+            # The sigma direction ee_S is perpendicular to the diffraction plane, defined as the
+            # plane that contains vIn and vOut.
+
+            # vector shape is (npoints, 3)
+
+            if verbose:
+                print(">>>>> e_S, perp vIn: ", e_S[0], vector_dot(e_S, vIn)[0])
+                print(">>>>> e_P, perp vIn: ", e_P[0], vector_dot(e_P, vIn)[0])
+
+            solution = 4 # TODO: review and clean the not used ones
+
+            if solution == 1:
+                x_axis = numpy.zeros_like(e_S)
+                x_axis[:, 0] = 1.0
+                axis = vector_cross(e_S, x_axis)
+                print(">>>>> axis 2: ", axis[0])
+                axis = vector_norm(vector_cross(e_S, x_axis))
+                ee_S = vector_rotate_around_axis(e_S, axis, numpy.arccos(c))
+                ee_S = vector_norm(ee_S)
+                if verbose: print(">>>>> ee_S, perp vOut: ", ee_S[0], vector_dot(ee_S, vOut)[0])
+
+                # new ee_P is perp to ee_S and vOut, in other words, parallel to ee_S ^ vOout
+                axis = vector_cross(ee_S, vOut)
+                ee_P = vector_cross(ee_S, vOut)
+                ee_P = vector_norm(ee_P)
+                if verbose: print(">>>>> ee_P, perp vOut: ", ee_P[0], vector_dot(ee_P, vOut)[0])
+
+            elif solution == 2:
+                # pure geometry change
+                axis = vector_cross(vIn, vOut)
+                cos_angle = vector_dot(vIn, vOut)
+                ee_S = vector_rotate_around_axis(e_S, axis, numpy.arccos(cos_angle))
+                ee_P = vector_rotate_around_axis(e_P, axis, numpy.arccos(cos_angle))
+
+                if verbose:
+                    print(">>>>> geometric ee_S, perp vOut: ", ee_S[0], vector_dot(ee_S, vOut)[0])
+                    print(">>>>> geometric ee_P, perp vOut: ", ee_P[0], vector_dot(ee_P, vOut)[0])
+
+            elif solution == 3:
+                # pure geometry change
+                axis = vector_cross(vIn, vOut)
+                cos_angle_S = vector_dot(e_S, axis)
+                cos_angle_P = vector_dot(e_P, axis)
+
+
+                print(">>> c, angle_S: ", cos_angle_S[0], numpy.degrees(numpy.arccos(cos_angle_S[0])))
+                print(">>> c, angle_P: ", cos_angle_P[0], numpy.degrees(numpy.arccos(cos_angle_P[0])))
+
+
+                if numpy.arccos(cos_angle_P[0]) > numpy.arccos(cos_angle_S[0]):
+                    print("\n\n ************* NEED SWAP *************",
+                          numpy.degrees(numpy.arccos(cos_angle_S[0])),
+                          numpy.degrees(numpy.arccos(cos_angle_P[0])),"\n\n" )
+                    cos_angle = cos_angle_P
+                else:
+                    cos_angle = cos_angle_S
+
+                # rotate directions to match ep_P in the diffraction plane
+                ep_S = vector_rotate_around_axis(e_S, vIn, numpy.arccos(cos_angle))
+                ep_P = vector_rotate_around_axis(e_P, vIn, numpy.arccos(cos_angle))
+
+                if verbose:
+                    print(">>>>> ep_S, perp vIn: ", ep_S[0], vector_dot(ep_S, vIn)[0])
+                    print(">>>>> ep_P, perp vIn: ", ep_P[0], vector_dot(ep_P, vIn)[0])
+
+                # ee_S is the same as e_P (s component conserved)
+                # ee_P is ep_P rotated the scattering angle around ee_S
+                cos_scattering_angle = vector_dot(vIn, vOut)
+                ee_S = ep_S
+                ee_P = vector_rotate_around_axis(ep_P, ee_S, numpy.arccos(cos_scattering_angle)) # vector_cross(ee_S, vOut)
+
+                if verbose:
+                    print(">>>>> final ee_S, perp vOut: ", ee_S[0], vector_dot(ee_S, vOut)[0])
+                    print(">>>>> final ee_P, perp vOut: ", ee_P[0], vector_dot(ee_P, vOut)[0])
+            elif solution == 4:
+                # pure geometry change
+                axis = vector_cross(vOut, vIn)
+
+                if verbose: print(">>>>> axis, mod, perp vIn: ", axis[0], vector_modulus(axis)[0], vector_dot(axis, vIn)[0])
+
+                ee_S = axis
+                ee_P = vector_cross(axis, vOut)
+
+                if verbose:
+                    print(">>>>> final ee_S, perp vOut: ", ee_S[0], vector_dot(ee_S, vOut)[0])
+                    print(">>>>> final ee_P, perp vOut: ", ee_P[0], vector_dot(ee_P, vOut)[0])
+
+
+
+            ######################################################
+            # set direction
+            footprint.set_column(4, vv[0])
+            footprint.set_column(5, vv[1])
+            footprint.set_column(6, vv[2])
+
+            # set electric fields
+            # if (numpy.abs(alpha - 1/2 * numpy.pi) < 1e-6) or (numpy.abs(alpha - 3/2 * numpy.pi) < 1e-6) :
+            #     print("\n**************** SWAPPING Efields *********************\n")
+            #     j11 = 0
+            #     j12 = 1
+            #     j21 = 1
+            #     j22 = 0
+            #     #
+            #     # multiply Jones matrix per Jones vector
+            #     #
+            #     J2 = numpy.zeros_like(J1, dtype=complex)
+            #     J2[:, 0] = j11 * J1[:, 0] + j12 * J1[:, 1]
+            #     J2[:, 1] = j21 * J1[:, 0] + j22 * J1[:, 1]
+            #     J1 = J2
+
+            footprint.set_jones(J1, e_S=ee_S, e_P=ee_P)
+
+            if verbose: print(">>>> Orthogonal footprint: ", footprint.efields_orthogonal(),
+                  vector_dot(ee_S, ee_P)[0],
+                  vector_dot(ee_S, vOut)[0],
+                  vector_dot(ee_P, vOut)[0])
+
+
+            b_S, b_P = footprint.get_efield_directions()
+            print("")
+            print(">>> reflected beam e_S, mod e_s", b_S[0], vector_modulus(b_S)[0])
+            print(">>> reflected beam e_P, mod e_P, e_S.e_P: ", b_P[0], vector_modulus(b_P)[0], vector_dot(b_S, b_P)[0])
+
+
+            print(">>> Intensity foot s, beam in s, foot p,  beam in p:",
+                  footprint.get_column(24)[0],beam.get_column(24)[0],
+                  footprint.get_column(25)[0],beam.get_column(25)[0],)
+
+        elif method_efields_management == -1: # NEW BACKUP USING RJR
             # print(">> method_efields_management=0: new in S4 using Jones calculus")
             outgoing_complex_amplitude_photon = perfect_crystal.calculatePhotonOut(photons_in,
                                                                                     apply_reflectivity=True,
@@ -1082,6 +1261,7 @@ class S4CrystalElement(S4BeamlineElement):
             print(">>> Intensity foot s, beam in s, foot p,  beam in p:",
                   footprint.get_column(24)[0],beam.get_column(24)[0],
                   footprint.get_column(25)[0],beam.get_column(25)[0],)
+
 
         elif method_efields_management == 1: # manages efields like in shadow3
             print(">> method_efields_management=1: traditional S3")
