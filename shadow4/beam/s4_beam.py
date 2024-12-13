@@ -657,14 +657,20 @@ class S4Beam(object):
         return vector_norm(v_S), vector_norm(v_P)
 
     def get_jones(self, nolost=0):
+        j0, j1 = self.get_jones_components(nolost=nolost)
+        J = numpy.zeros((self.N, 2), dtype=complex)
+        J[:, 0] = j0
+        J[:, 1] = j1
+        return J
+
+    def get_jones_components(self, nolost=0):
         intS = self.get_column(24, nolost=nolost)
         intP = self.get_column(25, nolost=nolost)
         phiS = self.get_column(14, nolost=nolost)
         phiP = self.get_column(15, nolost=nolost)
-        J = numpy.zeros((phiS.size, 2), dtype=complex)
-        J[:, 0] = numpy.sqrt(intS) * numpy.exp(1j * phiS)
-        J[:, 1] = numpy.sqrt(intP) * numpy.exp(1j * phiP)
-        return J
+        j0 = numpy.sqrt(intS) * numpy.exp(1j * phiS)
+        j1 = numpy.sqrt(intP) * numpy.exp(1j * phiP)
+        return j0,j1
 
     def get_efield_directions(self):
         vOut = self.get_columns([4, 5, 6]).T
@@ -1130,13 +1136,22 @@ class S4Beam(object):
             raise Exception("Incompatible dimension of J vector: it is (%d,%d), it must be (%d,2)" %
                             (J.shape[0], J.shape[2], self.N))
 
+        j0 = J[:, 0]
+        j1 = J[:, 1]
+        self.set_jones_components(j0, j1, e_S=e_S, e_P=e_P)
+
+    def set_jones_components(self, j0, j1, e_S=None, e_P=None):
+        if self.N != j0.size:
+            raise Exception("Incompatible dimension of j0 vector: it is %d, it must be %d" %
+                            (j1.size, self.N))
+
         if e_S is None or e_P is None:
             ee_S, ee_P = self.get_efield_directions()
             if e_S is None: e_S = ee_S
             if e_P is None: e_P = ee_P
 
-        E_S = vector_multiply_scalar(e_S, numpy.abs(J[:, 0]))
-        E_P = vector_multiply_scalar(e_P, numpy.abs(J[:, 1]))
+        E_S = vector_multiply_scalar(e_S, numpy.abs(j0))
+        E_P = vector_multiply_scalar(e_P, numpy.abs(j1))
 
         self.set_column( 7, E_S[:, 0])
         self.set_column( 8, E_S[:, 1])
@@ -1144,8 +1159,8 @@ class S4Beam(object):
         self.set_column(16, E_P[:, 0])
         self.set_column(17, E_P[:, 1])
         self.set_column(18, E_P[:, 2])
-        self.set_column(14, numpy.angle(J[:, 0]))
-        self.set_column(15, numpy.angle(J[:, 1]))
+        self.set_column(14, numpy.angle(j0))
+        self.set_column(15, numpy.angle(j1))
 
     #
     # info
