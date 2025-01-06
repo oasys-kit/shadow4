@@ -1071,3 +1071,9 @@ if __name__ == "__main__":
     print("using new (vectorized): ", S4Toroid._solve_quartic_vectorized(numpy.array([BB]), numpy.array([CC]), numpy.array([DD]), numpy.array([EE])))
     print("using mathematica: ", S4Toroid._solve_quartic_mathematica(BB, CC, DD, EE))
 
+
+    coeffs = [1, -BB, CC, -DD, EE]
+    companion_matrix = numpy.diag(numpy.ones(3), k=-1)
+    companion_matrix[0, :] = -numpy.array(coeffs[1:]) / coeffs[0]
+    roots = numpy.linalg.eigvals(companion_matrix) # Find eigenvalues (roots of the polynomial)
+    print("using chatGPT/numpy: ", roots)
