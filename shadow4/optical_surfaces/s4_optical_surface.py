@@ -16,29 +16,178 @@ from shadow4.tools.arrayofvectors import vector_modulus_square, vector_modulus, 
 from shadow4.tools.logger import is_verbose, is_debug
 
 class S4OpticalSurface(object):
+    """
+    Base class to manage optical surfaces [subclasses are S4Conic, S4Toroid, S4Mesh].
+
+    """
 
     def info(self):
+        """
+        To be implemented in derived classes.
+
+        Returns
+        -------
+        NotImplementedError
+
+        """
         raise NotImplementedError("Subclasses should implement this!")
 
     def duplicate(self):
+        """
+        To be implemented in derived classes.
+
+        Returns
+        -------
+        NotImplementedError
+
+        """
         raise NotImplementedError("Subclasses should implement this!")
 
     def surface_height(self, x, y, **kwargs):
+        """
+        To be implemented in derived classes.
+
+        Returns
+        -------
+        NotImplementedError
+
+        """
         raise NotImplementedError("Subclasses should implement this!")
 
     def get_normal(self, x, **kwargs):
+        """
+        To be implemented in derived classes.
+
+        Returns
+        -------
+        NotImplementedError
+
+        """
         raise NotImplementedError("Subclasses should implement this!")
 
     def calculate_intercept(self, XIN, VIN, **kwargs): # todo: remove?
+        """
+        To be implemented in derived classes.
+
+        Returns
+        -------
+        NotImplementedError
+
+        """
         raise NotImplementedError("Subclasses should implement this!")
 
     def choose_solution(self, TPAR1, TPAR2, **kwargs):
+        """
+        To be implemented in derived classes.
+
+        Returns
+        -------
+        NotImplementedError
+
+        """
         raise NotImplementedError("Subclasses should implement this!")
 
     def calculate_intercept_and_choose_solution(self, XIN, VIN, **kwargs): # todo: common implementation it here
+        """
+        To be implemented in derived classes.
+
+        Returns
+        -------
+        NotImplementedError
+
+        """
         raise NotImplementedError("Subclasses should implement this!")
 
+    def calculate_intercept_on_beam(self, beam):
+        """
+        Computes the intersection of the incident beam (expressed in local coordinates to the beamline element) with
+        optical element.
+
+        Parameters
+        ----------
+        beam : S4Beam instance
+            The input beam
+
+        Returns
+        -------
+        tuple
+            (footprint, normal): The footprint beam and the array with the normal direction with shape (3, npoints).
+
+        Notes:
+        ------
+        It uses arrayofvectors/vector_reflection()
+
+        """
+        #
+        # intercept calculation
+        #
+        footprint = beam.duplicate()
+
+        x1 = footprint.get_columns([1, 2, 3])
+        v1 = footprint.get_columns([4, 5, 6])
+        flag = footprint.get_column(10)
+        optical_path = footprint.get_column(13)
+
+        reference_distance = -footprint.get_column(2).mean() + footprint.get_column(3).mean()
+        t, iflag = self.calculate_intercept_and_choose_solution(x1, v1, reference_distance=reference_distance)
+
+        x2 = x1 + v1 * t
+        for i in range(flag.size):
+            if iflag[i] < 0: flag[i] = -100
+
+        normal = self.get_normal(x2)
+
+        #
+        # update footprint with the coordinates, flag and optical path. Other values are not changed.
+        #
+        footprint.set_column(1, x2[0])
+        footprint.set_column(2, x2[1])
+        footprint.set_column(3, x2[2])
+        footprint.set_column(10, flag)
+        footprint.set_column(13, optical_path + t)
+
+        return footprint, normal
+
     def apply_specular_reflection_on_beam(self, beam):
+        """
+        Computes
+
+        the intersection of the incident beam (expressed in local coordinates to the beamline element) with
+        optical element; and
+
+        the output direction based on the laws of specular reflection:
+
+        - The angle of incidence (the angle between the incoming light ray and the normal to the surface) is equal to
+        the angle of reflection (the angle between the reflected light ray and the normal)
+
+        - The incident ray, the reflected ray, and the normal to the surface at the point of incidence all lie in the same plane.
+
+        In vector form, given
+
+        - Incident vector: i (pointing towards the surface)
+
+        - Normal vector: n (perpendicular to the surface, of unit length)
+
+        - Reflected vector: r (pointing away from the surface)
+
+        The relationship between these vectors is: r = i - 2(i · n) n
+
+        Parameters
+        ----------
+        beam : S4Beam instance
+            The input beam
+
+        Returns
+        -------
+        tuple
+            (newbeam, normal, t, x1, v1, x2, v2) The footprint beam, the array with the normal direction with
+            shape (3, npoints), the time of flight or travelled path; and the incident points, incident direction,
+            intercept points, and output direction, all arrays with shape shape (3, npoints).
+
+        Notes:
+        ------
+        It uses arrayofvectors/vector_reflection()
+        """
         newbeam = beam.duplicate()
 
         # ;
@@ -77,25 +226,6 @@ class S4OpticalSurface(object):
         newbeam.set_column(5, v2[1])
         newbeam.set_column(6, v2[2])
 
-
-        if False:
-            #
-            # change the electric fields TODO: review and activate!
-            #
-            axis = vector_cross(v1.T, v2.T)
-            cos_angle = vector_dot(v1.T, v2.T)
-            Es = newbeam.get_columns([7, 8, 9]).T
-            Ep = newbeam.get_columns([16, 17, 18]).T
-            Esrot = vector_rotate_around_axis(Es, axis, numpy.arccos(cos_angle))
-            Eprot = vector_rotate_around_axis(Ep, axis, numpy.arccos(cos_angle))
-
-            newbeam.set_column(7, Esrot[:, 0])
-            newbeam.set_column(8, Esrot[:, 1])
-            newbeam.set_column(9, Esrot[:, 2])
-            newbeam.set_column(16, Eprot[:, 0])
-            newbeam.set_column(17, Eprot[:, 1])
-            newbeam.set_column(18, Eprot[:, 2])
-
         newbeam.set_column(10, flag)
         newbeam.set_column(13, optical_path + t)
 
@@ -108,6 +238,31 @@ class S4OpticalSurface(object):
                                  apply_attenuation=0,
                                  linear_attenuation_coefficient=0.0,  # in SI, i.e. m^-1
                                  ):
+        """
+        Computes
+
+        - the intersection of the incident beam (expressed in local coordinates to the beamline element) with
+        optical element; and
+
+        - the output direction based on the Snell law of refraction.
+
+
+        Parameters
+        ----------
+        beam : S4Beam instance
+            The input beam
+
+        Returns
+        -------
+        tuple
+            (newbeam, normal, t, x1, v1, x2, v2) The footprint beam, the array with the normal direction with
+            shape (3, npoints), the time of flight or travelled path; and the incident points, incident direction,
+            intercept points, and output direction, all arrays with shape shape (3, npoints).
+
+        Notes:
+        ------
+        It uses arrayofvectors/vector_refraction()
+        """
 
         # ;
         # ; TRACING...
@@ -170,7 +325,34 @@ class S4OpticalSurface(object):
 
 
     def apply_grating_diffraction_on_beam(self, beam, ruling=[0.0], order=0, f_ruling=0):
+        """
+        Computes
 
+        - the intersection of the incident beam (expressed in local coordinates to the beamline element) with
+        optical element; and
+
+        - the output direction based on the Grating scattering.
+
+
+        Parameters
+        ----------
+        beam : S4Beam instance
+            The input beam
+        order : int
+            The diffraction order, e.g. -1, 1, or 0.
+        f_ruling : list
+            the ruling coefficients, e.g., [800000] for a grating with uniform ruling of 800 lines per mm.
+
+        Returns
+        -------
+        tuple
+            (newbeam, normal) The footprint beam, the array with the normal direction with
+            shape (3, npoints).
+
+        Notes:
+        ------
+        It uses arrayofvectors/vector_refraction()
+        """
         newbeam = beam.duplicate()
 
         x1 = newbeam.get_columns([1, 2, 3])

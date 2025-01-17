@@ -16,11 +16,8 @@ from crystalpy.diffraction.DiffractionSetupShadowPreprocessorV1 import Diffracti
 from crystalpy.diffraction.DiffractionSetupShadowPreprocessorV2 import DiffractionSetupShadowPreprocessorV2
 
 from crystalpy.diffraction.GeometryType import BraggDiffraction
-from crystalpy.diffraction.Diffraction import Diffraction
 from crystalpy.util.Vector import Vector
-from crystalpy.util.Photon import Photon
 from crystalpy.util.ComplexAmplitudePhoton import ComplexAmplitudePhoton
-from crystalpy.util.ComplexAmplitudePhotonBunch import ComplexAmplitudePhotonBunch
 from crystalpy.diffraction.PerfectCrystalDiffraction import PerfectCrystalDiffraction
 
 from shadow4.optical_surfaces.s4_mesh import S4Mesh
@@ -414,9 +411,7 @@ class S4CrystalElement(S4BeamlineElement):
 
         soe = self.get_optical_element()
 
-        verbose = True # False
-
-        if verbose:
+        if is_verbose():
             b_S, b_P = input_beam.get_efield_directions()
             print("\n\n")
             print(">>> input beam e_S, mod e_s", b_S[0], vector_modulus(b_S)[0])
@@ -428,7 +423,7 @@ class S4CrystalElement(S4BeamlineElement):
         input_beam.rotate(alpha1,         axis=2)
         input_beam.rotate(theta_grazing1, axis=1)
 
-        if verbose:
+        if is_verbose():
             b_S, b_P = input_beam.get_efield_directions()
             print("")
             print(">>> local beam e_S, mod e_s", b_S[0], vector_modulus(b_S)[0])
@@ -448,119 +443,9 @@ class S4CrystalElement(S4BeamlineElement):
                                    Z_ROT=movements.rotation_z)
 
         #
-        # geometric and physics for the scattering process:
-        # reflect beam in the crystal and apply crystal reflectivity
+        # crystal diffraction
         #
-
-        if soe._method_efields_management == 0: # S4
-            footprint_before_scattering, normal = self.calculate_intercept(input_beam)
-            footprint = footprint_before_scattering.duplicate()
-
-            vIn, vOut, r_SS, r_PP= self.calculate_scattering(footprint, normal)
-
-            #
-            # get versors with the sigma and pi directions for:
-            #     e_S, e_P: the incident beam (as it is)
-            #     es_S, es_P: the scattering plane spanned by vIn (incident)
-            #     ee_S, ee_P: the scattering plane spanned by vOut (incident)
-            #
-            # Note that vector_norm() is not needed (for the vectors that should be unitary),
-            # but renormalizing them improves accuracy in the calculation of c, s
-            #
-            e_S, e_P = footprint.get_efield_directions()  #  these are \hat{u}_{\sigma,\pi} in Eq. 3
-
-            axis = vector_norm(vector_cross(vIn, vOut))
-
-            es_S = axis                                  # \hat{u}_{\sigma,i} in Eq. 12
-            es_P = vector_norm(vector_cross(es_S, vIn))  # \hat{u}_{\pi,i} in Eq. 12
-
-            ee_S = axis                                   # \hat{u}_{\sigma,f} in Eq. 13
-            ee_P = vector_norm(vector_cross(ee_S, vOut))  # \hat{u}_{\pi,f} in Eq. 13
-
-
-
-            if verbose:
-                print(">>>>> e_S, perp vIn: ", e_S[0], vector_dot(e_S, vIn)[0])
-                print(">>>>> e_P, perp vIn: ", e_P[0], vector_dot(e_P, vIn)[0])
-
-                print(">>>>> axis, mod, perp vIn: ", axis[0], vector_modulus(axis)[0], vector_dot(axis, vIn)[0])
-                print(">>>>> final ee_S, perp vOut: ", ee_S[0], vector_dot(ee_S, vOut)[0])
-                print(">>>>> final ee_P, perp vOut: ", ee_P[0], vector_dot(ee_P, vOut)[0])
-
-
-            #
-            # Jones calculus of refletivity
-            #
-
-            # Jones matrix (local)
-            J00 = r_SS
-            J01 = 0
-            J10 = 0
-            J11 = r_PP
-
-            # rotation matrix R
-            if True: # todo delete, only for test
-                # c = e_S[:, 0] # cos of angle between e_S and the x axis
-                c = vector_dot(e_S, ee_S)
-                s = numpy.sqrt(1 - c ** 2)  # sin
-                if verbose: print(">>> s, c, angle: ", s[0], c[0], numpy.degrees(numpy.arctan2(s[0], c[0])))
-                R00 = c
-                R01 = -s
-                R10 = s
-                R11 = c
-                if verbose: print(">>> R angles: ", R00[0], R01[0], R10[0], R11[0])
-
-            R00 = vector_dot(e_S, es_S)
-            R01 = vector_dot(e_S, es_P)
-            R10 = vector_dot(e_P, es_S)
-            R11 = vector_dot(e_P, es_P)
-
-            # J x R(alpha), the Jones matrix to apply to the Jones vector of the incident rays
-            Jrotated_00 = J00 * R00 + J01 * R10  #  r_SS * c
-            Jrotated_01 = J00 * R01 + J01 * R11  # -r_SS * s
-            Jrotated_10 = J10 * R00 + J11 * R10  # r_PP * s
-            Jrotated_11 = J10 * R01 + J11 * R11  # r_PP * c
-
-            if verbose:
-                print(">>> R dotprd: ", R00[0], R01[0], R10[0], R11[0])
-                print(">>> J: ", Jrotated_00[0], Jrotated_01[0], Jrotated_10[0], Jrotated_11[0])
-                print(">>> |J|: ", numpy.abs(Jrotated_00[0]), numpy.abs(Jrotated_01[0]), numpy.abs(Jrotated_10[0]), numpy.abs(Jrotated_11[0]))
-
-
-            # Jones vector of incident rays
-            jv_in_0, jv_in_1 = footprint.get_jones_components()
-            # Jones vector or reflected rays
-            jv_out_0 = Jrotated_00 * jv_in_0 + Jrotated_01 * jv_in_1
-            jv_out_1 = Jrotated_10 * jv_in_0 + Jrotated_11 * jv_in_1
-
-
-            # update beam array with the new direction
-            footprint.set_column(4, vOut[:, 0])
-            footprint.set_column(5, vOut[:, 1])
-            footprint.set_column(6, vOut[:, 2])
-            # update beam array with the new electric fields
-            footprint.set_jones_components(jv_out_0, jv_out_1, e_S=ee_S, e_P=ee_P)
-
-            if verbose:
-                print(">>>> Orthogonal footprint: ", footprint.efields_orthogonal(),
-                  vector_dot(ee_S, ee_P)[0],
-                  vector_dot(ee_S, vOut)[0],
-                  vector_dot(ee_P, vOut)[0])
-
-                b_S, b_P = footprint.get_efield_directions()
-                print("")
-                print(">>> reflected beam e_S, mod e_s", b_S[0], vector_modulus(b_S)[0])
-                print(">>> reflected beam e_P, mod e_P, e_S.e_P: ", b_P[0], vector_modulus(b_P)[0], vector_dot(b_S, b_P)[0])
-
-
-                print(">>> Intensity foot s, beam in s, foot p,  beam in p:",
-                      footprint.get_column(24)[0], footprint_before_scattering.get_column(24)[0],
-                      footprint.get_column(25)[0], footprint_before_scattering.get_column(25)[0],)
-
-
-            #OLD: footprint, normal = self.apply_crystal_diffraction_and_reflectivities(input_beam)
-        else: # S3
-            footprint, normal = self.apply_crystal_diffraction_and_reflectivities_S3(input_beam)
+        footprint, normal = self._apply_crystal_diffraction(input_beam)
 
         #
         # apply crystal movements (backwards) and boundaries
@@ -582,94 +467,62 @@ class S4CrystalElement(S4BeamlineElement):
         output_beam = footprint.duplicate()
         output_beam.change_to_image_reference_system(theta_grazing2, q)
 
-        if verbose:
+        if is_verbose():
             b_S, b_P = output_beam.get_efield_directions()
             print("")
             print(">>> image e_S, mod e_s", b_S[0], vector_modulus(b_S)[0])
             print(">>> image e_P, mod e_P, e_S.e_P: ", b_P[0], vector_modulus(b_P)[0], vector_dot(b_S, b_P)[0])
 
-        # plot results
-        # if False:
-        #     if scan_type == 0:
-        #         pass
-        #     else:
-        #         deviations = output_beam.get_column(6)
-        #         intensityS = output_beam.get_column(24)
-        #         intensityP = output_beam.get_column(25)
-        #
-        #     from srxraylib.plot.gol import plot
-        #     plot(1e6 * deviations, intensityS,
-        #          1e6 * deviations, intensityP,
-        #          xtitle="deviation angle [urad]",
-        #          ytitle="Reflectivity",
-        #          legend=["Sigma-polarization", "Pi-polarization"],
-        #          linestyle=['',''],
-        #          marker=['+','.'])
-
         return output_beam, footprint
 
-
-    def calculate_intercept(self, beam):
-        """
-        Computes the intersection of the incident beam (expressed in local coordinates to the beamline element) with
-        optical element.
-
-        Parameters
-        ----------
-        beam : S4Beam instance
-            The input beam
-
-        Returns
-        -------
-        tuple
-            (footprint, normal): The footprint beam and the array with the normal direction with shape (3, npoints).
-
-        """
+    def _apply_crystal_diffraction(self, input_beam):
         #
-        # intercept calculation
+        # geometric and physics for the scattering process:
+        # reflect beam in the crystal and apply crystal reflectivity
         #
-        soe = self.get_optical_element()
-        ccc = soe.get_optical_surface_instance()
-        footprint = beam.duplicate()
 
-        x1 = footprint.get_columns([1, 2, 3])  # numpy.array(a3.getshcol([1,2,3]))
-        v1 = footprint.get_columns([4, 5, 6])  # numpy.array(a3.getshcol([4,5,6]))
-        flag = footprint.get_column(10)        # numpy.array(a3.getshonecol(10))
-        optical_path = footprint.get_column(13)
+        if self.get_optical_element()._method_efields_management == 0: # S4
+            footprint, normal = self.get_optical_element().get_optical_surface_instance().calculate_intercept_on_beam(input_beam)
 
-        # t1, t2 = ccc.calculate_intercept(x1, v1)
-        # reference_distance = -footprint.get_column(2).mean() + footprint.get_column(3).mean()
-        # t, iflag = ccc.choose_solution(t1, t2, reference_distance=reference_distance)
+            vIn, vOut, r_SS, r_PP = self._calculate_perfect_crystal_scattering(footprint, normal)
+            jv_out_0, jv_out_1, ee_S, ee_P = self._calculate_jones_and_efield_directions(footprint, normal,
+                                                                                            vIn, vOut, r_SS, r_PP)
+            # update beam array with the new direction
+            footprint.set_column(4, vOut[:, 0])
+            footprint.set_column(5, vOut[:, 1])
+            footprint.set_column(6, vOut[:, 2])
+            # update beam array with the new electric fields
+            footprint.set_jones_components(jv_out_0, jv_out_1, e_S=ee_S, e_P=ee_P)
 
-        reference_distance = -footprint.get_column(2).mean() + footprint.get_column(3).mean()
-        t, iflag = ccc.calculate_intercept_and_choose_solution(x1, v1, reference_distance=reference_distance)
+            if is_verbose():
+                print(">>>> Orthogonal footprint: ", footprint.efields_orthogonal(),
+                  vector_dot(ee_S, ee_P)[0],
+                  vector_dot(ee_S, vOut)[0],
+                  vector_dot(ee_P, vOut)[0])
 
-        x2 = x1 + v1 * t
-        for i in range(flag.size):
-            if iflag[i] < 0: flag[i] = -100
+                b_S, b_P = footprint.get_efield_directions()
+                print("")
+                print(">>> reflected beam e_S, mod e_s", b_S[0], vector_modulus(b_S)[0])
+                print(">>> reflected beam e_P, mod e_P, e_S.e_P: ", b_P[0], vector_modulus(b_P)[0], vector_dot(b_S, b_P)[0])
 
-        normal = ccc.get_normal(x2)
 
-        #
-        # update footprint with the coordinates and other values that are not changed anymore.
-        #
-        footprint.set_column(1, x2[0])
-        footprint.set_column(2, x2[1])
-        footprint.set_column(3, x2[2])
-        # footprint.set_column(4, v2[0])
-        # footprint.set_column(5, v2[1])
-        # footprint.set_column(6, v2[2])
-        footprint.set_column(10, flag)
-        footprint.set_column(13, optical_path + t)
+                print(">>> Intensity foot s, beam in s, foot p,  beam in p:",
+                      footprint.get_column(24)[0], input_beam.get_column(24)[0],
+                      footprint.get_column(25)[0], input_beam.get_column(25)[0],)
+
+        else: # S3
+            footprint, normal = self._apply_crystal_diffraction_and_reflectivities_S3(input_beam)
 
         return footprint, normal
 
-
-    def calculate_scattering(self, footprint1, normal, verbose=False):
+    def _calculate_perfect_crystal_scattering(self, footprint1, normal):
         """
         Compute the scattering by the crystal beamline element.
+
         It calls crystalpy to compute the crystal parameters:
+
         - output direction vOut
+
         - reflectivities (complex amplitudes) r__S and r_P
 
         Parameters
@@ -767,7 +620,7 @@ class S4CrystalElement(S4BeamlineElement):
         r_S = outgoing_complex_amplitude_photon.getComplexAmplitudeS()
         r_P = outgoing_complex_amplitude_photon.getComplexAmplitudeP()
 
-        if verbose:
+        if is_verbose():
             print(">> r_S: ", r_S[0], numpy.abs(r_S[0]) ** 2)
             print(">> r_P: ", r_P[0], numpy.abs(r_P[0]) ** 2)
         vv = outgoing_complex_amplitude_photon.unitDirectionVector().components()  # (3, npoints)
@@ -775,7 +628,109 @@ class S4CrystalElement(S4BeamlineElement):
         vIn = v1.T
         return vIn, vOut, r_S, r_P
 
-    def apply_crystal_diffraction_and_reflectivities_S3(self, beam, verbose=False): #TODO delete
+    def _calculate_jones_and_efield_directions(self, footprint, normal, vIn, vOut, r_SS, r_PP):
+        """
+        Calculates the Jones vector after crystal diffraction. It also returns the directions of the
+        S and P polarized components of the electric field.
+
+
+        Parameters
+        ----------
+        footprint : instance of S4Beam
+            The input beam
+        normal : numpy array shape (nrays, 3)
+            The normal to the surface at the intercept points.
+        vIn :  numpy array shape (nrays, 3)
+            The incident directions
+        vOut :  numpy array shape (nrays, 3)
+            The incident directions
+        r_SS : numpy array complex shape (nrays)
+            The crystal reflectivity for the S polarization
+        r_PP : numpy array complex shape (nrays)
+            The crystal reflectivity for the P polarization
+
+        Returns
+        -------
+        tuple
+            (jv_out_0, jv_out_1, ee_S, ee_P) the two components of the Jones vector and the two vectors of
+            shape(nrays, 3) with the electric vectors for the S and P polarizations.
+
+        """
+        #
+        # get versors with the sigma and pi directions for:
+        #     e_S, e_P: the incident beam (as it is)
+        #     es_S, es_P: the scattering plane spanned by vIn (incident)
+        #     ee_S, ee_P: the scattering plane spanned by vOut (incident)
+        #
+        # Note that vector_norm() is not needed (for the vectors that should be unitary),
+        # but renormalizing them improves accuracy in the calculation of c, s
+        #
+        e_S, e_P = footprint.get_efield_directions()  # these are \hat{u}_{\sigma,\pi} in Eq. 3
+
+        axis = vector_norm(vector_cross(vIn, vOut))
+
+        es_S = axis  # \hat{u}_{\sigma,i} in Eq. 12
+        es_P = vector_norm(vector_cross(es_S, vIn))  # \hat{u}_{\pi,i} in Eq. 12
+
+        ee_S = axis  # \hat{u}_{\sigma,f} in Eq. 13
+        ee_P = vector_norm(vector_cross(ee_S, vOut))  # \hat{u}_{\pi,f} in Eq. 13
+
+        if is_verbose():
+            print(">>>>> e_S, perp vIn: ", e_S[0], vector_dot(e_S, vIn)[0])
+            print(">>>>> e_P, perp vIn: ", e_P[0], vector_dot(e_P, vIn)[0])
+
+            print(">>>>> axis, mod, perp vIn: ", axis[0], vector_modulus(axis)[0], vector_dot(axis, vIn)[0])
+            print(">>>>> final ee_S, perp vOut: ", ee_S[0], vector_dot(ee_S, vOut)[0])
+            print(">>>>> final ee_P, perp vOut: ", ee_P[0], vector_dot(ee_P, vOut)[0])
+
+        #
+        # Jones calculus of refletivity
+        #
+
+        # Jones matrix (local)
+        J00 = r_SS
+        J01 = 0
+        J10 = 0
+        J11 = r_PP
+
+        # rotation matrix R
+        if True:  # todo delete, only for test
+            # c = e_S[:, 0] # cos of angle between e_S and the x axis
+            c = vector_dot(e_S, ee_S)
+            s = numpy.sqrt(1 - c ** 2)  # sin
+            if is_verbose(): print(">>> s, c, angle: ", s[0], c[0], numpy.degrees(numpy.arctan2(s[0], c[0])))
+            R00 = c
+            R01 = -s
+            R10 = s
+            R11 = c
+            if is_verbose(): print(">>> R angles: ", R00[0], R01[0], R10[0], R11[0])
+
+        R00 = vector_dot(e_S, es_S)
+        R01 = vector_dot(e_S, es_P)
+        R10 = vector_dot(e_P, es_S)
+        R11 = vector_dot(e_P, es_P)
+
+        # J x R(alpha), the Jones matrix to apply to the Jones vector of the incident rays
+        Jrotated_00 = J00 * R00 + J01 * R10  # r_SS * c
+        Jrotated_01 = J00 * R01 + J01 * R11  # -r_SS * s
+        Jrotated_10 = J10 * R00 + J11 * R10  # r_PP * s
+        Jrotated_11 = J10 * R01 + J11 * R11  # r_PP * c
+
+        if is_verbose():
+            print(">>> R dotprd: ", R00[0], R01[0], R10[0], R11[0])
+            print(">>> J: ", Jrotated_00[0], Jrotated_01[0], Jrotated_10[0], Jrotated_11[0])
+            print(">>> |J|: ", numpy.abs(Jrotated_00[0]), numpy.abs(Jrotated_01[0]), numpy.abs(Jrotated_10[0]),
+                  numpy.abs(Jrotated_11[0]))
+
+        # Jones vector of incident rays
+        jv_in_0, jv_in_1 = footprint.get_jones_components()
+        # Jones vector or reflected rays
+        jv_out_0 = Jrotated_00 * jv_in_0 + Jrotated_01 * jv_in_1
+        jv_out_1 = Jrotated_10 * jv_in_0 + Jrotated_11 * jv_in_1
+
+        return jv_out_0, jv_out_1, ee_S, ee_P
+
+    def _apply_crystal_diffraction_and_reflectivities_S3(self, beam): #TODO delete
         """
         Applies the changes in direction and in reflectivity in a beam due to crystal diffraction.
         It mimics the procedure in SHADOW3.
@@ -793,41 +748,13 @@ class S4CrystalElement(S4BeamlineElement):
 
         """
         #
-        # intercept calculation
-        #
         soe = self.get_optical_element()
         ccc = soe.get_optical_surface_instance()
-        footprint = beam.duplicate()
+        v1 = beam.get_columns([4, 5, 6])
 
-        x1 = footprint.get_columns([1, 2, 3])  # numpy.array(a3.getshcol([1,2,3]))
-        v1 = footprint.get_columns([4, 5, 6])  # numpy.array(a3.getshcol([4,5,6]))
-        flag = footprint.get_column(10)        # numpy.array(a3.getshonecol(10))
-        optical_path = footprint.get_column(13)
+        # intercept calculation
+        footprint, normal = ccc.calculate_intercept_on_beam(beam)
 
-        # t1, t2 = ccc.calculate_intercept(x1, v1)
-        # reference_distance = -footprint.get_column(2).mean() + footprint.get_column(3).mean()
-        # t, iflag = ccc.choose_solution(t1, t2, reference_distance=reference_distance)
-
-        reference_distance = -footprint.get_column(2).mean() + footprint.get_column(3).mean()
-        t, iflag = ccc.calculate_intercept_and_choose_solution(x1, v1, reference_distance=reference_distance)
-
-        x2 = x1 + v1 * t
-        for i in range(flag.size):
-            if iflag[i] < 0: flag[i] = -100
-
-        normal = ccc.get_normal(x2)
-
-        #
-        # update footprint with the coordinates and other values that are not changed anymore.
-        #
-        footprint.set_column(1, x2[0])
-        footprint.set_column(2, x2[1])
-        footprint.set_column(3, x2[2])
-        # footprint.set_column(4, v2[0])
-        # footprint.set_column(5, v2[1])
-        # footprint.set_column(6, v2[2])
-        footprint.set_column(10, flag)
-        footprint.set_column(13, optical_path + t)
 
         #
         # direction and reflectivity calculation using crystalpy
@@ -895,7 +822,7 @@ class S4CrystalElement(S4BeamlineElement):
 
         # Calculate outgoing Photon.
 
-        if verbose: print(">> method_efields_management=1: traditional S3")
+        if is_verbose(): print(">> method_efields_management=1: traditional S3")
         outgoing_complex_amplitude_photon = perfect_crystal.calculatePhotonOut(photons_in,
                                                                                 apply_reflectivity=True,
                                                                                 calculation_method=1,
@@ -913,7 +840,7 @@ class S4CrystalElement(S4BeamlineElement):
         vIn = v1.T
         vH = vNormal # todo: set for asymmetry!!!
 
-        if verbose:
+        if is_verbose():
             print(">>>>> incident E_S, norm: ", E_S[0], vector_modulus(E_S)[0])
             print(">>>>> incident E_P, norm: ", E_P[0], vector_modulus(E_P)[0])
 
@@ -954,7 +881,7 @@ class S4CrystalElement(S4BeamlineElement):
         a21 = vector_dot(E_S, uP)
         a22 = vector_dot(E_P, uP)
 
-        if verbose:
+        if is_verbose():
             print(">>>>    Matrix a11: ", a11[0])
             print(">>>>    Matrix a12: ", a12[0])
             print(">>>>    Matrix a21: ", a21[0])
@@ -967,7 +894,7 @@ class S4CrystalElement(S4BeamlineElement):
         E_local_P = vector_multiply_scalar(uP, numpy.sqrt(M2_P))
 
 
-        if verbose:
+        if is_verbose():
             print(">>>>> E_local_S, norm: ", E_local_S[0], vector_modulus(E_local_S)[0])
             print(">>>>> E_local_P, norm: ", E_local_P[0], vector_modulus(E_local_P)[0])
 
@@ -983,7 +910,7 @@ class S4CrystalElement(S4BeamlineElement):
         crystal_phase_S = outgoing_complex_amplitude_photon.getPhaseS()
         crystal_phase_P = outgoing_complex_amplitude_photon.getPhaseP()
 
-        if verbose:
+        if is_verbose():
             print(">>>> crystal_reflectivity_S: ", crystal_reflectivity_S[0])
             print(">>>> crystal_reflectivity_P: ", crystal_reflectivity_P[0])
 
@@ -1058,7 +985,7 @@ class S4CrystalElement(S4BeamlineElement):
         aS = vector_modulus(E_diffracted_S)
         aP = vector_modulus(E_diffracted_P)
 
-        if verbose:
+        if is_verbose():
             print(">>>>>>  Modulus of initial E vectors s, p",   vector_modulus(E_S)[0], vector_modulus(E_P)[0])
             print(">>>>>>  Modulus of diffracted E vectors s, p", aS[0], aP[0])
 
