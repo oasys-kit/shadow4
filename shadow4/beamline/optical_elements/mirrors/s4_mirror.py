@@ -298,7 +298,7 @@ class S4MirrorElement(S4BeamlineElement):
         if soe._f_reflec == 0:
             rs = 1.0
             rp = 1.0
-        elif soe._f_reflec == 1: # full polarization
+        elif soe._f_reflec == 1: # apply reflectivity
             v_out = input_beam.get_columns([4, 5, 6])
             angle_in = numpy.arccos(v_in[0,:] * normal[0,:] +
                                     v_in[1,:] * normal[1,:] +
@@ -322,20 +322,25 @@ class S4MirrorElement(S4BeamlineElement):
 
                 Rs, Rp, Ru = pr.reflectivity_fresnel(grazing_angle_mrad=grazing_angle_mrad,
                                                      photon_energy_ev=input_beam.get_column(-11),
-                                                     roughness_rms_A=0.0)
+                                                     roughness_rms_A=0.0, # todo: pass the value
+                                                     method=2, # todo: change to 0
+                                                     )
                 rs, rp = numpy.sqrt(Rs), numpy.sqrt(Rp)
 
-            elif soe._f_refl == 1:  # alpha, gamma, electric susceptibilities
-                Rs, Rp, Ru = self.reflectivity_fresnel(soe._refraction_index , grazing_angle_mrad=grazing_angle_mrad)
-                rs, rp = numpy.sqrt(Rs), numpy.sqrt(Rp)
+            elif soe._f_refl == 1:  # refraction index external
+                refraction_index_2 = soe._refraction_index
+                refraction_index_1 = numpy.ones_like(refraction_index_2)
+
+                rs, rp =  PreRefl.reflectivity_amplitudes_fresnel_external(
+                    photon_energy_ev=input_beam.get_column(-11),
+                    refraction_index_1=refraction_index_1,
+                    refraction_index_2=refraction_index_2,
+                    grazing_angle_mrad=grazing_angle_mrad,
+                    roughness_rms_A=0.0, # todo: pass the value
+                    method=2 # todo: change to 0
+                    )
 
             elif soe._f_refl == 2:  # user angle, mrad ref
-                # raise Exception("Not implemented f_refl == 2")
-
-                # values = numpy.loadtxt(self._file_refl)
-                #
-                # beam_incident_angles = 90.0 - values[:, 1]
-
                 values = numpy.loadtxt(soe._file_refl)
 
                 mirror_grazing_angles = values[:, 0]
@@ -345,15 +350,13 @@ class S4MirrorElement(S4BeamlineElement):
                     mirror_grazing_angles = values[:, 0][::-1]
                     mirror_reflectivities = values[:, 1][::-1]
 
-                # mirror_grazing_angles = numpy.degrees(1e-3*mirror_grazing_angles) # mrad to deg
-
                 Rs = numpy.interp(grazing_angle_mrad,
                                   mirror_grazing_angles,
                                   mirror_reflectivities,
                                   left=mirror_reflectivities[0],
                                   right=mirror_reflectivities[-1])
                 Rp = Rs
-                rs, rp = numpy.sqrt(Rs), numpy.sqrt(Rp)
+                rs, rp = numpy.sqrt(Rs), numpy.sqrt(Rp) # the phase is not managed!
 
             elif soe._f_refl == 3:  # user energy
 
@@ -370,7 +373,7 @@ class S4MirrorElement(S4BeamlineElement):
                                   left=mirror_reflectivities[0],
                                   right=mirror_reflectivities[-1])
                 Rp = Rs
-                rs, rp = numpy.sqrt(Rs), numpy.sqrt(Rp)
+                rs, rp = numpy.sqrt(Rs), numpy.sqrt(Rp) # the phase is not managed!
 
             elif soe._f_refl == 4:  # user 2D
                 values = numpy.loadtxt(soe._file_refl)
@@ -381,8 +384,6 @@ class S4MirrorElement(S4BeamlineElement):
                 mirror_grazing_angles = values[:, 1]
                 mirror_energies         = numpy.unique(mirror_energies)
                 mirror_grazing_angles   = numpy.unique(mirror_grazing_angles)
-                # if self.user_defined_angle_units  == 0: mirror_grazing_angles = numpy.degrees(1e-3*mirror_grazing_angles)
-                # if self.user_defined_energy_units == 1: mirror_energies *= 1e3 # KeV to eV
 
                 def get_interpolator_weight_2D(mirror_energies, mirror_grazing_angles, mirror_reflectivities):
                     mirror_reflectivities = numpy.reshape(mirror_reflectivities, (mirror_energies.shape[0], mirror_grazing_angles.shape[0]))
@@ -409,7 +410,7 @@ class S4MirrorElement(S4BeamlineElement):
                     Rs = get_interpolator_weight_2D(mirror_energies, mirror_grazing_angles, mirror_reflectivities_s)
                     Rp = get_interpolator_weight_2D(mirror_energies, mirror_grazing_angles, mirror_reflectivities_p)
 
-                rs, rp = numpy.sqrt(Rs), numpy.sqrt(Rp)
+                rs, rp = numpy.sqrt(Rs), numpy.sqrt(Rp) # the phase is not managed!
 
             elif soe._f_refl == 5: # xraylib
 
@@ -419,7 +420,7 @@ class S4MirrorElement(S4BeamlineElement):
                         coating_density=soe._coating_density,
                         grazing_angle_mrad=grazing_angle_mrad,
                         roughness_rms_A=soe._coating_roughness,
-                        method=2,  # 0=born & wolf, 1=parratt, 2=shadow3
+                        method=2,  # 0=born & wolf, 1=parratt, 2=shadow3 TODO: change to 0
                     )
 
             elif soe._f_refl == 6: # xraylib
@@ -430,7 +431,7 @@ class S4MirrorElement(S4BeamlineElement):
                         coating_density=soe._coating_density,
                         grazing_angle_mrad=grazing_angle_mrad,
                         roughness_rms_A=soe._coating_roughness,
-                        method=2,  # 0=born & wolf, 1=parratt, 2=shadow3
+                        method=2,  # 0=born & wolf, 1=parratt, 2=shadow3 TODO: change to 0
                         dabax=None,
                     )
 
@@ -475,47 +476,6 @@ class S4MirrorElement(S4BeamlineElement):
         self.get_coordinates()._angle_radial     = numpy.pi / 2 - theta_grazing
         self.get_coordinates()._angle_radial_out = numpy.pi / 2 - theta_grazing
         if theta_azimuthal is not None: self.get_coordinates()._angle_azimuthal = theta_azimuthal
-
-    @classmethod
-    def reflectivity_fresnel(cls, refraction_index, grazing_angle_mrad=3.0, debyewaller=1.0):
-        """
-        Calculates Fresnel reflectivity.
-
-        Parameters
-        ----------
-        refraction_index : complex, numpy array
-            The refraction index (complex number).
-        grazing_angle_mrad : float, numpy array
-            The grazing angle in mrad.
-        debyewaller : float, numpy array
-            The Debye-Waller factor.
-
-        Returns
-        -------
-        tuple
-            (rs, rp, runp) reflectivities [in intensity!] (sigma, pi and unpolarized).
-        """
-        theta1 = grazing_angle_mrad * 1e-3     # in rad
-
-        alpha = 2 * (1.0 - refraction_index.real)
-        gamma = 2 * refraction_index.imag
-
-        rho = (numpy.sin(theta1))**2 - alpha
-        rho += numpy.sqrt((numpy.sin(theta1)**2 - alpha)**2 + gamma**2)
-        rho = numpy.sqrt(rho / 2)
-
-        rs1 = 4 * (rho**2) * (numpy.sin(theta1) - rho)**2 + gamma**2
-        rs2 = 4 * (rho**2) * (numpy.sin(theta1) + rho)**2 + gamma**2
-        rs = rs1 / rs2
-
-        ratio1 = 4 * rho**2 * (rho * numpy.sin(theta1) - numpy.cos(theta1)**2)**2 + gamma**2 * numpy.sin(theta1)**2
-        ratio2 = 4 * rho**2 * (rho * numpy.sin(theta1) + numpy.cos(theta1)**2)**2 + gamma**2 * numpy.sin(theta1)**2
-        ratio = ratio1 / ratio2
-
-        rp = rs * ratio
-        runp = 0.5 * (rs + rp)
-
-        return rs*debyewaller, rp*debyewaller, runp*debyewaller
 
 if __name__ == "__main__":
     #

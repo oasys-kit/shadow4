@@ -1,10 +1,9 @@
 """
 python version of the mirror reflectivity code and refractive index calculations in shadow.
 """
-# TODO: vectorization
 import numpy
 import scipy.constants as codata
-from shadow4.tools.logger import is_verbose, is_debug
+from shadow4.tools.logger import is_verbose, is_debug, set_verbose
 
 tocm = codata.h * codata.c / codata.e * 1e2 # 12398.419739640718e-8
 
@@ -500,11 +499,14 @@ class PreRefl(object):
                                                  refraction_index_2=1.0,
                                                  grazing_angle_mrad=3.0,
                                                  roughness_rms_A=0.0,
-                                                 method=2, # 0=born & wolf, 1=parratt, 2=shadow3 (avoid using 0 or 1, experimental!!) ):
+                                                 method=2, # 0=born & wolf, 1=parratt, 2=shadow3
                                                  ):
         """
         Standalone method to calculate the reflectivity (amplitude) of an interface using Fresnel formulas using optical
         constants entered by user.
+
+        This is the basic routine for the Fresnel equations.
+
 
         Parameters
         ----------
@@ -515,7 +517,10 @@ class PreRefl(object):
         roughness_rms_A : float or numpy array
             The rouughness RMS in Angstroms,
         method : int, optional
-            0=Born&Wolf, 1=Parratt, 2=shadow3  (avoid using 0 or 1, experimental!!)
+            The equations used for the calculation:
+            0=Born&Wolf [1]_ , 1=Parratt [2]_, 2=shadow3 [3]_
+            Note that Parratt and shadow3 are only good for X-rays. Parratt gives bad p-pol.
+            shadow3 does not calculate correct phase. Therefore, prefer Born&Wolf.
         coating_material : int, optional
             The symbol/formula of the coating material.
         coating_density : int, optional
@@ -529,6 +534,12 @@ class PreRefl(object):
         -------
         tuple
             (rs, rp) the s-polarized and p-pol and amplitude reflectivities
+
+        References
+    ----------
+        .. [1]  and Wolf "Principles of Optics" 6th edition, pag 40, eqs 21.
+        .. [2] Parratt LG (1954) Surface studies of solids by total reflection of X-rays. Phys Rev 95(2):359–369.
+        .. [3] Equations implemented in Shadow3.
         """
 
         theta1g = grazing_angle_mrad * 1e-3     # in rad
@@ -542,16 +553,19 @@ class PreRefl(object):
         cos_theta2 = numpy.sqrt(1 - sin_theta2**2, dtype=complex)
 
 
-        if method == 0: # born & wolf
-            rs1 = refraction_index_2 * cos_theta1 - refraction_index_1 * cos_theta2
-            rs2 = refraction_index_2 * cos_theta1 + refraction_index_1 * cos_theta2
+        if method == 0: # Born & Wolf 6th edition, pag 40
+            if is_verbose(): print("Fresnel equations from B&W")
+            rs1 = refraction_index_1 * cos_theta1 - refraction_index_2 * cos_theta2
+            rs2 = refraction_index_1 * cos_theta1 + refraction_index_2 * cos_theta2
             rs = rs1 / rs2
 
-            rp1 = refraction_index_1 * cos_theta1 - refraction_index_2 * cos_theta2
-            rp2 = refraction_index_1 * cos_theta1 + refraction_index_2 * cos_theta2
+            rp1 = refraction_index_2 * cos_theta1 - refraction_index_1 * cos_theta2
+            rp2 = refraction_index_2 * cos_theta1 + refraction_index_1 * cos_theta2
+
             rp = rp1 / rp2
 
         elif method == 1: # parratt
+            if is_verbose(): print("Fresnel equations from PARRATT")
             phi = theta1g
             delta1 = 1.0 - numpy.real(refraction_index_1)
             beta1 = numpy.imag(refraction_index_1)
@@ -560,9 +574,10 @@ class PreRefl(object):
             f1 = numpy.sqrt(phi ** 2 - 2 * delta1 - 2 * 1j * beta1, dtype=complex)
             f2 = numpy.sqrt(phi ** 2 - 2 * delta2 - 2 * 1j * beta2, dtype=complex)
             rs = (f1 - f2) / (f1 + f2)
-            rp = rs
+            rp = rs # TODO complete!
 
         elif method == 2:
+            if is_verbose(): print("Fresnel equations from Shadow3")
             alpha = 2 * (1.0 - refraction_index_2.real)
             gamma = 2 * refraction_index_2.imag
 
@@ -572,6 +587,7 @@ class PreRefl(object):
 
             rs1 = 4 * (rho ** 2) * (numpy.sin(theta1g) - rho) ** 2 + gamma ** 2
             rs2 = 4 * (rho ** 2) * (numpy.sin(theta1g) + rho) ** 2 + gamma ** 2
+
             rs = rs1 / rs2
 
             ratio1 = 4 * rho ** 2 * (rho * numpy.sin(theta1g) - numpy.cos(theta1g) ** 2) ** 2 + gamma ** 2 * numpy.sin(
@@ -581,13 +597,14 @@ class PreRefl(object):
             ratio = ratio1 / ratio2
 
             rp = rs * ratio
-
             rs = numpy.sqrt(rs, dtype = complex)
             rp = numpy.sqrt(rp, dtype = complex)
 
-        wavelength_m = codata.h * codata.c / codata.e / photon_energy_ev
-
-        debyewaller = numpy.exp( -(4.0 * numpy.pi * numpy.sin(theta1g) * rough1 / (wavelength_m * 1e10))**2 )
+        if roughness_rms_A != 0.0:
+            wavelength_m = codata.h * codata.c / codata.e / photon_energy_ev
+            debyewaller = numpy.exp( -(4.0 * numpy.pi * numpy.sin(theta1g) * rough1 / (wavelength_m * 1e10))**2 )
+        else:
+            debyewaller = 1.0
 
         # runp = 0.5 * (rs + rp)
         # return numpy.abs(rs)**2 * debyewaller, numpy.abs(rp)**2 * debyewaller, numpy.abs(runp)**2 * debyewaller
@@ -706,8 +723,12 @@ class PreRefl(object):
     def prerefl_cxro(cls, input_file="https://henke.lbl.gov/tmp/xray8378.dat", output_file="prerefl.dat",
                      E_MIN=None, E_MAX=None, NPOINTS=1000):
         """
-        Creates an instance of PreRefl with parameters initialized from the keyword parameters and the
-        prerefl preprocessor file. It uses the CXRO web site for accessing the optical constants.
+        Creates an instance of PreRefl with parameters initialized from the keyword parameters and a file
+        with energy, alpha and beta created by the CXRO web site https://henke.lbl.gov/optical_constants/getdb2.html
+
+        When running the cxro site, request a "text file" and copy the link below "If your file does not appear, click here."
+
+
 
         Parameters
         ----------
@@ -727,6 +748,8 @@ class PreRefl(object):
         instance of PreRefl
         """
         a = numpy.loadtxt(input_file, skiprows=2)
+        if a.shape[1] != 3:
+            raise Exception("Bar input. Take output URL from https://henke.lbl.gov/optical_constants/getdb2.html ")
 
         energy0 = a[:,0]
         delta0  = a[:,1]
@@ -787,6 +810,9 @@ class PreRefl(object):
 
 if __name__ == "__main__":
     from srxraylib.plot.gol import plot
+
+    set_verbose()
+
     if False:
         from srxraylib.plot.gol import plot
 
@@ -810,6 +836,284 @@ if __name__ == "__main__":
 
         a.preprocessor_info()
 
+    if False: # energy scan
+        from srxraylib.plot.gol import plot
+
+        #
+        # mirror reflectivity
+        #
+
+        a = PreRefl()
+
+        prerefl_file = "Rh5_50.dat"
+        PreRefl.prerefl(interactive=False, SYMBOL="Rh", DENSITY=12.41, FILE=prerefl_file,
+                        E_MIN=5000.0, E_MAX=50000.0, E_STEP=100.0)
+
+        a.read_preprocessor_file(prerefl_file)
+
+        Energy = numpy.linspace(5000.0,40000.0,100)
+
+        RS0 = numpy.zeros_like(Energy)
+        RS5 = numpy.zeros_like(Energy)
+
+        a.preprocessor_info()
+
+        # array inputs
+
+        Grazing_angle = numpy.ones_like(Energy) * 3.0
+
+        rs0_m0, rp0_m0 = a.reflectivity_amplitudes_fresnel(grazing_angle_mrad=Grazing_angle, photon_energy_ev=Energy,
+                                                     roughness_rms_A=0.0, method=0)
+        rs1_m0, rp1_m0 = a.reflectivity_amplitudes_fresnel(grazing_angle_mrad=Grazing_angle, photon_energy_ev=Energy,
+                                                     roughness_rms_A=5.0, method=0)
+
+        rs0_m1, rp0_m1 = a.reflectivity_amplitudes_fresnel(grazing_angle_mrad=Grazing_angle, photon_energy_ev=Energy,
+                                                     roughness_rms_A=0.0, method=1)
+        rs1_m1, rp1_m1 = a.reflectivity_amplitudes_fresnel(grazing_angle_mrad=Grazing_angle, photon_energy_ev=Energy,
+                                                     roughness_rms_A=5.0, method=1)
+
+        rs0_m2, rp0_m2 = a.reflectivity_amplitudes_fresnel(grazing_angle_mrad=Grazing_angle, photon_energy_ev=Energy,
+                                                     roughness_rms_A=0.0, method=2)
+        rs1_m2, rp1_m2 = a.reflectivity_amplitudes_fresnel(grazing_angle_mrad=Grazing_angle, photon_energy_ev=Energy,
+                                                     roughness_rms_A=5.0, method=2)
+
+        plot(Energy, numpy.abs(rs0_m0) ** 2, Energy, numpy.abs(rs1_m0) ** 2,
+             Energy, numpy.abs(rs0_m1) ** 2, Energy, numpy.abs(rs1_m1) ** 2,
+             Energy, numpy.abs(rs0_m2) ** 2, Energy, numpy.abs(rs1_m2) ** 2,
+             ylog=True,
+             legend=["method 0 - no roughness", "method 0 - 5A RMS roughness",
+                     "method 1 - no roughness", "method 1 - 5A RMS roughness",
+                     "method 2 - no roughness", "method 2 - 5A RMS roughness"], title="Rh mirror 3 mrad Energy Scan")
+
+
+    if False: # theta scan
+        from srxraylib.plot.gol import plot
+
+        #
+        # mirror reflectivity vs angle
+        #
+
+
+        angle_mrad = numpy.linspace(0.0, 10.0, 100)
+
+        RS0 = numpy.zeros_like(angle_mrad)
+        RS5 = numpy.zeros_like(angle_mrad)
+
+
+        rs0_m0, rp0_m0 = PreRefl.reflectivity_amplitudes_fresnel_external(grazing_angle_mrad=angle_mrad, photon_energy_ev=20000,
+                                roughness_rms_A=0.0, method=0,
+                                refraction_index_1=1.0, refraction_index_2=0.999995+9.88072e-08j)
+        rs1_m0, rp1_m0 = PreRefl.reflectivity_amplitudes_fresnel_external(grazing_angle_mrad=angle_mrad, photon_energy_ev=20000,
+                                roughness_rms_A=5.0, method=0,
+                                refraction_index_1=1.0,
+                                refraction_index_2=0.999995 + 9.88072e-08j)
+
+        rs0_m1, rp0_m1 = PreRefl.reflectivity_amplitudes_fresnel_external(grazing_angle_mrad=angle_mrad, photon_energy_ev=20000,
+                                roughness_rms_A=0.0, method=1,
+                                refraction_index_1=1.0, refraction_index_2=0.999995+9.88072e-08j)
+        rs1_m1, rp1_m1 = PreRefl.reflectivity_amplitudes_fresnel_external(grazing_angle_mrad=angle_mrad, photon_energy_ev=20000,
+                                roughness_rms_A=5.0, method=1,
+                                refraction_index_1=1.0,
+                                refraction_index_2=0.999995 + 9.88072e-08j)
+
+        rs0_m2, rp0_m2 = PreRefl.reflectivity_amplitudes_fresnel_external(grazing_angle_mrad=angle_mrad, photon_energy_ev=20000,
+                                roughness_rms_A=0.0, method=2,
+                                refraction_index_1=1.0, refraction_index_2=0.999995+9.88072e-08j)
+        rs1_m2, rp1_m2 = PreRefl.reflectivity_amplitudes_fresnel_external(grazing_angle_mrad=angle_mrad, photon_energy_ev=20000,
+                                roughness_rms_A=5.0, method=2,
+                                refraction_index_1=1.0,
+                                refraction_index_2=0.999995 + 9.88072e-08j)
+
+        plot(angle_mrad, numpy.abs(rs0_m0) ** 2, angle_mrad, numpy.abs(rs1_m0) ** 2,
+             angle_mrad, numpy.abs(rs0_m1) ** 2, angle_mrad, numpy.abs(rs1_m1) ** 2,
+             angle_mrad, numpy.abs(rs0_m2) ** 2, angle_mrad, numpy.abs(rs1_m2) ** 2,
+             ylog=True, xtitle="Grazing angle [mrad]",
+             legend=["method 0 - no roughness", "method 0 - 5A RMS roughness",
+                     "method 1 - no roughness", "method 1 - 5A RMS roughness",
+                     "method 2 - no roughness", "method 2 - 5A RMS roughness"],
+             marker=["+", "+", None, None, None, None],
+             linestyle=["", "", None, None, None, None],
+             title="Rh mirror @ 20 keV angle scan; external refraction index",
+             show=0)
+
+        plot(
+             angle_mrad, numpy.abs(rs0_m0) ** 2, angle_mrad, numpy.abs(rp0_m0) ** 2,
+             angle_mrad, numpy.abs(rs0_m1) ** 2, angle_mrad, numpy.abs(rp0_m1) ** 2,
+             angle_mrad, numpy.abs(rs0_m2) ** 2, angle_mrad, numpy.abs(rp0_m2) ** 2,
+             ylog=0, xtitle="Incidence angle (grazing) [mrad]",
+             legend=["method 0 - s", "method 0 - p",
+                     "method 1 - s", "method 1 - p !!!",
+                     "method 2 - s", "method 2 - p"],
+             marker=["+","+",None,None,None,None],
+             linestyle=["","",None,None,None,None],
+             title="Rh mirror @ 20 keV angle scan; external refraction index", yrange=[0,1],
+             show=0)
+
+        # TODO: there are many differences in phase
+        plot(
+             angle_mrad, numpy.angle(rs0_m0), angle_mrad, numpy.angle(rp0_m0),
+             angle_mrad, numpy.angle(rs0_m1), angle_mrad, numpy.angle(rp0_m1),
+             # angle_mrad, numpy.angle(rs0_m2), angle_mrad, numpy.angle(rp0_m2),
+             ylog=0, xtitle="Incidence angle (grazing) [mrad]", ytitle="Phase angle [rad]",
+             legend=["method 0 - s", "method 0 - p",
+                     "method 1 - s", "method 1 - p !!!",
+                     "method 2 - s", "method 2 - p"],
+             marker=["x","+",None,None,None,None],
+             linestyle=["","",None,None,None,None],
+             title="Rh mirror @ 20 keV angle scan; external refraction index")
+
+    if False: # theta scan GLASS https://www.rp-photonics.com/fresnel_equations.html , see also fig 1.12 (pag 44) B&W 6th ed.
+        from srxraylib.plot.gol import plot
+
+        #
+        # mirror reflectivity vs angle
+        #
+
+
+        angle_deg = numpy.linspace(0.0, 90.0, 100)
+        angle_mrad = 1e3 * numpy.radians(90.0 - angle_deg)
+
+        RS0 = numpy.zeros_like(angle_deg)
+        RS5 = numpy.zeros_like(angle_deg)
+
+
+        rs0_m0, rp0_m0 = PreRefl.reflectivity_amplitudes_fresnel_external(grazing_angle_mrad=angle_mrad, photon_energy_ev=20000,
+                                roughness_rms_A=0.0, method=0,
+                                refraction_index_1=1.0, refraction_index_2=1.52)
+        rs1_m0, rp1_m0 = PreRefl.reflectivity_amplitudes_fresnel_external(grazing_angle_mrad=angle_mrad, photon_energy_ev=20000,
+                                roughness_rms_A=5.0, method=0,
+                                refraction_index_1=1.0, refraction_index_2=1.52)
+
+        rs0_m1, rp0_m1 = PreRefl.reflectivity_amplitudes_fresnel_external(grazing_angle_mrad=angle_mrad, photon_energy_ev=20000,
+                                roughness_rms_A=0.0, method=1,
+                                refraction_index_1=1.0, refraction_index_2=1.52)
+        rs1_m1, rp1_m1 = PreRefl.reflectivity_amplitudes_fresnel_external(grazing_angle_mrad=angle_mrad, photon_energy_ev=20000,
+                                roughness_rms_A=5.0, method=1,
+                                refraction_index_1=1.0, refraction_index_2=1.52)
+
+        rs0_m2, rp0_m2 = PreRefl.reflectivity_amplitudes_fresnel_external(grazing_angle_mrad=angle_mrad, photon_energy_ev=20000,
+                                roughness_rms_A=0.0, method=2,
+                                refraction_index_1=1.0, refraction_index_2=1.52)
+        rs1_m2, rp1_m2 = PreRefl.reflectivity_amplitudes_fresnel_external(grazing_angle_mrad=angle_mrad, photon_energy_ev=20000,
+                                roughness_rms_A=5.0, method=2,
+                                refraction_index_1=1.0, refraction_index_2=1.52)
+
+        plot(
+             angle_deg, numpy.abs(rs0_m0) ** 2, angle_deg, numpy.abs(rp0_m0) ** 2,
+             angle_deg, numpy.abs(rs0_m1) ** 2, angle_deg, numpy.abs(rp0_m1) ** 2,
+             angle_deg, numpy.abs(rs0_m2) ** 2, angle_deg, numpy.abs(rp0_m2) ** 2,
+             ylog=0, xtitle="Incidence angle (to normal) [deg]",
+             legend=["method 0 - s", "method 0 - p",
+                     "method 1 - s", "method 1 - p !!!",
+                     "method 2 - s", "method 2 - p"],
+             marker=["+","+",None,None,None,None],
+             linestyle=["","",None,None,None,None],
+             title="GLASS n=1.52", xrange=[0,90], yrange=[0,1],
+             show=0)
+
+        # degree of polarization (op.cit. pag 44 eq 42)
+        P_m0 = numpy.abs((numpy.abs(rp0_m0) ** 2 - numpy.abs(rs0_m0) ** 2) / (numpy.abs(rp0_m0) ** 2 + numpy.abs(rs0_m0) ** 2))
+        P_m1 = numpy.abs((numpy.abs(rp0_m1) ** 2 - numpy.abs(rs0_m1) ** 2) / (numpy.abs(rp0_m1) ** 2 + numpy.abs(rs0_m1) ** 2))
+        P_m2 = numpy.abs((numpy.abs(rp0_m2) ** 2 - numpy.abs(rs0_m2) ** 2) / (numpy.abs(rp0_m2) ** 2 + numpy.abs(rs0_m2) ** 2))
+
+        print(">>>>", P_m0)
+        plot(
+             angle_deg, P_m0,
+             angle_deg, P_m1,
+             angle_deg, P_m2,
+             ylog=0, xtitle="Incidence angle (to normal) [deg]",
+             legend=["method 0",
+                     "method 1 !!!",
+                     "method 2"],
+             marker=["+",None,None],
+             linestyle=["",None,None],
+             title="GLASS n=1.52 POLARIZATION DEGREE", xrange=[0,90],
+             show=0)
+
+        # phase diff (op.cit. pag 50)
+        delta_m0 = numpy.angle(rs0_m0) - numpy.angle(rp0_m0)
+        delta_m1 = numpy.angle(rs0_m1) - numpy.angle(rp0_m1)
+        delta_m2 = numpy.angle(rs0_m2) - numpy.angle(rp0_m2)
+
+        plot(
+             angle_deg, delta_m0,
+             angle_deg, delta_m1,
+             angle_deg, delta_m2,
+             ylog=0, xtitle="Incidence angle (to normal) [deg]",
+             legend=["method 0",
+                     "method 1",
+                     "method 2"],
+             marker=["+",None,None],
+             linestyle=["",None,None],
+             title="GLASS n=1.52 delta (phase s - phase p)", xrange=[0,90],
+             show=1)
+
+    if 1: # Fresnel Rhomb  GLASS op cit  fig 1.16 (pag 450-51).
+        from srxraylib.plot.gol import plot
+
+        #
+        # mirror reflectivity vs angle
+        #
+
+
+        angle_deg = numpy.linspace(0.0, 90.0, 1000)
+        angle_mrad = 1e3 * numpy.radians(90.0 - angle_deg)
+
+        refraction_index_1 = 1.51
+        refraction_index_2 = 1.0
+
+        RS0 = numpy.zeros_like(angle_deg)
+        RS5 = numpy.zeros_like(angle_deg)
+
+        n12 = refraction_index_2 / refraction_index_1
+
+        rs0_m0, rp0_m0 = PreRefl.reflectivity_amplitudes_fresnel_external(grazing_angle_mrad=angle_mrad, photon_energy_ev=20000,
+                                roughness_rms_A=0.0, method=0,
+                                refraction_index_1=refraction_index_1, refraction_index_2=refraction_index_2)
+        rs1_m0, rp1_m0 = PreRefl.reflectivity_amplitudes_fresnel_external(grazing_angle_mrad=angle_mrad, photon_energy_ev=20000,
+                                roughness_rms_A=5.0, method=0,
+                                refraction_index_1=refraction_index_1, refraction_index_2=refraction_index_2)
+
+
+        plot(
+             angle_deg, numpy.abs(rs0_m0) ** 2, angle_deg, numpy.abs(rp0_m0) ** 2,
+             ylog=0, xtitle="Incidence angle (to normal) [deg]",
+             marker=["+","+",None,None,None,None],
+             title="FRESNEL RHOMB - REFLECTANCE", xrange=[0,90], yrange=[0,1],
+             show=0)
+
+        # degree of polarization (op.cit. pag 44 eq 42)
+        P_m0 = numpy.abs((numpy.abs(rp0_m0) ** 2 - numpy.abs(rs0_m0) ** 2) / (numpy.abs(rp0_m0) ** 2 + numpy.abs(rs0_m0) ** 2))
+
+        plot(
+             angle_deg, P_m0,
+             ylog=0, xtitle="Incidence angle (to normal) [deg]",
+             title="FRESNEL RHOMB - POLARIZATION DEGREE", xrange=[0,90],
+             show=0)
+
+        # phase diff (op.cit. pag 50)
+        delta_m0 = numpy.angle(rs0_m0) - numpy.angle(rp0_m0)
+
+        angle = numpy.radians(angle_deg)
+        arg_eq61 = numpy.cos(angle) * numpy.sqrt(numpy.sin(angle) ** 2 - n12 ** 2) / numpy.sin(angle) ** 2
+        ii = numpy.nanargmax(arg_eq61)
+        print("Max of eq 61 found at [deg]: ", angle_deg[ii], arg_eq61[ii])
+        delta_eq61 = 2 * numpy.arctan(arg_eq61)
+
+
+        plot(
+             angle_deg, numpy.degrees(delta_m0),
+             angle_deg, numpy.degrees(delta_eq61),
+             angle_deg, angle_deg * 0 + 45,
+             ylog=0, xtitle="Incidence angle (to normal) [deg]", ytitle="Phase diff delta [deg]",
+             title="FRESNEL RHOMB - delta (phase s - phase p)", xrange=[0,90],
+             legend=["fresnel", "eq61 TOTAL REFLECTION", "45"],
+             show=1)
+
+
+    if False:
+        from srxraylib.plot.gol import plot
+
         #
         # mirror reflectivity
         #
@@ -832,8 +1136,8 @@ if __name__ == "__main__":
         #
         # scalar inputs
         #
-        process_phase = False
-        method = 2
+        process_phase = True
+        method = 0
 
         for ii,ee in enumerate(Energy):
             if process_phase:
@@ -851,7 +1155,7 @@ if __name__ == "__main__":
                                                      roughness_rms_A=5.0, method=method)
                 RS5[ii] = rs
 
-        plot(Energy,RS0,Energy,RS5,ylog=True,legend=["no roughness","5A RMS roughness"],title="scalar inputs")
+        plot(Energy,RS0,Energy,RS5,ylog=True,legend=["no roughness","5A RMS roughness"],title="Rh5_50.dat scalar inputs")
 
 
 
@@ -871,10 +1175,10 @@ if __name__ == "__main__":
             rs0, rp0, rav0 = a.reflectivity_fresnel(grazing_angle_mrad=Grazing_angle, photon_energy_ev=Energy, roughness_rms_A=0.0)
             rs1, rp1, rav1 = a.reflectivity_fresnel(grazing_angle_mrad=Grazing_angle, photon_energy_ev=Energy, roughness_rms_A=5.0)
 
-            plot(Energy, rs0, Energy, rs1, ylog=True, legend=["no roughness", "5A RMS roughness"],title="array inputs")
+            plot(Energy, rs0, Energy, rs1, ylog=True, legend=["no roughness", "5A RMS roughness"],title="Rh5_50.dat array inputs")
 
 
-    if False: # compare with cxro
+    if False: # compare with cxro i) Au at low energies (differences observed)
 
         prerefl_file = "reflec1.dat"
         prerefl_file_cxro = "reflec_cxro.dat"
@@ -883,12 +1187,12 @@ if __name__ == "__main__":
         PreRefl.prerefl(interactive=False, SYMBOL="Au", DENSITY=19.3, FILE=prerefl_file,
                         E_MIN=110.0, E_MAX=501.0, E_STEP=1.0)
 
-        PreRefl.prerefl_cxro(input_file="https://henke.lbl.gov/tmp/xray8378.dat",
+        PreRefl.prerefl_cxro(input_file="https://henke.lbl.gov/tmp/xray8383.dat", # https://henke.lbl.gov/tmp/xray8354.dat
                              output_file=prerefl_file_cxro,
                              E_MIN=110, E_MAX=501,  NPOINTS=500)
 
         Energy = numpy.linspace(110.0,500.0,1000)
-        grazing_angle_mrad = 175.5
+        grazing_angle_mrad = 175.5 # 10.055409304545947 degrees
 
         a = PreRefl()
         a.read_preprocessor_file(filename=prerefl_file)
@@ -902,7 +1206,37 @@ if __name__ == "__main__":
 
         plot(Energy, rs,
              Energy, rs2, legend=["xraylib","cxro"],
-             xtitle="Photon energy [eV]", ytitle="Reflectivity", title="Au@%g mrad" % grazing_angle_mrad)
+             xtitle="Photon energy [eV]", ytitle="Reflectivity", title="COMPARISON WITH CXRO - LOW ENERGY - Au@%g mrad" % grazing_angle_mrad)
+
+    if False: # compare with cxro ii) Si at high energies (similar)
+
+        prerefl_file = "reflec1.dat"
+        prerefl_file_cxro = "reflec_cxro.dat"
+
+
+        PreRefl.prerefl(interactive=False, SYMBOL="Si", DENSITY=2.33, FILE=prerefl_file,
+                        E_MIN=1000.0, E_MAX=25000.0, E_STEP=25.0)
+
+        PreRefl.prerefl_cxro(input_file="https://henke.lbl.gov/tmp/xray8434.dat", # https://henke.lbl.gov/tmp/xray8354.dat
+                             output_file=prerefl_file_cxro,
+                             E_MIN=1000, E_MAX=25000,  NPOINTS=500)
+
+        Energy = numpy.linspace(5000.0,20000.0,1000)
+        grazing_angle_mrad = 5.0 # 10.055409304545947 degrees
+
+        a = PreRefl()
+        a.read_preprocessor_file(filename=prerefl_file)
+        rs, rp, rav = a.reflectivity_fresnel(grazing_angle_mrad=grazing_angle_mrad, photon_energy_ev=Energy,
+                                             roughness_rms_A=0.0, method=2)
+
+        a2 = PreRefl()
+        a2.read_preprocessor_file(filename=prerefl_file_cxro)
+        rs2, rp2, rav2 = a2.reflectivity_fresnel(grazing_angle_mrad=grazing_angle_mrad, photon_energy_ev=Energy,
+                                             roughness_rms_A=0.0, method=2)
+
+        plot(Energy, rs,
+             Energy, rs2, legend=["xraylib","cxro"],
+             xtitle="Photon energy [eV]", ytitle="Reflectivity", title="COMPARISON WITH CXRO - HIGH ENERGY - Si@%g mrad" % grazing_angle_mrad)
 
     if False: # comparing with f1f2_calc
 
@@ -912,12 +1246,12 @@ if __name__ == "__main__":
 
         PreRefl.prerefl(interactive=False, SYMBOL="Au", DENSITY=19.3, FILE=prerefl_file,
                         E_MIN=110.0, E_MAX=501.0, E_STEP=1.0)
-
+        #
         Energy = numpy.linspace(110.0, 500.0, 1000)
         grazing_angle_mrad = 175.5
-
-        PreRefl.prerefl(interactive=False, SYMBOL="Au", DENSITY=19.3, FILE=prerefl_file,
-                        E_MIN=110.0, E_MAX=501.0, E_STEP=1.0)
+        #
+        # PreRefl.prerefl(interactive=False, SYMBOL="Au", DENSITY=19.3, FILE=prerefl_file,
+        #                 E_MIN=110.0, E_MAX=501.0, E_STEP=1.0)
 
         a = PreRefl()
         a.read_preprocessor_file(prerefl_file)
@@ -928,7 +1262,7 @@ if __name__ == "__main__":
         #
         # scalar inputs
         #
-        process_phase = False
+        process_phase = True
         method = 0
 
         for ii,ee in enumerate(Energy):
@@ -953,7 +1287,9 @@ if __name__ == "__main__":
         print(aa.shape)
         plot(Energy,RS0,
              Energy,aa,
-             legend=["RS0",'f1f2_calc'])
+             legend=["xraylib",'f1f2_calc'],
+             xtitle="Photon energy [eV]", ytitle="Reflectivity",
+             title="COMPARISON WITH f1f2_calc - LOW ENERGY - Si@%g mrad" % grazing_angle_mrad)
 
 
     if False:
@@ -967,47 +1303,52 @@ if __name__ == "__main__":
         a.read_preprocessor_file(prerefl_file)
 
 
-        energies = (2000,3000,4000)
+        energies = (2000, 3000, 4000)
         print("Energies: ", energies)
+        method = 0
+
         for energy in energies:
+            print("+++++++++++++++++++++++++++++ Energy: ", energy)
             print(
                 a.reflectivity_amplitudes_fresnel(photon_energy_ev=energy,
                                                          grazing_angle_mrad=3.0,
                                                          roughness_rms_A=0.0,
-                                                         method=2 # 0=born & wolf, 1=parratt, 2=shadow3
+                                                         method=method # 0=born & wolf, 1=parratt, 2=shadow3
                                                         )
             )
 
+        energies = numpy.array((2000,3000,4000,4000))
+        print("+++++++++++++++++++++++++++++ Energy Scan: ", energies)
         print(
-                        a.reflectivity_amplitudes_fresnel(photon_energy_ev=numpy.array((2000,3000,4000,4000)),
+                        a.reflectivity_amplitudes_fresnel(photon_energy_ev=energies,
                                                                  grazing_angle_mrad=numpy.array((3.0,3.0,3.0,1.0)),
                                                                  roughness_rms_A=0.0,
-                                                                 method=2 # 0=born & wolf, 1=parratt, 2=shadow3
+                                                                 method=method # 0=born & wolf, 1=parratt, 2=shadow3
                                                                 )
                     )
 
         tmp_xrl = PreRefl.reflectivity_amplitudes_fresnel_external_xraylib(
-                                          photon_energy_ev=numpy.array((2000, 3000, 4000, 4000)),
+                                          photon_energy_ev=energies,
                                           coating_material="Au",
                                           coating_density=19.3,
                                           grazing_angle_mrad=numpy.array((3.0, 3.0, 3.0, 1.0)),
                                           roughness_rms_A=0.0,
-                                          method=2  # 0=born & wolf, 1=parratt, 2=shadow3
+                                          method=method  # 0=born & wolf, 1=parratt, 2=shadow3
                                           )
 
         tmp_dx = PreRefl.reflectivity_amplitudes_fresnel_external_dabax(
-                                          photon_energy_ev=numpy.array((2000, 3000, 4000, 4000)),
+                                          photon_energy_ev=energies,
                                           coating_material="Au",
                                           coating_density=19.3,
                                           grazing_angle_mrad=numpy.array((3.0, 3.0, 3.0, 1.0)),
                                           roughness_rms_A=0.0,
-                                          method=2  # 0=born & wolf, 1=parratt, 2=shadow3
+                                          method=method  # 0=born & wolf, 1=parratt, 2=shadow3
                                           )
 
         print(">>>> tmp_xrl", tmp_xrl)
         print(">>>> tmp_dx", tmp_dx)
 
-    if True:
+    if False :
         prerefl_file = "reflec1.dat"
 
         PreRefl.prerefl(interactive=False, SYMBOL="Au", DENSITY=19.3, FILE=prerefl_file,
@@ -1040,9 +1381,8 @@ if __name__ == "__main__":
         print(">>>> tmp_dx", tmp_dx)
 
 
-        if False:
+        if True:
             print("Refraction index Au (prerefl file): ", a.get_refraction_index(numpy.array(energies)))
-
             n_xrl = PreRefl.get_refraction_index_external_xraylib(
                                                 photon_energy_ev=numpy.array((2000, 3000, 4000, 4000)),
                                                 material="Au",
@@ -1055,13 +1395,11 @@ if __name__ == "__main__":
                                                 density=19.3,
                                                 dabax=None,
                                                        )
-
             print("Refraction index Au (xraylib): ", n_xrl)
             print("Refraction index Au (dabax): ", n_dx)
 
         if True:
             prerefl_file = "reflec1.dat"
-
             PreRefl.prerefl(interactive=False, SYMBOL="Al", DENSITY=2.6989, FILE=prerefl_file,
                             E_MIN=13000.0, E_MAX=15000.0, E_STEP=100.0)
 
@@ -1069,10 +1407,6 @@ if __name__ == "__main__":
             a.read_preprocessor_file(prerefl_file)
 
             energies = (14000, 14001, 14002)
-
-
-
-
             n_xrl = PreRefl.get_refraction_index_external_xraylib(
                                                 photon_energy_ev=numpy.array(energies),
                                                 material="Al",
@@ -1098,10 +1432,6 @@ if __name__ == "__main__":
                                                 density=2.6989,
                                                 dabax=None,
                                                        )
-            # print("Refraction index Al (prerefl file): ", a.get_refraction_index(numpy.array(energies)))
-            # print("Refraction index Al (xraylib): ", n_xrl)
-            # print("Refraction index Al (dabax): ", n_dx)
-
-            print("Attenuation index Al (prerefl file): ", a.get_attenuation_coefficient(numpy.array(energies)))
-            print("Attenuation index Al (xraylib): ", a_xrl)
-            print("Attenuation index Al (dabax): ", a_dx)
+            print("Attenuation Al (prerefl file): ", a.get_attenuation_coefficient(numpy.array(energies)))
+            print("Attenuation Al (xraylib): ", a_xrl)
+            print("Attenuation Al (dabax): ", a_dx)
