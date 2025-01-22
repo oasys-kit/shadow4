@@ -292,13 +292,12 @@ class S4MirrorElement(S4BeamlineElement):
 
         #
         # apply mirror reflectivity
-        # TODO: add phase
         #
 
-        if soe._f_reflec == 0:
-            rs = 1.0
-            rp = 1.0
-        elif soe._f_reflec == 1: # apply reflectivity
+        rs = 1.0
+        rp = 1.0
+
+        if soe._f_reflec == 1: # apply reflectivity
             v_out = input_beam.get_columns([4, 5, 6])
             angle_in = numpy.arccos(v_in[0,:] * normal[0,:] +
                                     v_in[1,:] * normal[1,:] +
@@ -318,14 +317,20 @@ class S4MirrorElement(S4BeamlineElement):
                 prerefl_file = soe._file_refl
                 pr = PreRefl()
                 pr.read_preprocessor_file(prerefl_file)
-                print(pr.info())
+                if is_verbose(): print(pr.info())
 
-                Rs, Rp, Ru = pr.reflectivity_fresnel(grazing_angle_mrad=grazing_angle_mrad,
+                rs, rp = pr.reflectivity_fresnel(grazing_angle_mrad=grazing_angle_mrad,
                                                      photon_energy_ev=input_beam.get_column(-11),
-                                                     roughness_rms_A=0.0, # todo: pass the value
-                                                     method=2, # todo: change to 0
+                                                     roughness_rms_A=soe._coating_roughness,
+                                                     method=0,
                                                      )
-                rs, rp = numpy.sqrt(Rs), numpy.sqrt(Rp)
+
+                # Rs, Rp, Ru = pr.reflectivity_fresnel(grazing_angle_mrad=grazing_angle_mrad,
+                #                                      photon_energy_ev=input_beam.get_column(-11),
+                #                                      roughness_rms_A=0.0, # todo: pass the value
+                #                                      method=0,
+                #                                      )
+                # rs, rp = numpy.sqrt(Rs), numpy.sqrt(Rp)
 
             elif soe._f_refl == 1:  # refraction index external
                 refraction_index_2 = soe._refraction_index
@@ -336,8 +341,8 @@ class S4MirrorElement(S4BeamlineElement):
                     refraction_index_1=refraction_index_1,
                     refraction_index_2=refraction_index_2,
                     grazing_angle_mrad=grazing_angle_mrad,
-                    roughness_rms_A=0.0, # todo: pass the value
-                    method=2 # todo: change to 0
+                    roughness_rms_A=soe._coating_roughness,
+                    method=0,
                     )
 
             elif soe._f_refl == 2:  # user angle, mrad ref
@@ -420,10 +425,10 @@ class S4MirrorElement(S4BeamlineElement):
                         coating_density=soe._coating_density,
                         grazing_angle_mrad=grazing_angle_mrad,
                         roughness_rms_A=soe._coating_roughness,
-                        method=2,  # 0=born & wolf, 1=parratt, 2=shadow3 TODO: change to 0
+                        method=0,  # 0=born & wolf, 1=parratt, 2=shadow3
                     )
 
-            elif soe._f_refl == 6: # xraylib
+            elif soe._f_refl == 6: # dabax
 
                 rs, rp = PreRefl.reflectivity_amplitudes_fresnel_external_dabax(
                         photon_energy_ev=input_beam.get_column(-11),
@@ -431,7 +436,7 @@ class S4MirrorElement(S4BeamlineElement):
                         coating_density=soe._coating_density,
                         grazing_angle_mrad=grazing_angle_mrad,
                         roughness_rms_A=soe._coating_roughness,
-                        method=2,  # 0=born & wolf, 1=parratt, 2=shadow3 TODO: change to 0
+                        method=0,  # 0=born & wolf, 1=parratt, 2=shadow3
                         dabax=None,
                     )
 
@@ -441,9 +446,9 @@ class S4MirrorElement(S4BeamlineElement):
         # TODO:
         # WARNING This application of the rs and rp coefficients does not take into account:
         # 1) The possible rotation of the sigma and pi directions by the oe orientation angle
-        # 2) The changes in phase due to the reflection
 
         footprint.apply_reflectivities(numpy.abs(rs), numpy.abs(rp))
+        footprint.add_phases(numpy.angle(rs), numpy.angle(rp))
 
         #
         # TODO: write angle.xx for comparison

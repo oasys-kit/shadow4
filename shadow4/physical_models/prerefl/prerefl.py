@@ -355,7 +355,7 @@ class PreRefl(object):
                                         photon_energy_ev=10000.0,
                                         grazing_angle_mrad=3.0,
                                         roughness_rms_A=0.0,
-                                        method=2 # 0=born & wolf, 1=parratt, 2=shadow3 (avoid using 0 or 1, experimental!!)
+                                        method=0 # 0=born & wolf, 1=parratt, 2=shadow3 (avoid using 0 or 1, experimental!!)
                                         ):
         """
         Calculates the reflectivity (amplitude) of an interface using Fresnel formulas.
@@ -395,7 +395,7 @@ class PreRefl(object):
                                                          coating_density=3.217,
                                                          grazing_angle_mrad=3.0,
                                                          roughness_rms_A=0.0,
-                                                         method=2,
+                                                         method=0,
                                                          # 0=born & wolf, 1=parratt, 2=shadow3 (avoid using 0 or 1, experimental!!) ):
                                                          ):
         """
@@ -445,7 +445,7 @@ class PreRefl(object):
                                                          coating_density=3.217,
                                                          grazing_angle_mrad=3.0,
                                                          roughness_rms_A=0.0,
-                                                         method=2, # 0=born & wolf, 1=parratt, 2=shadow3 (avoid using 0 or 1, experimental!!) ):
+                                                         method=0, # 0=born & wolf, 1=parratt, 2=shadow3 (avoid using 0 or 1, experimental!!) ):
                                                          dabax=None,
                                                        ):
         """
@@ -499,7 +499,7 @@ class PreRefl(object):
                                                  refraction_index_2=1.0,
                                                  grazing_angle_mrad=3.0,
                                                  roughness_rms_A=0.0,
-                                                 method=2, # 0=born & wolf, 1=parratt, 2=shadow3
+                                                 method=0, # 0=born & wolf, 1=parratt, 2=shadow3
                                                  ):
         """
         Standalone method to calculate the reflectivity (amplitude) of an interface using Fresnel formulas using optical
@@ -511,7 +511,8 @@ class PreRefl(object):
         Parameters
         ----------
         photon_energy_ev : float or numpy array
-            The photon energy in eV.
+            The photon energy in eV. This is only used for the Debye-Waller factor, therefore it is not used if
+            roughness_rms_A=0.
         grazing_angle_mrad : float or numpy array
             The grazing incident angle in mrad.
         roughness_rms_A : float or numpy array
@@ -962,7 +963,7 @@ if __name__ == "__main__":
              linestyle=["","",None,None,None,None],
              title="Rh mirror @ 20 keV angle scan; external refraction index")
 
-    if False: # theta scan GLASS https://www.rp-photonics.com/fresnel_equations.html , see also fig 1.12 (pag 44) B&W 6th ed.
+    if 1: # theta scan GLASS https://www.rp-photonics.com/fresnel_equations.html , see also fig 1.12 (pag 44) B&W 6th ed.
         from srxraylib.plot.gol import plot
 
         #
@@ -1048,7 +1049,7 @@ if __name__ == "__main__":
              title="GLASS n=1.52 delta (phase s - phase p)", xrange=[0,90],
              show=1)
 
-    if 1: # Fresnel Rhomb  GLASS op cit  fig 1.16 (pag 450-51).
+    if False: # Fresnel Rhomb  GLASS op cit  fig 1.16 (pag 450-51).
         from srxraylib.plot.gol import plot
 
         #
