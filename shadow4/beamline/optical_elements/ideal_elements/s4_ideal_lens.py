@@ -80,7 +80,7 @@ class S4IdealLensElement(S4BeamlineElement):
         footprint = self.get_input_beam().duplicate()
 
         p, q = self.get_coordinates().get_p_and_q()
-        if p != 0.0: footprint.retrace(p,resetY=True)
+        if p != 0.0: footprint.retrace(p, resetY=True)
 
         output_beam = footprint.duplicate()
 
@@ -88,15 +88,15 @@ class S4IdealLensElement(S4BeamlineElement):
         if self.get_focalX() != 0.0:
             # whatch out the minus!!
             tan_two_theta = - output_beam.get_column(1) / self.get_focalX()
-            output_beam.rotate(numpy.arctan(tan_two_theta),axis=3,rad=True)
+            output_beam.rotate(numpy.arctan(tan_two_theta), axis=3, rad=True)
 
         # rotate around X
         if self.get_focalZ() != 0.0:
             tan_two_theta = output_beam.get_column(3) / self.get_focalZ()
-            output_beam.rotate(numpy.arctan(tan_two_theta),axis=1,rad=True)
+            output_beam.rotate(numpy.arctan(tan_two_theta), axis=1, rad=True)
 
         if q != 0.0:
-            output_beam.retrace(q,resetY=True)
+            output_beam.retrace(q, resetY=True)
 
         return output_beam, footprint
 
@@ -124,7 +124,7 @@ class S4IdealLensElement(S4BeamlineElement):
 class S4SuperIdealLens(IdealLens, S4OpticalElementDecorator):
     def __init__(self, name="Undefined",focal_p_x=1.0, focal_p_y=1.0,
                                         focal_q_x=1.0, focal_q_y=1.0,):
-        super().__init__(name=name,focal_x=1.0/(1/focal_p_x+1/focal_q_x),focal_y=1.0/(1/focal_p_y+1/focal_q_y))
+        super().__init__(name=name, focal_x=1.0 / (1 / focal_p_x + 1 / focal_q_x), focal_y=1.0 / (1 / focal_p_y + 1 / focal_q_y))
 
         self._focal_p_x = focal_p_x
         self._focal_p_y = focal_p_y
@@ -203,7 +203,7 @@ class S4SuperIdealLensElement(S4BeamlineElement):
         footprint = self.get_input_beam().duplicate()
 
         p, q = self.get_coordinates().get_p_and_q()
-        if p != 0.0: footprint.retrace(p,resetY=True)
+        if p != 0.0: footprint.retrace(p, resetY=True)
 
         lens = self.get_optical_element()
 
@@ -221,7 +221,7 @@ class S4SuperIdealLensElement(S4BeamlineElement):
             tan_theta_q = 0.0
 
         two_theta = numpy.arctan(tan_theta_p) + numpy.arctan(tan_theta_q)
-        output_beam.rotate(two_theta,axis=3,rad=True)
+        output_beam.rotate(two_theta, axis=3, rad=True)
 
         # rotate around X
         if lens._focal_p_y != 0.0:
@@ -238,7 +238,7 @@ class S4SuperIdealLensElement(S4BeamlineElement):
         output_beam.rotate(two_theta,axis=1,rad=True)
 
         if q != 0.0:
-            output_beam.retrace(q,resetY=True)
+            output_beam.retrace(q, resetY=True)
 
         return output_beam, footprint
 
