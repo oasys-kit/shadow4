@@ -78,7 +78,7 @@ class PreRefl(object):
         """
         return self.preprocessor_info()
 
-    def get_refraction_index(self,energy1):
+    def get_refraction_index(self, energy1):
         """
         Returns the complex refraction index.
 
@@ -93,7 +93,7 @@ class PreRefl(object):
             The complex refraction index.
         """
 
-        wnum = 2*numpy.pi * energy1 / tocm
+        wnum = 2 * numpy.pi * energy1 / tocm
 
         QSTEP = self.prerefl_dict["QSTEP"]
         QMIN = self.prerefl_dict["QMIN"]
@@ -101,18 +101,15 @@ class PreRefl(object):
         index1 = (wnum - QMIN) / QSTEP
         index1 = numpy.array(index1).astype(int)
 
-        if index1.max() > self.prerefl_dict["NREFL"]:
-            raise Exception("Error: Photon energy above tabulated upper limit.")
+        if (index1.max() + 1) > (self.prerefl_dict["NREFL"] - 1):
+            raise Exception("Error: Photon energy above (or equal) tabulated upper limit.")
 
         if index1.min() < 0:
             raise Exception("Error: Photon energy below tabulated lower limit.")
 
-        # WNUM0 = QSTEP * int(index1) + QMIN
         WNUM0 = QSTEP * index1 + QMIN
         DEL_X = wnum - WNUM0
         DEL_X = DEL_X / QSTEP
-
-        # index1 = int(index1)
 
         ALFA = self.prerefl_dict["ZF1"][index1] + (self.prerefl_dict["ZF1"][index1 + 1] - self.prerefl_dict["ZF1"][index1]) * DEL_X
         GAMMA = self.prerefl_dict["ZF2"][index1] + (self.prerefl_dict["ZF2"][index1 + 1] - self.prerefl_dict["ZF2"][index1]) * DEL_X
@@ -538,7 +535,7 @@ class PreRefl(object):
 
         References
     ----------
-        .. [1]  and Wolf "Principles of Optics" 6th edition, pag 40, eqs 21.
+        .. [1] Born and Wolf "Principles of Optics" 6th edition, pag 40, eqs 21.
         .. [2] Parratt LG (1954) Surface studies of solids by total reflection of X-rays. Phys Rev 95(2):359–369.
         .. [3] Equations implemented in Shadow3.
         """
@@ -614,7 +611,7 @@ class PreRefl(object):
 
 
     #
-    # this is copied (ans sligtly ceaned) from shadow3 python preprocessors
+    # this is copied (and sligtly cleaned) from shadow3 python preprocessors
     #
     @classmethod
     def prerefl(cls,
@@ -718,7 +715,7 @@ class PreRefl(object):
         return None
 
     #
-    # this is copied (ans sligtly ceaned) from shadow3 python preprocessors
+    # this will create prerefl file from a file prepared at https://henke.lbl.gov/tmp/xray8378.dat
     #
     @classmethod
     def prerefl_cxro(cls, input_file="https://henke.lbl.gov/tmp/xray8378.dat", output_file="prerefl.dat",
@@ -809,10 +806,90 @@ class PreRefl(object):
 
         return None
 
+
+    #
+    # this will create prerefl file from a file from https://refractiveindex.info
+    # (it needs that the python package refractiveindex ( https://pypi.org/project/refractiveindex ) is installed)
+    #
+    @classmethod
+    def prerefl_refractiveindexinfo(cls,
+                    shelf='main', book='SiO2', page='Franta',
+                    output_file="prerefl.dat",
+                    WAVELENGTH_MIN=100e-9, WAVELENGTH_MAX=500e-9, NPOINTS=1000, density=2.2):
+        """
+        Creates an instance of PreRefl with parameters initialized from the keyword parameters and data
+        from https://refractiveindex.info/ .
+
+        Parameters
+        ----------
+        shelf : str
+            The shelf name (see [1]_ and [2]_).
+        book : str
+            The book name (see [1]_ and [2]_).
+        page : str
+            The page name (see [1]_ and [2]_).
+        output_file : str, optional
+            The file name (output) for the prerefl preprocessor file.
+        WAVELENGTH_MIN : float, optional
+            The minimum value for the wavelength in m.
+        WAVELENGTH_MAX: float, optional
+            The maximum value for the wavelength in m.
+        NPOINTS : int, optional
+            The number of points.
+        density : float, optional
+            The density in g/cm^3.
+
+        Returns
+        -------
+        instance of PreRefl
+
+        References
+        ----------
+        .. [1] https://github.com/toftul/refractiveindex
+        .. [2] https://refractiveindex.info/
+
+        """
+
+        from refractiveindex import RefractiveIndexMaterial
+
+        depth0 = density / 2.0
+
+        mat = RefractiveIndexMaterial(shelf=shelf, book=book, page=page)
+
+        qmax = 2 * numpy.pi / (WAVELENGTH_MIN * 100)  # in cm^-1
+        qmin = 2 * numpy.pi / (WAVELENGTH_MAX * 100)  # in cm^-1
+        QARRAY = numpy.linspace(qmin, qmax, NPOINTS)
+
+        N = []
+        K = []
+        for i in range(NPOINTS):
+            wavelength_nm = 2 * numpy.pi / QARRAY[i] * 1e7
+            N.append(mat.get_refractive_index(wavelength_nm))
+            K.append(mat.get_extinction_coefficient(wavelength_nm))
+
+        delta = 1 - numpy.array(N)
+        beta  = numpy.array(K)
+        qstep = numpy.abs(QARRAY[1] - QARRAY[0])
+
+
+        f = open(output_file, 'wt')
+        f.write(("%20.11e " * 4 + "\n") % tuple([qmin, qmax, qstep, depth0]))
+        f.write("%i \n" % int(NPOINTS))
+        for i in range(NPOINTS):
+            tmp = 2e0 * delta[i]
+            f.write("%e \n" % tmp)
+        for i in range(NPOINTS):
+            tmp2 = 2e0 * beta[i]
+            f.write("%e \n" % tmp2)
+        print("File written to disk: %s" % output_file)
+        f.close()
+
+        return None
+
 if __name__ == "__main__":
     from srxraylib.plot.gol import plot
 
-    set_verbose()
+    # set_verbose()
 
     if False:
         from srxraylib.plot.gol import plot
@@ -963,7 +1040,7 @@ if __name__ == "__main__":
              linestyle=["","",None,None,None,None],
              title="Rh mirror @ 20 keV angle scan; external refraction index")
 
-    if 1: # theta scan GLASS https://www.rp-photonics.com/fresnel_equations.html , see also fig 1.12 (pag 44) B&W 6th ed.
+    if False: # theta scan GLASS https://www.rp-photonics.com/fresnel_equations.html , see also fig 1.12 (pag 44) B&W 6th ed.
         from srxraylib.plot.gol import plot
 
         #
@@ -1208,6 +1285,32 @@ if __name__ == "__main__":
         plot(Energy, rs,
              Energy, rs2, legend=["xraylib","cxro"],
              xtitle="Photon energy [eV]", ytitle="Reflectivity", title="COMPARISON WITH CXRO - LOW ENERGY - Au@%g mrad" % grazing_angle_mrad)
+
+    if False: # refractiveindex.info site
+
+        prerefl_file_cxro = "reflec_refractiveindexinfo.dat"
+
+
+
+        PreRefl.prerefl_refractiveindexinfo(shelf='main', book='SiO2', page='Franta',
+                                output_file=prerefl_file_cxro,
+                    WAVELENGTH_MIN=5000e-9, WAVELENGTH_MAX=15000e-9, NPOINTS=1000, density=2.2)
+        #           WAVELENGTH_MIN = 0.025e-6, WAVELENGTH_MAX = 125e-6, NPOINTS = 100000, density = 2.2)
+
+        a2 = PreRefl()
+        a2.read_preprocessor_file(filename=prerefl_file_cxro)
+
+        wavelength_nm = numpy.linspace(6000, 14000, 1500)
+        energy_eV = codata.h * codata.c / codata.e / (wavelength_nm * 1e-9)
+
+        print(">>>> eV: ", energy_eV)
+        nn = a2.get_refraction_index(energy_eV)
+        plot(wavelength_nm, nn.real,
+             wavelength_nm, nn.imag,
+             legend=["real(n)","imag(n)"],
+             xtitle="Wavelength [nm]", title="data from database at: https://refractiveindex.info")
+
+
 
     if False: # compare with cxro ii) Si at high energies (similar)
 
