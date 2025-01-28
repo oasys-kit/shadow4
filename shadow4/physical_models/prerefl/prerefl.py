@@ -117,23 +117,44 @@ class PreRefl(object):
         refraction_index = (1.0 - ALFA / 2) + (GAMMA / 2)*1j
 
         if is_verbose():
-            print("   prerefl_test: calculates refraction index for a given energy")
-            print("                 using a file created by the prerefl preprocessor.")
-            print("   \n")
+            try:
+                print("   prerefl_test: calculates refraction index for a given energy")
+                print("                 using a file created by the prerefl preprocessor.")
+                print("   \n")
 
-            print("------------------------------------------------------------------------" )
-            print("Inputs: " )
-            print("   energy [eV]:                       ",wnum * tocm / (2 * numpy.pi))
-            print("   wavelength [A]:                    ",(1.0 / wnum) * 2 * numpy.pi * 1e8 )
-            print("   wavenumber (2 pi/lambda) [cm^-1]:  ",wnum )
-            # wnum = 2*numpy.pi * energy1 / tocm
-            print("Outputs: " )
-            print("   refraction index = (1-delta) + i*beta : " )
-            print("   delta:                          ", 1.0 - refraction_index.real )
-            print("   beta:                           ", refraction_index.imag)
-            print("   real(n):                        ", refraction_index.real )
-            print("   attenuation coef [cm^-1]:       ", 2*refraction_index.imag*wnum )
-            print("------------------------------------------------------------------------" )
+                print("------------------------------------------------------------------------")
+                print("Inputs: ")
+                print("   energy [eV]:                       ", wnum[0] * tocm / (2 * numpy.pi))
+                print("   wavelength [A]:                    ", (1.0 / wnum[0]) * 2 * numpy.pi * 1e8)
+                print("   wavenumber (2 pi/lambda) [cm^-1]:  ", wnum[0])
+                # wnum = 2*numpy.pi * energy1 / tocm
+                print("Outputs: ")
+                print("   refraction index = (1-delta) + i*beta : ")
+                print("   delta:                          ", 1.0 - refraction_index[0].real)
+                print("   beta:                           ", refraction_index[0].imag)
+                print("   real(n):                        ", refraction_index[0].real)
+                print("   attenuation coef [cm^-1]:       ", 2 * refraction_index[0].imag * wnum[0])
+                print("The given results correspond to ray index 0")
+
+                print("------------------------------------------------------------------------")
+            except:
+                print("   prerefl_test: calculates refraction index for a given energy")
+                print("                 using a file created by the prerefl preprocessor.")
+                print("   \n")
+
+                print("------------------------------------------------------------------------" )
+                print("Inputs: " )
+                print("   energy [eV]:                       ",wnum * tocm / (2 * numpy.pi))
+                print("   wavelength [A]:                    ",(1.0 / wnum) * 2 * numpy.pi * 1e8 )
+                print("   wavenumber (2 pi/lambda) [cm^-1]:  ",wnum )
+                # wnum = 2*numpy.pi * energy1 / tocm
+                print("Outputs: " )
+                print("   refraction index = (1-delta) + i*beta : " )
+                print("   delta:                          ", 1.0 - refraction_index.real )
+                print("   beta:                           ", refraction_index.imag)
+                print("   real(n):                        ", refraction_index.real )
+                print("   attenuation coef [cm^-1]:       ", 2*refraction_index.imag*wnum )
+                print("------------------------------------------------------------------------" )
 
 
         return refraction_index
@@ -815,7 +836,8 @@ class PreRefl(object):
     def prerefl_refractiveindexinfo(cls,
                     shelf='main', book='SiO2', page='Franta',
                     output_file="prerefl.dat",
-                    WAVELENGTH_MIN=100e-9, WAVELENGTH_MAX=500e-9, NPOINTS=1000, density=2.2):
+                    WAVELENGTH_MIN=100e-9, WAVELENGTH_MAX=500e-9, NPOINTS=1000, density=2.2,
+                    use_absorption=1, invert_refraction_index=0):
         """
         Creates an instance of PreRefl with parameters initialized from the keyword parameters and data
         from https://refractiveindex.info/ .
@@ -838,6 +860,10 @@ class PreRefl(object):
             The number of points.
         density : float, optional
             The density in g/cm^3.
+        use_absorption : int, optional
+            Set to zero for using zero absorption (zero imaginary part of refraction index).
+        invert_refraction_index : int, optional
+            Set to 1 to invert the refraction index (to be used for example, for total internal reflection)
 
         Returns
         -------
@@ -864,8 +890,14 @@ class PreRefl(object):
         K = []
         for i in range(NPOINTS):
             wavelength_nm = 2 * numpy.pi / QARRAY[i] * 1e7
-            N.append(mat.get_refractive_index(wavelength_nm))
-            K.append(mat.get_extinction_coefficient(wavelength_nm))
+            if invert_refraction_index:
+                N.append(1.0 / mat.get_refractive_index(wavelength_nm))
+            else:
+                N.append(mat.get_refractive_index(wavelength_nm))
+            if use_absorption:
+                K.append(mat.get_extinction_coefficient(wavelength_nm))
+            else:
+                K.append(0.0)
 
         delta = 1 - numpy.array(N)
         beta  = numpy.array(K)

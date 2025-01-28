@@ -13,6 +13,7 @@ from shadow4.beamline.s4_beamline_element_movements import S4BeamlineElementMove
 from shadow4.optical_surfaces.s4_conic import S4Conic
 from shadow4.optical_surfaces.s4_toroid import S4Toroid
 from shadow4.optical_surfaces.s4_mesh import S4Mesh
+from shadow4.tools.logger import is_verbose
 
 class S4Mirror(Mirror):
     """
@@ -319,18 +320,11 @@ class S4MirrorElement(S4BeamlineElement):
                 pr.read_preprocessor_file(prerefl_file)
                 if is_verbose(): print(pr.info())
 
-                rs, rp = pr.reflectivity_fresnel(grazing_angle_mrad=grazing_angle_mrad,
+                rs, rp = pr.reflectivity_amplitudes_fresnel(grazing_angle_mrad=grazing_angle_mrad,
                                                      photon_energy_ev=input_beam.get_column(-11),
                                                      roughness_rms_A=soe._coating_roughness,
                                                      method=0,
                                                      )
-
-                # Rs, Rp, Ru = pr.reflectivity_fresnel(grazing_angle_mrad=grazing_angle_mrad,
-                #                                      photon_energy_ev=input_beam.get_column(-11),
-                #                                      roughness_rms_A=0.0, # todo: pass the value
-                #                                      method=0,
-                #                                      )
-                # rs, rp = numpy.sqrt(Rs), numpy.sqrt(Rp)
 
             elif soe._f_refl == 1:  # refraction index external
                 refraction_index_2 = soe._refraction_index
