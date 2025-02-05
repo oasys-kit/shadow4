@@ -271,7 +271,7 @@ class S4SphereOpticalElementDecorator(S4CurvedOpticalElementDecorator):
                                                                     cylangle=cylangle,
                                                                     switch_convexity=switch_convexity,
                                                                     )
-        if is_verbose: print("Sphere ccc", out.ccc)
+        if is_verbose(): print("Sphere ccc", out.ccc)
         return out
 
 class S4EllipsoidOpticalElementDecorator(S4CurvedOpticalElementDecorator):
