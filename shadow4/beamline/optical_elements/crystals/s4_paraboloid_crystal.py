@@ -161,10 +161,12 @@ class S4ParaboloidCrystal(S4Crystal, S4ParaboloidOpticalElementDecorator):
         str
             Python code.
         """
-        txt = "\nfrom shadow4.beamline.optical_elements.crystals.s4_paraboloid_crystal import S4ParaboloidCrystal"
+        txt = self.to_python_code_boundary_shape()
+        txt_pre = """
 
-        txt_pre = """\noptical_element = S4ParaboloidCrystal(name='{name}',
-    boundary_shape=None,
+from shadow4.beamline.optical_elements.crystals.s4_paraboloid_crystal import S4ParaboloidCrystal        
+optical_element = S4ParaboloidCrystal(name='{name}',
+    boundary_shape=boundary_shape,
     at_infinity={at_infinity:d}, parabola_parameter={parabola_parameter:f}, pole_to_focus={pole_to_focus:f},
     is_cylinder={is_cylinder:d}, cylinder_direction={cylinder_direction:d}, convexity={convexity:d},
     material='{material}',

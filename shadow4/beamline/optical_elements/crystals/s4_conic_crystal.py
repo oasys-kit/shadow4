@@ -135,10 +135,12 @@ class S4ConicCrystal(S4Crystal, S4ConicOpticalElementDecorator):
         str
             Python code.
         """
-        txt = "\nfrom shadow4.beamline.optical_elements.crystals.s4_conic_crystal import S4ConicCrystal"
+        txt = self.to_python_code_boundary_shape()
+        txt_pre = """
 
-        txt_pre = """\noptical_element = S4ConicCrystal(name='{name}',
-    boundary_shape=None,
+from shadow4.beamline.optical_elements.crystals.s4_conic_crystal import S4ConicCrystal
+optical_element = S4ConicCrystal(name='{name}',
+    boundary_shape=boundary_shape,
     conic_coefficients={conic_coefficients:s},
     material='{material}', miller_index_h={miller_index_h}, miller_index_k={miller_index_k}, miller_index_l={miller_index_l},
     f_bragg_a={f_bragg_a}, asymmetry_angle={asymmetry_angle},

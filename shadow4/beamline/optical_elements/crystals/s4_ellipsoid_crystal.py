@@ -160,9 +160,11 @@ class S4EllipsoidCrystal(S4Crystal, S4EllipsoidOpticalElementDecorator):
         str
             Python code.
         """
-        txt = "\nfrom shadow4.beamline.optical_elements.crystals.s4_ellipsoid_crystal import S4EllipsoidCrystal"
+        txt = self.to_python_code_boundary_shape()
+        txt_pre = """
 
-        txt_pre = """\noptical_element = S4EllipsoidCrystal(name='{name}',
+from shadow4.beamline.optical_elements.crystals.s4_ellipsoid_crystal import S4EllipsoidCrystal        
+optical_element = S4EllipsoidCrystal(name='{name}',
     boundary_shape=None, material='{material}',
     miller_index_h={miller_index_h}, miller_index_k={miller_index_k}, miller_index_l={miller_index_l},
     f_bragg_a={f_bragg_a}, asymmetry_angle={asymmetry_angle},

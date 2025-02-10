@@ -160,10 +160,12 @@ class S4HyperboloidCrystal(S4Crystal, S4HyperboloidOpticalElementDecorator):
         str
             Python code.
         """
-        txt = "\nfrom shadow4.beamline.optical_elements.crystals.s4_hyperboloid_crystal import S4HyperboloidCrystal"
+        txt = self.to_python_code_boundary_shape()
+        txt_pre = """
 
-        txt_pre = """\noptical_element = S4HyperboloidCrystal(name='{name}',
-    boundary_shape=None, material='{material}',
+from shadow4.beamline.optical_elements.crystals.s4_hyperboloid_crystal import S4HyperboloidCrystal        
+optical_element = S4HyperboloidCrystal(name='{name}',
+    boundary_shape=boundary_shape, material='{material}',
     miller_index_h={miller_index_h}, miller_index_k={miller_index_k}, miller_index_l={miller_index_l},
     f_bragg_a={f_bragg_a}, asymmetry_angle={asymmetry_angle},
     is_thick={is_thick}, thickness={thickness},

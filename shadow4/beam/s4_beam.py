@@ -909,9 +909,10 @@ class S4Beam(object):
                 # CALCULATE HALF-ENERGY-WIDTH
                 cdf = numpy.cumsum(ticket["histogram"])
                 cdf /= cdf.max()
-                # hew is two times  the x value that has cdf=0.5 (Eq. 9 in https://arxiv.org/pdf/1505.07474v2.pdf)
-                hew = 2 * float(bin_center[numpy.argwhere(cdf > 0.5)][0])
-                ticket["hew"] = hew
+                hew1 = float(bin_center[numpy.argwhere(cdf > 0.25)][0])
+                hew2 = float(bin_center[numpy.argwhere(cdf > 0.75)][0])
+                ticket["hew"] = hew2 - hew1
+
 
         return ticket
 
@@ -1087,6 +1088,76 @@ class S4Beam(object):
 
         return ticket
 
+    def calculate_hew_x(self, nolost=0, bins=100):
+        """
+        Calculate HEW (Half Energy Width) for the Horizontal angle (column 4)
+        Parameters
+        ----------
+
+        nbins : int, optional
+            number of bins of the histogram.
+
+        nolost : int, optional
+            0=use all rays, 1=use only good rays (non-lost rays), 2=use only lost rays.
+
+        Returns
+        -------
+            float
+                The hew value (in radians).
+        """
+        xp = self.get_column(4, nolost=nolost)
+        w = self.get_column(23, nolost=nolost)
+        h_x, bins_x = numpy.histogram(numpy.abs(xp - numpy.average(xp, weights=w)), bins=bins, weights=w)
+        bin_center = bins_x[:-1] + (bins_x[1] - bins_x[0]) * 0.5
+        cdf_x = numpy.cumsum(h_x)
+        cdf_x /= cdf_x.max()
+        hew_x = 2 * float(bin_center[numpy.argwhere(cdf_x > 0.5)][0])
+        return hew_x
+
+    def calculate_hew_z(self, nolost=0, bins=100):
+        """
+        Calculate HEW (Half Energy Width) for the Vertical angle (column 6)
+        Parameters
+        ----------
+
+        nbins : int, optional
+            number of bins of the histogram.
+
+        nolost : int, optional
+            0=use all rays, 1=use only good rays (non-lost rays), 2=use only lost rays.
+
+        Returns
+        -------
+            float
+                The hew value (in radians).
+        """
+        zp = self.get_column(6, nolost=nolost)
+        w = self.get_column(23, nolost=nolost)
+        h_z, bins_z = numpy.histogram(numpy.abs(zp - numpy.average(zp, weights=w)), bins=bins, weights=w)
+        bin_center = bins_z[:-1] + (bins_z[1] - bins_z[0]) * 0.5
+        cdf_z = numpy.cumsum(h_z)
+        cdf_z /= cdf_z.max()
+        hew_z = 2 * float(bin_center[numpy.argwhere(cdf_z > 0.5)][0])
+        return hew_z
+
+    def calculate_hew(self, nolost=0, bins=100):
+        """
+        Calculate HEW (Half Energy Width) for the Horizontal and Vertical angles (columns 4 and 6)
+        Parameters
+        ----------
+
+        nbins : int, optional
+            number of bins of the histogram.
+
+        nolost : int, optional
+            0=use all rays, 1=use only good rays (non-lost rays), 2=use only lost rays.
+
+        Returns
+        -------
+            tuple
+                The hew values (in radians).
+        """
+        return self.calculate_hew_x(nolost=nolost, bins=bins), self.calculate_hew_z(nolost=nolost, bins=bins)
     #
     # setters
     #
