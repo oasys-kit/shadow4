@@ -324,7 +324,7 @@ class S4OpticalSurface(object):
         return newbeam, normal
 
 
-    def apply_grating_diffraction_on_beam(self, beam, ruling=[0.0], order=0, f_ruling=0):
+    def apply_grating_diffraction_on_beam(self, beam, ruling=[0.0], order=0, f_ruling=0, invert_normal=1):
         """
         Computes
 
@@ -336,13 +336,15 @@ class S4OpticalSurface(object):
 
         Parameters
         ----------
-        beam : S4Beam instance
+        beam : S4Beam instance, optional
             The input beam
-        order : int
+        order : int, optional
             The diffraction order, e.g. -1, 1, or 0.
         f_ruling : list
             the ruling coefficients, e.g., [800000] for a grating with uniform ruling of 800 lines per mm.
-
+        invert_normal : int, optional
+            We need the outward normal. In case that the calculated normal is inwards (like in S4Conic), set this flag
+            to one. In other cases when the calculated normal is outward (like S4Mesh) set to 0.
         Returns
         -------
         tuple
@@ -374,58 +376,72 @@ class S4OpticalSurface(object):
         # ;
 
         normal = self.get_normal(x2)
-
         # ;
         # ; grating scattering
         # ;
-        if True:
-            DIST = x2[1]
-            RDENS = 0.0
-            for n in range(len(ruling)):
-                RDENS += ruling[n] * DIST**n
+        DIST = x2[1]
+        RDENS = 0.0
+        for n in range(len(ruling)):
+            RDENS += ruling[n] * DIST**n
 
-            PHASE = optical_path + 2 * numpy.pi * order * DIST * RDENS / kin
-            G_MOD = 2 * numpy.pi * RDENS * order
-
-
-            # capilatized vectors are [:,3] as required for vector_* operations
-            VNOR = normal.T
-            VNOR = vector_multiply_scalar(VNOR, -1.0) # outward normal
+        PHASE = optical_path + 2 * numpy.pi * order * DIST * RDENS / kin
+        G_MOD = 2 * numpy.pi * RDENS * order
 
 
-            # versors
-            X_VRS = numpy.zeros((nrays,3))
-            X_VRS[:,0] = 1
-            Y_VRS = numpy.zeros((nrays, 3))
-            Y_VRS[:,1] = 1
+        # capilatized vectors are [:,3] as required for vector_* operations
+        VNOR = normal.T
 
-            if f_ruling == 0:
-                G_FAC = vector_dot(VNOR, Y_VRS)
-                G_FAC = numpy.sqrt(1 - G_FAC**2)
-            elif f_ruling == 1:
-                G_FAC = 1.0
-            elif f_ruling == 5:
-                G_FAC = vector_dot(VNOR, Y_VRS)
-                G_FAC = numpy.sqrt(1 - G_FAC**2)
+        # ###
+        # ccc = soe.get_optical_surface_instance()
+        #
+        # if isinstance(ccc, S4Mesh):
+        #     surface_normal = Vector(normal[0], normal[1], normal[2])  # normal is outwards!
+        # elif isinstance(ccc, S4Toroid):
+        #     if ccc.f_torus == 0 or ccc.f_torus == 2:
+        #         surface_normal = Vector(normal[0], normal[1], normal[2]).scalarMultiplication(
+        #             -1.0)  # normal is inwards!
+        #     else:
+        #         surface_normal = Vector(normal[0], normal[1], normal[2])  # normal is outwards!
+        #
+        # ###
 
-            G_MODR = G_MOD * G_FAC
 
-            K_IN = vector_multiply_scalar(v1.T, kin)
-            K_IN_NOR = vector_multiply_scalar(VNOR, vector_dot(K_IN, VNOR) )
-            K_IN_PAR = vector_diff(K_IN, K_IN_NOR)
+        if invert_normal: VNOR = vector_multiply_scalar(VNOR, -1.0) # outward normal
 
-            VTAN = vector_cross(VNOR, X_VRS)
-            GSCATTER = vector_multiply_scalar(VTAN, G_MODR)
 
-            K_OUT_PAR = vector_sum(K_IN_PAR, GSCATTER)
-            K_OUT_NOR = vector_multiply_scalar(VNOR,  numpy.sqrt(kin**2 - vector_modulus_square(K_OUT_PAR)))
-            K_OUT = vector_sum(K_OUT_PAR, K_OUT_NOR)
-            V_OUT = vector_norm(K_OUT)
+
+        # versors
+        X_VRS = numpy.zeros((nrays,3))
+        X_VRS[:,0] = 1
+        Y_VRS = numpy.zeros((nrays, 3))
+        Y_VRS[:,1] = 1
+
+        if f_ruling == 0:
+            G_FAC = vector_dot(VNOR, Y_VRS)
+            G_FAC = numpy.sqrt(1 - G_FAC**2)
+        elif f_ruling == 1:
+            G_FAC = 1.0
+        elif f_ruling == 5:
+            G_FAC = vector_dot(VNOR, Y_VRS)
+            G_FAC = numpy.sqrt(1 - G_FAC**2)
+
+        G_MODR = G_MOD * G_FAC
+
+        K_IN = vector_multiply_scalar(v1.T, kin)
+        K_IN_NOR = vector_multiply_scalar(VNOR, vector_dot(K_IN, VNOR) )
+        K_IN_PAR = vector_diff(K_IN, K_IN_NOR)
+
+        VTAN = vector_cross(VNOR, X_VRS)
+        GSCATTER = vector_multiply_scalar(VTAN, G_MODR)
+
+        K_OUT_PAR = vector_sum(K_IN_PAR, GSCATTER)
+        K_OUT_NOR = vector_multiply_scalar(VNOR,  numpy.sqrt(kin**2 - vector_modulus_square(K_OUT_PAR)))
+        K_OUT = vector_sum(K_OUT_PAR, K_OUT_NOR)
+        V_OUT = vector_norm(K_OUT)
 
         # ;
         # ; writes the beam arrays
         # ;
-
         newbeam.set_column(1, x2[0])
         newbeam.set_column(2, x2[1])
         newbeam.set_column(3, x2[2])

@@ -266,8 +266,7 @@ class S4GratingElement(S4BeamlineElement):
         #
         soe = self.get_optical_element()
 
-        footprint, normal = self._apply_grating_diffraction(input_beam)  # warning, beam is also changed!!
-
+        footprint, normal = self._apply_grating_diffraction(input_beam)
 
         if movements is not None:
             if movements.f_move:
@@ -336,25 +335,23 @@ class S4GratingElement(S4BeamlineElement):
 
         if isinstance(ssi, Plane) or isinstance(ssi, Sphere) or isinstance(ssi, Paraboloid) \
                 or isinstance(ssi, Ellipsoid) or isinstance(ssi, Hyperboloid) or isinstance(ssi, Conic):
-            beam_mirr, normal = ccc.apply_grating_diffraction_on_beam(
-                beam,
-                ruling=ruling,
-                order=oe._order,
-                f_ruling=oe._f_ruling)
+            invert_normal = 1
         elif isinstance(ssi, Toroid):
-            beam_mirr, normal = ccc.apply_grating_diffraction_on_beam(
-                beam,
-                ruling=ruling,
-                order=oe._order,
-                f_ruling=oe._f_ruling)
+            if ccc.f_torus == 0 or ccc.f_torus == 2:
+                invert_normal = 1
+            else:
+                invert_normal = 0
         elif isinstance(ssi, NumericalMesh):
-            beam_mirr, normal = ccc.apply_grating_diffraction_on_beam(
-                beam,
-                ruling=ruling,
-                order=oe._order,
-                f_ruling=oe._f_ruling)
+            invert_normal = 0
         else:
             raise NotImplementedError
+
+        beam_mirr, normal = ccc.apply_grating_diffraction_on_beam(
+            beam,
+            ruling=ruling,
+            order=oe._order,
+            f_ruling=oe._f_ruling,
+            invert_normal=invert_normal)
 
         return beam_mirr, normal
 
