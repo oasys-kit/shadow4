@@ -118,7 +118,7 @@ class S4IdealLensElement(S4BeamlineElement):
         txt += self.to_python_code_coordinates()
         txt += "\nfrom shadow4.beamline.optical_elements.ideal_elements.s4_ideal_lens import S4IdealLensElement"
         txt += "\nbeamline_element = S4IdealLensElement(optical_element=optical_element, coordinates=coordinates, input_beam=beam)"
-        txt += "\n\nbeam, mirr = beamline_element.trace_beam()"
+        txt += "\n\nbeam, footprint = beamline_element.trace_beam()"
         return txt
 
 class S4SuperIdealLens(IdealLens, S4OpticalElementDecorator):
@@ -260,7 +260,7 @@ class S4SuperIdealLensElement(S4BeamlineElement):
         txt += self.to_python_code_coordinates()
         txt += "\nfrom shadow4.beamline.optical_elements.ideal_elements.s4_ideal_lens import S4IdealLensElement"
         txt += "\nbeamline_element = S4IdealLensElement(optical_element=optical_element, coordinates=coordinates, input_beam=beam)"
-        txt += "\n\nbeam, mirr = beamline_element.trace_beam()"
+        txt += "\n\nbeam, footprint = beamline_element.trace_beam()"
         return txt
 
 if __name__ == "__main__":

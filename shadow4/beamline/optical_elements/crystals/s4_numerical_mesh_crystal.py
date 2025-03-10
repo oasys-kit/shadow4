@@ -213,7 +213,7 @@ class S4NumericalMeshCrystalElement(S4CrystalElement):
         txt += self.to_python_code_movements()
         txt += "\nfrom shadow4.beamline.optical_elements.crystals.s4_numerical_mesh_crystal import S4NumericalMeshCrystalElement"
         txt += "\nbeamline_element = S4NumericalMeshCrystalElement(optical_element=optical_element, coordinates=coordinates, movements=movements, input_beam=beam)"
-        txt += "\n\nbeam, mirr = beamline_element.trace_beam()"
+        txt += "\n\nbeam, footprint = beamline_element.trace_beam()"
         return txt
 
 if __name__ == "__main__":
@@ -273,7 +273,7 @@ if __name__ == "__main__":
 
     beamline_element = S4NumericalMeshCrystalElement(optical_element=optical_element, coordinates=coordinates, input_beam=beam)
 
-    beam, mirr = beamline_element.trace_beam()
+    beam, footprint = beamline_element.trace_beam()
 
     # test plot
     if True:

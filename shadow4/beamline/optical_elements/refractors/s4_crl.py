@@ -383,7 +383,7 @@ class S4CRLElement(S4BeamlineElement):
         txt += self.to_python_code_movements()
         txt += "\nfrom shadow4.beamline.optical_elements.refractors.s4_crl import S4CRLElement"
         txt += "\nbeamline_element = S4CRLElement(optical_element=optical_element, coordinates=coordinates, movements=movements, input_beam=beam)"
-        txt += "\n\nbeam, mirr = beamline_element.trace_beam()"
+        txt += "\n\nbeam, footprint = beamline_element.trace_beam()"
         return txt
 
     def trace_beam(self, **params):

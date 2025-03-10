@@ -184,7 +184,7 @@ class S4AdditionalNumericalMeshInterfaceElement(S4InterfaceElement):
         txt += self.to_python_code_movements()
         txt += "\nfrom shadow4.beamline.optical_elements.refractors.s4_additional_numerical_mesh_interface import S4AdditionalNumericalMeshInterfaceElement"
         txt += "\nbeamline_element = S4AdditionalNumericalMeshInterfaceElement(optical_element=optical_element, coordinates=coordinates, movements=movements, input_beam=beam)"
-        txt += "\n\nbeam, mirr = beamline_element.trace_beam()"
+        txt += "\n\nbeam, footprint = beamline_element.trace_beam()"
         return txt
 
 if __name__ == "__main__":

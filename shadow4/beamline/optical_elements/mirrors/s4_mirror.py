@@ -241,6 +241,10 @@ class S4MirrorElement(S4BeamlineElement):
             (output_beam, footprint) instances of S4Beam.
         """
         flag_lost_value = params.get("flag_lost_value", -1)
+        flag_input_beam_is_footprint = params.get("flag_input_beam_is_footprint", False)
+        if is_verbose():
+            if flag_input_beam_is_footprint:
+                print("flag_input_beam_is_footprint=1: skipping reference change to o.e.")
 
         p = self.get_coordinates().p()
         q = self.get_coordinates().q()
@@ -253,9 +257,10 @@ class S4MirrorElement(S4BeamlineElement):
         #
         # put beam in mirror reference system
         #
-        input_beam.rotate(alpha1, axis=2)
-        input_beam.rotate(theta_grazing1, axis=1)
-        input_beam.translation([0.0, -p * numpy.cos(theta_grazing1), p * numpy.sin(theta_grazing1)])
+        if not flag_input_beam_is_footprint:
+            input_beam.rotate(alpha1, axis=2)
+            input_beam.rotate(theta_grazing1, axis=1)
+            input_beam.translation([0.0, -p * numpy.cos(theta_grazing1), p * numpy.sin(theta_grazing1)])
 
         # mirror movement:
         movements = self.get_movements()

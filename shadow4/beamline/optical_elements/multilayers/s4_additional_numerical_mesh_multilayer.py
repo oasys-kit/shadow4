@@ -95,8 +95,10 @@ class S4AdditionalNumericalMeshMultilayer(S4NumericalMeshMultilayer):
             Python code.
         """
         txt = self.__ideal_multilayer.to_python_code()
+        txt += "\n"
         txt += "ideal_multilayer = optical_element"
         txt += self.__numerical_mesh_multilayer.to_python_code()
+        txt += "\n"
         txt += "numerical_mesh_multilayer = optical_element"
 
         txt += self.to_python_code_boundary_shape()
@@ -177,7 +179,7 @@ class S4AdditionalNumericalMeshMultilayerElement(S4MultilayerElement):
         txt += self.to_python_code_movements()
         txt += "\nfrom shadow4.beamline.optical_elements.multilayers.s4_additional_numerical_mesh_multilayer import S4AdditionalNumericalMeshMultilayerElement"
         txt += "\nbeamline_element = S4AdditionalNumericalMeshMultilayerElement(optical_element=optical_element, coordinates=coordinates, movements=movements, input_beam=beam)"
-        txt += "\n\nbeam, mirr = beamline_element.trace_beam()"
+        txt += "\n\nbeam, footprint = beamline_element.trace_beam()"
         return txt
 
 if __name__ == "__main__":

@@ -347,7 +347,7 @@ class S4TransfocatorElement(S4BeamlineElement):
         txt += self.to_python_code_movements()
         txt += "\nfrom shadow4.beamline.optical_elements.refractors.s4_transfocator import S4TransfocatorElement"
         txt += "\nbeamline_element = S4TransfocatorElement(optical_element=optical_element, coordinates=coordinates, movements=movements, input_beam=beam)"
-        txt += "\n\nbeam, mirr = beamline_element.trace_beam()"
+        txt += "\n\nbeam, footprint = beamline_element.trace_beam()"
         return txt
 
     def _get_list_of_individual_elements_crl(self):
