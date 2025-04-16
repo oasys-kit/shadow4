@@ -249,6 +249,7 @@ class S4MirrorElement(S4BeamlineElement):
         p = self.get_coordinates().p()
         q = self.get_coordinates().q()
         theta_grazing1 = numpy.pi / 2 - self.get_coordinates().angle_radial()
+        theta_grazing2 = numpy.pi / 2 - self.get_coordinates().angle_radial_out()
         alpha1 = self.get_coordinates().angle_azimuthal()
 
         #
@@ -459,7 +460,7 @@ class S4MirrorElement(S4BeamlineElement):
         #
 
         output_beam = footprint.duplicate()
-        output_beam.change_to_image_reference_system(theta_grazing1, q)
+        output_beam.change_to_image_reference_system(theta_grazing2, q)
 
         return output_beam, footprint
 
