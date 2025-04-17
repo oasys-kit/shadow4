@@ -499,7 +499,7 @@ class S4Beam(object):
 
     def get_standard_deviation(self,col, nolost=1, ref=0):
         """
-        Returns the standard deviation of one variable in the beam.
+        Returns the weighted standard deviation of one variable in the beam.
 
         Parameters
         ----------
@@ -511,7 +511,7 @@ class S4Beam(object):
             0=use all rays, 1=use only good rays (non-lost rays), 2=use only lost rays.
 
         ref : int, optional
-            ref: 0 = no weight, 1=weight with intensity (col23)
+            ref: 0 = no weight, other value = weight with intensity (col23)
 
         Returns
         -------
@@ -519,14 +519,43 @@ class S4Beam(object):
             the st dev.
 
         """
-        x = self.get_column(col,nolost=nolost)
+        x = self.get_column(col, nolost=nolost)
         if ref == 0:
             return x.std()
         else:
-            w = self.get_column(23,nolost=nolost)
+            w = self.get_column(23, nolost=nolost)
             average = numpy.average(x, weights=w)
             variance = numpy.average( (x-average)**2, weights=w)
             return(numpy.sqrt(variance))
+
+    def get_average(self, col, nolost=1, ref=0):
+        """
+        Returns the weighted average of one variable in the beam.
+
+        Parameters
+        ----------
+        col : int
+            The column number.
+
+
+        nolost : int, optional
+            0=use all rays, 1=use only good rays (non-lost rays), 2=use only lost rays.
+
+        ref : int, optional
+            ref: 0 = no weight, other value = weight with intensity (col23)
+
+        Returns
+        -------
+        float
+            the average value.
+
+        """
+        x = self.get_column(col, nolost=nolost)
+        if ref == 0:
+            return numpy.mean(x)
+        else:
+            w = self.get_column(23, nolost=nolost)
+            return numpy.average(x, weights=w)
 
     def intensity(self, nolost=0):
         """
@@ -545,7 +574,7 @@ class S4Beam(object):
             total intensity.
 
         """
-        w = self.get_column(23,nolost=nolost)
+        w = self.get_column(23, nolost=nolost)
         return w.sum()
 
     def get_good_range(self, icol, nolost=0):
@@ -701,6 +730,54 @@ class S4Beam(object):
         return e_S, e_P
 
 
+    def isnan(self, verbose=1):
+        """
+        Informs on the existence of nan and returns the number of rays with nan.
+
+        Parameters
+        ----------
+        verbose : int, optional
+            0=No, 1=verbose output.
+
+
+        Returns
+        -------
+        tuple
+            (N1_all, N1_good) the number of rays with nan in all rays (N1_all) and in good rays (N1_good).
+
+        """
+        x = self.get_rays(nolost=0)
+        N0_all = numpy.isnan(x).sum()
+        N1_all = numpy.isnan(x.sum(axis=1)).sum()
+
+        x = self.get_rays(nolost=1)
+        N0_good = numpy.isnan(x).sum()
+        N1_good = numpy.isnan(x.sum(axis=1)).sum()
+
+        if verbose:
+            print("Number if nan in all rays: ",              N0_all)
+            print("Number of rays with nan in all rays: ", N1_all)
+            print("Number nan in good rays: ",              N0_good)
+            print("Number of rays with nan in good rays: ", N1_good)
+
+        return N1_all, N1_good
+
+    def fixnan(self, value=0.0):
+        """
+        Replaces nan by zero (or other value).
+
+        Parameters
+        ----------
+        value : float, optional
+            The replacement value.
+
+        """
+        N_all, N_good = self.isnan(verbose=0)
+        if N_all > 0:
+            self.rays[numpy.isnan(self.rays)] = value
+
+        if N_good > 0:
+            print("**WARNING: Fixed nan values in rays that are good! **")
 
     #
     # tools
@@ -2714,7 +2791,11 @@ if __name__ == "__main__":
     # print("bad : ", (B.get_rays(nolost=2)).shape, B.rays_bad.shape)
     #
     # print(B.focnew_coeffs())
+    #
+    # print(B.efields_orthogonal())
+    #
+    # print(B.get_average(1), get_average(ref=23))
 
-    print(B.efields_orthogonal())
+    print(B.isnan())
 
 
