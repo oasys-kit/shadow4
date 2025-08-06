@@ -156,7 +156,7 @@ class S4IdealFZPElement(S4BeamlineElement):
             # Rays that arrive onto the inner zone
             # IN are the indices of rays that arrive inside the inner zone
 
-            R0 = self.get_optical_element().r0()
+            R0 = self.get_optical_element().r0_exact()
             focal = self.get_optical_element().focal()
             nomlambda = self.get_optical_element().nominal_wavelength()
             DDm = self.get_optical_element().diameter()
@@ -175,18 +175,18 @@ class S4IdealFZPElement(S4BeamlineElement):
             OUT = numpy.where(r >= R0)
             OUT = numpy.array(OUT)
             if OUT.size > 0:
-                n[OUT] = (r[OUT] ** 2 - R0 ** 2) / (nomlambda * focal)
+                n[OUT] = (r[OUT] ** 2 - R0 ** 2) / (nomlambda * focal)  # eq 8.56
+                # d-spacing: we suppose the ray is in the middle of two r's with fractional n
                 d[OUT] = numpy.sqrt((n[OUT] + .5) * nomlambda * focal + R0 ** 2) - \
                          numpy.sqrt((n[OUT] - .5) * nomlambda * focal + R0 ** 2)
 
             # computing G (the "grating" wavevector)
 
-            dA = d  # m
-            Gx = -numpy.pi / dA * (x / r)
-            Gz = -numpy.pi / dA * (z / r)
+            Gx = -numpy.pi / d * (x / r)
+            Gz = -numpy.pi / d * (z / r)
             # capture infinities
-            Gx[dA == 0] = 0.0
-            Gz[dA == 0] = 0.0
+            Gx[d == 0] = 0.0
+            Gz[d == 0] = 0.0
 
             # computing kout
 
