@@ -90,7 +90,7 @@ class S4CRL(CRL, S4RefractiveLensOpticalElementDecorator):
                                  # 3=direct calculation using dabax
                  prerefl_file=None,    # for ri_calculation_mode=0: file name (from prerefl) to get the refraction index.
                  refraction_index=1.0, # for ri_calculation_mode=1: n (real)
-                 attenuation_coefficient=0.0, # for ri_calculation_mode=1: mu in cm^-1 (real)
+                 attenuation_coefficient=0.0, # for ri_calculation_mode=1: mu in m^-1 (real)
                  dabax=None,
                  radius=500e-6,        # for surface_shape=(1,2): lens radius [m] (for spherical, or radius at the tip for paraboloid)
                  conic_coefficients1=None,   # for surface_shape = 3: the conic coefficients of the first interface
@@ -301,7 +301,7 @@ optical_element = S4CRL(name='{name:s}',
                                      # 0=User, 1=prerefl file, 2=xraylib, 3=dabax
      prerefl_file='{prerefl_file:s}', # for ri_calculation_mode=0: file name (from prerefl) to get the refraction index.
      refraction_index={refraction_index:g}, # for ri_calculation_mode=1: n (real)
-     attenuation_coefficient={attenuation_coefficient:g}, # for ri_calculation_mode=1: mu in cm^-1 (real)
+     attenuation_coefficient={attenuation_coefficient:g}, # for ri_calculation_mode=1: mu in m^-1 (real)
      dabax={dabax:s}, # the pointer to dabax library
      radius={radius:g}, # for surface_shape=(1,2): lens radius [m] (for spherical, or radius at the tip for paraboloid)
      conic_coefficients1={conic_coefficients1}, # for surface_shape = 3: the conic coefficients of the single lens interface 1
@@ -521,7 +521,7 @@ if __name__ == "__main__":
                                 prerefl_file='Al5_55.dat',
                                 # for ri_calculation_mode=0: file name (from prerefl) to get the refraction index.
                                 refraction_index=1,  # for ri_calculation_mode=1: n (real)
-                                attenuation_coefficient=0,  # for ri_calculation_mode=1: mu in cm^-1 (real)
+                                attenuation_coefficient=0,  # for ri_calculation_mode=1: mu in m^-1 (real)
                                 dabax=None,  # the pointer to dabax library
                                 radius=0.0003,
                                 # for surface_shape=(1,2): lens radius [m] (for spherical, or radius at the tip for paraboloid)
