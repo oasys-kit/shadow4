@@ -74,21 +74,29 @@ class S4Beamline(Beamline):
 
         Parameters
         ----------
+        partial_code: int
+            set to 0: returns full beamline (default), 1: returns only source, 2: returns only beamline elements.
         **kwargs
-            Passed arguments
+            Passed arguments.
 
         Returns
         -------
         str
             The python code.
         """
+        partial_code = kwargs.get('partial_code', 0)  # default to 0
+
         script = "from shadow4.beamline.s4_beamline import S4Beamline"
         script += "\n\nbeamline = S4Beamline()\n"
-        try:
-            script += self.get_light_source().to_python_code()
-            script += "\n\nbeamline.set_light_source(light_source)"
-        except:
-            script +=  "\n\n\n# Error getting python code for S4Beamline S4LightSource "
+
+        if partial_code in [0,1]:
+            try:
+                script += self.get_light_source().to_python_code()
+                script += "\n\nbeamline.set_light_source(light_source)"
+            except:
+                script +=  "\n\n\n# Error getting python code for S4Beamline S4LightSource "
+
+        if partial_code == 1: return script
 
         for i,element in enumerate(self.get_beamline_elements()):
             try:
