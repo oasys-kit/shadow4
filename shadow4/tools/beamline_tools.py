@@ -583,7 +583,8 @@ def focnew_scan_full_beamline(beamline, npoints=10):
 
         if T_IMAGE > 0:
             yi = numpy.linspace(-T_IMAGE, 0, npoints)
-            y = numpy.append(y, y[-1] + THCK + T_IMAGE + yi)
+            y_to_append = y[-1] + THCK + T_IMAGE + yi
+            y = numpy.append(y, y_to_append)
             if numpy.abs(numpy.mod(ALPHA_tot, numpy.pi)) < 1e-9:
                 x_i = focnew_scan(ticket["AX"], yi)
                 z_i = focnew_scan(ticket["AZ"], yi)
@@ -594,18 +595,18 @@ def focnew_scan_full_beamline(beamline, npoints=10):
             z = numpy.append(z, z_i)
             marker = numpy.append(marker, numpy.zeros(npoints) + (i + 0.2))
             x_multi.append(1e6 * x_i)
-            y_multi.append(y[-1] + THCK + T_IMAGE + yi)
+            y_multi.append(y_to_append)
             z_multi.append(1e6 * z_i)
             title_multi.append("oe %d (q)" % (i + 1))
 
-            yy_multi.append(y[-1] + THCK + T_IMAGE + yi)
-            yy_multi.append(y[-1] + THCK + T_IMAGE + yi)
+            yy_multi.append(y_to_append)
+            yy_multi.append(y_to_append)
             xz_multi.append(1e6 * x_i)
             xz_multi.append(1e6 * z_i)
             tt_multi.append("oe %d q (H)" % (i + 1))
             tt_multi.append("oe %d q (V)" % (i + 1))
 
-            list_y.append(y[-1] + THCK + T_IMAGE + yi)
+            list_y.append(y_to_append)
             list_x.append(1e6 * x_i)
             list_z.append(1e6 * z_i)
             list_x_label.append("oe %d q (H)" % (i + 1))
