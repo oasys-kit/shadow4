@@ -230,6 +230,8 @@ class MLayer(object):
                    ell_photon_energy=10000.0,  # eV
                    GRADE_DEPTH=0,
                    LIST_N_THICK_GAMMA_ROUGHE_ROUGHO_FROM_TOP_TO_BOTTOM=None,
+                   use_xraylib_or_dabax=0,
+                   dabax=None,
                    ):
         """
         Creates an instance of MLayer with parameters initialized from the keyword parameters and the
@@ -297,6 +299,10 @@ class MLayer(object):
         LIST_N_THICK_GAMMA_ROUGHE_ROUGHO_FROM_TOP_TO_BOTTOM : None or str
             A str with a list definition of multilayers blocks in the form: [block1, block2, ...]
             with each block defined as [Nbilayers, BilayerThickness, BilayerGamma, roughnessEven, roughnessOdd].
+        use_xraylib_or_dabax : int, optional
+            0=use xraylib, 1=use dabax for the optical constabrs.
+        dabax : None or instance of DabaxXraylib,
+            The pointer to the dabax library  (used for use_xraylib_or_dabax = 1).
         Returns
         -------
         instance of MLayer
@@ -324,7 +330,9 @@ class MLayer(object):
         -----
         This method requires xraylib to access to the optical constants.
         """
-        import xraylib
+        if use_xraylib_or_dabax == 0:
+            try: import xraylib
+            except: "xraylib not available"
 
         #--- From input keywords...
         fileout = FILE
@@ -378,47 +386,66 @@ class MLayer(object):
         f.write("%i \n" % np)
         pre_mlayer_dict["np"] = np
 
-        ENERGY = numpy.zeros(np)
+        ENERGY = numpy.zeros(np) # eV
         for i in range(np):
-            energy = 30e0*numpy.power(10,elfactor*(istart+i-1))
+            energy = 30e0 * numpy.power(10, elfactor * (istart + i - 1))
             f.write("%e " % energy)
             ENERGY[i] = energy
         f.write( "\n")
         pre_mlayer_dict["energy"] = ENERGY
 
-        DELTA = numpy.zeros(np)
-        BETA = numpy.zeros(np)
-        for i in range(np):  #substrate
-            energy = 30e0*numpy.power(10,elfactor*(istart+i-1)) *1e-3 # in keV!!
-            delta = 1e0-xraylib.Refractive_Index_Re(matSubstrate,energy,denSubstrate)
-            beta = xraylib.Refractive_Index_Im(matSubstrate,energy,denSubstrate)
-            DELTA[i] = delta
-            BETA[i] = beta
-            f.write( ("%26.17e "*2+"\n") % tuple([delta,beta]) )
+        if use_xraylib_or_dabax == 0:
+            DELTA = numpy.zeros(np)
+            BETA = numpy.zeros(np)
+            for i in range(np):  #substrate
+                energy = 30e0 * numpy.power(10, elfactor * (istart + i - 1)) * 1e-3 # in keV!!
+                delta = 1e0 - xraylib.Refractive_Index_Re(matSubstrate, energy, denSubstrate)
+                beta = xraylib.Refractive_Index_Im(matSubstrate, energy, denSubstrate)
+                DELTA[i] = delta
+                BETA[i] = beta
+        else:
+            DELTA = 1e0 - dabax.Refractive_Index_Re(matSubstrate, 1e-3 * ENERGY, denSubstrate)
+            BETA = dabax.Refractive_Index_Im(matSubstrate, 1e-3 * ENERGY, denSubstrate)
+
+
+        for i in range(np):  # substrate
+            f.write( ("%26.17e "*2+"\n") % tuple([DELTA[i], BETA[i]]) )
         pre_mlayer_dict["delta_s"] = DELTA
         pre_mlayer_dict["beta_s"] = BETA
 
-        DELTA = numpy.zeros(np)
-        BETA = numpy.zeros(np)
-        for i in range(np): #even
-            energy = 30e0*numpy.power(10,elfactor*(istart+i-1)) *1e-3 # in keV!!
-            delta = 1e0-xraylib.Refractive_Index_Re(matEven,energy,denEven)
-            beta = xraylib.Refractive_Index_Im(matEven,energy,denEven)
-            DELTA[i] = delta
-            BETA[i] = beta
-            f.write( ("%26.17e  "*2+"\n") % tuple([delta,beta]) )
+        if use_xraylib_or_dabax == 0:
+            DELTA = numpy.zeros(np)
+            BETA = numpy.zeros(np)
+            for i in range(np): #even
+                energy = 30e0 * numpy.power(10, elfactor * (istart + i - 1)) * 1e-3 # in keV!!
+                delta = 1e0 - xraylib.Refractive_Index_Re(matEven, energy, denEven)
+                beta = xraylib.Refractive_Index_Im(matEven, energy, denEven)
+                DELTA[i] = delta
+                BETA[i] = beta
+        else:
+            DELTA = 1e0 - dabax.Refractive_Index_Re(matEven, 1e-3 * ENERGY, denEven)
+            BETA = dabax.Refractive_Index_Im(matEven, 1e-3 * ENERGY, denEven)
+
+        for i in range(np):  # even
+            f.write( ("%26.17e "*2+"\n") % tuple([DELTA[i], BETA[i]]) )
         pre_mlayer_dict["delta_e"] = DELTA
         pre_mlayer_dict["beta_e"] = BETA
 
-        DELTA = numpy.zeros(np)
-        BETA = numpy.zeros(np)
-        for i in range(np): #odd
-            energy = 30e0*numpy.power(10,elfactor*(istart+i-1)) *1e-3 # in keV!!
-            delta = 1e0-xraylib.Refractive_Index_Re(matOdd,energy,denOdd)
-            beta = xraylib.Refractive_Index_Im(matOdd,energy,denOdd)
-            DELTA[i] = delta
-            BETA[i] = beta
-            f.write( ("%26.17e "*2+"\n") % tuple([delta,beta]) )
+        if use_xraylib_or_dabax == 0:
+            DELTA = numpy.zeros(np)
+            BETA = numpy.zeros(np)
+            for i in range(np): #odd
+                energy = 30e0 * numpy.power(10, elfactor * (istart + i - 1)) * 1e-3 # in keV!!
+                delta = 1e0 - xraylib.Refractive_Index_Re(matOdd, energy, denOdd)
+                beta = xraylib.Refractive_Index_Im(matOdd, energy, denOdd)
+                DELTA[i] = delta
+                BETA[i] = beta
+        else:
+            DELTA = 1e0 - dabax.Refractive_Index_Re(matOdd, 1e-3 * ENERGY, denOdd)
+            BETA = dabax.Refractive_Index_Im(matOdd, 1e-3 * ENERGY, denOdd)
+
+        for i in range(np):  # even
+            f.write( ("%26.17e "*2+"\n") % tuple([DELTA[i], BETA[i]]) )
         pre_mlayer_dict["delta_o"] = DELTA
         pre_mlayer_dict["beta_o"] = BETA
 
@@ -560,7 +587,12 @@ class MLayer(object):
         instance of MLayer
         """
 
-        import xraylib
+        if use_xraylib_or_dabax == 0:
+            try: import xraylib
+            except: "xraylib not available"
+            material_constant_library = xraylib
+        else:
+            material_constant_library = dabax
 
         if GRADE_DEPTH == 0:
             npair = int(bilayer_pairs)
@@ -610,21 +642,21 @@ class MLayer(object):
 
         if pre_mlayer_dict["densityS"] is None:
             try:
-                pre_mlayer_dict["densityS"] = xraylib.ElementDensity(xraylib.SymbolToAtomicNumber(pre_mlayer_dict["materialS"]))
+                pre_mlayer_dict["densityS"] = material_constant_library.ElementDensity(material_constant_library.SymbolToAtomicNumber(pre_mlayer_dict["materialS"]))
                 print("Using density for substrate (%s): %f"%(pre_mlayer_dict["materialS"],
                       pre_mlayer_dict["densityS"]))
             except:
                 raise Exception("Failed to load density for material: %s"%(pre_mlayer_dict["material1"]))
         if pre_mlayer_dict["density1"] is None:
             try:
-                pre_mlayer_dict["density1"] = xraylib.ElementDensity(xraylib.SymbolToAtomicNumber(pre_mlayer_dict["material1"]))
+                pre_mlayer_dict["density1"] = material_constant_library.ElementDensity(material_constant_library.SymbolToAtomicNumber(pre_mlayer_dict["material1"]))
                 print("Using density for layer 1 (even) (%s): %f" % (pre_mlayer_dict["material1"],
                       pre_mlayer_dict["density1"]))
             except:
                 raise Exception("Failed to load density for material: %s"%(pre_mlayer_dict["material1"]))
         if pre_mlayer_dict["density2"] is None:
             try:
-                pre_mlayer_dict["density2"] = xraylib.ElementDensity(xraylib.SymbolToAtomicNumber(pre_mlayer_dict["material2"]))
+                pre_mlayer_dict["density2"] = material_constant_library.ElementDensity(material_constant_library.SymbolToAtomicNumber(pre_mlayer_dict["material2"]))
                 print("Using density for layer 2 (odd) (%s): %f" % (pre_mlayer_dict["material2"],
                       pre_mlayer_dict["density2"]))
             except:
@@ -760,7 +792,12 @@ class MLayer(object):
         instance of MLayer
         """
 
-        import xraylib
+        if use_xraylib_or_dabax == 0:
+            try: import xraylib
+            except: "xraylib not available"
+            material_constant_library = xraylib
+        else:
+            material_constant_library = dabax
 
         #
         # parse
@@ -829,21 +866,21 @@ class MLayer(object):
 
         if pre_mlayer_dict["densityS"] is None:
             try:
-                pre_mlayer_dict["densityS"] = xraylib.ElementDensity(xraylib.SymbolToAtomicNumber(pre_mlayer_dict["materialS"]))
+                pre_mlayer_dict["densityS"] = material_constant_library.ElementDensity(material_constant_library.SymbolToAtomicNumber(pre_mlayer_dict["materialS"]))
                 print("Using density for substrate (%s): %f"%(pre_mlayer_dict["materialS"],
                       pre_mlayer_dict["densityS"]))
             except:
                 raise Exception("Failed to load density for material: %s"%(pre_mlayer_dict["material1"]))
         if pre_mlayer_dict["density1"] is None:
             try:
-                pre_mlayer_dict["density1"] = xraylib.ElementDensity(xraylib.SymbolToAtomicNumber(pre_mlayer_dict["material1"]))
+                pre_mlayer_dict["density1"] = material_constant_library.ElementDensity(material_constant_library.SymbolToAtomicNumber(pre_mlayer_dict["material1"]))
                 print("Using density for layer 1 (even) (%s): %f" % (pre_mlayer_dict["material1"],
                       pre_mlayer_dict["density1"]))
             except:
                 raise Exception("Failed to load density for material: %s"%(pre_mlayer_dict["material1"]))
         if pre_mlayer_dict["density2"] is None:
             try:
-                pre_mlayer_dict["density2"] = xraylib.ElementDensity(xraylib.SymbolToAtomicNumber(pre_mlayer_dict["material2"]))
+                pre_mlayer_dict["density2"] = material_constant_library.ElementDensity(material_constant_library.SymbolToAtomicNumber(pre_mlayer_dict["material2"]))
                 print("Using density for layer 2 (odd) (%s): %f" % (pre_mlayer_dict["material2"],
                       pre_mlayer_dict["density2"]))
             except:
@@ -992,15 +1029,30 @@ class MLayer(object):
                 else:
                     h5w = H5SimpleWriter(h5file, None)
                 h5_entry_name = "MLayer"
-                h5w.create_entry(h5_entry_name, nx_default="reflectivity-s")
+                # s-pol
+                h5w.create_entry(h5_entry_name,nx_default="reflectivity-s")
                 if energyN == 1:
-                    h5w.add_dataset(theta_array, R_S_array[0], dataset_name="reflectivity-s", entry_name=h5_entry_name,
+                    h5w.add_dataset(theta_array, R_S_array[0]**2, dataset_name="reflectivity-s", entry_name=h5_entry_name,
                                     title_x="Grazing angle [deg]", title_y="Reflectivity-s")
                 elif thetaN == 1:
-                    h5w.add_dataset(energy_array, R_S_array[:,0], dataset_name="reflectivity-s", entry_name=h5_entry_name,
+                    h5w.add_dataset(energy_array, R_S_array[:,0]**2, dataset_name="reflectivity-s", entry_name=h5_entry_name,
                                     title_x="Photon energy [eV]", title_y="Reflectivity-s")
                 else:
-                    h5w.add_image(R_S_array, energy_array, theta_array, image_name="EnergyAngleScan",
+                    # h5w.create_entry(h5_entry_name, nx_default="EnergyAngleScan")
+                    h5w.add_image(R_S_array**2, energy_array, theta_array, image_name="EnergyAngleScan-s",
+                                  entry_name=h5_entry_name,
+                                  title_x="Photon Energy [eV]",
+                                  title_y="Grazing Angle [deg]")
+                # p-pol
+                if energyN == 1:
+                    h5w.add_dataset(theta_array, R_P_array[0]**2, dataset_name="reflectivity-p", entry_name=h5_entry_name,
+                                    title_x="Grazing angle [deg]", title_y="Reflectivity-p")
+                elif thetaN == 1:
+                    h5w.add_dataset(energy_array, R_P_array[:,0]**2, dataset_name="reflectivity-p", entry_name=h5_entry_name,
+                                    title_x="Photon energy [eV]", title_y="Reflectivity-p")
+                else:
+                    # h5w.create_entry(h5_entry_name, nx_default="EnergyAngleScan")
+                    h5w.add_image(R_P_array**2, energy_array, theta_array, image_name="EnergyAngleScan-p",
                                   entry_name=h5_entry_name,
                                   title_x="Photon Energy [eV]",
                                   title_y="Grazing Angle [deg]")
@@ -1011,6 +1063,15 @@ class MLayer(object):
                         h5w.add_key(key, self.pre_mlayer_dict[key], entry_name=h5_entry_name + "/parameters")
                     except:
                         pass
+                try:
+                    h5w.add_key("energyN", energyN, entry_name=h5_entry_name + "/parameters")
+                    h5w.add_key("energy1", energy1, entry_name=h5_entry_name + "/parameters")
+                    h5w.add_key("energy2", energy2, entry_name=h5_entry_name + "/parameters")
+                    h5w.add_key("thetaN",  thetaN,  entry_name=h5_entry_name + "/parameters")
+                    h5w.add_key("theta1",  theta1,  entry_name=h5_entry_name + "/parameters")
+                    h5w.add_key("theta2",  theta2,  entry_name=h5_entry_name + "/parameters")
+                except:
+                    pass
 
                 print("File written to disk: %s" % h5file)
             except:
@@ -1130,7 +1191,8 @@ class MLayer(object):
                     DELO[i]  = DELTA_O[index1] + (DELTA_O[index1+1] - DELTA_O[index1]) * (PHOT_ENER[i] - ENER[index1]) / (ENER[index1 + 1] - ENER[index1])
                     BETO[i]  =  BETA_O[index1] + ( BETA_O[index1+1] -  BETA_O[index1]) * (PHOT_ENER[i] - ENER[index1]) / (ENER[index1 + 1] - ENER[index1])
         elif self.using_pre_mlayer == 0: # not using preprocessor, using xraylib
-            import xraylib
+            try: import xraylib
+            except: "xraylib not available"
             if is_monochromatic:
                 DELS[:]  = 1.0 - xraylib.Refractive_Index_Re(self.pre_mlayer_dict["materialS"], 1e-3 * PHOT_ENER[0], self.pre_mlayer_dict["densityS"])
                 BETS[:]  =       xraylib.Refractive_Index_Im(self.pre_mlayer_dict["materialS"], 1e-3 * PHOT_ENER[0], self.pre_mlayer_dict["densityS"])
@@ -1147,14 +1209,12 @@ class MLayer(object):
                     DELO[i]  = 1.0 - xraylib.Refractive_Index_Re(self.pre_mlayer_dict["material2"], 1e-3 * PHOT_ENER[i], self.pre_mlayer_dict["density2"])
                     BETO[i]  =       xraylib.Refractive_Index_Im(self.pre_mlayer_dict["material2"], 1e-3 * PHOT_ENER[i], self.pre_mlayer_dict["density2"])
         elif self.using_pre_mlayer == 2: # not using preprocessor, using dabax
-            from dabax.dabax_xraylib import DabaxXraylib
-            dx = DabaxXraylib()
-            DELS  = 1.0 - dx.Refractive_Index_Re(self.pre_mlayer_dict["materialS"], 1e-3 * PHOT_ENER, self.pre_mlayer_dict["densityS"])
-            BETS  =       dx.Refractive_Index_Im(self.pre_mlayer_dict["materialS"], 1e-3 * PHOT_ENER, self.pre_mlayer_dict["densityS"])
-            DELE  = 1.0 - dx.Refractive_Index_Re(self.pre_mlayer_dict["material1"], 1e-3 * PHOT_ENER, self.pre_mlayer_dict["density1"])
-            BETE  =       dx.Refractive_Index_Im(self.pre_mlayer_dict["material1"], 1e-3 * PHOT_ENER, self.pre_mlayer_dict["density1"])
-            DELO  = 1.0 - dx.Refractive_Index_Re(self.pre_mlayer_dict["material2"], 1e-3 * PHOT_ENER, self.pre_mlayer_dict["density2"])
-            BETO  =       dx.Refractive_Index_Im(self.pre_mlayer_dict["material2"], 1e-3 * PHOT_ENER, self.pre_mlayer_dict["density2"])
+            DELS  = 1.0 - self.dabax.Refractive_Index_Re(self.pre_mlayer_dict["materialS"], 1e-3 * PHOT_ENER, self.pre_mlayer_dict["densityS"])
+            BETS  =       self.dabax.Refractive_Index_Im(self.pre_mlayer_dict["materialS"], 1e-3 * PHOT_ENER, self.pre_mlayer_dict["densityS"])
+            DELE  = 1.0 - self.dabax.Refractive_Index_Re(self.pre_mlayer_dict["material1"], 1e-3 * PHOT_ENER, self.pre_mlayer_dict["density1"])
+            BETE  =       self.dabax.Refractive_Index_Im(self.pre_mlayer_dict["material1"], 1e-3 * PHOT_ENER, self.pre_mlayer_dict["density1"])
+            DELO  = 1.0 - self.dabax.Refractive_Index_Re(self.pre_mlayer_dict["material2"], 1e-3 * PHOT_ENER, self.pre_mlayer_dict["density2"])
+            BETO  =       self.dabax.Refractive_Index_Im(self.pre_mlayer_dict["material2"], 1e-3 * PHOT_ENER, self.pre_mlayer_dict["density2"])
 
 
         return DELO, BETO, DELE, BETE, DELS, BETS
@@ -1475,7 +1535,7 @@ if __name__ == "__main__":
 
     from srxraylib.plot.gol import plot
 
-    if 0:
+    if 1:
         a = MLayer.pre_mlayer(
             FILE="pre_mlayer.dat",
             E_MIN=110.0, E_MAX=500.0,
@@ -1523,7 +1583,7 @@ if __name__ == "__main__":
                 energyN=1,energy1=398.0,thetaN=1,theta1=45.0)
 
 
-    if 0: # prepate optical element: MLayer.reflectivity()
+    if 1: # prepate optical element: MLayer.reflectivity()
         if 1:
             b = MLayer.pre_mlayer(
                 FILE="mlayer1.dat",
@@ -1588,7 +1648,7 @@ if __name__ == "__main__":
         rs1, rp1, phase_s1, phase_p1= b.reflectivity(numpy.ones_like(energy) * 0.26356, energy)
         plot(energy, rs1, xtitle="Photon energy [eV]", ytitle="Reflectivity", title="MIXED scan", )
 
-    if 0: # compressed format
+    if 1: # compressed format
 
         b = MLayer.initialize_from_bilayer_stack_in_compressed_format(
         structure='[Pd,B4C]x150+Si',
@@ -1597,7 +1657,7 @@ if __name__ == "__main__":
         density_S=None,  roughness_S=0.0,
         bilayer_thickness=25.14,
         bilayer_gamma=0.5,
-        use_xraylib_or_dabax=1,
+        use_xraylib_or_dabax=0,
         )
 
         # b = MLayer()
@@ -1645,7 +1705,7 @@ if __name__ == "__main__":
              xtitle="angle [deg]", ytitle="Phase P [rad]", title="THETA scan", ylog=0,
              legend=['S4 reflectivity s-pol','IMD s-pol'])
 
-    if 0: # angle scan from preprocessor data
+    if 1: # angle scan from preprocessor data
         b = MLayer()
         b.read_preprocessor_file("/home/srio/Oasys/mlayer_id28_old.dat")
         print(">>>> using preprocessor data: ", b.using_pre_mlayer)
@@ -1655,7 +1715,7 @@ if __name__ == "__main__":
         rs1, rp1, phase_s1, phase_p1 = b.reflectivity(theta, energy)
         plot(theta, rs1**2, xtitle="Angle [deg]", ytitle="Reflectivity", title="THETA scan", )
 
-    if 0: # angle scan from preprocessor data
+    if 1: # angle scan from preprocessor data
         b = MLayer()
         b.read_preprocessor_file("/home/srio/Oasys/mymultilayer_new2.dat")
         print(">>>> using preprocessor data? graded?: ", b.using_pre_mlayer, b.is_laterally_graded())
@@ -1670,6 +1730,7 @@ if __name__ == "__main__":
         print(">>> coeffs: ", b.pre_mlayer_dict['a0'], b.pre_mlayer_dict['a1'], b.pre_mlayer_dict['a2'], b.pre_mlayer_dict['a3'])
 
     if 1: # angle scan from preprocessor data
+        from dabax.dabax_xraylib import DabaxXraylib
         # a=array([ 1.00000544, -0.35375728, -0.04919996, -0.01776213])
         # a=array([ 1.00000033, -0.35376397, -0.04875604, -0.01749082])
         b = MLayer.pre_mlayer(
@@ -1690,6 +1751,8 @@ if __name__ == "__main__":
             ell_theta_grazing_deg=0.75,  # deg
             ell_length=0.30,  # m
             ell_photon_energy=12400.0,  # eV
+            use_xraylib_or_dabax=1,
+            dabax=DabaxXraylib(),
         )
         print(">>>> using preprocessor data? graded?: ", b.using_pre_mlayer, b.is_laterally_graded())
         npoints = 1000
@@ -1701,7 +1764,7 @@ if __name__ == "__main__":
         print(">>> igrade: ", b.pre_mlayer_dict['igrade'])
 
 
-    if 0: # thick graded
+    if 1: # thick graded
         #
         # Example inspited from https://doi.org/10.1117/1.JATIS.4.1.011209  (structure in Table1, reflectivity in Fig. 9.)
         #

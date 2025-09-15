@@ -301,7 +301,9 @@ if __name__ == "__main__":
         beam, footprint = ie.trace_beam()
 
         print("Intensity: ", beam.intensity(nolost=1))
-        import xraylib
+        try: import xraylib
+        except: "xraylib not available"
+
         mu = xraylib.CS_Total_CP('Be', 5.000000)  * 1.848
         mu *= 100 # m^-1
         print("Estimated intensity: ", numpy.exp(-mu * 5e-3) * 5000)

@@ -184,7 +184,9 @@ class PreRefl(object):
                                                      material="SiC",
                                                      density=3.217,):
 
-        import xraylib
+        try: import xraylib
+        except: "xraylib not available"
+
         photon_energy_ev_array = numpy.array(photon_energy_ev)
         attenuation_coefficient = numpy.zeros_like(photon_energy_ev_array, dtype=float)
 
@@ -247,7 +249,9 @@ class PreRefl(object):
         float or numpy array
             The array with attenuation coefficient in cm^-1.
         """
-        import xraylib
+        try: import xraylib
+        except: "xraylib not available"
+
         if isinstance(photon_energy_ev, (float, int)):
             return xraylib.Refractive_Index(material, photon_energy_ev * 1e-3, density)
         else:
@@ -438,7 +442,9 @@ class PreRefl(object):
         tuple
             (rs, rp, runp) the s-polarized, p-pol and unpolarized reflectivities
         """
-        import xraylib
+        try: import xraylib
+        except: "xraylib not available"
+
         photon_energy_ev_array = numpy.array(photon_energy_ev)
         refraction_index_2 = numpy.zeros_like(photon_energy_ev_array, dtype=complex)
 
@@ -669,7 +675,8 @@ class PreRefl(object):
         -------
         instance of PreRefl
         """
-        import xraylib
+        try: import xraylib
+        except: "xraylib not available"
 
         if interactive:
             # input section
@@ -1414,7 +1421,8 @@ if __name__ == "__main__":
 
         try:
             from xoppylib.scattering_functions.f1f2_calc import f1f2_calc
-            import xraylib
+            try: import xraylib
+            except: "xraylib not available"
         except:
             print("Please install xoppylib (to be avoided)")
 
