@@ -373,7 +373,7 @@ class S4Toroid(S4OpticalSurface):
         return t, i_res
 
 
-    def calculate_intercept(self, XIN, VIN, vectorize=0, do_test_solution=0): #todo vectorized=1,2 fail - search another solution...
+    def calculate_intercept(self, XIN, VIN, vectorize=0, do_test_solution=0):
         """
         Calculates the intercept point (or stack of points) for a given ray or stack of rays,
         given a point XIN and director vector VIN.
@@ -386,11 +386,14 @@ class S4Toroid(S4OpticalSurface):
             The coordinates of a director vector the ray: shape [3, NRAYS].
         vectorize : int, optional
             Flag:
-                * 2 use S4 new way to compute iterative-solutions,
-                * 1 use S4 new way to compute vectorized-solutions,
-                * 0 use numpy polynomial.polyroots iteratively to compute solutions.
+                * 0 use vectorized numpy (default)
+                * 1 use numpy polynomial.polyroots iteratively to compute solutions.
+                * 2 New method, vectorized, exact solution of 4th degree eq. It fails in some cases.
+                * 3 Like 1, but iterated (not vectorized). It fails in some cases.
+                * 4 Use fqs modified library as in srxraylib. It does not work.
         do_test_solution : int, optional
-            Flag to test the solutions (substitute in the polynomial and check if result is zero): 0=No, 1=Yes.
+            Flag to test the solutions (substitute in the polynomial and check if result is zero):
+            0=No, 1=Yes.
 
         Returns
         -------
@@ -402,8 +405,10 @@ class S4Toroid(S4OpticalSurface):
         AA, BB, CC, DD = self._calculate_quartic_coefficients(XIN, VIN, method=vectorize)
 
         # get the four solutions of the quartic equation: t^4 + AA t^3 + BB t^2 + CC t + DD = 0
-        if vectorize==0: # traditional method (numpy)
 
+        if vectorize==0: # default method (numpy vectorized)
+            t0, t1, t2, t3 = self._solve_quartic_vectorized_numpy(AA, BB, CC, DD)
+        elif vectorize == 1: # numpy, not vectorized
             t0 = numpy.zeros_like(AA, dtype=complex)
             t1 = numpy.zeros_like(AA, dtype=complex)
             t2 = numpy.zeros_like(AA, dtype=complex)
@@ -414,7 +419,39 @@ class S4Toroid(S4OpticalSurface):
                 t1[k] = h_output2[1]
                 t2[k] = h_output2[2]
                 t3[k] = h_output2[3]
+            return t0, t1, t2, t3
+        elif vectorize == 2: # exact, vectorized
+            t0, t1, t2, t3 = self._solve_quartic_vectorized(AA, BB, CC, DD)
+        elif vectorize == 3: # exact, iterated
+            t0 = numpy.zeros_like(AA, dtype=complex)
+            t1 = numpy.zeros_like(AA, dtype=complex)
+            t2 = numpy.zeros_like(AA, dtype=complex)
+            t3 = numpy.zeros_like(AA, dtype=complex)
+            for k in range(AA.size):
+                h_output2 = self._solve_quartic(AA[k], BB[k], CC[k], DD[k])
+                t0[k] = h_output2[0]
+                t1[k] = h_output2[1]
+                t2[k] = h_output2[2]
+                t3[k] = h_output2[3]
+        elif vectorize == 4:  # vectorised (fqs modified) IT DOES NOT WORK!
+            # calculate solutions array
+            #         Input data are coefficients of the Quartic polynomial of the form:
+            #
+            #             p[0]*x^4 + p[1]*x^3 + p[2]*x^2 + p[3]*x + p[4] = 0
+            P = numpy.zeros((AA.size, 5))
+            P[:, 0] = numpy.ones_like(AA)
+            P[:, 1] = AA.copy()
+            P[:, 2] = BB.copy()
+            P[:, 3] = CC.copy()
+            P[:, 4] = DD.copy()
 
+            from srxraylib.profiles.diaboloid.fqs import quartic_roots
+            SOLUTION = quartic_roots(P, modified=1, zero_below=1e-6)
+
+            SOLUTION_T = SOLUTION.T
+            t0, t1, t2, t3 =  SOLUTION_T[0], SOLUTION_T[1], SOLUTION_T[2], SOLUTION_T[3]
+
+        if do_test_solution:
             for k in range(AA.size):
                 z = t0[k]
                 result0 = z ** 4 + AA[k] * z ** 3 + BB[k] * z ** 2 + CC[k] * z + DD[k]
@@ -429,62 +466,11 @@ class S4Toroid(S4OpticalSurface):
                 if numpy.abs(result2) > 1e-3: print("Error in solution 2: ray, Delta, A, B, C, D: ", k, numpy.abs(result2), AA[k], BB[k], CC[k], DD[k])
                 if numpy.abs(result3) > 1e-3: print("Error in solution 3: ray, Delta, A, B, C, D: ", k, numpy.abs(result3), AA[k], BB[k], CC[k], DD[k])
 
-            return t0, t1, t2, t3
 
-        elif vectorize >= 1:  # new method
-            if vectorize == 1: # new method, vectorized
-                t0, t1, t2, t3 = self._solve_quartic_vectorized(AA, BB, CC, DD)
-            elif vectorize == 2: # new method, iterative
-                t0 = numpy.zeros_like(AA, dtype=complex)
-                t1 = numpy.zeros_like(AA, dtype=complex)
-                t2 = numpy.zeros_like(AA, dtype=complex)
-                t3 = numpy.zeros_like(AA, dtype=complex)
-                for k in range(AA.size):
-                    h_output2 = self._solve_quartic(AA[k], BB[k], CC[k], DD[k])
-                    t0[k] = h_output2[0]
-                    t1[k] = h_output2[1]
-                    t2[k] = h_output2[2]
-                    t3[k] = h_output2[3]
-            else:
-                raise Exception("Invalid value of vectorize=" % vectorize)
+        return t0, t1, t2, t3
 
-            if do_test_solution:
-                for k in range(AA.size):
-                    z = t0[k]
-                    result0 = z ** 4 + AA[k] * z ** 3 + BB[k] * z ** 2 + CC[k] * z + DD[k]
-                    z = t1[k]
-                    result1 = z ** 4 + AA[k] * z ** 3 + BB[k] * z ** 2 + CC[k] * z + DD[k]
-                    z = t2[k]
-                    result2 = z ** 4 + AA[k] * z ** 3 + BB[k] * z ** 2 + CC[k] * z + DD[k]
-                    z = t3[k]
-                    result3 = z ** 4 + AA[k] * z ** 3 + BB[k] * z ** 2 + CC[k] * z + DD[k]
-                    if numpy.abs(result0) > 1e-3: print("Error in solution 0: ray, Delta, A, B, C, D: ", k, numpy.abs(result0), AA[k], BB[k], CC[k], DD[k])
-                    if numpy.abs(result1) > 1e-3: print("Error in solution 1: ray, Delta, A, B, C, D: ", k, numpy.abs(result1), AA[k], BB[k], CC[k], DD[k])
-                    if numpy.abs(result2) > 1e-3: print("Error in solution 2: ray, Delta, A, B, C, D: ", k, numpy.abs(result2), AA[k], BB[k], CC[k], DD[k])
-                    if numpy.abs(result3) > 1e-3: print("Error in solution 3: ray, Delta, A, B, C, D: ", k, numpy.abs(result3), AA[k], BB[k], CC[k], DD[k])
 
-            return t0, t1, t2, t3
-
-        # elif vectorize == 2:  # vectorised (fqs modified) IT DOES NOT WORK!
-        #
-        #     # calculate solutions array
-        #     #         Input data are coefficients of the Quartic polynomial of the form:
-        #     #
-        #     #             p[0]*x^4 + p[1]*x^3 + p[2]*x^2 + p[3]*x + p[4] = 0
-        #     P = numpy.zeros((AA.size, 5))
-        #     P[:, 0] = numpy.ones_like(AA)
-        #     P[:, 1] = AA.copy()
-        #     P[:, 2] = BB.copy()
-        #     P[:, 3] = CC.copy()
-        #     P[:, 4] = DD.copy()
-        #
-        #     from srxraylib.profiles.diaboloid.fqs import quartic_roots
-        #     SOLUTION = quartic_roots(P, modified=1, zero_below=1e-6)
-        #
-        #     SOLUTION_T = SOLUTION.T
-        #     return SOLUTION_T[0], SOLUTION_T[1], SOLUTION_T[2], SOLUTION_T[3]
-
-    def choose_solution(self, t0, t1, t2, t3, vectorize=0, zero_below=1e-6):
+    def choose_solution(self, t0, t1, t2, t3, vectorize=2, zero_below=1e-6):
         """
         Selects the wanted single solution from the total of solutions.
 
@@ -503,6 +489,7 @@ class S4Toroid(S4OpticalSurface):
         vectorize : int, optional
             0: iterative (loop) method,
             1: use vectorized method.
+            2: use another vectorized method (slower than 1).
         zero_below : float, optional
             A level of zero for intermediate step in finding the solutions using vectorized=1.
 
@@ -514,38 +501,7 @@ class S4Toroid(S4OpticalSurface):
         i_res  = numpy.ones( t0.size )
         answer = numpy.ones( t0.size )
 
-        if vectorize:
-            h_output = numpy.stack((t0, t1, t2, t3))
-
-            # set small imaginary part to zero (to be considered as real)
-            mask_precision = numpy.abs(h_output.imag) < zero_below
-            h_output[mask_precision] = numpy.real(h_output[mask_precision])
-
-            # create a list of solutions
-            ANSWERS = list(h_output[:, k] for k in range(t0.size))
-
-            # remove the imaginary solutions
-            ANSWERS = list(ANSWERS[k][ANSWERS[k].imag == 0] for k in range(t0.size))
-
-            # sort solutions
-            ANSWERS = list(numpy.sort(ANSWERS[k].real) for k in range(t0.size))
-
-            if self.f_torus == 0:
-                answer = [item[-1] for item in ANSWERS]
-            elif self.f_torus == 1:
-                answer = [item[-2] for item in ANSWERS]
-            elif self.f_torus == 2:
-                answer = [item[1] for item in ANSWERS]
-            elif self.f_torus == 3:
-                answer = [item[0] for item in ANSWERS]
-
-            # find and set the bad rays (all solutions are complex)
-            mask_all_imag = h_output.imag.prod(axis=0) > zero_below # != 0
-            if mask_all_imag.sum() > 0:
-                print("all the solutions are complex for %d rays: " % mask.sum())
-                i_res[mask_all_imag] = -1
-                answer[mask_all_imag] = 0.0
-        else:
+        if vectorize == 0:
             for k in range(t0.size):
                 h_output = numpy.array([t0[k], t1[k], t2[k], t3[k]])
                 mask = numpy.abs(h_output.imag) < zero_below
@@ -584,11 +540,79 @@ class S4Toroid(S4OpticalSurface):
                             i_res[k] = -1
                     elif self.f_torus == 3:
                         answer[k] = Answers[0]
+        elif vectorize == 1:
+            h_output = numpy.stack((t0, t1, t2, t3))
+
+            # set small imaginary part to zero (to be considered as real)
+            mask_precision = numpy.abs(h_output.imag) < zero_below
+            h_output[mask_precision] = numpy.real(h_output[mask_precision])
+
+            # create a list of solutions
+            ANSWERS = list(h_output[:, k] for k in range(t0.size))
+
+            # remove the imaginary solutions
+            ANSWERS = list(ANSWERS[k][ANSWERS[k].imag == 0] for k in range(t0.size))
+
+            # sort solutions
+            ANSWERS = list(numpy.sort(ANSWERS[k].real) for k in range(t0.size))
+
+            if self.f_torus == 0:
+                answer = [item[-1] for item in ANSWERS]
+            elif self.f_torus == 1:
+                answer = [item[-2] for item in ANSWERS]
+            elif self.f_torus == 2:
+                answer = [item[1] for item in ANSWERS]
+            elif self.f_torus == 3:
+                answer = [item[0] for item in ANSWERS]
+
+            # find and set the bad rays (all solutions are complex)
+            mask_all_imag = h_output.imag.prod(axis=0) > zero_below # != 0
+            if mask_all_imag.sum() > 0:
+                print("all the solutions are complex for %d rays: " % mask.sum())
+                i_res[mask_all_imag] = -1
+                answer[mask_all_imag] = 0.0
+
+        elif vectorize == 2: # same algorithm as vectorized=1, but accelerated with the help of chatGPT
+            h_output = numpy.stack((t0, t1, t2, t3))  # shape (4, N)
+            # Zero-out tiny imaginary parts
+            mask_precision = numpy.abs(h_output.imag) < zero_below
+            h_output.real[mask_precision] = h_output.real[mask_precision]
+            h_output.imag[mask_precision] = 0.0
+
+            # Prepare results
+            answer = numpy.zeros(h_output.shape[1], dtype=float)
+
+            for k in range(h_output.shape[1]):  # iterate columns
+                vals = h_output[:, k]
+                # Keep only real solutions
+                real_vals = vals[vals.imag == 0].real
+                if real_vals.size == 0:
+                    # All solutions complex
+                    i_res[k] = -1
+                    answer[k] = 0.0
+                    continue
+                # Sort
+                real_vals.sort()
+                # Pick depending on f_torus
+                try:
+                    if self.f_torus == 0:
+                        answer[k] = real_vals[-1]
+                    elif self.f_torus == 1:
+                        answer[k] = real_vals[-2]
+                    elif self.f_torus == 2:
+                        answer[k] = real_vals[1]
+                    elif self.f_torus == 3:
+                        answer[k] = real_vals[0]
+                except IndexError:
+                    # Not enough solutions (like original code → would error)
+                    i_res[k] = -1
+                    answer[k] = 0.0
+
         return answer, i_res
 
     # todo: method=1 does not work
     #       method=0 does not give enough precision,
-    #       (now default sis method=3).
+    #       (now default is method=2).
     def surface_height(self, X, Y, solution_index=-1, method=2):
         """
         Calculates a 2D mesh array with the surface heights.
@@ -795,6 +819,108 @@ class S4Toroid(S4OpticalSurface):
     def _dpol4(self, z0, ABCD=None): # derivative of the quartic polynomial
         return 4 * z0 ** 3 + 3 * ABCD[0] * z0 ** 2 + 2 * ABCD[1] * z0 + ABCD[2]
 
+    def _calculate_quartic_coefficients(self, XIN, VIN, method=1):
+        #calculates the coefficients of the quartic polynomial resulting from
+        #the intersection of the torus with a ray.
+        # For the new equations, see https://arxiv.org/pdf/2301.03191.pdf but pay attention that the
+        # equations are full of typos...
+
+        P1 = XIN[0,:]
+        P2 = XIN[1,:]
+        P3 = XIN[2,:]
+
+        V1 = VIN[0,:]
+        V2 = VIN[1,:]
+        V3 = VIN[2,:]
+
+        #
+        # r_min and r_maj are like in shadow3
+        #
+        r_min = self.r_min
+        r_maj = self.r_maj
+
+        if self.f_torus == 0:
+            P3 = P3 - r_maj - r_min
+        elif self.f_torus == 1:
+            P3 = P3 - r_maj + r_min
+        elif self.f_torus == 2:
+            P3 = P3 + r_maj - r_min
+        elif self.f_torus == 3:
+            P3 = P3 + r_maj + r_min
+
+
+        if method==0: # shadow3
+            #     ! ** Evaluates the quartic coefficients **
+            # z^4 + AA z^3 + BB z^2 + CC z + DD = 0
+            A	=   r_maj**2 - r_min**2
+            B	= -(r_maj**2 + r_min**2)
+
+            AA	= P1 * V1**3 + P2 * V2**3 + P3 * V3**3 + \
+                V1 * V2**2 * P1 + V1**2 * V2 * P2 + \
+                V1 * V3**2 * P1 + V1**2 * V3 * P3 + \
+                V2 * V3**2 * P2 + V2**2 * V3 * P3
+            AA	= 4*AA
+
+            BB	= 3 * P1**2 * V1**2 + 3 * P2**2 * V2**2 +  \
+                3 * P3**2 * V3**2 + \
+                V2**2 * P1**2 + V1**2 * P2**2 + \
+                V3**2 * P1**2 + V1**2 * P3**2 + \
+                V3**2 * P2**2 + V2**2 * P3**2 + \
+                A * V1**2 + B * V2**2 + B * V3**2 + \
+                4 * V1 * V2 * P1 * P2 +  \
+                4 * V1 * V3 * P1 * P3 +  \
+                4 * V2 * V3 * P2 * P3
+            BB	= 2 * BB
+
+            CC	= P1**3 * V1 + P2**3 * V2 + P3**3 * V3 + \
+                P2 * P1**2 * V2 + P1 * P2**2 * V1 + \
+                P3 * P1**2 * V3 + P1 * P3**2 * V1 + \
+                P3 * P2**2 * V3 + P2 * P3**2 * V2 + \
+                A * V1 * P1 + B * V2 * P2 + B * V3 * P3
+            CC	= 4 * CC
+
+            DD	= P1**4 + P2**4 + P3**4 + \
+                2 * P1**2 * P2**2 + 2 * P1**2 * P3**2 + \
+                2 * P2**2 * P3**2 + \
+                2 * A * P1**2 + 2 * B * P2**2 + 2 * B * P3**2 + \
+                A**2
+
+            AA.shape = -1
+            BB.shape = -1
+            CC.shape = -1
+            DD.shape = -1
+
+        else: # shadow4 (much simpler, the same result...)
+            A = r_maj ** 2 - r_min ** 2
+
+            PdotV = P1 * V1 + P2 * V2 + P3 * V3
+            PdotP = P1 ** 2 + P2 ** 2 + P3 ** 2
+
+            AA = 4 * PdotV
+            BB = 4 * PdotV ** 2 + 2 * (A + PdotP) - 4 * r_maj ** 2 * (V2 ** 2 + V3 ** 2)
+            CC = 4 * PdotV * (A + PdotP) - 8 * r_maj ** 2 * (P2 * V2 + P3 * V3)
+            DD = (A + PdotP) ** 2 - 4 * r_maj ** 2 * (P2 ** 2 + P3 ** 2)
+
+        return AA, BB, CC, DD
+
+    @classmethod
+    def _solve_quartic_vectorized_numpy(cls, AA, BB, CC, DD):
+        if isinstance(AA, float): AA, BB, CC, DD = map(numpy.atleast_1d, (AA, BB, CC, DD))
+
+        n = AA.size
+
+        coeffs = numpy.stack([numpy.ones(n), AA, BB, CC, DD], axis=-1)  # (n,5)
+
+        # Build companion matrices in batch: shape (n,4,4)
+        M = numpy.zeros((n, 4, 4), dtype=numpy.complex128)
+        M[:, 1:, :-1] = numpy.eye(3)[None, :, :]  # subdiagonal ones
+        M[:, 0, :] = -coeffs[:, 1:] / coeffs[:, 0][:, None]
+
+        # Compute eigenvalues (roots)
+        roots = numpy.linalg.eigvals(M)  # (n,4)
+
+        return roots[:, 0], roots[:, 1], roots[:, 2], roots[:, 3]
+
     @classmethod
     def _solve_quartic(cls, b, c, d, e):
         # See General Formula for Roots in https://en.wikipedia.org/wiki/Quartic_function
@@ -957,90 +1083,6 @@ class S4Toroid(S4OpticalSurface):
 
         return z2, z3, z4, z1
 
-    def _calculate_quartic_coefficients(self, XIN, VIN, method=1):
-        #calculates the coefficients of the quartic polynomial resulting from
-        #the intersection of the torus with a ray.
-        # For the new equations, see https://arxiv.org/pdf/2301.03191.pdf but pay attention that the
-        # equations are full of typos...
-
-        P1 = XIN[0,:]
-        P2 = XIN[1,:]
-        P3 = XIN[2,:]
-
-        V1 = VIN[0,:]
-        V2 = VIN[1,:]
-        V3 = VIN[2,:]
-
-        #
-        # r_min and r_maj are like in shadow3
-        #
-        r_min = self.r_min
-        r_maj = self.r_maj
-
-        if self.f_torus == 0:
-            P3 = P3 - r_maj - r_min
-        elif self.f_torus == 1:
-            P3 = P3 - r_maj + r_min
-        elif self.f_torus == 2:
-            P3 = P3 + r_maj - r_min
-        elif self.f_torus == 3:
-            P3 = P3 + r_maj + r_min
-
-
-        if method==0: # shadow3
-            #     ! ** Evaluates the quartic coefficients **
-            # z^4 + AA z^3 + BB z^2 + CC z + DD = 0
-            A	=   r_maj**2 - r_min**2
-            B	= -(r_maj**2 + r_min**2)
-
-            AA	= P1 * V1**3 + P2 * V2**3 + P3 * V3**3 + \
-                V1 * V2**2 * P1 + V1**2 * V2 * P2 + \
-                V1 * V3**2 * P1 + V1**2 * V3 * P3 + \
-                V2 * V3**2 * P2 + V2**2 * V3 * P3
-            AA	= 4*AA
-
-            BB	= 3 * P1**2 * V1**2 + 3 * P2**2 * V2**2 +  \
-                3 * P3**2 * V3**2 + \
-                V2**2 * P1**2 + V1**2 * P2**2 + \
-                V3**2 * P1**2 + V1**2 * P3**2 + \
-                V3**2 * P2**2 + V2**2 * P3**2 + \
-                A * V1**2 + B * V2**2 + B * V3**2 + \
-                4 * V1 * V2 * P1 * P2 +  \
-                4 * V1 * V3 * P1 * P3 +  \
-                4 * V2 * V3 * P2 * P3
-            BB	= 2 * BB
-
-            CC	= P1**3 * V1 + P2**3 * V2 + P3**3 * V3 + \
-                P2 * P1**2 * V2 + P1 * P2**2 * V1 + \
-                P3 * P1**2 * V3 + P1 * P3**2 * V1 + \
-                P3 * P2**2 * V3 + P2 * P3**2 * V2 + \
-                A * V1 * P1 + B * V2 * P2 + B * V3 * P3
-            CC	= 4 * CC
-
-            DD	= P1**4 + P2**4 + P3**4 + \
-                2 * P1**2 * P2**2 + 2 * P1**2 * P3**2 + \
-                2 * P2**2 * P3**2 + \
-                2 * A * P1**2 + 2 * B * P2**2 + 2 * B * P3**2 + \
-                A**2
-
-            AA.shape = -1
-            BB.shape = -1
-            CC.shape = -1
-            DD.shape = -1
-
-        else: # shadow4 (much simpler, the same result...)
-            A = r_maj ** 2 - r_min ** 2
-
-            PdotV = P1 * V1 + P2 * V2 + P3 * V3
-            PdotP = P1 ** 2 + P2 ** 2 + P3 ** 2
-
-            AA = 4 * PdotV
-            BB = 4 * PdotV ** 2 + 2 * (A + PdotP) - 4 * r_maj ** 2 * (V2 ** 2 + V3 ** 2)
-            CC = 4 * PdotV * (A + PdotP) - 8 * r_maj ** 2 * (P2 * V2 + P3 * V3)
-            DD = (A + PdotP) ** 2 - 4 * r_maj ** 2 * (P2 ** 2 + P3 ** 2)
-
-        return AA, BB, CC, DD
-
 if __name__ == "__main__":
 
     # t = S4Toroid(r_maj=5000.0, r_min=100, f_torus=3)
@@ -1066,7 +1108,9 @@ if __name__ == "__main__":
     # print("normal: ", t.get_normal(x2))
 
     BB, CC, DD, EE = 20.246392743580742, 993.7703042220965, 9022.71585643664, -4285.150145292282
-    print("using numpy: ", numpy.polynomial.polynomial.polyroots([EE, DD, CC, BB, 1.0]))
+    print("using _solve_quartic_vectorized_numpy ** in use **: ", S4Toroid._solve_quartic_vectorized_numpy(BB, CC, DD, EE))
+    print("using numpy polyroots: ", numpy.polynomial.polynomial.polyroots([EE, DD, CC, BB, 1.0]))
+    print("using numpy roots: ", numpy.roots([1.0, BB, CC, DD, EE]))
     print("using new (itemized): ", S4Toroid._solve_quartic(BB, CC, DD, EE))
     print("using new (vectorized): ", S4Toroid._solve_quartic_vectorized(numpy.array([BB]), numpy.array([CC]), numpy.array([DD]), numpy.array([EE])))
     print("using mathematica: ", S4Toroid._solve_quartic_mathematica(BB, CC, DD, EE))
@@ -1077,3 +1121,26 @@ if __name__ == "__main__":
     companion_matrix[0, :] = -numpy.array(coeffs[1:]) / coeffs[0]
     roots = numpy.linalg.eigvals(companion_matrix) # Find eigenvalues (roots of the polynomial)
     print("using chatGPT/numpy: ", roots)
+
+    #
+    # Find real roots using Brent–Dekker method (brentq).
+    #
+    from scipy.optimize import brentq
+    def poly(t, BB, CC, DD, EE):
+        """Quartic polynomial: t^4 + AA*t^3 + BB*t^2 + CC*t + DD"""
+        return t ** 4 + BB * t ** 3 + CC * t ** 2 + DD * t + EE
+
+    a, b, n_points = -100, 100, 500
+    ts = numpy.linspace(a, b, n_points)
+    values = poly(ts, BB, CC, DD, EE)
+
+    roots = []
+    for i in range(len(ts)-1):
+        if values[i] * values[i+1] < 0:  # sign change → root in bracket
+            try:
+                root = brentq(poly, ts[i], ts[i+1], args=(BB, CC, DD, EE))
+                if not any(abs(root - r) < 1e-6 for r in roots):
+                    roots.append(root)
+            except ValueError:
+                pass
+    print("using chatGPT/brent: ", roots)
