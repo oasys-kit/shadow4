@@ -11,13 +11,11 @@ Available public functions:
 
 """
 
-try:
-    import oasys_srw.srwlib as sl
-except:
-    try:
-        import srwlib as sl
-    except:
-        raise ImportError("SRW not imported")
+from shadow4.srw import (
+    SRW_INSTALLED, SRWLPartBeam, SRWLMagFldH, SRWLMagFldU, SRWLMagFldC,
+    array as srw_array, SRWLRadMesh, SRWLWfr, srwl,
+    SRWLOptD, SRWLOptC
+)
 
 from copy import deepcopy
 import numpy
@@ -180,7 +178,7 @@ def _undul_phot_SRW(E_ENERGY, INTENSITY, LAMBDAU, NPERIODS, K, EMIN, EMAX, NG_E,
 
     z_start = -0.5 * lambdau * (nperiods + 4)
 
-    part_beam = sl.SRWLPartBeam()
+    part_beam = SRWLPartBeam()
     part_beam.Iavg = intensity
     part_beam.partStatMom1.x = 0.0
     part_beam.partStatMom1.y = 0.0
@@ -200,21 +198,21 @@ def _undul_phot_SRW(E_ENERGY, INTENSITY, LAMBDAU, NPERIODS, K, EMIN, EMAX, NG_E,
 
 
     magnetic_fields = []
-    magnetic_fields.append(sl.SRWLMagFldH(1, 'v',
+    magnetic_fields.append(SRWLMagFldH(1, 'v',
                                        _B=B,
                                        _ph=0.0,
                                        _s=-1,
                                        _a=1.0))
-    magnetic_structure = sl.SRWLMagFldU(_arHarm=magnetic_fields, _per=lambdau, _nPer=nperiods)
-    magnetic_field_container = sl.SRWLMagFldC(_arMagFld=[magnetic_structure],
-                                           _arXc=sl.array('d', [0.0]),
-                                           _arYc=sl.array('d', [0.0]),
-                                           _arZc=sl.array('d', [0.0]))
+    magnetic_structure = SRWLMagFldU(_arHarm=magnetic_fields, _per=lambdau, _nPer=nperiods)
+    magnetic_field_container = SRWLMagFldC(_arMagFld=[magnetic_structure],
+                                           _arXc=srw_array('d', [0.0]),
+                                           _arYc=srw_array('d', [0.0]),
+                                           _arZc=srw_array('d', [0.0]))
 
 
     sys.stdout.flush()
 
-    mesh = sl.SRWLRadMesh(_eStart=emin,
+    mesh = SRWLRadMesh(_eStart=emin,
                        _eFin=emax,
                        _ne=ne,
                        _xStart=slit_xmin,
@@ -227,13 +225,13 @@ def _undul_phot_SRW(E_ENERGY, INTENSITY, LAMBDAU, NPERIODS, K, EMIN, EMAX, NG_E,
 
     print ("Calculating source (SRW)...", mesh.ne, mesh.eStart, mesh.eFin, mesh.xStart, mesh.xFin, mesh.yStart, mesh.yFin)
 
-    wfr = sl.SRWLWfr()
+    wfr = SRWLWfr()
     wfr.allocate(mesh.ne, mesh.nx, mesh.ny)
     wfr.mesh = mesh
     wfr.partBeam = part_beam # part_beam
     wfr.unitElFld = 1 #Electric field units: 0- arbitrary, 1- sqrt(Phot/s/0.1%bw/mm^2), 2- sqrt(J/eV/mm^2) or sqrt(W/mm^2), depending on representation (freq. or time)
 
-    sl.srwl.CalcElecFieldSR(wfr, 0, magnetic_field_container, [1, 0.01, 0, 0, number_of_trajectory_points * nperiods, 1, 0])
+    srwl.CalcElecFieldSR(wfr, 0, magnetic_field_container, [1, 0.01, 0, 0, number_of_trajectory_points * nperiods, 1, 0])
     ###
     # part_beam = _srw_drift_electron_beam(part_beam, -part_beam.moved)
     ###
@@ -331,7 +329,7 @@ def _undul_phot_SRW(E_ENERGY, INTENSITY, LAMBDAU, NPERIODS, K, EMIN, EMAX, NG_E,
         srw_oe_array = []
         srw_pp_array = []
 
-        drift_before_oe_0 = sl.SRWLOptD(-distance)
+        drift_before_oe_0 = SRWLOptD(-distance)
         # Wavefront Propagation Parameters:
         # [0]: Auto-Resize (1) or not (0) Before propagation
         # [1]: Auto-Resize (1) or not (0) After propagation
@@ -356,10 +354,10 @@ def _undul_phot_SRW(E_ENERGY, INTENSITY, LAMBDAU, NPERIODS, K, EMIN, EMAX, NG_E,
         ####################################################
         # PROPAGATION
 
-        optBL = sl.SRWLOptC(srw_oe_array, srw_pp_array)
+        optBL = SRWLOptC(srw_oe_array, srw_pp_array)
 
         print("Backpropagating source (SRW)...")
-        sl.srwl.PropagElecField(wfr, optBL)
+        srwl.PropagElecField(wfr, optBL)
 
         BPwSigma, BPwPi = _SRWEFieldAsNumpy(wfr)
 
@@ -442,6 +440,9 @@ def calculate_undulator_emission_srw(
         A dictionary with calculated values and arrays.
 
     """
+
+    if not SRW_INSTALLED: raise ImportError("SRW is not installed")
+
     return _undul_phot_SRW(
                         electron_energy,
                         electron_current,
