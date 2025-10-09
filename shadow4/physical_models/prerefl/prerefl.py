@@ -184,8 +184,8 @@ class PreRefl(object):
                                                      material="SiC",
                                                      density=3.217,):
 
-        try: import xraylib
-        except: "xraylib not available"
+        try:    import xraylib
+        except: raise ImportError("xraylib not available")
 
         photon_energy_ev_array = numpy.array(photon_energy_ev)
         attenuation_coefficient = numpy.zeros_like(photon_energy_ev_array, dtype=float)
@@ -229,9 +229,9 @@ class PreRefl(object):
 
     @classmethod
     def get_refraction_index_external_xraylib(self,
-                                                     photon_energy_ev=10000.0,
-                                                     material="SiC",
-                                                     density=3.217,):
+                                              photon_energy_ev=10000.0,
+                                              material="SiC",
+                                              density=3.217,):
         """
         Standalone method to return the complex refraction index using xraylib.
 
@@ -249,8 +249,8 @@ class PreRefl(object):
         float or numpy array
             The array with attenuation coefficient in cm^-1.
         """
-        try: import xraylib
-        except: "xraylib not available"
+        try:    import xraylib
+        except: raise ImportError("xraylib not available")
 
         if isinstance(photon_energy_ev, (float, int)):
             return xraylib.Refractive_Index(material, photon_energy_ev * 1e-3, density)
@@ -292,28 +292,24 @@ class PreRefl(object):
 
     @classmethod
     def get_refraction_index_external_dabax(self,
-                                                     photon_energy_ev=10000.0,
-                                                     material="SiC",
-                                                     density=3.217,
-                                                     dabax=None,
-                                                     ):
+                                            photon_energy_ev=10000.0,
+                                            material="SiC",
+                                            density=3.217,
+                                            dabax=None):
 
         from dabax.dabax_xraylib import DabaxXraylib
-        if isinstance(dabax, DabaxXraylib):
-            dx = dabax
-        else:
-            dx = DabaxXraylib()
+        if isinstance(dabax, DabaxXraylib): dx = dabax
+        else:                               dx = DabaxXraylib()
 
         return dx.Refractive_Index_Re(material, photon_energy_ev * 1e-3, density) + \
                1j * dx.Refractive_Index_Im(material, photon_energy_ev * 1e-3, density)
 
     @classmethod
     def get_refraction_index_real_external_dabax(self,
-                                                     photon_energy_ev=10000.0,
-                                                     material="SiC",
-                                                     density=3.217,
-                                                     dabax=None,
-                                                     ):
+                                                 photon_energy_ev=10000.0,
+                                                 material="SiC",
+                                                 density=3.217,
+                                                 dabax=None):
         """
         Standalone method to return the complex refraction index using dabax.
 
@@ -334,10 +330,8 @@ class PreRefl(object):
             The array with attenuation coefficient in cm^-1.
         """
         from dabax.dabax_xraylib import DabaxXraylib
-        if isinstance(dabax, DabaxXraylib):
-            dx = dabax
-        else:
-            dx = DabaxXraylib()
+        if isinstance(dabax, DabaxXraylib): dx = dabax
+        else:                               dx = DabaxXraylib()
 
         return dx.Refractive_Index_Re(material, photon_energy_ev * 1e-3, density)
 
@@ -442,8 +436,8 @@ class PreRefl(object):
         tuple
             (rs, rp, runp) the s-polarized, p-pol and unpolarized reflectivities
         """
-        try: import xraylib
-        except: "xraylib not available"
+        try:    import xraylib
+        except: raise ImportError("xraylib not available")
 
         photon_energy_ev_array = numpy.array(photon_energy_ev)
         refraction_index_2 = numpy.zeros_like(photon_energy_ev_array, dtype=complex)
@@ -649,6 +643,7 @@ class PreRefl(object):
                 E_MIN=100.0,
                 E_MAX=20000.0,
                 E_STEP=100.0,
+                materials_library=None
                 ):
         """
         Creates an instance of PreRefl with parameters initialized from the keyword parameters and the
@@ -675,8 +670,12 @@ class PreRefl(object):
         -------
         instance of PreRefl
         """
-        try: import xraylib
-        except: "xraylib not available"
+
+        if materials_library is None:
+            try:    import xraylib as materials_library
+            except:
+                from dabax.dabax_xraylib import DabaxXraylib
+                materials_library = DabaxXraylib()
 
         if interactive:
             # input section
@@ -715,11 +714,11 @@ class PreRefl(object):
         f.write("%i \n" % int(npoint))
         for i in range(npoint):
             energy = (estart + estep * i) * 1e-3
-            tmp = 2e0 * (1e0 - xraylib.Refractive_Index_Re(iMaterial, energy, density))
+            tmp = 2e0 * (1e0 - materials_library.Refractive_Index_Re(iMaterial, energy, density))
             f.write("%e \n" % tmp)
         for i in range(npoint):
             energy = (estart + estep * i) * 1e-3
-            tmp2 = 2e0 * (xraylib.Refractive_Index_Im(iMaterial, energy, density))
+            tmp2 = 2e0 * (materials_library.Refractive_Index_Im(iMaterial, energy, density))
             f.write("%e \n" % tmp2)
         print("File written to disk: %s" % out_file)
         f.close()
@@ -727,7 +726,7 @@ class PreRefl(object):
         # test (not needed)
         itest = 0
         if itest:
-            cdtest = xraylib.CompoundParser(iMaterial)
+            cdtest = materials_library.CompoundParser(iMaterial)
             print("    ", iMaterial, " contains %i atoms and %i elements" % (cdtest['nAtomsAll'], cdtest['nElements']))
             for i in range(cdtest['nElements']):
                 print("    Element %i: %lf %%" % (cdtest['Elements'][i], cdtest['massFractions'][i] * 100.0))
@@ -737,8 +736,8 @@ class PreRefl(object):
                 energy = (estart + estep * i) * 1e-3
                 qq = qmin + qstep * i
                 print(energy, qq, \
-                      2e0 * (1e0 - xraylib.Refractive_Index_Re(iMaterial, energy, density)), \
-                      2e0 * (xraylib.Refractive_Index_Im(iMaterial, energy, density)))
+                      2e0 * (1e0 - materials_library.Refractive_Index_Re(iMaterial, energy, density)), \
+                      2e0 * (materials_library.Refractive_Index_Im(iMaterial, energy, density)))
 
         return None
 
@@ -883,7 +882,8 @@ class PreRefl(object):
 
         """
 
-        from refractiveindex import RefractiveIndexMaterial
+        try: from refractiveindex import RefractiveIndexMaterial
+        except: raise ImportError("refractiveindex not available")
 
         depth0 = density / 2.0
 
