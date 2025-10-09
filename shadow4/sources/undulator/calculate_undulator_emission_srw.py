@@ -11,7 +11,7 @@ Available public functions:
 
 """
 
-from shadow4.srw import (
+from shadow4.tools.srw import (
     SRW_INSTALLED, SRWLPartBeam, SRWLMagFldH, SRWLMagFldU, SRWLMagFldC,
     array as srw_array, SRWLRadMesh, SRWLWfr, srwl,
     SRWLOptD, SRWLOptC

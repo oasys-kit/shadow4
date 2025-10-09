@@ -71,7 +71,6 @@ PACKAGES = [
     "shadow4.beamline.optical_elements.gratings",
     "shadow4.beamline.optical_elements.refractors",
     "shadow4.tools",
-    "shadow4.srw",
 ]
 
 INSTALL_REQUIRES = (
@@ -87,7 +86,7 @@ README_FILE = os.path.join(os.path.dirname(__file__), 'README.rst')
 LONG_DESCRIPTION = open(README_FILE).read()
 
 setup(name='shadow4',
-      version='0.1.62',
+      version='0.1.63',
       description='shadow implementation in python',
       long_description=LONG_DESCRIPTION,
       long_description_content_type='text/x-rst',
