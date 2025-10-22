@@ -350,6 +350,8 @@ class S4CrystalElement(S4BeamlineElement):
                 energy = codata.h * codata.c / codata.e * 1e2 / (oe._phot_cent * 1e-8)
 
             setting_angle = self._crystalpy_diffraction_setup.angleBraggCorrected(energy)
+            if isinstance(setting_angle, (list, tuple, numpy.ndarray)): setting_angle = setting_angle[0]
+
             theta_in_grazing  = setting_angle + oe._asymmetry_angle
 
             if is_verbose():
@@ -363,14 +365,16 @@ class S4CrystalElement(S4BeamlineElement):
                 print("    align_crystal: (normal) Reflection angle [LAUE EQUATION]",  numpy.degrees(numpy.pi/2 - (theta_out_grazing) ))
                 print("    align_crystal: grazing output angle [LAUE EQUATION]: ", numpy.degrees(theta_out_grazing))
 
-
             KIN = self._crystalpy_diffraction_setup.vectorKscattered(energy=energy)
             theta_out = KIN.angle(self._crystalpy_diffraction_setup.vectorNormalSurface())
+            if isinstance(theta_out, (list, tuple, numpy.ndarray)): theta_out = theta_out[0]
+
             if is_verbose(): print("    align_crystal: (normal) Reflection angle [SCATTERING EQUATION]: ", numpy.degrees(theta_out))
-            _,_,angle_azimuthal = coor.get_angles()
-            coor.set_angles(angle_radial=    numpy.pi/2 - theta_in_grazing ,
-                            angle_radial_out=theta_out,
-                            angle_azimuthal=angle_azimuthal)
+            _, _, angle_azimuthal = coor.get_angles()
+
+            coor.set_angles(angle_radial     = numpy.pi/2 - theta_in_grazing,
+                            angle_radial_out = theta_out,
+                            angle_azimuthal  = angle_azimuthal)
         else:
             if is_verbose(): print("align_crystal: nothing to align: f_central=0")
 
