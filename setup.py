@@ -77,7 +77,7 @@ INSTALL_REQUIRES = (
     'setuptools',
     'numpy',
     'scipy',
-    'syned>=1.0.41',
+    'syned>=1.0.47',
     'srxraylib>=1.0.61',
     'crystalpy>=0.0.25',
 )

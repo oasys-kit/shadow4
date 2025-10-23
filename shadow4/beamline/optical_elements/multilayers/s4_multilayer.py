@@ -2,18 +2,12 @@ import numpy
 
 from syned.beamline.shape import Rectangle, Ellipse
 from syned.beamline.element_coordinates import ElementCoordinates
-
-# TODO: change from syned.beamline.optical_elements.multilayers.multilayer import Multilayer
-from shadow4.beamline.optical_elements.multilayers.syned_multilayer import Multilayer
+from syned.beamline.optical_elements.multilayers.multilayer import Multilayer
 
 from shadow4.physical_models.mlayer.mlayer import MLayer
 from shadow4.beamline.s4_beamline_element import S4BeamlineElement
 from shadow4.beam.s4_beam import S4Beam
 from shadow4.beamline.s4_beamline_element_movements import S4BeamlineElementMovements
-
-from shadow4.optical_surfaces.s4_conic import S4Conic
-from shadow4.optical_surfaces.s4_toroid import S4Toroid
-from shadow4.optical_surfaces.s4_mesh import S4Mesh
 
 class S4Multilayer(Multilayer):
     """

@@ -1,6 +1,6 @@
-import numpy
 from syned.beamline.shape import NumericalMesh
 from syned.beamline.element_coordinates import ElementCoordinates
+
 from shadow4.beam.s4_beam import S4Beam
 from shadow4.beamline.optical_elements.multilayers.s4_multilayer import S4MultilayerElement, S4Multilayer
 from shadow4.beamline.optical_elements.multilayers.s4_numerical_mesh_multilayer import S4NumericalMeshMultilayer
