@@ -2666,7 +2666,7 @@ class S4Beam(object):
         column_names = cls.column_short_names_with_column_number()
 
         try:
-            x = (f["%s/%s/col01 x"%(simulation_name,beam_name)])[:]
+            x = (f["%s/%s/%s" % (simulation_name, beam_name, column_names[0])])[:]
 
             beam = S4Beam(N=x.size)
             rays = numpy.zeros( (x.size,18))
