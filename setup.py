@@ -36,8 +36,10 @@
 #
 # Upload to pypi (when uploading, increment the version number):
 #     python setup.py register (only once, not longer needed)
+#     # use python > 3.10, pip > 25.2 (packages needed: twine build)
 #     python setup.py sdist
-#     python -m twine upload dist/...
+#     python -m build
+#     python -m twine upload dist/*
 #          
 # Install from pypi:
 #     pip install shadow4
@@ -86,7 +88,7 @@ README_FILE = os.path.join(os.path.dirname(__file__), 'README.rst')
 LONG_DESCRIPTION = open(README_FILE).read()
 
 setup(name='shadow4',
-      version='0.1.68',
+      version='0.1.69',
       description='shadow implementation in python',
       long_description=LONG_DESCRIPTION,
       long_description_content_type='text/x-rst',
