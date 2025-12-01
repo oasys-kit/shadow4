@@ -122,8 +122,7 @@ class S4Beam(object):
 
         """
         self._N_cleaned = self.get_number_of_rays(nolost=0)
-        mask = self.rays[:, 11] >= 0
-        self.rays = self.rays[mask]
+        self.rays       = self.rays[numpy.where(self.rays[:, 9] > 0.0)]
 
     def append_beam(self, beam_to_append, update_column_index=True):
         """
