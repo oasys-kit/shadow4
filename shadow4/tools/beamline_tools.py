@@ -131,19 +131,26 @@ def flux_summary(beamline, spectrum_energy=None, spectrum_flux=None, e_min=None,
     txt += "# SHADOW SOURCE --------- \n"
     txt += "\n"
     try:
+        I0 = beam0.N
+        I1 = beam1.intensity(nolost=1)
+        I0ratio = beam0.Ngood / beam0.N # this should be 1, except for optimized sources (cleaned beams)
         if is_monochromatic:
             txt += " Source Energy (monochromatic): %.3f eV \n" % (photon_energy[0])
 
+            if beam0.is_cleaned():
+                txt1 = "(source optimized or cleaned)"
+            else:
+                txt1 = ""
             txt += "\n"
-            txt += "# SHADOW BEAMLINE --------- \n"
+            txt += "# SHADOW BEAMLINE --------- %s \n" % txt1
             txt += " \n"
-            txt += " Shadow Intensity (Initial): %f \n" % (beam0.intensity(nolost=1))
-            txt += " Shadow Intensity (Final)  : %f \n" % (beam1.intensity(nolost=1))
-            txt += " Efficiency: %f %% \n" % (100 * beam1.intensity(nolost=1) / beam0.intensity(nolost=1))
+            txt += " Shadow Intensity (Initial number of rays): %f \n" % (I0)
+            txt += " Shadow Intensity (Final)  : %f \n" % (I1)
+            txt += " Efficiency: %f %% \n" % (100 * I1 / I0)
 
             txt += "\n"
             txt += " Bandwidth considered : 1 eV \n"
-            T_eV = beam1.intensity(nolost=1) / beam0.intensity(nolost=1)
+            T_eV = I1 / I0
             txt += " Flux Transmitivity per eV: %.3g %% \n" % (100 * T_eV)
         else:
             txt += " Source Central Energy: %.3f eV \n" % (0.5 * (photon_energy.max() - photon_energy.min()) + photon_energy.min())
@@ -169,14 +176,14 @@ def flux_summary(beamline, spectrum_energy=None, spectrum_flux=None, e_min=None,
             txt += "\n"
             txt += "# SHADOW BEAMLINE --------- \n"
             txt += " \n"
-            txt += " Shadow Intensity (Initial): %f (from histogram: %f)\n" % (beam0.intensity(nolost=1), numpy.array(ticket0['histogram']).sum())
-            txt += " Shadow Intensity (Final)  : %f (from histogram: %f)\n" % (beam1.intensity(nolost=1), numpy.array(ticket1['histogram']).sum())
-            txt += " Efficiency: %f %% \n" % (100 * beam1.intensity(nolost=1) / beam0.intensity(nolost=1))
+            txt += " Shadow Intensity (Initial): %f (from histogram: %f)\n" % (I0, numpy.array(ticket0['histogram']).sum() * I0ratio)
+            txt += " Shadow Intensity (Final)  : %f (from histogram: %f)\n" % (I1, numpy.array(ticket1['histogram']).sum())
+            txt += " Efficiency: %f %% \n" % (100 * I1 / I0)
 
             txt += "\n"
             txt += " Bandwidth (at the Image Plane): %.3f eV \n" % (ticket1['fwhm'])
-            T_eV = beam1.intensity(nolost=1) / (ticket1['fwhm']) / \
-                   (beam0.intensity(nolost=1) / (photon_energy.max() - photon_energy.min()))
+            T_eV = I1 / (ticket1['fwhm']) / \
+                   (I0 / (photon_energy.max() - photon_energy.min()))
             txt += " Flux Transmitivity per eV: %.3g %% \n" % (100 * T_eV)
 
     except:
@@ -215,7 +222,7 @@ def flux_summary(beamline, spectrum_energy=None, spectrum_flux=None, e_min=None,
     # Calculation using an approximated method (an interpolated value of the source flux, supposed almost constants at the source)
     #
     txt += "\n"
-    txt += "# FLUX CALCULATION (APPROXIMATED)--------- \n"
+    txt += "# FLUX CALCULATION (APPROXIMATED)---------(using interpolated source flux, supposed almost constants at the source) \n"
     txt += "\n"
 
     try:
@@ -273,14 +280,14 @@ def flux_summary(beamline, spectrum_energy=None, spectrum_flux=None, e_min=None,
     try:
         if not is_monochromatic:
             txt += "\n"
-            txt += "# FLUX CALCULATION (EXACT)--------- \n"
+            txt += "# FLUX CALCULATION (EXACT)--------- (using calibrated histograms) \n"
             txt += "\n"
 
             txt += " Initial Flux from Source (integrated over histogram): %g ph/s" % (
                                                 numpy.trapz(interpolated_flux_per_ev, ticket0['bin_center']))
 
             txt += "\n"
-            flux_at_sample = interpolated_flux_per_ev * ticket1['histogram'] / ticket0['histogram']
+            flux_at_sample = interpolated_flux_per_ev * I0ratio * ticket1['histogram'] / ticket0['histogram']
             flux_at_sample_integrated = numpy.trapz(flux_at_sample, ticket1['bin_center'])
 
             txt += " ---> Integrated Flux at image: %.3g ph/s \n" % (flux_at_sample_integrated)
@@ -886,7 +893,6 @@ if __name__ == "__main__":
 
         return beamline, beam
 
-
     beamline, beam = get_beamline()
 
     if 0:
@@ -902,7 +908,7 @@ if __name__ == "__main__":
         print(focnew(beamline=beamline, mode=2, center=[0,0])["text"])
 
 
-    if 1:
+    if 0:
         # b = beamline_get_beam_at_element(beamline, 5)
         # print(b)
 
@@ -932,3 +938,7 @@ if __name__ == "__main__":
               ticket['list_yy'][9],  ticket['list_xz'][9],
               ticket['list_yy'][10], ticket['list_xz'][10], legend=ticket['list_labels'])
         # print(beamline.distances_summary())
+
+    if 1:
+
+        print(flux_summary(beamline))gti add 

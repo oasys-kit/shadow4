@@ -113,7 +113,7 @@ class S4Beam(object):
     def clean_lost_rays(self):
         """
         Clean the lost rays from the beam. It removed the lost rays from the stored beam. It saves memory.
-        Useful qhen lost rays are not longer interesting.
+        Useful when lost rays are not longer interesting.
 
         Returns
         -------
@@ -242,9 +242,18 @@ class S4Beam(object):
         Parameters
         ----------
         nolost : int, optional
-            * 0=return all rays,
-            * 1=Return only good rays (non-lost rays),
-            * 2=Return only lost rays.
+            * 0=return the total number of rays,
+            * 1=Return the number of good rays (non-lost rays),
+            * 2=Return the number of STORED lost rays (see Notes).
+
+        Notes
+        -----
+        Note: in general, when the beam "has not been cleaned" (using clean_lost_rays()) the total number of rays is
+        equal to good raus plus lost rays, and all of them are stored in the beam.
+        If the beam has been cleaned, get_number_of_rays(nolost=2), returns the number of the lost rays that are
+        physically stored in the beam. Calling beam.get_number_of_rays(nolost=2) on a beam that has just been
+        beam.clean_lost_rays() will return zero. It may not be zero if the beam is traced after cleaned and not
+        re-clean.
 
         Returns
         -------
@@ -258,20 +267,20 @@ class S4Beam(object):
             print("Error: Empty beam...")
             return 0
 
-        if self._N_cleaned is None:
+        if self.is_cleaned():
             if nolost == 0:
-                return w.size
+                return self._N_cleaned
             if nolost == 1:
                 return numpy.array(numpy.where(w >= 0)).size
             if nolost == 2:
                 return numpy.array(numpy.where(w < 0)).size
         else:
             if nolost == 0:
-                return self._N_cleaned
+                return w.size
             if nolost == 1:
                 return numpy.array(numpy.where(w >= 0)).size
             if nolost == 2:
-                return self._N_cleaned - numpy.array(numpy.where(w >= 0)).size
+                return numpy.array(numpy.where(w < 0)).size
 
         return self.rays.shape[0]
 
@@ -304,7 +313,7 @@ class S4Beam(object):
     @property
     def Nbad(self):
         """
-        Returns the number of bad rays.
+        Returns the number of STORED bad rays (see Notes in get_number_of_rays()).
 
         Returns
         -------
@@ -989,7 +998,7 @@ class S4Beam(object):
             a python dictionary with the calculated histogram. Some of the keys are:
                  'error', 'col', 'write', 'nolost', 'nbins', 'xrange', 'factor'
                  'histogram', 'bins', 'histogram_sigma', 'bin_center', 'bin_left', 'bin_right',
-                 'intensity', 'fwhm', 'nrays', 'good_rays'.
+                 'intensity', 'fwhm', 'nrays', 'good_rays', 'lost_rays'.
 
         """
         # initialize return value
@@ -1093,6 +1102,7 @@ class S4Beam(object):
             ticket['fwhm'] = None
             ticket['nrays'] = self.get_number_of_rays(nolost=0)
             ticket['good_rays'] = self.get_number_of_rays(nolost=1)
+            ticket['lost_rays'] = self.get_number_of_rays(nolost=2)
 
             # for practical purposes, writes the points the will define the histogram area
             tmp_b = []
@@ -1242,6 +1252,7 @@ class S4Beam(object):
             ticket['bin_h_center'] = ticket['bin_v_center'] = ticket['intensity'] = numpy.nan
             ticket['nrays'] = self.get_number_of_rays(nolost=0)
             ticket['good_rays'] = 0
+            ticket['lost_rays'] = 0
             ticket['fwhm_h'] = ticket['fwhm_v'] = None
             if calculate_widths > 0:  ticket['fwhm_coordinates_h'] = ticket['fwhm_coordinates_v'] = (numpy.nan, numpy.nan)
             if calculate_widths == 2: ticket["fw25%m_h"] = ticket["fw75%m_h"] = ticket["fw25%m_v"] = ticket["fw75%m_v"] = None
@@ -1271,6 +1282,7 @@ class S4Beam(object):
             ticket['intensity'] = self.intensity(nolost=nolost)
             ticket['nrays'] = self.get_number_of_rays(nolost=0)
             ticket['good_rays'] = self.get_number_of_rays(nolost=1)
+            ticket['lost_rays'] = self.get_number_of_rays(nolost=2)
 
             # CALCULATE fwhm
 
@@ -2966,17 +2978,21 @@ if __name__ == "__main__":
         print(B.get_average(1), B.get_average(1, ref=23))
         print(B.isnan())
 
-    if 0:  # check cleaned beam
+    if 1:  # check cleaned beam
         B = S4Beam.initialize_as_pencil(N=2000)
         print("Beam cleaned? ", B.is_cleaned())
         print("...reflagging 100, and cleaning...")
-        B.rays[100:200, 11] = -1
+        B.rays[100:200, 9] = -1
         B.clean_lost_rays()
         print("Beam cleaned? ", B.is_cleaned())
-        print("...reflagging 200, and NOT cleaning...")
+        print("number of rays : ", B.N, B.get_number_of_rays())
+        print("number of good rays : ", B.Ngood, B.get_number_of_rays(nolost=1))
+        print("number of bad rays : ", B.Nbad, B.get_number_of_rays(nolost=2))
+        print("number of stored rays: ", (B.Nstored))
+
+        print("\n...reflagging 200, and NOT cleaning...")
         B.rays[1100:1300, 9] = -1
         print("Beam cleaned? ", B.is_cleaned())
-
         print("number of rays : ", B.N, B.get_number_of_rays())
         print("number of good rays : ", B.Ngood, B.get_number_of_rays(nolost=1))
         print("number of bad rays : ", B.Nbad, B.get_number_of_rays(nolost=2))
@@ -2988,7 +3004,7 @@ if __name__ == "__main__":
         print(B.get_column(12)[-1], B.rays.shape)
 
 
-    if 1:  # check append beam
+    if 0:  # check append beam
         A = S4Beam.initialize_as_pencil(N=1000)
 
         B = S4Beam.initialize_as_pencil(N=2000)
@@ -3013,5 +3029,7 @@ if __name__ == "__main__":
         print("bad : ", (A.get_rays(nolost=2)).shape, A.rays_bad.shape, A.rays_bad)
         print("rays shape, Nstored: ", A.rays.shape, A.Nstored)
         print("last index: ", A.get_column(12)[-1])
+
+
 
 
