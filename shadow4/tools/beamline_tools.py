@@ -939,6 +939,6 @@ if __name__ == "__main__":
               ticket['list_yy'][10], ticket['list_xz'][10], legend=ticket['list_labels'])
         # print(beamline.distances_summary())
 
-    if 1:
+    if 0:
 
-        print(flux_summary(beamline))gti add 
+        print(flux_summary(beamline))
