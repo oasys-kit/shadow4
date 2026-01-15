@@ -98,7 +98,7 @@ class S4Crystal(Crystal):
                  asymmetry_angle=0.0,
                  is_thick=0,          # 1=Use thick crystal approximation
                  thickness=0.010,
-                 f_central=False,
+                 f_central=0,
                  f_phot_cent=0,
                  phot_cent=8000.0,
                  # f_johansson=False,
@@ -399,6 +399,15 @@ class S4CrystalElement(S4BeamlineElement):
 
         if not isinstance(self.get_optical_element(), Crystal): raise Exception("Undefined Crystal")
         flag_lost_value = params.get("flag_lost_value", -1)
+        change_reference_system_in = params.get("change_reference_system_in", True)
+        change_reference_system_out = params.get("change_reference_system_out", True)
+        print(">>>>>> change_reference_system: ", change_reference_system_in, change_reference_system_out)
+
+        if is_verbose():
+            if not change_reference_system_in:
+                print("change_reference_system_in = False: skipping reference change to o.e.")
+            if not change_reference_system_out:
+                print("change_reference_system_out = False: skipping reference change from o.e. to image")
 
         if self._crystalpy_diffraction_setup is None:  # todo: supress if?
             self.set_crystalpy_diffraction_setup()
@@ -424,16 +433,17 @@ class S4CrystalElement(S4BeamlineElement):
         #
         # put input_beam in crystal reference system
         #
-        input_beam.rotate(alpha1,         axis=2)
-        input_beam.rotate(theta_grazing1, axis=1)
+        if change_reference_system_in:
+            input_beam.rotate(alpha1,         axis=2)
+            input_beam.rotate(theta_grazing1, axis=1)
 
-        if is_verbose():
-            b_S, b_P = input_beam.get_efield_directions()
-            print("")
-            print(">>> local beam e_S, mod e_s", b_S[0], vector_modulus(b_S)[0])
-            print(">>> local beam e_P, mod e_P, e_S.e_P: ", b_P[0], vector_modulus(b_P)[0], vector_dot(b_S, b_P)[0])
+            if is_verbose():
+                b_S, b_P = input_beam.get_efield_directions()
+                print("")
+                print(">>> local beam e_S, mod e_s", b_S[0], vector_modulus(b_S)[0])
+                print(">>> local beam e_P, mod e_P, e_S.e_P: ", b_P[0], vector_modulus(b_P)[0], vector_dot(b_S, b_P)[0])
 
-        input_beam.translation([0.0, -p * numpy.cos(theta_grazing1), p * numpy.sin(theta_grazing1)])
+            input_beam.translation([0.0, -p * numpy.cos(theta_grazing1), p * numpy.sin(theta_grazing1)])
 
         # crystal movement (forward):
         movements = self.get_movements()
@@ -469,13 +479,14 @@ class S4CrystalElement(S4BeamlineElement):
         # from element reference system to image plane
         #
         output_beam = footprint.duplicate()
-        output_beam.change_to_image_reference_system(theta_grazing2, q)
+        if change_reference_system_out:
+            output_beam.change_to_image_reference_system(theta_grazing2, q)
 
-        if is_verbose():
-            b_S, b_P = output_beam.get_efield_directions()
-            print("")
-            print(">>> image e_S, mod e_s", b_S[0], vector_modulus(b_S)[0])
-            print(">>> image e_P, mod e_P, e_S.e_P: ", b_P[0], vector_modulus(b_P)[0], vector_dot(b_S, b_P)[0])
+            if is_verbose():
+                b_S, b_P = output_beam.get_efield_directions()
+                print("")
+                print(">>> image e_S, mod e_s", b_S[0], vector_modulus(b_S)[0])
+                print(">>> image e_P, mod e_P, e_S.e_P: ", b_P[0], vector_modulus(b_P)[0], vector_dot(b_S, b_P)[0])
 
         return output_beam, footprint
 
@@ -487,6 +498,10 @@ class S4CrystalElement(S4BeamlineElement):
 
         if self.get_optical_element()._method_efields_management == 0: # S4
             footprint, normal = self.get_optical_element().get_optical_surface_instance().calculate_intercept_on_beam(input_beam)
+
+            print("    >>>>>>>>> intercept: ", footprint.get_columns([1, 2, 3])[:, 0])
+            print("    >>>>>>>>> vout: ", footprint.get_columns([4, 5, 6])[:, 0])
+            print("    >>>>>>>>> normal: ", normal.shape, normal[:, 0])
 
             vIn, vOut, r_SS, r_PP = self._calculate_perfect_crystal_scattering(footprint, normal)
             jv_out_0, jv_out_1, ee_S, ee_P = self._calculate_jones_and_efield_directions(footprint, normal,
@@ -1048,7 +1063,7 @@ if __name__ == "__main__":
             asymmetry_angle=0.0,
             is_thick=0,
             thickness=0.010,
-            f_central=False,
+            f_central=0,
             f_phot_cent=0,
             phot_cent=8000.0,
             file_refl="",

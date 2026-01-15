@@ -233,7 +233,13 @@ class S4MirrorElement(S4BeamlineElement):
 
         Parameters
         ----------
-        **params
+        **params : generic parameters can be passed, in particular:
+        flag_lost_value : float, optional
+            value to flag lost rays (default=-1).
+        change_reference_system_in : boolean, optional
+            indicates if the input beam is converted to local o.e. frame (default=True).
+        change_reference_system_out : boolean, optional
+            indicates if the outgoing beam is converted image o.e. frame (default=True).
 
         Returns
         -------
@@ -241,10 +247,14 @@ class S4MirrorElement(S4BeamlineElement):
             (output_beam, footprint) instances of S4Beam.
         """
         flag_lost_value = params.get("flag_lost_value", -1)
-        flag_input_beam_is_footprint = params.get("flag_input_beam_is_footprint", False)
+        change_reference_system_in = params.get("change_reference_system_in", True)
+        change_reference_system_out = params.get("change_reference_system_out", True)
+
         if is_verbose():
-            if flag_input_beam_is_footprint:
-                print("flag_input_beam_is_footprint=1: skipping reference change to o.e.")
+            if not change_reference_system_in:
+                print("change_reference_system_in = False: skipping reference change to o.e.")
+            if not change_reference_system_out:
+                print("change_reference_system_out = False: skipping reference change from o.e. to image")
 
         p = self.get_coordinates().p()
         q = self.get_coordinates().q()
@@ -258,7 +268,7 @@ class S4MirrorElement(S4BeamlineElement):
         #
         # put beam in mirror reference system
         #
-        if not flag_input_beam_is_footprint:
+        if change_reference_system_in:
             input_beam.rotate(alpha1, axis=2)
             input_beam.rotate(theta_grazing1, axis=1)
             input_beam.translation([0.0, -p * numpy.cos(theta_grazing1), p * numpy.sin(theta_grazing1)])
@@ -281,7 +291,6 @@ class S4MirrorElement(S4BeamlineElement):
 
         v_in = input_beam.get_columns([4,5,6])
 
-        # footprint, normal = self.apply_local_reflection(input_beam)
         footprint, normal = self.get_optical_element()._apply_mirror_reflection(input_beam)
 
         if movements is not None:
@@ -460,7 +469,8 @@ class S4MirrorElement(S4BeamlineElement):
         #
 
         output_beam = footprint.duplicate()
-        output_beam.change_to_image_reference_system(theta_grazing2, q)
+        if change_reference_system_out:
+            output_beam.change_to_image_reference_system(theta_grazing2, q)
 
         return output_beam, footprint
 
