@@ -355,21 +355,21 @@ class S4CrystalElement(S4BeamlineElement):
             theta_in_grazing  = setting_angle + oe._asymmetry_angle
 
             if is_verbose():
-                print("    align_crystal: dSpacingSI: " , (self._crystalpy_diffraction_setup.dSpacingSI()))
+                print("    align_crystal: dSpacingSI [m]: " , (self._crystalpy_diffraction_setup.dSpacingSI()))
                 print("    align_crystal: Bragg angle (uncorrected) for E=%f eV is %f deg" % (energy, numpy.degrees(self._crystalpy_diffraction_setup.angleBragg(energy))))
                 print("    align_crystal: Bragg angle (corrected) for E=%f eV is %f deg" % (energy, numpy.degrees(setting_angle)))
-                print("    align_crystal: (normal) Incident   angle",  numpy.degrees(numpy.pi/2 - (theta_in_grazing ) ))
-                print("    align_crystal: grazing incident angle: ", numpy.degrees(theta_in_grazing ))
+                print("    align_crystal: (normal) Incident   angle [deg]",  numpy.degrees(numpy.pi/2 - (theta_in_grazing ) ))
+                print("    align_crystal: grazing incident angle [deg]: ", numpy.degrees(theta_in_grazing ))
 
                 theta_out_grazing = setting_angle - oe._asymmetry_angle # wrong because this just applies the Laue equation
-                print("    align_crystal: (normal) Reflection angle [LAUE EQUATION]",  numpy.degrees(numpy.pi/2 - (theta_out_grazing) ))
-                print("    align_crystal: grazing output angle [LAUE EQUATION]: ", numpy.degrees(theta_out_grazing))
+                print("    align_crystal: (normal) Reflection angle [LAUE EQUATION] [deg]",  numpy.degrees(numpy.pi/2 - (theta_out_grazing) ))
+                print("    align_crystal: grazing output angle [LAUE EQUATION] [deg]: ", numpy.degrees(theta_out_grazing))
 
             KIN = self._crystalpy_diffraction_setup.vectorKscattered(energy=energy)
             theta_out = KIN.angle(self._crystalpy_diffraction_setup.vectorNormalSurface())
             if isinstance(theta_out, (list, tuple, numpy.ndarray)): theta_out = theta_out[0]
 
-            if is_verbose(): print("    align_crystal: (normal) Reflection angle [SCATTERING EQUATION]: ", numpy.degrees(theta_out))
+            if is_verbose(): print("    align_crystal: (normal) Reflection angle [SCATTERING EQUATION] [deg]: ", numpy.degrees(theta_out))
             _, _, angle_azimuthal = coor.get_angles()
 
             coor.set_angles(angle_radial     = numpy.pi/2 - theta_in_grazing,

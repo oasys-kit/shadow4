@@ -70,6 +70,7 @@ PACKAGES = [
     "shadow4.beamline.optical_elements.crystals",
     "shadow4.beamline.optical_elements.gratings",
     "shadow4.beamline.optical_elements.refractors",
+    "shadow4.beamline.optical_elements.compound",
     "shadow4.tools",
 ]
 

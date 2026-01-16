@@ -380,7 +380,7 @@ class S4Conic(S4OpticalSurface):
         References
         ----------
         "Conic Surfaces and Transformations for X-Ray Beamline Optics Modeling", M. Sanchez del Rio and K. Goldberg,
-        To be published (2024).
+        (2024) https://doi.org/10.48550/arXiv.2406.04079
 
         """
         if method == 0: # See Table 5 in Sanchez del Rio and Goldberg
@@ -461,7 +461,7 @@ class S4Conic(S4OpticalSurface):
         References
         ----------
         "Conic Surfaces and Transformations for X-Ray Beamline Optics Modeling", M. Sanchez del Rio and K. Goldberg,
-        To be published (2024).
+        (2024) https://doi.org/10.48550/arXiv.2406.04079
 
         """
         if method == 0:
@@ -551,7 +551,7 @@ class S4Conic(S4OpticalSurface):
         References
         ----------
         "Conic Surfaces and Transformations for X-Ray Beamline Optics Modeling", M. Sanchez del Rio and K. Goldberg,
-        To be published (2024).
+        (2024) https://doi.org/10.48550/arXiv.2406.04079
 
         """
         if method == 0:
@@ -923,6 +923,53 @@ class S4Conic(S4OpticalSurface):
     #
     # utilities
     #
+    @classmethod
+    def rotate_and_translate_coefficients(cls, coe_list, R_M, T):
+        """
+        Perform rotation and translation of the conic coefficients [rf]_
+
+        Parameters
+        ----------
+        coe_list : list
+            A list with the 10 conic coefficients.
+        R : list
+            The rotation matrix (e.g. identity is [[1,0,0],[0,1,0],[0,0,1]] )
+        T : list
+            Translation vector (e.t. [0,0,0])
+
+        Returns
+        -------
+        list
+            The rotated coefficients
+
+        References
+        ----------
+        .. [rf] "Conic Surfaces and Transformations for X-Ray Beamline Optics Modeling", M. Sanchez del Rio and K. Goldberg,
+        (2024) https://doi.org/10.48550/arXiv.2406.04079
+        """
+        R_M = numpy.array(R_M, dtype=float)
+        T = numpy.array(T, dtype=float)
+
+        axx, ayy, azz, axy, ayz, axz, ax, ay, az, a0 = coe_list
+        A2 = numpy.array([[axx,     axy / 2, axz / 2],
+                          [axy / 2, ayy,     ayz / 2],
+                          [axz / 2, ayz / 2, azz]])
+        A1 = numpy.array([ax, ay, az])
+        A0 = a0
+        B2 = numpy.dot(R_M, numpy.dot(A2, R_M.T))                          # first equation 6.29
+        B1 = numpy.dot(R_M, A1) - 2 * numpy.dot(B2, T)                     # 2nd equation 6.29
+        B0 = A0 + numpy.dot(T.T, (numpy.dot(B2, T) - numpy.dot(R_M, A1)))  # 3rd equation 6.29
+
+        return [B2[0, 0],
+                B2[1, 1],
+                B2[2, 2],
+                B2[0, 1] + B2[1, 0],
+                B2[1, 2] + B2[2, 1],
+                B2[0, 2] + B2[2, 0],
+                B1[0],
+                B1[1],
+                B1[2],
+                B0]
 
     @classmethod
     def _transform_conic(cls, conic, cylindrical, cylangle, switch_convexity):
@@ -1063,7 +1110,6 @@ class S4Conic(S4OpticalSurface):
 
 if __name__ == "__main__":
     from srxraylib.plot.gol import set_qt
-    set_qt()
 
     if False:
         ccc = S4Conic.initialize_as_plane()
