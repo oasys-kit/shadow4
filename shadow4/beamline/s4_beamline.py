@@ -13,10 +13,12 @@ from shadow4.beamline.optical_elements.ideal_elements.s4_empty import S4Empty
 from shadow4.beamline.optical_elements.mirrors.s4_mirror import S4Mirror
 from shadow4.beamline.optical_elements.crystals.s4_crystal import S4Crystal
 from shadow4.beamline.optical_elements.gratings.s4_grating import S4Grating
+from shadow4.beamline.optical_elements.multilayers.s4_multilayer import S4Multilayer
 from shadow4.beamline.optical_elements.refractors.s4_lens import S4Lens
 from shadow4.beamline.optical_elements.refractors.s4_transfocator import S4Transfocator
 from shadow4.beamline.optical_elements.refractors.s4_crl import S4CRL
 from shadow4.beamline.optical_elements.absorbers.s4_screen import S4Screen
+from shadow4.beamline.optical_elements.compound.s4_compound import S4Compound
 
 
 
@@ -165,6 +167,8 @@ class S4Beamline(Beamline):
         """
         from shadow4.sources.source_geometrical.source_grid_cartesian import SourceGridCartesian
         from shadow4.sources.source_geometrical.source_grid_polar import SourceGridPolar
+        from shadow4.sources.s4_light_source_from_file import S4LightSourceFromFile
+        from shadow4.sources.s4_light_source_from_beamlines import S4LightSourceFromBeamlines
 
         light_source = self.get_light_source()
 
@@ -181,10 +185,17 @@ class S4Beamline(Beamline):
             txt_source += "Grid source (cartesian)\n"
         elif isinstance(light_source, SourceGridPolar):
             txt_source += "Grid source (polar)\n"
+        elif isinstance(light_source, S4LightSourceFromFile):
+            txt_source += "Source from file\n"
+        elif isinstance(light_source, S4LightSourceFromBeamlines):
+            txt_source += "Source from merging lightsources/beamlines\n"
         else:
             txt_source += "Random source\n"
 
-        txt_source += "Generated total %d rays.\n" % light_source.get_nrays()
+        try:
+            txt_source += "Generated total %d rays.\n" % light_source.get_nrays()
+        except:
+            pass
 
         txt_end = \
 """
@@ -221,7 +232,7 @@ class S4Beamline(Beamline):
             txt = ""
             for i, element in enumerate(self.get_beamline_elements()):
                 txt += top_txt1
-                txt += "O.E. %d" % (i+1)
+                txt += "O.E. %d (%s)" % (i + 1, element.get_optical_element().get_name())
                 txt += top_txt2
                 txt += self._get_info_coordinates(i)
                 txt += element.get_optical_element().get_info()
@@ -229,7 +240,7 @@ class S4Beamline(Beamline):
         else:
             txt = ""
             txt += top_txt1
-            txt += "O.E. %d" % (oe_index + 1)
+            txt += "O.E. %d (%s)" % (oe_index + 1, self.get_beamline_element_at(oe_index).get_optical_element().get_name())
             txt += top_txt2
             txt += self._get_info_coordinates(i)
             txt += self.get_beamline_element_at(oe_index).get_optical_element().get_info()
@@ -499,6 +510,8 @@ class S4Beamline(Beamline):
                 TEXT = "CRYSTAL"
             elif isinstance(oe, S4Grating):
                 TEXT = "GRATING"
+            elif isinstance(oe, S4Multilayer):
+                TEXT = "MULTILAYER"
             elif isinstance(oe, S4Lens):
                 TEXT = "LENS"
             elif isinstance(oe, S4CRL):
@@ -507,6 +520,8 @@ class S4Beamline(Beamline):
                 TEXT = "TRANSFOCATOR"
             elif isinstance(oe, S4Screen):
                 TEXT = "SCREEN/SLIT/ABSORBER"
+            elif isinstance(oe, S4Compound):
+                TEXT = "COMPOUND"
             else:
                 TEXT = "*** Error: NOT IDENTIFIED OE %s ***" % repr(oe)
 
@@ -586,6 +601,8 @@ class S4Beamline(Beamline):
                 oetype = "CRYSTAL"
             elif isinstance(oe, S4Grating):
                 oetype = "GRATING"
+            elif isinstance(oe, S4Multilayer):
+                oetype = "MULTILAYER"
             elif isinstance(oe, S4Lens):
                 oetype = "LENS"
                 is_focusing = 1
@@ -597,6 +614,8 @@ class S4Beamline(Beamline):
                 is_focusing = 1
             elif isinstance(oe, S4Screen):
                 oetype = "SCR/SLIT/ABS"
+            elif isinstance(oe, S4Compound):
+                oetype = "COMPOUND"
             else:
                 oetype = "*** Error: NOT IDENTIFIED OE %s ***" % repr(oe)
 
@@ -667,50 +686,192 @@ class S4Beamline(Beamline):
         return(txt)
 
 if __name__ == "__main__":
-    from shadow4.sources.source_geometrical.source_geometrical import SourceGeometrical
-    from shadow4.beamline.optical_elements.mirrors.s4_plane_mirror import S4PlaneMirror, S4PlaneMirrorElement
-    from shadow4.beamline.optical_elements.refractors.s4_transfocator import S4Transfocator, S4TransfocatorElement
-    from syned.beamline.element_coordinates import ElementCoordinates
-    from srxraylib.plot.gol import set_qt
-    set_qt()
 
-    light_source = SourceGeometrical(name='SourceGeometrical', nrays=10000, seed=5676561)
+    if False:
+        from shadow4.sources.source_geometrical.source_geometrical import SourceGeometrical
+        from shadow4.beamline.optical_elements.mirrors.s4_plane_mirror import S4PlaneMirror, S4PlaneMirrorElement
+        from shadow4.beamline.optical_elements.refractors.s4_transfocator import S4Transfocator, S4TransfocatorElement
+        from syned.beamline.element_coordinates import ElementCoordinates
 
-    m1 = S4PlaneMirror()
-    # m2 = S4PlaneMirror()
-    m2 = S4Transfocator()
+        light_source = SourceGeometrical(name='SourceGeometrical', nrays=10000, seed=5676561)
+
+        m1 = S4PlaneMirror()
+        # m2 = S4PlaneMirror()
+        m2 = S4Transfocator()
 
 
-    e1 = S4PlaneMirrorElement(m1, ElementCoordinates())
-    # e2 = S4PlaneMirrorElement(m2, ElementCoordinates())
-    e2 = S4TransfocatorElement(m2, ElementCoordinates())
+        e1 = S4PlaneMirrorElement(m1, ElementCoordinates())
+        # e2 = S4PlaneMirrorElement(m2, ElementCoordinates())
+        e2 = S4TransfocatorElement(m2, ElementCoordinates())
 
-    bl = S4Beamline(light_source=light_source) # , beamline_elements_list=[e1,e2])
+        bl = S4Beamline(light_source=light_source) # , beamline_elements_list=[e1,e2])
 
-    # print(bl.info())
-    #
-    # print(bl.to_python_code())
-    #
-    # output_beam, output_mirr = bl.run_beamline()
+        print(bl.distances_summary())
 
-    # test plot
-    # from srxraylib.plot.gol import plot_scatter
-    # rays = output_beam.get_rays()
-    # plot_scatter(1e6 * rays[:, 3], 1e6 * rays[:, 5], title='(Xp,Zp) in microns')
+        print(">>>> oe info: ", bl.oeinfo())
 
-    # print(bl.sourcinfo())
+        print(">>>> sys info: ", bl.sysinfo())
 
-    # print(bl.oeinfo())
-    #
-    # print(bl.sysinfo())
-    #
-    # print(bl.to_json())
+    if False: # check source from file
+        from shadow4.beamline.s4_beamline import S4Beamline
+        import numpy as np
 
-    # print(bl.syspositions())
+        beamline = S4Beamline()
 
-    print(bl.distances_summary())
+        #
+        #
+        #
+        from shadow4.sources.s4_light_source_from_file import S4LightSourceFromFile
 
-    print(">>>> oe info: ", bl.oeinfo())
+        light_source = S4LightSourceFromFile(name='Shadow4 File Reader', file_name='/home/srio/Oasys/tmp.h5', simulation_name='run001',
+                                             beam_name='begin')
+        # beam = light_source.get_beam()
 
-    print(">>>> sys info: ", bl.sysinfo())
+        beamline.set_light_source(light_source)
+
+        print(beamline.sourcinfo())
+
+
+    if False: # check source from merged beamlines
+        from shadow4.beamline.s4_beamline import S4Beamline
+        import numpy as np
+
+        beamline = S4Beamline()
+
+
+        def run_beamline_1():
+            from shadow4.beamline.s4_beamline import S4Beamline
+            import numpy as np
+
+            beamline = S4Beamline()
+
+            #
+            #
+            #
+            from shadow4.sources.s4_light_source_from_file import S4LightSourceFromFile
+            light_source = S4LightSourceFromFile(name='Shadow4 File Reader', file_name='/home/srio/Oasys/tmp.h5',
+                                                 simulation_name='run001', beam_name='begin')
+            beam = light_source.get_beam()
+
+            beamline.set_light_source(light_source)
+            return beamline
+
+
+        def run_beamline_2():
+            from shadow4.beamline.s4_beamline import S4Beamline
+            import numpy as np
+
+            beamline = S4Beamline()
+
+            #
+            #
+            #
+            from shadow4.sources.s4_light_source_from_file import S4LightSourceFromFile
+            light_source = S4LightSourceFromFile(name='Shadow4 File Reader', file_name='/home/srio/Oasys/tmp.h5',
+                                                 simulation_name='run001', beam_name='begin')
+            beam = light_source.get_beam()
+
+            beamline.set_light_source(light_source)
+            return beamline
+
+
+        #
+        #
+        #
+        from shadow4.sources.s4_light_source_from_beamlines import S4LightSourceFromBeamlines
+
+        light_source = S4LightSourceFromBeamlines(name='Merge Shadow4 Beam')
+
+        light_source.append_beamline(run_beamline_1(), id='beamline channel 1', weight=10.000000)
+        light_source.append_beamline(run_beamline_2(), id='beamline channel 2', weight=10.000000)
+        # beam = light_source.get_beam()
+
+        beamline.set_light_source(light_source)
+
+        print(beamline.sourcinfo())
+
+    if 1: # check compound
+        from shadow4.beamline.s4_beamline import S4Beamline
+        import numpy as np
+
+        beamline = S4Beamline()
+
+        #
+        #
+        #
+        from shadow4.sources.s4_light_source_from_file import S4LightSourceFromFile
+
+        light_source = S4LightSourceFromFile(name='Shadow4 File Reader', file_name='tmp.h5', simulation_name='run001',
+                                             beam_name='begin')
+        beam = light_source.get_beam()
+
+        beamline.set_light_source(light_source)
+
+
+        # optical element number XX
+
+        def get_oe_1():
+            boundary_shape = None
+
+            from shadow4.beamline.optical_elements.crystals.s4_conic_crystal import S4ConicCrystal
+            optical_element = S4ConicCrystal(name='Crystal 1',
+                                             boundary_shape=boundary_shape,
+                                             conic_coefficients=[np.float64(0.0), np.float64(0.0), np.float64(0.0),
+                                                                 np.float64(0.0), np.float64(0.0), np.float64(0.0),
+                                                                 np.float64(0.0), np.float64(0.0), np.float64(-1.0),
+                                                                 np.float64(-0.0025)],
+                                             material='Si', miller_index_h=1, miller_index_k=1, miller_index_l=1,
+                                             f_bragg_a=False, asymmetry_angle=0.0,
+                                             is_thick=1, thickness=0.001,
+                                             f_central=0, f_phot_cent=0, phot_cent=5000.0,
+                                             file_refl='bragg.dat',
+                                             f_ext=0,
+                                             material_constants_library_flag=1,
+                                             # 0=xraylib,1=dabax,2=preprocessor v1,3=preprocessor v2
+                                             )
+            return optical_element
+
+
+        def get_oe_2():
+            boundary_shape = None
+
+            from shadow4.beamline.optical_elements.crystals.s4_conic_crystal import S4ConicCrystal
+            optical_element = S4ConicCrystal(name='Crystal 2',
+                                             boundary_shape=boundary_shape,
+                                             conic_coefficients=[np.float64(0.0), np.float64(0.0), np.float64(0.0),
+                                                                 np.float64(0.0), np.float64(0.0), np.float64(0.0),
+                                                                 np.float64(0.0), np.float64(0.0), np.float64(1.0),
+                                                                 np.float64(-0.0025)],
+                                             material='Si', miller_index_h=1, miller_index_k=1, miller_index_l=1,
+                                             f_bragg_a=False, asymmetry_angle=0.0,
+                                             is_thick=1, thickness=0.001,
+                                             f_central=0, f_phot_cent=0, phot_cent=5000.0,
+                                             file_refl='bragg.dat',
+                                             f_ext=0,
+                                             material_constants_library_flag=1,
+                                             # 0=xraylib,1=dabax,2=preprocessor v1,3=preprocessor v2
+                                             )
+            return optical_element
+
+
+        oe_list = [get_oe_1(), get_oe_2(), ]
+
+        from shadow4.beamline.optical_elements.compound.s4_compound import S4Compound
+
+        optical_element = S4Compound(name='ChannelCut (2)', oe_list=oe_list)
+        from syned.beamline.element_coordinates import ElementCoordinates
+
+        coordinates = ElementCoordinates(p=0, q=0.01, angle_radial=1.45421466, angle_azimuthal=0,
+                                         angle_radial_out=1.687377993)
+        movements = None
+        from shadow4.beamline.optical_elements.compound.s4_compound import S4CompoundElement
+
+        beamline_element = S4CompoundElement(optical_element=optical_element, coordinates=coordinates, input_beam=beam,
+                                             movements=movements)
+
+        # beam, footprint = beamline_element.trace_beam()
+
+        beamline.append_beamline_element(beamline_element)
+        print(beamline.oeinfo())
+
 

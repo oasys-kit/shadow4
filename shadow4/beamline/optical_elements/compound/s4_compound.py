@@ -37,6 +37,9 @@ class S4Compound(OpticalElement, S4OpticalElementDecorator):
         The name of the mirror.
     oe_list : list, optional
         A list of S4OpticalElement instances.
+    footprint_index : None or int
+        The footprint index to be returned by S4CompoundElement.trace_beam().
+        None means that all footprints will be returned in a list.
 
     Returns
     -------
@@ -45,6 +48,7 @@ class S4Compound(OpticalElement, S4OpticalElementDecorator):
     def __init__(self,
                  name="Undefined",
                  oe_list=None,
+                 footprint_index=None,
                  ):
 
         OpticalElement.__init__(self,
@@ -56,9 +60,12 @@ class S4Compound(OpticalElement, S4OpticalElementDecorator):
         else:
             self._oe_list = oe_list
 
+        self._footprint_index = footprint_index
+
         # support text containg name of variable, help text and unit. Will be stored in self._support_dictionary
         self._add_support_text([
             ("oe_list",            "S4: list of optical elements",                 ""),
+            ("footprint_index",    "The footprint index to be returned",           ""),
         ] )
 
     def get_info(self):
@@ -107,7 +114,8 @@ class S4Compound(OpticalElement, S4OpticalElementDecorator):
 
         txt = "" # self.to_python_code_boundary_shape()
         txt += "\nfrom shadow4.beamline.optical_elements.compound.s4_compound import S4Compound"
-        txt += "\noptical_element = S4Compound(name='%s', oe_list=oe_list)" % self.get_name()
+        txt += "\noptical_element = S4Compound(name='%s', oe_list=oe_list," % self.get_name()
+        txt += "\n    footprint_index=" + repr(self._footprint_index) + ")  # use None for all (list)"
         return txt_pre + txt
 
 class S4CompoundElement(S4BeamlineElement):
@@ -251,7 +259,11 @@ class S4CompoundElement(S4BeamlineElement):
             output_beam.change_to_image_reference_system(theta_grazing2, q)
             print(">>> compound changes to out")
 
-        return output_beam, footprints
+        footprint_index = self.get_optical_element()._footprint_index
+        if footprint_index is None:
+            return output_beam, footprints
+        else:
+            return output_beam, footprints[footprint_index]
 
     def to_python_code(self, **kwargs):
         """
@@ -508,6 +520,6 @@ if __name__ == "__main__":
         print_centroids(footprints[0], title='CRYSTAL 1', factor=1e3)
         print_centroids(footprints[1], title='CRYSTAL 2', factor=1e3)
         print_centroids(beam, title='IMAGE', factor=1e6)
-        # print(beamline.to_python_code())
+        print(beamline.to_python_code())
         plot_2d(beam, footprints, irange=[-5e-3, 5e-3], frange=[-20e-3, 20e-3])
 

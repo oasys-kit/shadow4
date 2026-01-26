@@ -119,9 +119,16 @@ def flux_summary(beamline, spectrum_energy=None, spectrum_flux=None, e_min=None,
     if isinstance(beamline.get_light_source(), S4LightSourceBase):
         return "*** ERROR *** To be implemented for geometrical sources"
 
-    is_monochromatic = beamline.get_light_source().get_magnetic_structure().is_monochromatic()
+    try:
+        is_monochromatic = beamline.get_light_source().get_magnetic_structure().is_monochromatic()
+    except:
+        is_monochromatic = False
+
     if spectrum_energy is None or spectrum_flux is None:
-        spectrum_energy, spectrum_flux, _ = beamline.get_light_source().calculate_spectrum()
+        try:
+            spectrum_energy, spectrum_flux, _ = beamline.get_light_source().calculate_spectrum()
+        except:
+            print("Energy spectrum not available")
 
     #
     # SHADOW data
@@ -627,288 +634,286 @@ def focnew_scan_full_beamline(beamline, npoints=10):
 
 if __name__ == "__main__":
 
-    def get_beamline():
-        from shadow4.beamline.s4_beamline import S4Beamline
+    if False:
+        def get_beamline():
+            from shadow4.beamline.s4_beamline import S4Beamline
 
-        beamline = S4Beamline()
+            beamline = S4Beamline()
 
-        # electron beam
-        from shadow4.sources.s4_electron_beam import S4ElectronBeam
-        electron_beam = S4ElectronBeam(energy_in_GeV=6, energy_spread=0.001, current=0.2)
-        electron_beam.set_sigmas_all(sigma_x=3.01836e-05, sigma_y=4.36821e-06, sigma_xp=3.63641e-06,
-                                     sigma_yp=1.37498e-06)
+            # electron beam
+            from shadow4.sources.s4_electron_beam import S4ElectronBeam
+            electron_beam = S4ElectronBeam(energy_in_GeV=6, energy_spread=0.001, current=0.2)
+            electron_beam.set_sigmas_all(sigma_x=3.01836e-05, sigma_y=4.36821e-06, sigma_xp=3.63641e-06,
+                                         sigma_yp=1.37498e-06)
 
-        # magnetic structure
-        from shadow4.sources.undulator.s4_undulator_gaussian import S4UndulatorGaussian
-        source = S4UndulatorGaussian(
-            period_length=0.042,  # syned Undulator parameter (length in m)
-            number_of_periods=38.571,  # syned Undulator parameter
-            photon_energy=5000.0,  # Photon energy (in eV)
-            delta_e=4.0,  # Photon energy width (in eV)
-            ng_e=100,  # Photon energy scan number of points
-            flag_emittance=1,  # when sampling rays: Use emittance (0=No, 1=Yes)
-            flag_energy_spread=0,  # when sampling rays: Use e- energy spread (0=No, 1=Yes)
-            harmonic_number=1,  # harmonic number
-            flag_autoset_flux_central_cone=1,  # value to set the flux peak
-            flux_central_cone=681709040139326.4,  # value to set the flux peak
-        )
+            # magnetic structure
+            from shadow4.sources.undulator.s4_undulator_gaussian import S4UndulatorGaussian
+            source = S4UndulatorGaussian(
+                period_length=0.042,  # syned Undulator parameter (length in m)
+                number_of_periods=38.571,  # syned Undulator parameter
+                photon_energy=5000.0,  # Photon energy (in eV)
+                delta_e=4.0,  # Photon energy width (in eV)
+                ng_e=100,  # Photon energy scan number of points
+                flag_emittance=1,  # when sampling rays: Use emittance (0=No, 1=Yes)
+                flag_energy_spread=0,  # when sampling rays: Use e- energy spread (0=No, 1=Yes)
+                harmonic_number=1,  # harmonic number
+                flag_autoset_flux_central_cone=1,  # value to set the flux peak
+                flux_central_cone=681709040139326.4,  # value to set the flux peak
+            )
 
-        # light source
-        from shadow4.sources.undulator.s4_undulator_gaussian_light_source import S4UndulatorGaussianLightSource
-        light_source = S4UndulatorGaussianLightSource(name='GaussianUndulator', electron_beam=electron_beam,
-                                                      magnetic_structure=source, nrays=15000, seed=5676561)
-        beam = light_source.get_beam()
+            # light source
+            from shadow4.sources.undulator.s4_undulator_gaussian_light_source import S4UndulatorGaussianLightSource
+            light_source = S4UndulatorGaussianLightSource(name='GaussianUndulator', electron_beam=electron_beam,
+                                                          magnetic_structure=source, nrays=15000, seed=5676561)
+            beam = light_source.get_beam()
 
-        beamline.set_light_source(light_source)
+            beamline.set_light_source(light_source)
 
-        # optical element number XX
-        from syned.beamline.shape import Rectangle
-        boundary_shape = Rectangle(x_left=-0.001, x_right=0.001, y_bottom=-0.001, y_top=0.001)
+            # optical element number XX
+            from syned.beamline.shape import Rectangle
+            boundary_shape = Rectangle(x_left=-0.001, x_right=0.001, y_bottom=-0.001, y_top=0.001)
 
-        from shadow4.beamline.optical_elements.absorbers.s4_screen import S4Screen
-        optical_element = S4Screen(name='Generic Beam Screen/Slit/Stopper/Attenuator', boundary_shape=boundary_shape,
-                                   i_abs=0,  # 0=No, 1=prerefl file_abs, 2=xraylib, 3=dabax
-                                   i_stop=0, thick=0, file_abs='<specify file name>', material='Au', density=19.3)
+            from shadow4.beamline.optical_elements.absorbers.s4_screen import S4Screen
+            optical_element = S4Screen(name='Generic Beam Screen/Slit/Stopper/Attenuator', boundary_shape=boundary_shape,
+                                       i_abs=0,  # 0=No, 1=prerefl file_abs, 2=xraylib, 3=dabax
+                                       i_stop=0, thick=0, file_abs='<specify file name>', material='Au', density=19.3)
 
-        from syned.beamline.element_coordinates import ElementCoordinates
-        coordinates = ElementCoordinates(p=27.2, q=0, angle_radial=0, angle_azimuthal=0, angle_radial_out=3.141592654)
-        from shadow4.beamline.optical_elements.absorbers.s4_screen import S4ScreenElement
-        beamline_element = S4ScreenElement(optical_element=optical_element, coordinates=coordinates, input_beam=beam)
+            from syned.beamline.element_coordinates import ElementCoordinates
+            coordinates = ElementCoordinates(p=27.2, q=0, angle_radial=0, angle_azimuthal=0, angle_radial_out=3.141592654)
+            from shadow4.beamline.optical_elements.absorbers.s4_screen import S4ScreenElement
+            beamline_element = S4ScreenElement(optical_element=optical_element, coordinates=coordinates, input_beam=beam)
 
-        beam, footprint = beamline_element.trace_beam()
+            beam, footprint = beamline_element.trace_beam()
 
-        beamline.append_beamline_element(beamline_element)
+            beamline.append_beamline_element(beamline_element)
 
-        # optical element number XX
-        boundary_shape = None
+            # optical element number XX
+            boundary_shape = None
 
-        from shadow4.beamline.optical_elements.mirrors.s4_plane_mirror import S4PlaneMirror
-        optical_element = S4PlaneMirror(name='Plane Mirror', boundary_shape=boundary_shape,
-                                        f_reflec=1, f_refl=5, file_refl='<none>', refraction_index=0.99999 + 0.001j,
-                                        coating_material='Ni', coating_density=8.902, coating_roughness=0)
-
-        from syned.beamline.element_coordinates import ElementCoordinates
-        coordinates = ElementCoordinates(p=2.7, q=0, angle_radial=1.563796327, angle_azimuthal=1.570796327,
-                                         angle_radial_out=1.563796327)
-        movements = None
-        from shadow4.beamline.optical_elements.mirrors.s4_plane_mirror import S4PlaneMirrorElement
-        beamline_element = S4PlaneMirrorElement(optical_element=optical_element, coordinates=coordinates,
-                                                movements=movements, input_beam=beam)
-
-        beam, mirr = beamline_element.trace_beam()
-
-        beamline.append_beamline_element(beamline_element)
-
-        # optical element number XX
-        boundary_shape = None
-
-        from shadow4.beamline.optical_elements.mirrors.s4_plane_mirror import S4PlaneMirror
-        optical_element = S4PlaneMirror(name='Plane Mirror', boundary_shape=boundary_shape,
-                                        f_reflec=1, f_refl=5, file_refl='<none>', refraction_index=0.99999 + 0.001j,
-                                        coating_material='Ni', coating_density=8.902, coating_roughness=0)
-
-        from syned.beamline.element_coordinates import ElementCoordinates
-        coordinates = ElementCoordinates(p=0.825, q=0, angle_radial=1.563796327, angle_azimuthal=3.141592654,
-                                         angle_radial_out=1.563796327)
-        movements = None
-        from shadow4.beamline.optical_elements.mirrors.s4_plane_mirror import S4PlaneMirrorElement
-        beamline_element = S4PlaneMirrorElement(optical_element=optical_element, coordinates=coordinates,
-                                                movements=movements, input_beam=beam)
-
-        beam, mirr = beamline_element.trace_beam()
-
-        beamline.append_beamline_element(beamline_element)
-
-        # optical element number XX
-
-        from shadow4.beamline.optical_elements.ideal_elements.s4_empty import S4Empty
-        optical_element = S4Empty(name='Empty Element')
-
-        from syned.beamline.element_coordinates import ElementCoordinates
-        coordinates = ElementCoordinates(p=0, q=0, angle_radial=0, angle_azimuthal=4.71238898,
-                                         angle_radial_out=3.141592654)
-        from shadow4.beamline.optical_elements.ideal_elements.s4_empty import S4EmptyElement
-        beamline_element = S4EmptyElement(optical_element=optical_element, coordinates=coordinates, input_beam=beam)
-
-        beam, mirr = beamline_element.trace_beam()
-
-        beamline.append_beamline_element(beamline_element)
-
-        # optical element number XX
-        from syned.beamline.shape import Rectangle
-        boundary_shape = Rectangle(x_left=-0.0015, x_right=0.0015, y_bottom=-0.0015, y_top=0.0015)
-
-        from shadow4.beamline.optical_elements.absorbers.s4_screen import S4Screen
-        optical_element = S4Screen(name='Generic Beam Screen/Slit/Stopper/Attenuator', boundary_shape=boundary_shape,
-                                   i_abs=0,  # 0=No, 1=prerefl file_abs, 2=xraylib, 3=dabax
-                                   i_stop=0, thick=0, file_abs='<specify file name>', material='Au', density=19.3)
-
-        from syned.beamline.element_coordinates import ElementCoordinates
-        coordinates = ElementCoordinates(p=5.475, q=0, angle_radial=0, angle_azimuthal=0, angle_radial_out=3.141592654)
-        from shadow4.beamline.optical_elements.absorbers.s4_screen import S4ScreenElement
-        beamline_element = S4ScreenElement(optical_element=optical_element, coordinates=coordinates, input_beam=beam)
-
-        beam, footprint = beamline_element.trace_beam()
-
-        beamline.append_beamline_element(beamline_element)
-
-        # optical element number XX
-        from shadow4.beamline.optical_elements.crystals.s4_plane_crystal import S4PlaneCrystal
-        optical_element = S4PlaneCrystal(name='Plane Crystal',
-                                         boundary_shape=None, material='Si',
-                                         miller_index_h=1, miller_index_k=1, miller_index_l=1,
-                                         f_bragg_a=False, asymmetry_angle=0.0,
-                                         is_thick=1, thickness=0.001,
-                                         f_central=1, f_phot_cent=0, phot_cent=5000.0,
-                                         file_refl='bragg.dat',
-                                         f_ext=0,
-                                         material_constants_library_flag=0,
-                                         # 0=xraylib,1=dabax,2=preprocessor v1,3=preprocessor v2
-                                         )
-        from syned.beamline.element_coordinates import ElementCoordinates
-        coordinates = ElementCoordinates(p=1.9, q=0, angle_radial=1.164204344, angle_azimuthal=0,
-                                         angle_radial_out=1.164204344)
-        movements = None
-        from shadow4.beamline.optical_elements.crystals.s4_plane_crystal import S4PlaneCrystalElement
-        beamline_element = S4PlaneCrystalElement(optical_element=optical_element, coordinates=coordinates,
-                                                 movements=movements, input_beam=beam)
-
-        beam, mirr = beamline_element.trace_beam()
-
-        beamline.append_beamline_element(beamline_element)
-
-        # optical element number XX
-        from shadow4.beamline.optical_elements.crystals.s4_plane_crystal import S4PlaneCrystal
-        optical_element = S4PlaneCrystal(name='Plane Crystal',
-                                         boundary_shape=None, material='Si',
-                                         miller_index_h=1, miller_index_k=1, miller_index_l=1,
-                                         f_bragg_a=False, asymmetry_angle=0.0,
-                                         is_thick=1, thickness=0.001,
-                                         f_central=1, f_phot_cent=0, phot_cent=5000.0,
-                                         file_refl='bragg.dat',
-                                         f_ext=0,
-                                         material_constants_library_flag=0,
-                                         # 0=xraylib,1=dabax,2=preprocessor v1,3=preprocessor v2
-                                         )
-        from syned.beamline.element_coordinates import ElementCoordinates
-        coordinates = ElementCoordinates(p=0.012, q=0, angle_radial=1.164204344, angle_azimuthal=3.141592654,
-                                         angle_radial_out=1.164204344)
-        movements = None
-        from shadow4.beamline.optical_elements.crystals.s4_plane_crystal import S4PlaneCrystalElement
-        beamline_element = S4PlaneCrystalElement(optical_element=optical_element, coordinates=coordinates,
-                                                 movements=movements, input_beam=beam)
-
-        beam, mirr = beamline_element.trace_beam()
-
-        beamline.append_beamline_element(beamline_element)
-
-        # optical element number XX
-        from syned.beamline.shape import Rectangle
-        boundary_shape = Rectangle(x_left=-0.0005, x_right=0.0005, y_bottom=-0.0005, y_top=0.0005)
-
-        from shadow4.beamline.optical_elements.absorbers.s4_screen import S4Screen
-        optical_element = S4Screen(name='Generic Beam Screen/Slit/Stopper/Attenuator', boundary_shape=boundary_shape,
-                                   i_abs=0,  # 0=No, 1=prerefl file_abs, 2=xraylib, 3=dabax
-                                   i_stop=0, thick=0, file_abs='<specify file name>', material='Au', density=19.3)
-
-        from syned.beamline.element_coordinates import ElementCoordinates
-        coordinates = ElementCoordinates(p=12.888, q=0, angle_radial=0, angle_azimuthal=0, angle_radial_out=3.141592654)
-        from shadow4.beamline.optical_elements.absorbers.s4_screen import S4ScreenElement
-        beamline_element = S4ScreenElement(optical_element=optical_element, coordinates=coordinates, input_beam=beam)
-
-        beam, footprint = beamline_element.trace_beam()
-
-        beamline.append_beamline_element(beamline_element)
-
-        # optical element number XX
-        boundary_shape = None
-
-        from shadow4.beamline.optical_elements.mirrors.s4_ellipsoid_mirror import S4EllipsoidMirror
-        optical_element = S4EllipsoidMirror(name='Ellipsoid Mirror', boundary_shape=boundary_shape,
-                                            surface_calculation=0,
-                                            min_axis=2.000000, maj_axis=2.000000, pole_to_focus=1.000000,
-                                            p_focus=51.500000, q_focus=0.150000, grazing_angle=0.006000,
-                                            is_cylinder=1, cylinder_direction=0, convexity=1,
-                                            f_reflec=1, f_refl=5, file_refl='<none>', refraction_index=0.99999 + 0.001j,
+            from shadow4.beamline.optical_elements.mirrors.s4_plane_mirror import S4PlaneMirror
+            optical_element = S4PlaneMirror(name='Plane Mirror', boundary_shape=boundary_shape,
+                                            f_reflec=0, f_refl=4, file_refl='<none>', refraction_index=0.99999 + 0.001j,
                                             coating_material='Ni', coating_density=8.902, coating_roughness=0)
 
-        from syned.beamline.element_coordinates import ElementCoordinates
-        coordinates = ElementCoordinates(p=0.5, q=0.0575, angle_radial=1.564796327, angle_azimuthal=0,
-                                         angle_radial_out=1.564796327)
-        movements = None
-        from shadow4.beamline.optical_elements.mirrors.s4_ellipsoid_mirror import S4EllipsoidMirrorElement
-        beamline_element = S4EllipsoidMirrorElement(optical_element=optical_element, coordinates=coordinates,
+            from syned.beamline.element_coordinates import ElementCoordinates
+            coordinates = ElementCoordinates(p=2.7, q=0, angle_radial=1.563796327, angle_azimuthal=1.570796327,
+                                             angle_radial_out=1.563796327)
+            movements = None
+            from shadow4.beamline.optical_elements.mirrors.s4_plane_mirror import S4PlaneMirrorElement
+            beamline_element = S4PlaneMirrorElement(optical_element=optical_element, coordinates=coordinates,
                                                     movements=movements, input_beam=beam)
 
-        beam, mirr = beamline_element.trace_beam()
+            beam, mirr = beamline_element.trace_beam()
 
-        beamline.append_beamline_element(beamline_element)
+            beamline.append_beamline_element(beamline_element)
 
-        # optical element number XX
-        boundary_shape = None
+            # optical element number XX
+            boundary_shape = None
 
-        from shadow4.beamline.optical_elements.mirrors.s4_ellipsoid_mirror import S4EllipsoidMirror
-        optical_element = S4EllipsoidMirror(name='Ellipsoid Mirror', boundary_shape=boundary_shape,
-                                            surface_calculation=0,
-                                            min_axis=2.000000, maj_axis=2.000000, pole_to_focus=1.000000,
-                                            p_focus=51.590000, q_focus=0.060000, grazing_angle=0.006000,
-                                            is_cylinder=1, cylinder_direction=0, convexity=1,
-                                            f_reflec=1, f_refl=5, file_refl='<none>', refraction_index=0.99999 + 0.001j,
+            from shadow4.beamline.optical_elements.mirrors.s4_plane_mirror import S4PlaneMirror
+            optical_element = S4PlaneMirror(name='Plane Mirror', boundary_shape=boundary_shape,
+                                            f_reflec=0, f_refl=4, file_refl='<none>', refraction_index=0.99999 + 0.001j,
                                             coating_material='Ni', coating_density=8.902, coating_roughness=0)
 
-        from syned.beamline.element_coordinates import ElementCoordinates
-        coordinates = ElementCoordinates(p=0.0325, q=0.06, angle_radial=1.564796327, angle_azimuthal=1.570796327,
-                                         angle_radial_out=1.564796327)
-        movements = None
-        from shadow4.beamline.optical_elements.mirrors.s4_ellipsoid_mirror import S4EllipsoidMirrorElement
-        beamline_element = S4EllipsoidMirrorElement(optical_element=optical_element, coordinates=coordinates,
+            from syned.beamline.element_coordinates import ElementCoordinates
+            coordinates = ElementCoordinates(p=0.825, q=0, angle_radial=1.563796327, angle_azimuthal=3.141592654,
+                                             angle_radial_out=1.563796327)
+            movements = None
+            from shadow4.beamline.optical_elements.mirrors.s4_plane_mirror import S4PlaneMirrorElement
+            beamline_element = S4PlaneMirrorElement(optical_element=optical_element, coordinates=coordinates,
                                                     movements=movements, input_beam=beam)
 
-        beam, mirr = beamline_element.trace_beam()
+            beam, mirr = beamline_element.trace_beam()
 
-        beamline.append_beamline_element(beamline_element)
+            beamline.append_beamline_element(beamline_element)
 
-        # optical element number XX
+            # optical element number XX
 
-        from shadow4.beamline.optical_elements.ideal_elements.s4_empty import S4Empty
-        optical_element = S4Empty(name='Empty Element')
+            from shadow4.beamline.optical_elements.ideal_elements.s4_empty import S4Empty
+            optical_element = S4Empty(name='Empty Element')
 
-        from syned.beamline.element_coordinates import ElementCoordinates
-        coordinates = ElementCoordinates(p=0, q=0, angle_radial=0, angle_azimuthal=4.71238898,
-                                         angle_radial_out=3.141592654)
-        from shadow4.beamline.optical_elements.ideal_elements.s4_empty import S4EmptyElement
-        beamline_element = S4EmptyElement(optical_element=optical_element, coordinates=coordinates, input_beam=beam)
+            from syned.beamline.element_coordinates import ElementCoordinates
+            coordinates = ElementCoordinates(p=0, q=0, angle_radial=0, angle_azimuthal=4.71238898,
+                                             angle_radial_out=3.141592654)
+            from shadow4.beamline.optical_elements.ideal_elements.s4_empty import S4EmptyElement
+            beamline_element = S4EmptyElement(optical_element=optical_element, coordinates=coordinates, input_beam=beam)
 
-        beam, mirr = beamline_element.trace_beam()
+            beam, mirr = beamline_element.trace_beam()
 
-        beamline.append_beamline_element(beamline_element)
+            beamline.append_beamline_element(beamline_element)
 
-        # test plot
-        if 0:
-            from srxraylib.plot.gol import plot_scatter
-            plot_scatter(beam.get_photon_energy_eV(nolost=1), beam.get_column(23, nolost=1),
-                         title='(Intensity,Photon Energy)', plot_histograms=0)
-            plot_scatter(1e6 * beam.get_column(1, nolost=1), 1e6 * beam.get_column(3, nolost=1),
-                         title='(X,Z) in microns')
+            # optical element number XX
+            from syned.beamline.shape import Rectangle
+            boundary_shape = Rectangle(x_left=-0.0015, x_right=0.0015, y_bottom=-0.0015, y_top=0.0015)
 
-        return beamline, beam
+            from shadow4.beamline.optical_elements.absorbers.s4_screen import S4Screen
+            optical_element = S4Screen(name='Generic Beam Screen/Slit/Stopper/Attenuator', boundary_shape=boundary_shape,
+                                       i_abs=0,  # 0=No, 1=prerefl file_abs, 2=xraylib, 3=dabax
+                                       i_stop=0, thick=0, file_abs='<specify file name>', material='Au', density=19.3)
 
-    beamline, beam = get_beamline()
+            from syned.beamline.element_coordinates import ElementCoordinates
+            coordinates = ElementCoordinates(p=5.475, q=0, angle_radial=0, angle_azimuthal=0, angle_radial_out=3.141592654)
+            from shadow4.beamline.optical_elements.absorbers.s4_screen import S4ScreenElement
+            beamline_element = S4ScreenElement(optical_element=optical_element, coordinates=coordinates, input_beam=beam)
 
-    if 0:
+            beam, footprint = beamline_element.trace_beam()
+
+            beamline.append_beamline_element(beamline_element)
+
+            # optical element number XX
+            from shadow4.beamline.optical_elements.crystals.s4_plane_crystal import S4PlaneCrystal
+            optical_element = S4PlaneCrystal(name='Plane Crystal',
+                                             boundary_shape=None, material='Si',
+                                             miller_index_h=1, miller_index_k=1, miller_index_l=1,
+                                             f_bragg_a=False, asymmetry_angle=0.0,
+                                             is_thick=1, thickness=0.001,
+                                             f_central=1, f_phot_cent=0, phot_cent=5000.0,
+                                             file_refl='bragg.dat',
+                                             f_ext=0,
+                                             material_constants_library_flag=1,
+                                             # 0=xraylib,1=dabax,2=preprocessor v1,3=preprocessor v2
+                                             )
+            from syned.beamline.element_coordinates import ElementCoordinates
+            coordinates = ElementCoordinates(p=1.9, q=0, angle_radial=1.164204344, angle_azimuthal=0,
+                                             angle_radial_out=1.164204344)
+            movements = None
+            from shadow4.beamline.optical_elements.crystals.s4_plane_crystal import S4PlaneCrystalElement
+            beamline_element = S4PlaneCrystalElement(optical_element=optical_element, coordinates=coordinates,
+                                                     movements=movements, input_beam=beam)
+
+            beam, mirr = beamline_element.trace_beam()
+
+            beamline.append_beamline_element(beamline_element)
+
+            # optical element number XX
+            from shadow4.beamline.optical_elements.crystals.s4_plane_crystal import S4PlaneCrystal
+            optical_element = S4PlaneCrystal(name='Plane Crystal',
+                                             boundary_shape=None, material='Si',
+                                             miller_index_h=1, miller_index_k=1, miller_index_l=1,
+                                             f_bragg_a=False, asymmetry_angle=0.0,
+                                             is_thick=1, thickness=0.001,
+                                             f_central=1, f_phot_cent=0, phot_cent=5000.0,
+                                             file_refl='bragg.dat',
+                                             f_ext=0,
+                                             material_constants_library_flag=1,
+                                             # 0=xraylib,1=dabax,2=preprocessor v1,3=preprocessor v2
+                                             )
+            from syned.beamline.element_coordinates import ElementCoordinates
+            coordinates = ElementCoordinates(p=0.012, q=0, angle_radial=1.164204344, angle_azimuthal=3.141592654,
+                                             angle_radial_out=1.164204344)
+            movements = None
+            from shadow4.beamline.optical_elements.crystals.s4_plane_crystal import S4PlaneCrystalElement
+            beamline_element = S4PlaneCrystalElement(optical_element=optical_element, coordinates=coordinates,
+                                                     movements=movements, input_beam=beam)
+
+            beam, mirr = beamline_element.trace_beam()
+
+            beamline.append_beamline_element(beamline_element)
+
+            # optical element number XX
+            from syned.beamline.shape import Rectangle
+            boundary_shape = Rectangle(x_left=-0.0005, x_right=0.0005, y_bottom=-0.0005, y_top=0.0005)
+
+            from shadow4.beamline.optical_elements.absorbers.s4_screen import S4Screen
+            optical_element = S4Screen(name='Generic Beam Screen/Slit/Stopper/Attenuator', boundary_shape=boundary_shape,
+                                       i_abs=0,  # 0=No, 1=prerefl file_abs, 2=xraylib, 3=dabax
+                                       i_stop=0, thick=0, file_abs='<specify file name>', material='Au', density=19.3)
+
+            from syned.beamline.element_coordinates import ElementCoordinates
+            coordinates = ElementCoordinates(p=12.888, q=0, angle_radial=0, angle_azimuthal=0, angle_radial_out=3.141592654)
+            from shadow4.beamline.optical_elements.absorbers.s4_screen import S4ScreenElement
+            beamline_element = S4ScreenElement(optical_element=optical_element, coordinates=coordinates, input_beam=beam)
+
+            beam, footprint = beamline_element.trace_beam()
+
+            beamline.append_beamline_element(beamline_element)
+
+            # optical element number XX
+            boundary_shape = None
+
+            from shadow4.beamline.optical_elements.mirrors.s4_ellipsoid_mirror import S4EllipsoidMirror
+            optical_element = S4EllipsoidMirror(name='Ellipsoid Mirror', boundary_shape=boundary_shape,
+                                                surface_calculation=0,
+                                                min_axis=2.000000, maj_axis=2.000000, pole_to_focus=1.000000,
+                                                p_focus=51.500000, q_focus=0.150000, grazing_angle=0.006000,
+                                                is_cylinder=1, cylinder_direction=0, convexity=1,
+                                                f_reflec=0, f_refl=4, file_refl='<none>', refraction_index=0.99999 + 0.001j,
+                                                coating_material='Ni', coating_density=8.902, coating_roughness=0)
+
+            from syned.beamline.element_coordinates import ElementCoordinates
+            coordinates = ElementCoordinates(p=0.5, q=0.0575, angle_radial=1.564796327, angle_azimuthal=0,
+                                             angle_radial_out=1.564796327)
+            movements = None
+            from shadow4.beamline.optical_elements.mirrors.s4_ellipsoid_mirror import S4EllipsoidMirrorElement
+            beamline_element = S4EllipsoidMirrorElement(optical_element=optical_element, coordinates=coordinates,
+                                                        movements=movements, input_beam=beam)
+
+            beam, mirr = beamline_element.trace_beam()
+
+            beamline.append_beamline_element(beamline_element)
+
+            # optical element number XX
+            boundary_shape = None
+
+            from shadow4.beamline.optical_elements.mirrors.s4_ellipsoid_mirror import S4EllipsoidMirror
+            optical_element = S4EllipsoidMirror(name='Ellipsoid Mirror', boundary_shape=boundary_shape,
+                                                surface_calculation=0,
+                                                min_axis=2.000000, maj_axis=2.000000, pole_to_focus=1.000000,
+                                                p_focus=51.590000, q_focus=0.060000, grazing_angle=0.006000,
+                                                is_cylinder=1, cylinder_direction=0, convexity=1,
+                                                f_reflec=0, f_refl=4, file_refl='<none>', refraction_index=0.99999 + 0.001j,
+                                                coating_material='Ni', coating_density=8.902, coating_roughness=0)
+
+            from syned.beamline.element_coordinates import ElementCoordinates
+            coordinates = ElementCoordinates(p=0.0325, q=0.06, angle_radial=1.564796327, angle_azimuthal=1.570796327,
+                                             angle_radial_out=1.564796327)
+            movements = None
+            from shadow4.beamline.optical_elements.mirrors.s4_ellipsoid_mirror import S4EllipsoidMirrorElement
+            beamline_element = S4EllipsoidMirrorElement(optical_element=optical_element, coordinates=coordinates,
+                                                        movements=movements, input_beam=beam)
+
+            beam, mirr = beamline_element.trace_beam()
+
+            beamline.append_beamline_element(beamline_element)
+
+            # optical element number XX
+
+            from shadow4.beamline.optical_elements.ideal_elements.s4_empty import S4Empty
+            optical_element = S4Empty(name='Empty Element')
+
+            from syned.beamline.element_coordinates import ElementCoordinates
+            coordinates = ElementCoordinates(p=0, q=0, angle_radial=0, angle_azimuthal=4.71238898,
+                                             angle_radial_out=3.141592654)
+            from shadow4.beamline.optical_elements.ideal_elements.s4_empty import S4EmptyElement
+            beamline_element = S4EmptyElement(optical_element=optical_element, coordinates=coordinates, input_beam=beam)
+
+            beam, mirr = beamline_element.trace_beam()
+
+            beamline.append_beamline_element(beamline_element)
+
+            # test plot
+            if 0:
+                from srxraylib.plot.gol import plot_scatter
+                plot_scatter(beam.get_photon_energy_eV(nolost=1), beam.get_column(23, nolost=1),
+                             title='(Intensity,Photon Energy)', plot_histograms=0)
+                plot_scatter(1e6 * beam.get_column(1, nolost=1), 1e6 * beam.get_column(3, nolost=1),
+                             title='(X,Z) in microns')
+
+            return beamline, beam
+
+        beamline, beam = get_beamline()
+
         # a = numpy.loadtxt("/home/srio/Oasys/spectrum.dat.csv")
         # print(a.shape)
         # print(flux_summary(beamline, spectrum_energy=a[:,0], spectrum_flux=a[:,1]))
         print(flux_summary(beamline))
 
 
-    if 0:
         # print(focnew(beam=beam))
         # print(focnew(beam=beamline_get_last_beam(beamline)))
         print(focnew(beamline=beamline, mode=2, center=[0,0])["text"])
 
 
-    if 0:
         # b = beamline_get_beam_at_element(beamline, 5)
         # print(b)
 
@@ -939,6 +944,48 @@ if __name__ == "__main__":
               ticket['list_yy'][10], ticket['list_xz'][10], legend=ticket['list_labels'])
         # print(beamline.distances_summary())
 
-    if 0:
-
         print(flux_summary(beamline))
+
+    if False: # check reading file
+        def get_bb():
+            from shadow4.beamline.s4_beamline import S4Beamline
+            import numpy as np
+
+            beamline = S4Beamline()
+
+            #
+            #
+            #
+            from shadow4.sources.s4_light_source_from_file import S4LightSourceFromFile
+            light_source = S4LightSourceFromFile(name='Shadow4 File Reader',
+                                                 file_name='/nobackup/gurb1/srio/Oasys/tmp.h5',
+                                                 simulation_name='run001', beam_name='begin')
+            beam = light_source.get_beam()
+
+            beamline.set_light_source(light_source)
+
+            # optical element number XX
+            boundary_shape = None
+
+            from shadow4.beamline.optical_elements.absorbers.s4_screen import S4Screen
+            optical_element = S4Screen(name='TF Screen (before) (1)', boundary_shape=boundary_shape,
+                                       i_abs=0,  # 0=No, 1=prerefl file_abs, 2=xraylib, 3=dabax
+                                       i_stop=0, thick=0, file_abs='<specify file name>', material='Au', density=19.3)
+
+            from syned.beamline.element_coordinates import ElementCoordinates
+            coordinates = ElementCoordinates(p=0.724, q=0, angle_radial=0, angle_azimuthal=0,
+                                             angle_radial_out=3.141592654)
+            from shadow4.beamline.optical_elements.absorbers.s4_screen import S4ScreenElement
+            beamline_element = S4ScreenElement(optical_element=optical_element, coordinates=coordinates,
+                                               input_beam=beam)
+
+            beam, footprint = beamline_element.trace_beam()
+
+            beamline.append_beamline_element(beamline_element)
+
+
+            return beamline
+
+        bb = get_bb()
+        print(flux_summary(get_bb()))
+

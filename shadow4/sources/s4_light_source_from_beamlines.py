@@ -167,6 +167,17 @@ class S4LightSourceFromBeamlines(EmptyLightSource):
         txt += "\nbeam = light_source.get_beam()"
         return txt
 
+    def calculate_spectrum(self, **params):
+        """
+        To be implemented in a derived class.
+
+        Raises
+        ------
+        NotImplementedError()
+
+        """
+        raise NotImplementedError()
+
     def get_info(self):
         """
         Returns specific information.
