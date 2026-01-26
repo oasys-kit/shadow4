@@ -219,7 +219,7 @@ class S4UndulatorLightSource(S4LightSource):
             if INTEGRATION_METHOD == 0:
                 power_density = radiation.sum(axis=0) * step_e * codata.e * 1e3 # W/rad2
             else:
-                power_density = numpy.trapz(radiation, photon_energy, axis=0) * codata.e * 1e3 # W/rad2
+                power_density = numpy.trapezoid(radiation, photon_energy, axis=0) * codata.e * 1e3 # W/rad2
 
         return power_density, theta, phi
 
@@ -287,7 +287,7 @@ class S4UndulatorLightSource(S4LightSource):
             flux = radiation2.sum(axis=2).sum(axis=1) * (1e-3 * photon_energy) # photons/eV -> photons/0.1%bw
             flux *= 4 * (theta[1] - theta[0]) * (phi[1] - phi[0]) # adding the four quadrants!
         else:
-            flux = 4 * numpy.trapz(numpy.trapz(radiation2, phi, axis=2), theta, axis=1) * (1e-3 * photon_energy) # photons/eV -> photons/0.1%bw
+            flux = 4 * numpy.trapezoid(numpy.trapezoid(radiation2, phi, axis=2), theta, axis=1) * (1e-3 * photon_energy) # photons/eV -> photons/0.1%bw
 
 
         spectral_power = flux * codata.e * 1e3
