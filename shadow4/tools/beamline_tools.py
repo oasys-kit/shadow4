@@ -20,8 +20,8 @@ def beamline_get_source_beam(beamline):
         The beam at the source position.
     """
     n = beamline.get_beamline_elements_number()
+    light_source = beamline.get_light_source()
     if n == 0:
-        light_source = beamline.get_light_source()
         beam0 = light_source.get_beam()
     else:
         beam0 = beamline.get_beamline_element_at(0).get_input_beam()
@@ -218,7 +218,8 @@ def flux_summary(beamline, spectrum_energy=None, spectrum_flux=None, e_min=None,
             peak_e = spectrum_energy[peak_i]
             txt += " Peak Flux from Source (at %.3f eV): %.3g ph/s/0.1%%bw = %.3g ph/s/eV \n" % (peak_e, peak_f, peak_f / (1e-3 * peak_e))
             txt += " Averaged Flux from Source: %.3g ph/s/0.1%%bw = %.3g ph/s/eV \n" % (spectrum_flux.mean(), spectrum_flux.mean() / (1e-3 * spectrum_energy.mean()))
-            initial_flux = numpy.trapezoid(spectrum_flux / (1e-3 * spectrum_energy), spectrum_energy)
+            try:    initial_flux = numpy.trapezoid(spectrum_flux / (1e-3 * spectrum_energy), spectrum_energy)
+            except: initial_flux = numpy.trapz(spectrum_flux / (1e-3 * spectrum_energy), spectrum_energy)
             averaged_flux = initial_flux / (spectrum_energy.max() - spectrum_energy.min())
             txt += " Integrated Flux from Source: Total: %.3g ph/s = %.3g ph/s/eV\n" % (initial_flux, averaged_flux)
     except:
@@ -290,18 +291,24 @@ def flux_summary(beamline, spectrum_energy=None, spectrum_flux=None, e_min=None,
             txt += "# FLUX CALCULATION (EXACT)--------- (using calibrated histograms) \n"
             txt += "\n"
 
-            txt += " Initial Flux from Source (integrated over histogram): %g ph/s" % (
-                                                numpy.trapezoid(interpolated_flux_per_ev, ticket0['bin_center']))
+            try:
+                txt += " Initial Flux from Source (integrated over histogram): %g ph/s" % (
+                    numpy.trapezoid(interpolated_flux_per_ev, ticket0['bin_center']))
+            except:
+                txt += " Initial Flux from Source (integrated over histogram): %g ph/s" % (
+                    numpy.trapz(interpolated_flux_per_ev, ticket0['bin_center']))
 
             txt += "\n"
             flux_at_sample = interpolated_flux_per_ev * I0ratio * ticket1['histogram'] / ticket0['histogram']
-            flux_at_sample_integrated = numpy.trapezoid(flux_at_sample, ticket1['bin_center'])
+            try:    flux_at_sample_integrated = numpy.trapezoid(flux_at_sample, ticket1['bin_center'])
+            except: flux_at_sample_integrated = numpy.trapz(flux_at_sample, ticket1['bin_center'])
 
             txt += " ---> Integrated Flux at image: %.3g ph/s \n" % (flux_at_sample_integrated)
             txt += " ---> Flux Density  : %.3g ph/s/mm^2  (over %f x %f um2) \n" % (flux_at_sample_integrated / (dx * dy), 1e3 * dx, 1e3 * dy)
 
             power_at_sample = flux_at_sample * ticket0["bin_center"] * codata.e
-            power_at_sample_integrated = numpy.trapezoid(power_at_sample, ticket1['bin_center'])
+            try:    power_at_sample_integrated = numpy.trapezoid(power_at_sample, ticket1['bin_center'])
+            except: power_at_sample_integrated = numpy.trapz(power_at_sample, ticket1['bin_center'])
             step = ticket1['bin_center'][1] - ticket1['bin_center'][0]
             txt += " ---> Integrated Power at image: %.3g W = %g\n" % (power_at_sample_integrated, power_at_sample.sum() * step)
             txt += " ---> Power Density  : %.3g W/mm^2 (over %f x %f um2) \n" % (power_at_sample_integrated / (dx * dy), 1e3 * dx, 1e3 * dy)
