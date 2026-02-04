@@ -20,6 +20,8 @@ from crystalpy.util.Vector import Vector
 from crystalpy.util.ComplexAmplitudePhoton import ComplexAmplitudePhoton
 from crystalpy.diffraction.PerfectCrystalDiffraction import PerfectCrystalDiffraction
 
+from dabax.dabax_xraylib import DabaxXraylib
+
 from shadow4.optical_surfaces.s4_mesh import S4Mesh
 from shadow4.optical_surfaces.s4_toroid import S4Toroid
 
@@ -80,6 +82,8 @@ class S4Crystal(Crystal):
         0: xraylib, 1: dabax, 2: preprocessor file v1, 3: preprocessor file v2.
     file_refl : str, optional
         for material_constants_library_flag=2,3, the name of the file containing the crystal parameters.
+    dabax : None or instance of DabaxXraylib,
+        The pointer to the dabax library  (used for material_constants_library_flag=1).
 
     Returns
     -------
@@ -111,6 +115,7 @@ class S4Crystal(Crystal):
                                                     # 3=shadow preprocessor file v2
                  file_refl="",
                  method_efields_management=0, # 0=S4, 1=S3
+                 dabax=None,
                  ):
 
 
@@ -137,6 +142,7 @@ class S4Crystal(Crystal):
         self._material_constants_library_flag = material_constants_library_flag
         self._file_refl = file_refl
 
+        self._dabax = dabax
         self._method_efields_management = method_efields_management
 
         # self._f_mosaic = f_mosaic
@@ -236,6 +242,13 @@ class S4Crystal(Crystal):
             txt += "\nboundary_shape = Ellipse(a_axis_min=%g, a_axis_max=%g, b_axis_min=%g, b_axis_max=%g)" % bs.get_boundaries()
         return txt
 
+    def _get_dabax_txt(self):
+        if isinstance(self._dabax, DabaxXraylib):
+            dabax_txt = 'DabaxXraylib(file_f0="%s", file_f1f2="%s")' % (self._dabax.get_file_f0(), self._dabax.get_file_f1f2())
+        else:
+            dabax_txt = "DabaxXraylib()"
+        return dabax_txt
+
 class S4CrystalElement(S4BeamlineElement):
     """
     The base class for Shadow4 crystal element.
@@ -305,7 +318,8 @@ class S4CrystalElement(S4BeamlineElement):
                                                  miller_k=oe._miller_index_k,  # int
                                                  miller_l=oe._miller_index_l,  # int
                                                  asymmetry_angle=oe._asymmetry_angle,  # radians
-                                                 azimuthal_angle=0.0)
+                                                 azimuthal_angle=0.0,
+                                                 dabax=oe._dabax)
         elif oe._material_constants_library_flag == 2:
             if is_verbose(): print("\nCreating a diffraction setup (shadow preprocessor file V1)...")
             diffraction_setup = DiffractionSetupShadowPreprocessorV1(geometry_type=BraggDiffraction(),  # todo: use oe._diffraction_geometry

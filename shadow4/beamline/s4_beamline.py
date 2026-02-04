@@ -88,8 +88,10 @@ class S4Beamline(Beamline):
         """
         partial_code = kwargs.get('partial_code', 0)  # default to 0
 
-        script = "from shadow4.beamline.s4_beamline import S4Beamline"
-        script += "\nimport numpy as np"
+        script = "import numpy as np"
+        script += "\nfrom dabax.dabax_xraylib import DabaxXraylib"
+        script += "\nfrom shadow4.beamline.s4_beamline import S4Beamline"
+
         script += "\n\nbeamline = S4Beamline()\n"
 
         if partial_code in [0,1]:

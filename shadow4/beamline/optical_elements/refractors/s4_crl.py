@@ -516,7 +516,7 @@ if __name__ == "__main__":
                                 convex_to_the_beam=0,
                                 # for surface_shape: convexity of the first interface exposed to the beam 0=No, 1=Yes
                                 cylinder_angle=1,  # for surface_shape: 0=not cylindricaL, 1=meridional 2=sagittal
-                                ri_calculation_mode=2,  # source of refraction indices and absorption coefficients
+                                ri_calculation_mode=3,  # source of refraction indices and absorption coefficients
                                 # 0=User, 1=prerefl file, 2=xraylib, 3=dabax
                                 prerefl_file='Al5_55.dat',
                                 # for ri_calculation_mode=0: file name (from prerefl) to get the refraction index.

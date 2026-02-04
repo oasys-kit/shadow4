@@ -51,7 +51,7 @@ class S4Lens(Lens, S4RefractiveLensOpticalElementDecorator):
     attenuation_coefficient : float, optional
         For ri_calculation_mode=0, the attenuation coefficient in m^-1 !!!.
     dabax : None or instance of DabaxXraylib,
-        The pointer to the dabax library  (used for f_r_ind > 6).
+        The pointer to the dabax library  (used for ri_calculation_mode=3). If None, the default is used.
     radius : float, optional
         For surface_shape=(1,2), the lens radius in m. (For parabolic lenses, it is the radius at the tip for paraboloid.)
     conic_coefficients1 : None or list, optional
