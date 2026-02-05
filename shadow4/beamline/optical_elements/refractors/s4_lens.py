@@ -79,7 +79,7 @@ class S4Lens(Lens, S4RefractiveLensOpticalElementDecorator):
                  refraction_index=1.0, # for ri_calculation_mode=1: n (real)
                  attenuation_coefficient=0.0, # for ri_calculation_mode=1: mu in m^-1 (real)
                  density=1.0,
-                 dabax=None,
+                 dabax=None,           # for  ri_calculation_mode=3
                  radius=500e-6,        # for surface_shape=(1,2): lens radius [m] (for spherical, or radius at the tip for paraboloid)
                  conic_coefficients1=None,   # for surface_shape = 3: the conic coefficients of the first interface
                  conic_coefficients2=None,  # for surface_shape = 3: the conic coefficients of the second interface
@@ -119,7 +119,12 @@ class S4Lens(Lens, S4RefractiveLensOpticalElementDecorator):
             "refraction_index":        refraction_index,
             "attenuation_coefficient": attenuation_coefficient,
             "density":                 density,
-            "dabax":                   repr(dabax),
+            "dabax":                   (
+                                        "DabaxXraylib()"
+                                        if dabax is None
+                                        else 'DabaxXraylib(file_f1f2="%s", file_CrossSec="%s")'
+                                        % (dabax.get_file_f1f2(), dabax.get_file_CrossSec())
+                                    ),
             "radius":                  radius,
             "conic_coefficients1":     repr(conic_coefficients1),
             "conic_coefficients2":     repr(conic_coefficients2),
@@ -186,16 +191,14 @@ optical_element = S4Lens(name='{name:s}',
      material='{material:s}', # the material for ri_calculation_mode > 1
      density={density:g}, # the density for ri_calculation_mode > 1
      thickness={thickness}, # syned stuff, lens thickness [m] (distance between the two interfaces at the center of the lenses)
-     surface_shape={surface_shape}, # now: 0=plane, 1=sphere, 2=parabola, 3=conic coefficients
-                                    # (in shadow3: 1=sphere 4=paraboloid, 5=plane)
+     surface_shape={surface_shape}, # 0=plane, 1=sphere, 2=parabola, 3=conic coefficients
      convex_to_the_beam={convex_to_the_beam}, # for surface_shape: convexity of the first interface exposed to the beam 0=No, 1=Yes
      cylinder_angle={cylinder_angle}, # for surface_shape: 0=not cylindricaL, 1=meridional 2=sagittal
-     ri_calculation_mode={ri_calculation_mode},   # source of refraction indices and absorption coefficients
-                                     # 0=User, 1=prerefl file, 2=xraylib, 3=dabax
+     ri_calculation_mode={ri_calculation_mode},   # source of refr indices and absorp coeff 0=User, 1=prerefl file, 2=xraylib, 3=dabax
      prerefl_file='{prerefl_file:s}', # for ri_calculation_mode=0: file name (from prerefl) to get the refraction index.
      refraction_index={refraction_index:g}, # for ri_calculation_mode=1: n (real)
      attenuation_coefficient={attenuation_coefficient:g}, # for ri_calculation_mode=1: mu in m^-1 (real)
-     dabax={dabax:s}, # the pointer to dabax library
+     dabax={dabax:s}, # if using dabax (ri_calculation_mode=3), instance of DabaxXraylib() (use None for default)
      radius={radius:g}, # for surface_shape=(1,2): lens radius [m] (for spherical, or radius at the tip for paraboloid)
      conic_coefficients1={conic_coefficients1}, # for surface_shape = 3: the conic coefficients for interface 1
      conic_coefficients2={conic_coefficients2}, # for surface_shape = 3: the conic coefficients for interface 2
@@ -522,7 +525,7 @@ if __name__ == "__main__":
                  convex_to_the_beam=0, # for surface_shape (1,2): convexity of the first interface exposed to the beam 0=No, 1=Yes
                                        # the second interface has opposite convexity
                  cylinder_angle=0,     # for surface_shape (1,2): 0=not cylindricaL, 1=meridional 2=sagittal
-                 ri_calculation_mode=1,       # source of refraction indices and absorption coefficients
+                 ri_calculation_mode=3,       # source of refraction indices and absorption coefficients
                                  # 0=User
                                  # 1=prerefl file
                                  # 2=direct calculation using xraylib
