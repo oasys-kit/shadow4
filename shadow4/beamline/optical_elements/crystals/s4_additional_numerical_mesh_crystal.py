@@ -50,6 +50,7 @@ class S4AdditionalNumericalMeshCrystal(S4NumericalMeshCrystal):
                  f_ext                          =0 if ideal_crystal is None else ideal_crystal._f_ext,
                  material_constants_library_flag=0 if ideal_crystal is None else ideal_crystal._material_constants_library_flag,
                  file_refl                      ="" if ideal_crystal is None else ideal_crystal._file_refl,
+                 dabax                          =None if ideal_crystal is None else ideal_crystal._dabax,
                  )
 
         self.__ideal_crystal         = ideal_crystal

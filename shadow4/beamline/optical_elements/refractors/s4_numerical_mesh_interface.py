@@ -128,7 +128,11 @@ class S4NumericalMeshInterface(S4Interface, S4NumericalMeshOpticalElementDecorat
             "r_attenuation_ima": r_attenuation_ima,
             "file_r_ind_obj": file_r_ind_obj,
             "file_r_ind_ima": file_r_ind_ima,
-            "dabax": dabax,
+            "dabax": ("DabaxXraylib()"
+                        if dabax is None
+                        else 'DabaxXraylib(file_f1f2="%s", file_CrossSec="%s")'
+                        % (dabax.get_file_f1f2(), dabax.get_file_CrossSec())
+                        ),
             "xx": xx,
             "yy": yy,
             "zz": zz,
@@ -164,7 +168,7 @@ optical_element = S4NumericalMeshInterface(name='{name:s}',
     r_ind_obj={r_ind_obj:g}, r_ind_ima={r_ind_ima:g},
     r_attenuation_obj={r_attenuation_obj:g}, r_attenuation_ima={r_attenuation_ima:g},
     file_r_ind_obj='{file_r_ind_obj:s}', file_r_ind_ima='{file_r_ind_ima:s}',
-    dabax={dabax},
+    dabax={dabax}, # if using dabax (f_r_ind > 6), instance of DabaxXraylib() (use None for default)
     )
 """
         txt += txt_pre.format(**self.__inputs)

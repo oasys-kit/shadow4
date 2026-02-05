@@ -57,6 +57,8 @@ class S4NumericalMeshCrystal(S4Crystal, S4NumericalMeshOpticalElementDecorator):
         0: xraylib, 1: dabax, 2: preprocessor file v1, 3: preprocessor file v2.
     file_refl : str, optional
         for material_constants_library_flag=2,3, the name of the file containing the crystal parameters.
+    dabax : None or instance of DabaxXraylib,
+        The pointer to the dabax library  (used for material_constants_library_flag=1).
 
     Returns
     -------
@@ -86,6 +88,7 @@ class S4NumericalMeshCrystal(S4Crystal, S4NumericalMeshOpticalElementDecorator):
                                                      # 2=shadow preprocessor file v1
                                                      # 3=shadow preprocessor file v1
                  file_refl="",
+                 dabax=None,
                  ):
 
         S4NumericalMeshOpticalElementDecorator.__init__(self, xx, yy, zz, surface_data_file)
@@ -108,6 +111,7 @@ class S4NumericalMeshCrystal(S4Crystal, S4NumericalMeshOpticalElementDecorator):
                            f_bragg_a=f_bragg_a,
                            f_ext=f_ext,
                            material_constants_library_flag=material_constants_library_flag,
+                           dabax=dabax,
                            )
         self.__inputs = {
             "name": name,
@@ -130,6 +134,7 @@ class S4NumericalMeshCrystal(S4Crystal, S4NumericalMeshOpticalElementDecorator):
             "f_bragg_a": f_bragg_a,
             "f_ext": f_ext,
             "material_constants_library_flag": material_constants_library_flag,
+            "dabax": self._get_dabax_txt(),
         }
 
     def to_python_code(self, **kwargs):
@@ -159,6 +164,7 @@ optical_element = S4NumericalMeshCrystal(name='{name:s}',boundary_shape=boundary
     file_refl='{file_refl}',
     f_ext={f_ext},
     material_constants_library_flag={material_constants_library_flag}, # 0=xraylib,1=dabax,2=preprocessor v1,3=preprocessor v2
+    dabax={dabax}, # used when material_constants_library_flag=1
     )"""
         txt += txt_pre.format(**self.__inputs)
         return txt

@@ -64,11 +64,13 @@ class S4HyperboloidCrystal(S4Crystal, S4HyperboloidOpticalElementDecorator):
         0: xraylib, 1: dabax, 2: preprocessor file v1, 3: preprocessor file v2.
     file_refl : str, optional
         for material_constants_library_flag=2,3, the name of the file containing the crystal parameters.
-
+    dabax : None or instance of DabaxXraylib,
+        The pointer to the dabax library  (used for material_constants_library_flag=1).
     Returns
     -------
     instance of S4HyperboloidCrystal.
     """
+
     def __init__(self,
                  name="Hyperboloid crystal",
                  boundary_shape=None,
@@ -95,6 +97,7 @@ class S4HyperboloidCrystal(S4Crystal, S4HyperboloidOpticalElementDecorator):
                  is_cylinder=False,
                  cylinder_direction=Direction.TANGENTIAL,
                  convexity=Convexity.UPWARD,
+                 dabax=None,
                  ):
         p_focus, q_focus, grazing_angle = 1.0, 1.0, 1e-3
         S4HyperboloidOpticalElementDecorator.__init__(self, SurfaceCalculation.EXTERNAL, is_cylinder, cylinder_direction, convexity,
@@ -119,6 +122,7 @@ class S4HyperboloidCrystal(S4Crystal, S4HyperboloidOpticalElementDecorator):
                            f_bragg_a=f_bragg_a,
                            f_ext=f_ext,
                            material_constants_library_flag=material_constants_library_flag,
+                           dabax=dabax,
                            )
 
         self.__inputs = {
@@ -145,6 +149,7 @@ class S4HyperboloidCrystal(S4Crystal, S4HyperboloidOpticalElementDecorator):
             "is_cylinder": is_cylinder,
             "cylinder_direction": cylinder_direction,
             "convexity": convexity,
+            "dabax": self._get_dabax_txt(),
             }
 
     def to_python_code(self, **kwargs):
@@ -163,7 +168,7 @@ class S4HyperboloidCrystal(S4Crystal, S4HyperboloidOpticalElementDecorator):
         txt = self.to_python_code_boundary_shape()
         txt_pre = """
 
-from shadow4.beamline.optical_elements.crystals.s4_hyperboloid_crystal import S4HyperboloidCrystal        
+from shadow4.beamline.optical_elements.crystals.s4_hyperboloid_crystal import S4HyperboloidCrystal   
 optical_element = S4HyperboloidCrystal(name='{name}',
     boundary_shape=boundary_shape, material='{material}',
     miller_index_h={miller_index_h}, miller_index_k={miller_index_k}, miller_index_l={miller_index_l},
@@ -174,6 +179,7 @@ optical_element = S4HyperboloidCrystal(name='{name}',
     f_ext={f_ext},
     material_constants_library_flag={material_constants_library_flag}, # 0=xraylib,1=dabax,2=preprocessor v1,3=preprocessor v2
     min_axis={min_axis:f}, maj_axis={maj_axis:f}, pole_to_focus={pole_to_focus:f}, is_cylinder={is_cylinder:d}, cylinder_direction={cylinder_direction:d}, convexity={convexity:d},
+    dabax={dabax}, # used when material_constants_library_flag=1
     )"""
         txt += txt_pre.format(**self.__inputs)
 

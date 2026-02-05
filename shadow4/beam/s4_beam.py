@@ -876,7 +876,7 @@ class S4Beam(object):
         e_S = numpy.zeros_like(E_S)
         e_P = numpy.zeros_like(E_P)
 
-        for i in range(self.N): # TODO: vectorize? difficult for possible patological cases....
+        for i in range(self.Nstored): # TODO: vectorize? difficult for possible patological cases....
             if modE_S[i] > 0:
                 e_S[i, :] = E_S[i, :] / modE_S[i]
                 tmp = vector_cross(e_S[numpy.newaxis, i, :], vOut[numpy.newaxis, i, :])
@@ -1463,18 +1463,18 @@ class S4Beam(object):
         self.rays[:,10] =  2*numpy.pi/(wavelength * 1e2)
 
     def set_jones(self, J, e_S=None, e_P=None):
-        if self.N != J.shape[0]:
+        if self.Nstored != J.shape[0]:
             raise Exception("Incompatible dimension of J vector: it is (%d,%d), it must be (%d,2)" %
-                            (J.shape[0], J.shape[2], self.N))
+                            (J.shape[0], J.shape[2], self.Nstored))
 
         j0 = J[:, 0]
         j1 = J[:, 1]
         self.set_jones_components(j0, j1, e_S=e_S, e_P=e_P)
 
     def set_jones_components(self, j0, j1, e_S=None, e_P=None):
-        if self.N != j0.size:
+        if self.Nstored != j0.size:
             raise Exception("Incompatible dimension of j0 vector: it is %d, it must be %d" %
-                            (j1.size, self.N))
+                            (j1.size, self.Nstored))
 
         if e_S is None or e_P is None:
             ee_S, ee_P = self.get_efield_directions()
