@@ -5,6 +5,8 @@ from syned.beamline.shape import Rectangle, Ellipse
 from syned.beamline.element_coordinates import ElementCoordinates
 from syned.beamline.optical_elements.mirrors.mirror import Mirror
 
+from dabax.dabax_xraylib import DabaxXraylib
+
 from shadow4.physical_models.prerefl.prerefl import PreRefl
 from shadow4.beamline.s4_beamline_element import S4BeamlineElement
 from shadow4.beam.s4_beam import S4Beam
@@ -38,7 +40,7 @@ class S4Mirror(Mirror):
     f_refl : int, optional
         A flag to indicate the source of reflectivities:
             * 0=prerefl file,
-            * 1=electric susceptibility,
+            * 1=refraction index,
             * 2=user defined file (1D angle in mrad, reflectivity),
             * 3=user defined file (1D energy in eV, reflectivity),
             * 4=user defined file (2D energy in eV, angle in mrad, reflectivity),
@@ -52,6 +54,8 @@ class S4Mirror(Mirror):
             string with material formula (for f_refl=5,6)
     density : float, optional
             material density in g/cm^3 (for f_refl=5,6)
+    dabax : None or instance of DabaxXraylib,
+        The pointer to the dabax library  (used for f_refl=6).
 
     Returns
     -------
@@ -64,7 +68,7 @@ class S4Mirror(Mirror):
                  # inputs related to mirror reflectivity
                  f_reflec=0,  # reflectivity of surface: 0=no reflectivity, 1=full polarization
                  f_refl=0,   # 0=prerefl file
-                             # 1=electric susceptibility
+                             # 1=refraction index
                              # 2=user defined file (1D reflectivity vs angle)
                              # 3=user defined file (1D reflectivity vs energy)
                              # 4=user defined file (2D reflectivity vs energy and angle)
@@ -75,6 +79,7 @@ class S4Mirror(Mirror):
                  coating_material="", # string with coating material formula for f_refl=5,6
                  coating_density=1.0,  # coating material density for f_refl=5,6
                  coating_roughness=0.0,  # coating material roughness in A for f_refl=5,6
+                 dabax=None,
                  ):
 
         Mirror.__init__(self,
@@ -93,6 +98,7 @@ class S4Mirror(Mirror):
         self._refraction_index = refraction_index
         self._coating_density = coating_density
         self._coating_roughness = coating_roughness
+        self._dabax = dabax
 
         # support text containg name of variable, help text and unit. Will be stored in self._support_dictionary
         self._add_support_text([
@@ -119,7 +125,7 @@ class S4Mirror(Mirror):
             if self._f_refl == 0:
                 txt += "   Calculated reflectivity from preprocessor (prerefl) file: %s\n" % self._file_refl
             elif self._f_refl == 1:
-                txt += "   Calculated reflectivity from electric susceptibility\n"
+                txt += "   Calculated reflectivity from refraction index\n"
             elif self._f_refl == 2:
                 txt += "   Calculated reflectivity from user defined file (1D reflectivity vs angle): %s\n" % self._file_refl
             elif self._f_refl == 3:
@@ -191,6 +197,13 @@ class S4Mirror(Mirror):
         sur = self.get_optical_surface_instance()
         footprint, normal, _, _, _, _, _ = sur.apply_specular_reflection_on_beam(beam)
         return footprint, normal
+
+    def _get_dabax_txt(self):
+        if isinstance(self._dabax, DabaxXraylib):
+            dabax_txt = 'DabaxXraylib(file_f1f2="%s")' % (self._dabax.get_file_f1f2())
+        else:
+            dabax_txt = "DabaxXraylib()"
+        return dabax_txt
 
 
 class S4MirrorElement(S4BeamlineElement):
@@ -446,7 +459,7 @@ class S4MirrorElement(S4BeamlineElement):
                         grazing_angle_mrad=grazing_angle_mrad,
                         roughness_rms_A=soe._coating_roughness,
                         method=0,  # 0=born & wolf, 1=parratt, 2=shadow3
-                        dabax=None,
+                        dabax=self._dabax,
                     )
 
             else:
