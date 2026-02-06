@@ -35,11 +35,14 @@ class S4ToroidMirror(S4Mirror, S4ToroidOpticalElementDecorator):
             - 1=full polarization.
     f_refl : int, optional
         A flag to indicate the source of reflectivities:
-            - 0=prerefl file
-            - 1=electric susceptibility
-            - 2=user defined file (1D angle in mrad, reflectivity)
-            - 3=user defined file (1D energy in eV, reflectivity)
-            - 4=user defined file (2D energy in eV, angle in mrad, reflectivity)
+            * 0=prerefl file
+            * 1=refraction index
+            * 2=user defined file (1D angle in mrad, reflectivity)
+            * 3=user defined file (1D energy in eV, reflectivity)
+            * 4=user defined file (2D energy in eV, angle in mrad, reflectivity)
+            * 5=direct calculation using xraylib,
+            * 6=direct calculation using dabax.
+
     file_refl : str, optional
             name of user defined file (for f_refl=0).
     refraction_index : complex, optional
@@ -48,6 +51,8 @@ class S4ToroidMirror(S4Mirror, S4ToroidOpticalElementDecorator):
             string with material formula (for f_refl=5,6)
     density : float, optional
             material density in g/cm^3 (for f_refl=5,6)
+    dabax : None or instance of DabaxXraylib,
+        The pointer to the dabax library  (used for f_refl=6).
 
     Returns
     -------
@@ -70,20 +75,35 @@ class S4ToroidMirror(S4Mirror, S4ToroidOpticalElementDecorator):
                  # inputs related to mirror reflectivity
                  f_reflec=0,  # reflectivity of surface: 0=no reflectivity, 1=full polarization
                  f_refl=0,  # 0=prerefl file
-                 # 1=electric susceptibility
+                 # 1=refraction index
                  # 2=user defined file (1D reflectivity vs angle)
                  # 3=user defined file (1D reflectivity vs energy)
                  # 4=user defined file (2D reflectivity vs energy and angle)
+                 # 5=direct calculation using xraylib
+                 # 6=direct calculation using dabax
                  file_refl="",  # preprocessor file fir f_refl=0,2,3,4
                  refraction_index=1.0,  # refraction index (complex) for f_refl=1
                  coating_material="",   # string with coating material formula for f_refl=5,6
                  coating_density=1.0,   # coating material density for f_refl=5,6
                  coating_roughness=0.0, # coating material roughness in A for f_refl=5,6
+                 dabax=None,
                  ):
         S4ToroidOpticalElementDecorator.__init__(self, surface_calculation,
                                                  min_radius, maj_radius, f_torus, p_focus, q_focus, grazing_angle)
-        S4Mirror.__init__(self, name, boundary_shape, self.get_surface_shape_instance(),
-                          f_reflec, f_refl, file_refl, refraction_index, coating_material, coating_density, coating_roughness)
+        S4Mirror.__init__(self,
+                          name              = name,
+                          boundary_shape    = boundary_shape,
+                          surface_shape     = self.get_surface_shape_instance(),
+                          f_reflec          = f_reflec,
+                          f_refl            = f_refl,
+                          file_refl         = file_refl,
+                          refraction_index  = refraction_index,
+                          coating_material  = coating_material,
+                          coating_density   = coating_density,
+                          coating_roughness = coating_roughness,
+                          dabax             = dabax,
+                          )
+
 
         self.__inputs = {
             "name": name,
@@ -102,6 +122,7 @@ class S4ToroidMirror(S4Mirror, S4ToroidOpticalElementDecorator):
             "coating_material": coating_material,
             "coating_density": coating_density,
             "coating_roughness": coating_roughness,
+            "dabax": self._get_dabax_txt(),
         }
 
     def to_python_code(self, **kwargs):
@@ -121,18 +142,31 @@ class S4ToroidMirror(S4Mirror, S4ToroidOpticalElementDecorator):
         txt_pre = """
         
 from shadow4.beamline.optical_elements.mirrors.s4_toroid_mirror import S4ToroidMirror
-optical_element = S4ToroidMirror(name='{name:s}',boundary_shape=boundary_shape,
+optical_element = S4ToroidMirror(name='{name:s}', boundary_shape=boundary_shape,
     surface_calculation={surface_calculation:d},
     min_radius={min_radius:.6g},  # min_radius = sagittal
     maj_radius={maj_radius:.6g},  # maj_radius = tangential
     f_torus={f_torus},
-    p_focus={p_focus:.6g},q_focus={q_focus:.6g},grazing_angle={grazing_angle:g},
-    f_reflec={f_reflec:d},f_refl={f_refl:d},file_refl='{file_refl:s}',refraction_index={refraction_index:g},
-    coating_material='{coating_material:s}',coating_density={coating_density:g},coating_roughness={coating_roughness:g})
+    p_focus={p_focus:.6g}, q_focus={q_focus:.6g}, grazing_angle={grazing_angle:g},
+    f_reflec={f_reflec:d}, # reflectivity of surface: 0=no reflectivity, 1=full polarization
+    f_refl={f_refl:d}, # for f_reflec=1: file: 0=prerefl, 2=(mrad, refl), 3=(eV, refl), 4=(eV, mrad, refl); 1=refr index, 5=xraylib, 6=dabax
+    file_refl='{file_refl:s}', # for f_refl=0,2,3,4
+    refraction_index={refraction_index:g}, # for f_refl=1
+    coating_material='{coating_material:s}', coating_density={coating_density:g}, coating_roughness={coating_roughness:g}, # for f_refl=5,6
+    dabax={dabax:s})
 """
         txt += txt_pre.format(**self.__inputs)
         return txt
 
+"""
+            * 0=prerefl file
+            * 1=refraction index
+            * 2=user defined file (1D angle in mrad, reflectivity)
+            * 3=user defined file (1D energy in eV, reflectivity)
+            * 4=user defined file (2D energy in eV, angle in mrad, reflectivity)
+            * 5=direct calculation using xraylib,
+            * 6=direct calculation using dabax.
+            """
 
 class S4ToroidMirrorElement(S4MirrorElement):
     """

@@ -41,7 +41,7 @@ class S4AdditionalNumericalMeshMirror(S4NumericalMeshMirror):
                  # inputs related to mirror reflectivity
                  f_reflec=0 if ideal_mirror is None else ideal_mirror._f_reflec,  # reflectivity of surface: 0=no reflectivity, 1=full polarization
                  f_refl=0 if ideal_mirror is None else ideal_mirror._f_refl,  # 0=prerefl file
-                     # 1=electric susceptibility
+                     # 1=refraction index
                      # 2=user defined file (1D reflectivity vs angle)
                      # 3=user defined file (1D reflectivity vs energy)
                      # 4=user defined file (2D reflectivity vs energy and angle)

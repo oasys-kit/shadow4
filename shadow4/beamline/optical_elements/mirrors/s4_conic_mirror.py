@@ -24,11 +24,13 @@ class S4ConicMirror(S4Mirror, S4ConicOpticalElementDecorator):
             - 1=full polarization.
     f_refl : int, optional
         A flag to indicate the source of reflectivities:
-            - 0=prerefl file
-            - 1=electric susceptibility
-            - 2=user defined file (1D angle in mrad, reflectivity)
-            - 3=user defined file (1D energy in eV, reflectivity)
-            - 4=user defined file (2D energy in eV, angle in mrad, reflectivity)
+            * 0=prerefl file,
+            * 1=refraction index,
+            * 2=user defined file (1D angle in mrad, reflectivity),
+            * 3=user defined file (1D energy in eV, reflectivity),
+            * 4=user defined file (2D energy in eV, angle in mrad, reflectivity),
+            * 5=direct calculation using xraylib,
+            * 6=direct calculation using dabax.
     file_refl : str, optional
             name of user defined file (for f_refl=0).
     refraction_index : complex, optional
@@ -37,6 +39,8 @@ class S4ConicMirror(S4Mirror, S4ConicOpticalElementDecorator):
             string with material formula (for f_refl=5,6)
     density : float, optional
             material density in g/cm^3 (for f_refl=5,6)
+    dabax : None or instance of DabaxXraylib,
+        The pointer to the dabax library  (used for f_refl=6).
 
     Returns
     -------
@@ -49,7 +53,7 @@ class S4ConicMirror(S4Mirror, S4ConicOpticalElementDecorator):
                  # inputs related to mirror reflectivity
                  f_reflec=0, # reflectivity of surface: 0=no reflectivity, 1=full polarization
                  f_refl=0,   # 0=prerefl file
-                             # 1=electric susceptibility
+                             # 1=erefraction index,
                              # 2=user defined file (1D reflectivity vs angle)
                              # 3=user defined file (1D reflectivity vs energy)
                              # 4=user defined file (2D reflectivity vs energy and angle)
@@ -60,10 +64,22 @@ class S4ConicMirror(S4Mirror, S4ConicOpticalElementDecorator):
                  coating_material="",   # string with coating material formula for f_refl=5,6
                  coating_density=1.0,   # coating material density for f_refl=5,6
                  coating_roughness=0.0, # coating material roughness in A for f_refl=5,6
+                 dabax=None,
                  ):
         S4ConicOpticalElementDecorator.__init__(self, conic_coefficients)
-        S4Mirror.__init__(self, name, boundary_shape, self.get_surface_shape_instance(),
-                          f_reflec, f_refl, file_refl, refraction_index, coating_material, coating_density, coating_roughness)
+        S4Mirror.__init__(self,
+                          name              = name,
+                          boundary_shape    = boundary_shape,
+                          surface_shape     = self.get_surface_shape_instance(),
+                          f_reflec          = f_reflec,
+                          f_refl            = f_refl,
+                          file_refl         = file_refl,
+                          refraction_index  = refraction_index,
+                          coating_material  = coating_material,
+                          coating_density   = coating_density,
+                          coating_roughness = coating_roughness,
+                          dabax             = dabax,
+                          )
 
         self.__inputs = {
             "name": name,
@@ -76,6 +92,7 @@ class S4ConicMirror(S4Mirror, S4ConicOpticalElementDecorator):
             "coating_material": coating_material,
             "coating_density": coating_density,
             "coating_roughness": coating_roughness,
+            "dabax": self._get_dabax_txt(),
         }
 
     def to_python_code(self, **kwargs):
@@ -95,10 +112,14 @@ class S4ConicMirror(S4Mirror, S4ConicOpticalElementDecorator):
         txt_pre = """
         
 from shadow4.beamline.optical_elements.mirrors.s4_conic_mirror import S4ConicMirror
-optical_element = S4ConicMirror(name='{name:s}',boundary_shape=boundary_shape,
+optical_element = S4ConicMirror(name='{name:s}', boundary_shape=boundary_shape,
     conic_coefficients={conic_coefficients:s},
-    f_reflec={f_reflec:d},f_refl={f_refl:d},file_refl='{file_refl:s}',refraction_index={refraction_index:g},
-    coating_material='{coating_material:s}',coating_density={coating_density:g},coating_roughness={coating_roughness:g})
+    f_reflec={f_reflec:d}, # reflectivity of surface: 0=no reflectivity, 1=full polarization
+    f_refl={f_refl:d}, # for f_reflec=1: file: 0=prerefl, 2=(mrad, refl), 3=(eV, refl), 4=(eV, mrad, refl); 1=refr index, 5=xraylib, 6=dabax
+    file_refl='{file_refl:s}', # for f_refl=0,2,3,4
+    refraction_index={refraction_index:g}, # for f_refl=1
+    coating_material='{coating_material:s}', coating_density={coating_density:g}, coating_roughness={coating_roughness:g}, # for f_refl=5,6
+    dabax={dabax:s})
 """
         txt += txt_pre.format(**self.__inputs)
         return txt
