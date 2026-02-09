@@ -138,15 +138,17 @@ class S4SphereMirror(S4Mirror, S4SphereOpticalElementDecorator):
         
 from shadow4.beamline.optical_elements.mirrors.s4_sphere_mirror import S4SphereMirror
 optical_element = S4SphereMirror(name='{name:s}', boundary_shape=boundary_shape,
-    surface_calculation={surface_calculation:d}, is_cylinder={is_cylinder:d}, cylinder_direction={cylinder_direction:d},
-    convexity={convexity:d}, radius={radius:f}, p_focus={p_focus:f}, q_focus={q_focus:f},
+    surface_calculation={surface_calculation:d}, # 0=Internal calculation, 1=External 
+    is_cylinder={is_cylinder:d}, cylinder_direction={cylinder_direction:d},
+    convexity={convexity:d}, radius={radius:f}, p_focus={p_focus:f}, q_focus={q_focus:f}, # for surface_calculation=0
     grazing_angle={grazing_angle:f},
     f_reflec={f_reflec:d}, # reflectivity of surface: 0=no reflectivity, 1=full polarization
     f_refl={f_refl:d}, # for f_reflec=1: file: 0=prerefl, 2=(mrad, refl), 3=(eV, refl), 4=(eV, mrad, refl); 1=refr index, 5=xraylib, 6=dabax
     file_refl='{file_refl:s}', # for f_refl=0,2,3,4
     refraction_index={refraction_index:g}, # for f_refl=1
     coating_material='{coating_material:s}', coating_density={coating_density:g}, coating_roughness={coating_roughness:g}, # for f_refl=5,6
-    dabax={dabax:s})
+    dabax={dabax:s}, # if using dabax (ri_calculation_mode=3), instance of DabaxXraylib() (use None for default)
+    )
 """
         txt += txt_pre.format(**self.__inputs)
         return txt
