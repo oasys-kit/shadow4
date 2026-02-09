@@ -53,6 +53,8 @@ class S4ParaboloidMultilayer(S4Multilayer, S4ParaboloidOpticalElementDecorator):
             string with material formula (for f_refl=5,6)
     density : float, optional
             material density in g/cm^3 (for f_refl=5,6)
+    dabax : None or instance of DabaxXraylib,
+        The pointer to the dabax library  (used for f_refl=6).
 
     Returns
     -------
@@ -82,6 +84,7 @@ class S4ParaboloidMultilayer(S4Multilayer, S4ParaboloidOpticalElementDecorator):
                  structure='[B/W]x50+Si',
                  period=25.0,
                  Gamma=0.5,
+                 dabax=None,
                  ):
         S4ParaboloidOpticalElementDecorator.__init__(self, surface_calculation, is_cylinder, cylinder_direction, convexity,
                                                      parabola_parameter, at_infinity, pole_to_focus, p_focus, q_focus, grazing_angle)
@@ -94,6 +97,7 @@ class S4ParaboloidMultilayer(S4Multilayer, S4ParaboloidOpticalElementDecorator):
                               structure=structure,
                               period=period,
                               Gamma=Gamma,
+                              dabax=dabax,
                               )
 
         self.__inputs = {
@@ -114,6 +118,7 @@ class S4ParaboloidMultilayer(S4Multilayer, S4ParaboloidOpticalElementDecorator):
             "structure": structure,
             "period": period,
             "Gamma": Gamma,
+            "dabax": self._get_dabax_txt(),
         }
 
     def to_python_code(self, **kwargs):
@@ -135,11 +140,15 @@ class S4ParaboloidMultilayer(S4Multilayer, S4ParaboloidOpticalElementDecorator):
 from shadow4.beamline.optical_elements.multilayers.s4_paraboloid_multilayer import S4ParaboloidMultilayer
 optical_element = S4ParaboloidMultilayer(name='{name:s}', boundary_shape=boundary_shape,
     at_infinity={at_infinity:d}, 
-    surface_calculation={surface_calculation:d},
-    p_focus={p_focus:f}, q_focus={q_focus:f}, grazing_angle={grazing_angle:f}, # for internal
-    parabola_parameter={parabola_parameter:f}, pole_to_focus={pole_to_focus:f}, # for external
+    surface_calculation={surface_calculation:d}, # 0=Internal calculation, 1=External 
+    p_focus={p_focus:f}, q_focus={q_focus:f}, grazing_angle={grazing_angle:f}, # for surface_calculation=0
+    parabola_parameter={parabola_parameter:f}, pole_to_focus={pole_to_focus:f}, # for surface_calculation=1
     is_cylinder={is_cylinder:d}, cylinder_direction={cylinder_direction:d}, convexity={convexity:d},
-    f_refl={f_refl:d},file_refl='{file_refl:s}', structure='{structure:s}', period={period:f}, Gamma={Gamma:f})
+    f_refl={f_refl:d}, # 0=prerefl, 1=(mrad, refl), 2=(eV, refl), 3=(eV, mrad, refl); 4=xraylib, 5=dabax
+    file_refl='{file_refl:s}', # for f_refl=0,1,2,3
+    structure='{structure:s}', period={period:f}, Gamma={Gamma:f}, # for f_refl=4,5
+    dabax={dabax:s}, # if using dabax (f_refl=6), instance of DabaxXraylib() (use None for default)
+    )
 """
         txt += txt_pre.format(**self.__inputs)
         return txt

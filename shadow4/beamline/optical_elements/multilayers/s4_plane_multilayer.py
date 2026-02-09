@@ -38,6 +38,8 @@ class S4PlaneMultilayer(S4Multilayer, S4PlaneOpticalElementDecorator):
             string with material formula (for f_refl=5,6)
     density : float, optional
             material density in g/cm^3 (for f_refl=5,6)
+    dabax : None or instance of DabaxXraylib,
+        The pointer to the dabax library  (used for f_refl=6).
 
     Returns
     -------
@@ -57,6 +59,7 @@ class S4PlaneMultilayer(S4Multilayer, S4PlaneOpticalElementDecorator):
                  structure='[B/W]x50+Si',
                  period=25.0,
                  Gamma=0.5,
+                 dabax=None,
                  ):
         S4PlaneOpticalElementDecorator.__init__(self)
         S4Multilayer.__init__(self,
@@ -68,6 +71,7 @@ class S4PlaneMultilayer(S4Multilayer, S4PlaneOpticalElementDecorator):
                               structure=structure,
                               period=period,
                               Gamma=Gamma,
+                              dabax=dabax,
                               )
 
         self.__inputs = {
@@ -78,6 +82,7 @@ class S4PlaneMultilayer(S4Multilayer, S4PlaneOpticalElementDecorator):
             "structure": structure,
             "period": period,
             "Gamma": Gamma,
+            "dabax": self._get_dabax_txt(),
         }
 
     def to_python_code(self, **kwargs):
@@ -97,8 +102,12 @@ class S4PlaneMultilayer(S4Multilayer, S4PlaneOpticalElementDecorator):
         txt_pre = """
    
 from shadow4.beamline.optical_elements.multilayers.s4_plane_multilayer import S4PlaneMultilayer
-optical_element = S4PlaneMultilayer(name='{name:s}',boundary_shape=boundary_shape,
-    f_refl={f_refl:d},file_refl='{file_refl:s}', structure='{structure:s}', period={period:f}, Gamma={Gamma:f})
+optical_element = S4PlaneMultilayer(name='{name:s}', boundary_shape=boundary_shape,
+    f_refl={f_refl:d}, # 0=prerefl, 1=(mrad, refl), 2=(eV, refl), 3=(eV, mrad, refl); 4=xraylib, 5=dabax
+    file_refl='{file_refl:s}', # for f_refl=0,1,2,3
+    structure='{structure:s}', period={period:f}, Gamma={Gamma:f}, # for f_refl=4,5
+    dabax={dabax:s}, # if using dabax (f_refl=6), instance of DabaxXraylib() (use None for default)
+    )
 """
         txt += txt_pre.format(**self.__inputs)
         return txt

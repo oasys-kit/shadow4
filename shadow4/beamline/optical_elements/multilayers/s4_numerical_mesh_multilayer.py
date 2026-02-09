@@ -42,6 +42,8 @@ class S4NumericalMeshMultilayer(S4Multilayer, S4NumericalMeshOpticalElementDecor
             string with material formula (for f_refl=5,6)
     density : float, optional
             material density in g/cm^3 (for f_refl=5,6)
+    dabax : None or instance of DabaxXraylib,
+        The pointer to the dabax library  (used for f_refl=6).
 
     Returns
     -------
@@ -65,6 +67,7 @@ class S4NumericalMeshMultilayer(S4Multilayer, S4NumericalMeshOpticalElementDecor
                  structure='[B/W]x50+Si',
                  period=25.0,
                  Gamma=0.5,
+                 dabax=None,
                  ):
         S4NumericalMeshOpticalElementDecorator.__init__(self, xx, yy, zz, surface_data_file)
         S4Multilayer.__init__(self,
@@ -76,6 +79,7 @@ class S4NumericalMeshMultilayer(S4Multilayer, S4NumericalMeshOpticalElementDecor
                               structure=structure,
                               period=period,
                               Gamma=Gamma,
+                              dabax=dabax,
                               )
 
         self.__inputs = {
@@ -90,6 +94,7 @@ class S4NumericalMeshMultilayer(S4Multilayer, S4NumericalMeshOpticalElementDecor
             "structure": structure,
             "period": period,
             "Gamma": Gamma,
+            "dabax": self._get_dabax_txt(),
         }
 
     def to_python_code(self, **kwargs):
@@ -109,9 +114,13 @@ class S4NumericalMeshMultilayer(S4Multilayer, S4NumericalMeshOpticalElementDecor
         txt_pre = """
         
 from shadow4.beamline.optical_elements.multilayers.s4_numerical_mesh_multilayer import S4NumericalMeshMultilayer
-optical_element = S4NumericalMeshMultilayer(name='{name:s}',boundary_shape=boundary_shape,
-    xx=None,yy=None,zz=None,surface_data_file='{surface_data_file:s}',
-    f_refl={f_refl:d},file_refl='{file_refl:s}', structure='{structure:s}', period={period:f}, Gamma={Gamma:f})
+optical_element = S4NumericalMeshMultilayer(name='{name:s}', boundary_shape=boundary_shape,
+    xx=None, yy=None, zz=None, surface_data_file='{surface_data_file:s}',
+    f_refl={f_refl:d}, # 0=prerefl, 1=(mrad, refl), 2=(eV, refl), 3=(eV, mrad, refl); 4=xraylib, 5=dabax
+    file_refl='{file_refl:s}',
+    structure='{structure:s}', period={period:f}, Gamma={Gamma:f}, # for f_refl=4,5
+    dabax={dabax:s}, # if using dabax (f_refl=6), instance of DabaxXraylib() (use None for default)
+    )
 """
         txt += txt_pre.format(**self.__inputs)
         return txt

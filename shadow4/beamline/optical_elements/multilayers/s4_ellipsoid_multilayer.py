@@ -51,6 +51,8 @@ class S4EllipsoidMultilayer(S4Multilayer, S4EllipsoidOpticalElementDecorator):
             string with material formula (for f_refl=5,6)
     density : float, optional
             material density in g/cm^3 (for f_refl=5,6)
+    dabax : None or instance of DabaxXraylib,
+        The pointer to the dabax library  (used for f_refl=6).
 
     Returns
     -------
@@ -80,6 +82,7 @@ class S4EllipsoidMultilayer(S4Multilayer, S4EllipsoidOpticalElementDecorator):
                  structure='[B/W]x50+Si',
                  period=25.0,
                  Gamma=0.5,
+                 dabax=None,
                  ):
         S4EllipsoidOpticalElementDecorator.__init__(self, surface_calculation, is_cylinder, cylinder_direction, convexity,
                                                     min_axis, maj_axis, pole_to_focus,
@@ -93,6 +96,7 @@ class S4EllipsoidMultilayer(S4Multilayer, S4EllipsoidOpticalElementDecorator):
                               structure=structure,
                               period=period,
                               Gamma=Gamma,
+                              dabax=dabax,
                               )
 
         self.__inputs = {
@@ -113,6 +117,7 @@ class S4EllipsoidMultilayer(S4Multilayer, S4EllipsoidOpticalElementDecorator):
             "structure": structure,
             "period": period,
             "Gamma": Gamma,
+            "dabax": self._get_dabax_txt(),
         }
 
     def to_python_code(self, **kwargs):
@@ -134,11 +139,15 @@ class S4EllipsoidMultilayer(S4Multilayer, S4EllipsoidOpticalElementDecorator):
         
 from shadow4.beamline.optical_elements.multilayers.s4_ellipsoid_multilayer import S4EllipsoidMultilayer
 optical_element = S4EllipsoidMultilayer(name='{name:s}', boundary_shape=boundary_shape,
-    surface_calculation={surface_calculation:d},
-    min_axis={min_axis:f}, maj_axis={maj_axis:f}, pole_to_focus={pole_to_focus:f},
-    p_focus={p_focus:f}, q_focus={q_focus:f}, grazing_angle={grazing_angle:f},
+    surface_calculation={surface_calculation:d}, # 0=Internal calculation, 1=External 
+    min_axis={min_axis:f}, maj_axis={maj_axis:f}, pole_to_focus={pole_to_focus:f}, # for surface_calculation=1
+    p_focus={p_focus:f}, q_focus={q_focus:f}, grazing_angle={grazing_angle:f}, # for surface_calculation=0
     is_cylinder={is_cylinder:d}, cylinder_direction={cylinder_direction:d}, convexity={convexity:d},
-    f_refl={f_refl:d},file_refl='{file_refl:s}', structure='{structure:s}', period={period:f}, Gamma={Gamma:f})
+    f_refl={f_refl:d}, # 0=prerefl, 1=(mrad, refl), 2=(eV, refl), 3=(eV, mrad, refl); 4=xraylib, 5=dabax
+    file_refl='{file_refl:s}', # for f_refl=0,1,2,3
+    structure='{structure:s}', period={period:f}, Gamma={Gamma:f}, # for f_refl=4,5
+    dabax={dabax:s}, # if using dabax (f_refl=6), instance of DabaxXraylib() (use None for default)
+    )
 """
         txt += txt_pre.format(**self.__inputs)
         return txt
@@ -209,3 +218,5 @@ if __name__ == "__main__":
     print(">>>>", a.info())
 
     print(">>>>", a.get_info())
+
+    print(">>>>", a.to_python_code())
