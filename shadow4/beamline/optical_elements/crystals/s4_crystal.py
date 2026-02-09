@@ -27,6 +27,7 @@ from shadow4.optical_surfaces.s4_toroid import S4Toroid
 
 from shadow4.tools.logger import is_verbose, is_debug
 from shadow4.tools.arrayofvectors import vector_modulus_square, vector_modulus, vector_norm, vector_rotate_around_axis
+from shadow4.tools.logger import is_verbose, is_debug
 
 import scipy.constants as codata
 
@@ -513,9 +514,10 @@ class S4CrystalElement(S4BeamlineElement):
         if self.get_optical_element()._method_efields_management == 0: # S4
             footprint, normal = self.get_optical_element().get_optical_surface_instance().calculate_intercept_on_beam(input_beam)
 
-            print("    >>>>>>>>> intercept: ", footprint.get_columns([1, 2, 3])[:, 0])
-            print("    >>>>>>>>> vout: ", footprint.get_columns([4, 5, 6])[:, 0])
-            print("    >>>>>>>>> normal: ", normal.shape, normal[:, 0])
+            if is_debug():
+                print("    >>>>>> intercept: ", footprint.get_columns([1, 2, 3])[:, 0])
+                print("    >>>>>> vout: ", footprint.get_columns([4, 5, 6])[:, 0])
+                print("    >>>>>> normal: ", normal.shape, normal[:, 0])
 
             vIn, vOut, r_SS, r_PP = self._calculate_perfect_crystal_scattering(footprint, normal)
             jv_out_0, jv_out_1, ee_S, ee_P = self._calculate_jones_and_efield_directions(footprint, normal,
@@ -528,7 +530,7 @@ class S4CrystalElement(S4BeamlineElement):
             footprint.set_jones_components(jv_out_0, jv_out_1, e_S=ee_S, e_P=ee_P)
 
             if is_verbose():
-                print(">>>> Orthogonal footprint: ", footprint.efields_orthogonal(),
+                print(">>> Orthogonal footprint: ", footprint.efields_orthogonal(),
                   vector_dot(ee_S, ee_P)[0],
                   vector_dot(ee_S, vOut)[0],
                   vector_dot(ee_P, vOut)[0])
@@ -1019,14 +1021,14 @@ class S4CrystalElement(S4BeamlineElement):
         aP = vector_modulus(E_diffracted_P)
 
         if is_verbose():
-            print(">>>>>>  Modulus of initial E vectors s, p",   vector_modulus(E_S)[0], vector_modulus(E_P)[0])
-            print(">>>>>>  Modulus of diffracted E vectors s, p", aS[0], aP[0])
+            print(">>>  Modulus of initial E vectors s, p",   vector_modulus(E_S)[0], vector_modulus(E_P)[0])
+            print(">>>  Modulus of diffracted E vectors s, p", aS[0], aP[0])
 
         v_S = vector_cross(vOut, vH) # AS_TEMP
         v_Smod = vector_modulus(v_S)
         mask = (v_Smod == 0.0)
         if mask.any():
-            print(">>>>>>>>>> FOUND A ZERO!!!!!")
+            print(">>>>>> FOUND A ZERO!!!!!")
             if v_Smod.sum() > 0:
                 v_S[mask, 0] = E_diffracted_S[mask, 0]
                 v_S[mask, 1] = E_diffracted_S[mask, 1]

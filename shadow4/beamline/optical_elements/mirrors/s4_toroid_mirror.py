@@ -143,17 +143,18 @@ class S4ToroidMirror(S4Mirror, S4ToroidOpticalElementDecorator):
         
 from shadow4.beamline.optical_elements.mirrors.s4_toroid_mirror import S4ToroidMirror
 optical_element = S4ToroidMirror(name='{name:s}', boundary_shape=boundary_shape,
-    surface_calculation={surface_calculation:d},
+    surface_calculation={surface_calculation:d}, # 0=Internal calculation, 1=External 
     min_radius={min_radius:.6g},  # min_radius = sagittal
     maj_radius={maj_radius:.6g},  # maj_radius = tangential
     f_torus={f_torus},
-    p_focus={p_focus:.6g}, q_focus={q_focus:.6g}, grazing_angle={grazing_angle:g},
+    p_focus={p_focus:.6g}, q_focus={q_focus:.6g}, grazing_angle={grazing_angle:g}, # for surface_calculation=0
     f_reflec={f_reflec:d}, # reflectivity of surface: 0=no reflectivity, 1=full polarization
     f_refl={f_refl:d}, # for f_reflec=1: file: 0=prerefl, 2=(mrad, refl), 3=(eV, refl), 4=(eV, mrad, refl); 1=refr index, 5=xraylib, 6=dabax
     file_refl='{file_refl:s}', # for f_refl=0,2,3,4
     refraction_index={refraction_index:g}, # for f_refl=1
     coating_material='{coating_material:s}', coating_density={coating_density:g}, coating_roughness={coating_roughness:g}, # for f_refl=5,6
-    dabax={dabax:s})
+    dabax={dabax:s}, # if using dabax (f_refl=6), instance of DabaxXraylib() (use None for default)
+    )
 """
         txt += txt_pre.format(**self.__inputs)
         return txt

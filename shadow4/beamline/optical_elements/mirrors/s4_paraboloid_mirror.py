@@ -150,7 +150,7 @@ from shadow4.beamline.optical_elements.mirrors.s4_paraboloid_mirror import S4Par
 optical_element = S4ParaboloidMirror(name='{name:s}', boundary_shape=boundary_shape,
     at_infinity={at_infinity:d}, 
     surface_calculation={surface_calculation:d},
-    p_focus={p_focus:f}, q_focus={q_focus:f}, grazing_angle={grazing_angle:f}, # for internal
+    p_focus={p_focus:f}, q_focus={q_focus:f}, grazing_angle={grazing_angle:f}, # for surface_calculation=0
     parabola_parameter={parabola_parameter:f}, pole_to_focus={pole_to_focus:f}, # for external
     is_cylinder={is_cylinder:d}, cylinder_direction={cylinder_direction:d}, convexity={convexity:d},
     f_reflec={f_reflec:d}, # reflectivity of surface: 0=no reflectivity, 1=full polarization
@@ -158,7 +158,8 @@ optical_element = S4ParaboloidMirror(name='{name:s}', boundary_shape=boundary_sh
     file_refl='{file_refl:s}', # for f_refl=0,2,3,4
     refraction_index={refraction_index:g}, # for f_refl=1
     coating_material='{coating_material:s}', coating_density={coating_density:g}, coating_roughness={coating_roughness:g}, # for f_refl=5,6
-    dabax={dabax:s})
+    dabax={dabax:s}, # if using dabax (ri_calculation_mode=3), instance of DabaxXraylib() (use None for default)
+    )
 """
         txt += txt_pre.format(**self.__inputs)
         return txt

@@ -459,7 +459,7 @@ class S4MirrorElement(S4BeamlineElement):
                         grazing_angle_mrad=grazing_angle_mrad,
                         roughness_rms_A=soe._coating_roughness,
                         method=0,  # 0=born & wolf, 1=parratt, 2=shadow3
-                        dabax=self._dabax,
+                        dabax=soe._dabax,
                     )
 
             else:

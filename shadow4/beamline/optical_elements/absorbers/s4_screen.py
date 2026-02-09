@@ -25,11 +25,12 @@ class S4Screen(Absorber, S4OpticalElementDecorator):
                  i_abs=0,      # include absorption: 0=No, 1=using preprocessor file
                                # 2=direct calculation using xraylib
                                # 3=direct calculation using dabax
-                 i_stop=0, # aperture/stop
+                 i_stop=0,     # aperture/stop
                  thick=0.0,    # thickness of the absorber (in SI)
-                 file_abs="",  # if i_abs=1, the material file (from prerefl)
-                 material="",  # if i_abs=2,3, the material name
-                 density=1.0,  # if i_abs=2,3, the material density in g/cm^3
+                 file_abs="",  # for i_abs=1, the material file (from prerefl)
+                 material="",  # for i_abs=2,3, the material name
+                 density=1.0,  # for i_abs=2,3, the material density in g/cm^3
+                 dabax=None,
                 ):
         """
         Constructor.
@@ -56,6 +57,8 @@ class S4Screen(Absorber, S4OpticalElementDecorator):
             The material identifier: symbol of element or formula (for i_abs>1).
         density : float, optional
             The material density (for i_abs>1).
+        dabax : None or instance of DabaxXraylib,
+            The pointer to the dabax library  (used for i_abs=3).
 
         Returns
         -------
@@ -68,6 +71,7 @@ class S4Screen(Absorber, S4OpticalElementDecorator):
         self._file_abs = file_abs
         self._material = material
         self._density = density
+        self._dabax = dabax
 
         self.__inputs = {
             "name": name,
@@ -78,6 +82,10 @@ class S4Screen(Absorber, S4OpticalElementDecorator):
             "material": material,
             "file_abs": file_abs,
             "density": density,
+            "dabax": ("DabaxXraylib()"
+                        if dabax is None
+                        else 'DabaxXraylib(file_CrossSec="%s")' % (dabax.get_file_CrossSec())
+                        ),
         }
 
     def get_info(self):
@@ -157,8 +165,13 @@ class S4Screen(Absorber, S4OpticalElementDecorator):
 
 from shadow4.beamline.optical_elements.absorbers.s4_screen import S4Screen
 optical_element = S4Screen(name='{name:s}', boundary_shape=boundary_shape,
-    i_abs={i_abs:d}, # 0=No, 1=prerefl file_abs, 2=xraylib, 3=dabax
-    i_stop={i_stop:d}, thick={thick:g}, file_abs='{file_abs:s}', material='{material:s}', density={density:g})
+    i_abs={i_abs:d}, # attenuation: 0=No, 1=prerefl file, 2=xraylib, 3=dabax
+    i_stop={i_stop:d}, # 0=slit or aperture, 1=beam stop
+    thick={thick:g}, # for i_abs>0
+    file_abs='{file_abs:s}', # for i_abs=1
+    material='{material:s}', density={density:g}, # for i_abs=2,3
+    dabax={dabax:s}, # if using dabax (i_abs=3), instance of DabaxXraylib() (use None for default)
+    )
 """
         txt += txt_pre.format(**self.__inputs)
         return txt
@@ -268,8 +281,9 @@ class S4ScreenElement(S4BeamlineElement):
                                                                              density=oe._density)
             elif oe._i_abs == 3: # dabax
                 coeff = PreRefl.get_attenuation_coefficient_external_dabax(photon_energy_ev=energy,
-                                                                             material=oe._material,
-                                                                             density=oe._density)
+                                                                           material=oe._material,
+                                                                           density=oe._density,
+                                                                           dabax=oe._dabax)
 
 
             I_over_I0 = numpy.exp(- coeff * thickness * 1e2)

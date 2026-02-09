@@ -119,7 +119,8 @@ optical_element = S4ConicMirror(name='{name:s}', boundary_shape=boundary_shape,
     file_refl='{file_refl:s}', # for f_refl=0,2,3,4
     refraction_index={refraction_index:g}, # for f_refl=1
     coating_material='{coating_material:s}', coating_density={coating_density:g}, coating_roughness={coating_roughness:g}, # for f_refl=5,6
-    dabax={dabax:s})
+    dabax={dabax:s}, # if using dabax (ri_calculation_mode=3), instance of DabaxXraylib() (use None for default)
+    )
 """
         txt += txt_pre.format(**self.__inputs)
         return txt

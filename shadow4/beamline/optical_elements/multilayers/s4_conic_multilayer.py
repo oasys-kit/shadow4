@@ -37,6 +37,8 @@ class S4ConicMultilayer(S4Multilayer, S4ConicOpticalElementDecorator):
             string with material formula (for f_refl=5,6)
     density : float, optional
             material density in g/cm^3 (for f_refl=5,6)
+    dabax : None or instance of DabaxXraylib,
+        The pointer to the dabax library  (used for f_refl=6).
 
     Returns
     -------
@@ -57,6 +59,7 @@ class S4ConicMultilayer(S4Multilayer, S4ConicOpticalElementDecorator):
                  structure='[B/W]x50+Si',
                  period=25.0,
                  Gamma=0.5,
+                 dabax=None,
                  ):
         S4ConicOpticalElementDecorator.__init__(self, conic_coefficients)
         S4Multilayer.__init__(self,
@@ -67,7 +70,9 @@ class S4ConicMultilayer(S4Multilayer, S4ConicOpticalElementDecorator):
                               file_refl=file_refl,
                               structure=structure,
                               period=period,
-                              Gamma=Gamma,)
+                              Gamma=Gamma,
+                              dabax=dabax,
+                              )
 
         self.__inputs = {
             "name": name,
@@ -78,6 +83,7 @@ class S4ConicMultilayer(S4Multilayer, S4ConicOpticalElementDecorator):
             "structure": structure,
             "period": period,
             "Gamma": Gamma,
+            "dabax": self._get_dabax_txt(),
         }
 
     def to_python_code(self, **kwargs):
@@ -97,9 +103,13 @@ class S4ConicMultilayer(S4Multilayer, S4ConicOpticalElementDecorator):
         txt_pre = """
         
 from shadow4.beamline.optical_elements.multilayers.s4_conic_multilayer import S4ConicMultilayer
-optical_element = S4ConicMultilayer(name='{name:s}',boundary_shape=boundary_shape,
+optical_element = S4ConicMultilayer(name='{name:s}', boundary_shape=boundary_shape,
     conic_coefficients={conic_coefficients:s},
-    f_refl={f_refl:d},file_refl='{file_refl:s}', structure='{structure:s}', period={period:f}, Gamma={Gamma:f})
+    f_refl={f_refl:d}, # 0=prerefl, 1=(mrad, refl), 2=(eV, refl), 3=(eV, mrad, refl); 4=xraylib, 5=dabax
+    file_refl='{file_refl:s}', # for f_refl=0,1,2,3
+    structure='{structure:s}', period={period:f}, Gamma={Gamma:f}, # for f_refl=4,5
+    dabax={dabax:s}, # if using dabax (f_refl=6), instance of DabaxXraylib() (use None for default)
+    )
 """
         txt += txt_pre.format(**self.__inputs)
         return txt

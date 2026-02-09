@@ -48,6 +48,8 @@ class S4ToroidMultilayer(S4Multilayer, S4ToroidOpticalElementDecorator):
             string with material formula (for f_refl=5,6)
     density : float, optional
             material density in g/cm^3 (for f_refl=5,6)
+    dabax : None or instance of DabaxXraylib,
+        The pointer to the dabax library  (used for f_refl=6).
 
     Returns
     -------
@@ -78,6 +80,7 @@ class S4ToroidMultilayer(S4Multilayer, S4ToroidOpticalElementDecorator):
                  structure='[B/W]x50+Si',
                  period=25.0,
                  Gamma=0.5,
+                 dabax=None,
                  ):
         S4ToroidOpticalElementDecorator.__init__(self, surface_calculation,
                                                  min_radius, maj_radius, f_torus, p_focus, q_focus, grazing_angle)
@@ -90,6 +93,7 @@ class S4ToroidMultilayer(S4Multilayer, S4ToroidOpticalElementDecorator):
                               structure=structure,
                               period=period,
                               Gamma=Gamma,
+                              dabax=dabax,
                               )
 
         self.__inputs = {
@@ -109,6 +113,7 @@ class S4ToroidMultilayer(S4Multilayer, S4ToroidOpticalElementDecorator):
             "structure": structure,
             "period": period,
             "Gamma": Gamma,
+            "dabax": self._get_dabax_txt(),
         }
 
     def to_python_code(self, **kwargs):
@@ -129,12 +134,14 @@ class S4ToroidMultilayer(S4Multilayer, S4ToroidOpticalElementDecorator):
         
 from shadow4.beamline.optical_elements.multilayers.s4_toroid_multilayer import S4ToroidMultilayer
 optical_element = S4ToroidMultilayer(name='{name:s}',boundary_shape=boundary_shape,
-    surface_calculation={surface_calculation:d},
-    min_radius={min_radius:.6g},  # min_radius = sagittal
-    maj_radius={maj_radius:.6g},  # maj_radius = tangential
-    f_torus={f_torus},
-    p_focus={p_focus:.6g},q_focus={q_focus:.6g},grazing_angle={grazing_angle:g},
-    f_refl={f_refl:d},file_refl='{file_refl:s}', structure='{structure:s}', period={period:f}, Gamma={Gamma:f})
+    surface_calculation={surface_calculation:d}, # 0=Internal calculation, 1=External 
+    min_radius={min_radius:.6g}, maj_radius={maj_radius:.6g}, # for surface_calculation=1, min_radius (sagittal) and maj_radius = tangential
+    f_torus={f_torus}, # for surface_calculation=1, 0=low/out (conc/conc), 1=low/inner (conc/conv), # 2=upp/inner (conc/conc), 3=upp/out (conv/conv).
+    p_focus={p_focus:.6g}, q_focus={q_focus:.6g}, grazing_angle={grazing_angle:g}, # for surface_calculation=0
+    f_refl={f_refl:d}, # 0=prerefl, 1=(mrad, refl), 2=(eV, refl), 3=(eV, mrad, refl); 4=xraylib, 5=dabax
+    file_refl='{file_refl:s}', # for f_refl=0,1,2,3
+    structure='{structure:s}', period={period:f}, Gamma={Gamma:f}, # for f_refl=4,5
+    )
 """
         txt += txt_pre.format(**self.__inputs)
         return txt
