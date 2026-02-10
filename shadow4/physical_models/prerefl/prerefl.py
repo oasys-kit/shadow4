@@ -247,7 +247,7 @@ class PreRefl(object):
         Returns
         -------
         float or numpy array
-            The array with attenuation coefficient in cm^-1.
+            The array with complex refraction index.
         """
         try:    import xraylib
         except: raise ImportError("xraylib not available")
@@ -282,7 +282,7 @@ class PreRefl(object):
         Returns
         -------
         float or numpy array
-            The array with attenuation coefficient in cm^-1.
+            The array with the real part of refraction index.
         """
 
         return cls.get_refraction_index_external_xraylib(
@@ -296,7 +296,25 @@ class PreRefl(object):
                                             material="SiC",
                                             density=3.217,
                                             dabax=None):
+        """
+        Standalone method to return the complex refraction index using DABAX.
 
+        Parameters
+        ----------
+        photon_energy_ev : float or numpy array
+            The photon energy or array of energies in eV.
+        material : str, optional
+            The symbol/formula of the material.
+        density : float, optional
+            The material density in g/cm3.
+        dabax: None or DabaxXraylib, optional
+            The pointer to the DabaxXraylib instance (default: None, it uses DabaxXraylib()).
+
+        Returns
+        -------
+        float or numpy array
+            The array with complex refraction index.
+        """
         from dabax.dabax_xraylib import DabaxXraylib
         if isinstance(dabax, DabaxXraylib): dx = dabax
         else:                               dx = DabaxXraylib()
@@ -311,7 +329,7 @@ class PreRefl(object):
                                                  density=3.217,
                                                  dabax=None):
         """
-        Standalone method to return the complex refraction index using dabax.
+        Standalone method to return the complex refraction index using DABAX.
 
         Parameters
         ----------
@@ -321,13 +339,13 @@ class PreRefl(object):
             The symbol/formula of the material.
         density : float, oprional
             The material density in g/cm3.
-        dabax : None or instance of DabaxXraylib
-            A pointer to the dabax library. Use None for default.
+        dabax: None or DabaxXraylib, optional
+            The pointer to the DabaxXraylib instance (default: None, it uses DabaxXraylib()).
 
         Returns
         -------
         float or numpy array
-            The array with attenuation coefficient in cm^-1.
+            The array with the real part of the refraction index.
         """
         from dabax.dabax_xraylib import DabaxXraylib
         if isinstance(dabax, DabaxXraylib): dx = dabax

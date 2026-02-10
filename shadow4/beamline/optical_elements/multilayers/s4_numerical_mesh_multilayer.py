@@ -119,7 +119,7 @@ optical_element = S4NumericalMeshMultilayer(name='{name:s}', boundary_shape=boun
     f_refl={f_refl:d}, # 0=prerefl, 1=(mrad, refl), 2=(eV, refl), 3=(eV, mrad, refl); 4=xraylib, 5=dabax
     file_refl='{file_refl:s}',
     structure='{structure:s}', period={period:f}, Gamma={Gamma:f}, # for f_refl=4,5
-    dabax={dabax:s}, # if using dabax (f_refl=6), instance of DabaxXraylib() (use None for default)
+    dabax={dabax:s}, # if using dabax (f_refl=5), instance of DabaxXraylib() (use None for default)
     )
 """
         txt += txt_pre.format(**self.__inputs)

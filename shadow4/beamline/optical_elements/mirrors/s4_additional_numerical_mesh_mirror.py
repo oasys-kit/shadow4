@@ -51,7 +51,7 @@ class S4AdditionalNumericalMeshMirror(S4NumericalMeshMirror):
                 refraction_index=1+0j if ideal_mirror is None else ideal_mirror._refraction_index,  # refraction index (complex) for f_refl=1)
                 coating_material= ""  if ideal_mirror is None else ideal_mirror._coating,   # string with coating material formula for f_refl=5,6
                 coating_density=  1.0 if ideal_mirror is None else ideal_mirror._coating_density,    # coating material density for f_refl=5,6
-                coating_roughness=0.0 if ideal_mirror is None else ideal_mirror._coating_roughness,  # coating material roughness in A for f_refl=5,6
+                coating_roughness=0.0 if ideal_mirror is None else ideal_mirror._coating_roughness,  # coating material roughness in A for f_refl=0,1,5,6
                 )
 
         self.__ideal_mirror          = ideal_mirror
