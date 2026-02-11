@@ -333,6 +333,12 @@ class MLayer(object):
         if use_xraylib_or_dabax == 0:
             try: import xraylib
             except: "xraylib not available"
+        else:
+            if dabax is None:
+                from dabax.dabax_xraylib import DabaxXraylib
+                dabax = DabaxXraylib()
+
+
 
         #--- From input keywords...
         fileout = FILE
