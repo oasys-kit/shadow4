@@ -103,7 +103,7 @@ class S4PlaneMultilayer(S4Multilayer, S4PlaneOpticalElementDecorator):
    
 from shadow4.beamline.optical_elements.multilayers.s4_plane_multilayer import S4PlaneMultilayer
 optical_element = S4PlaneMultilayer(name='{name:s}', boundary_shape=boundary_shape,
-    f_refl={f_refl:d}, # 0=prerefl, 1=(mrad, refl), 2=(eV, refl), 3=(eV, mrad, refl); 4=xraylib, 5=dabax
+    f_refl={f_refl:d}, # 0=pre_mlayer, 1=(mrad, refl), 2=(eV, refl), 3=(eV, mrad, refl); 4=xraylib, 5=dabax
     file_refl='{file_refl:s}', # for f_refl=0,1,2,3
     structure='{structure:s}', period={period:f}, Gamma={Gamma:f}, # for f_refl=4,5
     dabax={dabax:s}, # if using dabax (f_refl=5), instance of DabaxXraylib() (use None for default)

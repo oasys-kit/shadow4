@@ -138,7 +138,7 @@ optical_element = S4ToroidMultilayer(name='{name:s}',boundary_shape=boundary_sha
     min_radius={min_radius:.6g}, maj_radius={maj_radius:.6g}, # for surface_calculation=1, min_radius (sagittal) and maj_radius = tangential
     f_torus={f_torus}, # for surface_calculation=1, 0=low/out (conc/conc), 1=low/inner (conc/conv), # 2=upp/inner (conc/conc), 3=upp/out (conv/conv).
     p_focus={p_focus:.6g}, q_focus={q_focus:.6g}, grazing_angle={grazing_angle:g}, # for surface_calculation=0
-    f_refl={f_refl:d}, # 0=prerefl, 1=(mrad, refl), 2=(eV, refl), 3=(eV, mrad, refl); 4=xraylib, 5=dabax
+    f_refl={f_refl:d}, # 0=pre_mlayer, 1=(mrad, refl), 2=(eV, refl), 3=(eV, mrad, refl); 4=xraylib, 5=dabax
     file_refl='{file_refl:s}', # for f_refl=0,1,2,3
     structure='{structure:s}', period={period:f}, Gamma={Gamma:f}, # for f_refl=4,5
     dabax={dabax:s}, # if using dabax (f_refl=5), instance of DabaxXraylib() (use None for default)

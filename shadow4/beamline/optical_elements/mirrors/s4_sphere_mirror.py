@@ -148,7 +148,7 @@ optical_element = S4SphereMirror(name='{name:s}', boundary_shape=boundary_shape,
     refraction_index={refraction_index:g}, # for f_refl=1
     coating_material='{coating_material:s}', coating_density={coating_density:g}, # for f_refl=5,6
     coating_roughness={coating_roughness:g}, # for f_refl=0,1,5,6
-    dabax={dabax:s}, # if using dabax (ri_calculation_mode=3), instance of DabaxXraylib() (use None for default)
+    dabax={dabax:s}, # if using dabax (f_reflec=1,f_refl=6), instance of DabaxXraylib() (use None for default)
     )
 """
         txt += txt_pre.format(**self.__inputs)

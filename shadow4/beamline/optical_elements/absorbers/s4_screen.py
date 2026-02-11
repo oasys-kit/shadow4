@@ -13,6 +13,8 @@ from syned.beamline.optical_elements.absorbers.absorber import Absorber
 from syned.beamline.element_coordinates import ElementCoordinates
 from syned.beamline.shape import Rectangle, Ellipse, MultiplePatch
 
+from dabax.dabax_xraylib import DabaxXraylib
+
 from shadow4.physical_models.prerefl.prerefl import PreRefl
 
 from shadow4.beamline.s4_optical_element_decorators import S4OpticalElementDecorator
@@ -73,6 +75,14 @@ class S4Screen(Absorber, S4OpticalElementDecorator):
         self._density = density
         self._dabax = dabax
 
+        dabax_txt = "None"
+        if self._i_abs == 3:
+            if isinstance(dabax, DabaxXraylib):
+                dabax_txt = 'DabaxXraylib(file_CrossSec="%s")' % (dabax.get_file_CrossSec())
+            else:
+                dabax_txt = "DabaxXraylib()"
+
+
         self.__inputs = {
             "name": name,
             "boundary_shape": boundary_shape,
@@ -81,11 +91,8 @@ class S4Screen(Absorber, S4OpticalElementDecorator):
             "thick":    thick ,
             "material": material,
             "file_abs": file_abs,
-            "density": density,
-            "dabax": ("DabaxXraylib()"
-                        if dabax is None
-                        else 'DabaxXraylib(file_CrossSec="%s")' % (dabax.get_file_CrossSec())
-                        ),
+            "density":  density,
+            "dabax":    dabax_txt,
         }
 
     def get_info(self):
@@ -317,7 +324,7 @@ class S4ScreenElement(S4BeamlineElement):
         return txt
 
 if __name__ == "__main__":
-    o = S4Screen()
+    o = S4Screen(dabax=DabaxXraylib())
 
     e = S4ScreenElement()
 

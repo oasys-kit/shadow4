@@ -116,7 +116,7 @@ class S4NumericalMeshMultilayer(S4Multilayer, S4NumericalMeshOpticalElementDecor
 from shadow4.beamline.optical_elements.multilayers.s4_numerical_mesh_multilayer import S4NumericalMeshMultilayer
 optical_element = S4NumericalMeshMultilayer(name='{name:s}', boundary_shape=boundary_shape,
     xx=None, yy=None, zz=None, surface_data_file='{surface_data_file:s}',
-    f_refl={f_refl:d}, # 0=prerefl, 1=(mrad, refl), 2=(eV, refl), 3=(eV, mrad, refl); 4=xraylib, 5=dabax
+    f_refl={f_refl:d}, # 0=pre_mlayer, 1=(mrad, refl), 2=(eV, refl), 3=(eV, mrad, refl); 4=xraylib, 5=dabax
     file_refl='{file_refl:s}',
     structure='{structure:s}', period={period:f}, Gamma={Gamma:f}, # for f_refl=4,5
     dabax={dabax:s}, # if using dabax (f_refl=5), instance of DabaxXraylib() (use None for default)

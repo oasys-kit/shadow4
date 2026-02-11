@@ -14,9 +14,9 @@ from shadow4.tools.logger import is_verbose, is_debug
 
 class S4Multilayer(Multilayer):
     """
-    Shadow4 Mirror Class
-    This is a base class for mirrors.
-    Use derived classes for plane or other curved mirror surfaces.
+    Shadow4 Multilayer Class
+    This is a base class for multilayers.
+    Use derived classes for plane or other curved multilayer surfaces.
 
     Constructor.
 
@@ -28,10 +28,6 @@ class S4Multilayer(Multilayer):
         The boundary shape of the mirror.
     surface_shape : instance of SurfaceShape, optional
         The surface shape of the mirror.
-    f_reflec : int, optional
-         the reflectivity of surface:
-            - 0=no reflectivity,
-            - 1=full polarization.
     f_refl : int, optional
         A flag to indicate the source of reflectivities:
             * 0=prerefl file,
@@ -85,7 +81,7 @@ class S4Multilayer(Multilayer):
 
         # support text containg name of variable, help text and unit. Will be stored in self._support_dictionary
         self._add_support_text([
-                    ("f_refl",             "S4: refl. source for f_reflec=1: 0=prerefl, 5=xraylib, 6=dabax", ""),
+                    ("f_refl",             "S4: refl. source: 0=pre_mlayer, 1-3: file, 4=xraylib, 5=dabax", ""),
                     ("file_refl",          "S4: for f_refl=0: file name",               ""),
             ] )
 
@@ -174,10 +170,13 @@ class S4Multilayer(Multilayer):
         return footprint, normal
 
     def _get_dabax_txt(self):
-        if isinstance(self._dabax, DabaxXraylib):
-            dabax_txt = 'DabaxXraylib(file_f1f2="%s")' % (self._dabax.get_file_f1f2())
+        if self._f_refl == 5:
+            if isinstance(self._dabax, DabaxXraylib):
+                dabax_txt = 'DabaxXraylib(file_f1f2="%s")' % (self._dabax.get_file_f1f2())
+            else:
+                dabax_txt = "DabaxXraylib()"
         else:
-            dabax_txt = "DabaxXraylib()"
+            dabax_txt = "None"
         return dabax_txt
 
 class S4MultilayerElement(S4BeamlineElement):

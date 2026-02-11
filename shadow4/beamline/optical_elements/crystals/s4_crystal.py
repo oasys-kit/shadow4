@@ -244,10 +244,14 @@ class S4Crystal(Crystal):
         return txt
 
     def _get_dabax_txt(self):
-        if isinstance(self._dabax, DabaxXraylib):
-            dabax_txt = 'DabaxXraylib(file_f0="%s", file_f1f2="%s")' % (self._dabax.get_file_f0(), self._dabax.get_file_f1f2())
+        if self._material_constants_library_flag == 1:
+            if isinstance(self._dabax, DabaxXraylib):
+                dabax_txt = 'DabaxXraylib(file_f0="%s", file_f1f2="%s")' % (self._dabax.get_file_f0(), self._dabax.get_file_f1f2())
+            else:
+                dabax_txt = "DabaxXraylib()"
         else:
-            dabax_txt = "DabaxXraylib()"
+            dabax_txt = "None"
+
         return dabax_txt
 
 class S4CrystalElement(S4BeamlineElement):
