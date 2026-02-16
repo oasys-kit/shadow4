@@ -426,10 +426,13 @@ class S4Interface(Interface):
         return footprint, normal
 
     def _get_dabax_txt(self):
-        if isinstance(self._dabax, DabaxXraylib):
-            dabax_txt = 'DabaxXraylib(file_f1f2="%s", file_CrossSec="%s")' % (self._dabax.get_file_f1f2(), self._dabax.get_file_CrossSec())
+        if self._f_r_ind > 6:
+            if isinstance(self._dabax, DabaxXraylib):
+                dabax_txt = 'DabaxXraylib(file_f1f2="%s", file_CrossSec="%s")' % (self._dabax.get_file_f1f2(), self._dabax.get_file_CrossSec())
+            else:
+                dabax_txt = "DabaxXraylib()"
         else:
-            dabax_txt = "DabaxXraylib()"
+            dabax_txt = "None"
         return dabax_txt
 class S4InterfaceElement(S4BeamlineElement):
     """

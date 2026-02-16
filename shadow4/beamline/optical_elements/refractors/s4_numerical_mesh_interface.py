@@ -2,6 +2,9 @@ import numpy
 
 from syned.beamline.shape import Convexity, Direction
 from syned.beamline.element_coordinates import ElementCoordinates
+
+from dabax.dabax_xraylib import DabaxXraylib
+
 from shadow4.beam.s4_beam import S4Beam
 from shadow4.beamline.s4_optical_element_decorators import SurfaceCalculation, S4NumericalMeshOpticalElementDecorator
 from shadow4.beamline.optical_elements.refractors.s4_interface import S4InterfaceElement, S4Interface
@@ -110,6 +113,15 @@ class S4NumericalMeshInterface(S4Interface, S4NumericalMeshOpticalElementDecorat
                              dabax=dabax,
                              )
 
+        if f_r_ind > 6:
+            if isinstance(dabax, DabaxXraylib):
+                dabax_txt = 'DabaxXraylib(file_f1f2="%s", file_CrossSec="%s")' % \
+                            (dabax.get_file_f1f2(), dabax.get_file_CrossSec())
+            else:
+                dabax_txt = 'DabaxXraylib()'
+        else:
+            dabax_txt = "None"
+
         self.__inputs = {
             "name": name,
             "boundary_shape": boundary_shape,
@@ -128,11 +140,7 @@ class S4NumericalMeshInterface(S4Interface, S4NumericalMeshOpticalElementDecorat
             "r_attenuation_ima": r_attenuation_ima,
             "file_r_ind_obj": file_r_ind_obj,
             "file_r_ind_ima": file_r_ind_ima,
-            "dabax": ("DabaxXraylib()"
-                        if dabax is None
-                        else 'DabaxXraylib(file_f1f2="%s", file_CrossSec="%s")'
-                        % (dabax.get_file_f1f2(), dabax.get_file_CrossSec())
-                        ),
+            "dabax": dabax_txt,
             "xx": xx,
             "yy": yy,
             "zz": zz,

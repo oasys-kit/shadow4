@@ -4,6 +4,8 @@ from syned.beamline.element_coordinates import ElementCoordinates
 from syned.beamline.optical_elements.refractors.lens import Lens
 from syned.beamline.shape import Rectangle, Ellipse, Circle
 
+from dabax.dabax_xraylib import DabaxXraylib
+
 from shadow4.beam.s4_beam import S4Beam
 from shadow4.beamline.s4_beamline_element import S4BeamlineElement
 from shadow4.beamline.s4_beamline_element_movements import S4BeamlineElementMovements
@@ -106,6 +108,15 @@ class S4Lens(Lens, S4RefractiveLensOpticalElementDecorator):
                       material=material,
                       thickness=thickness)
 
+        if ri_calculation_mode == 3:
+            if isinstance(dabax, DabaxXraylib):
+                dabax_txt = 'DabaxXraylib(file_f1f2="%s", file_CrossSec="%s")' % \
+                            (dabax.get_file_f1f2(), dabax.get_file_CrossSec())
+            else:
+                dabax_txt = 'DabaxXraylib()'
+        else:
+            dabax_txt = "None"
+
         self.__inputs = {
             "name": name,
             "boundary_shape":          boundary_shape,
@@ -119,12 +130,7 @@ class S4Lens(Lens, S4RefractiveLensOpticalElementDecorator):
             "refraction_index":        refraction_index,
             "attenuation_coefficient": attenuation_coefficient,
             "density":                 density,
-            "dabax":                   (
-                                        "DabaxXraylib()"
-                                        if dabax is None
-                                        else 'DabaxXraylib(file_f1f2="%s", file_CrossSec="%s")'
-                                        % (dabax.get_file_f1f2(), dabax.get_file_CrossSec())
-                                    ),
+            "dabax":                   dabax_txt,
             "radius":                  radius,
             "conic_coefficients1":     repr(conic_coefficients1),
             "conic_coefficients2":     repr(conic_coefficients2),
