@@ -6,3 +6,6 @@
 /.idea/inspectionProfiles/
 /.idea/
 /TEST/
+/build/
+/dist/
+/shadow4.egg-info/

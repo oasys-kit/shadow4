@@ -5,13 +5,13 @@ import numpy
 
 from syned.beamline.element_coordinates import ElementCoordinates
 from syned.beamline.optical_elements.refractors.interface import Interface
+from syned.beamline.shape import Rectangle, Ellipse
+
+from dabax.dabax_xraylib import DabaxXraylib
 
 from shadow4.beam.s4_beam import S4Beam
 from shadow4.beamline.s4_beamline_element import S4BeamlineElement
 from shadow4.beamline.s4_beamline_element_movements import S4BeamlineElementMovements
-
-from syned.beamline.shape import Rectangle, Ellipse
-
 from shadow4.physical_models.prerefl.prerefl import PreRefl
 
 class S4Interface(Interface):
@@ -425,6 +425,15 @@ class S4Interface(Interface):
 
         return footprint, normal
 
+    def _get_dabax_txt(self):
+        if self._f_r_ind > 6:
+            if isinstance(self._dabax, DabaxXraylib):
+                dabax_txt = 'DabaxXraylib(file_f1f2="%s", file_CrossSec="%s")' % (self._dabax.get_file_f1f2(), self._dabax.get_file_CrossSec())
+            else:
+                dabax_txt = "DabaxXraylib()"
+        else:
+            dabax_txt = "None"
+        return dabax_txt
 class S4InterfaceElement(S4BeamlineElement):
     """
     Constructor.

@@ -186,30 +186,29 @@ class S4Grating(GratingVLS, S4OpticalElementDecorator):
 
 
 class S4GratingElement(S4BeamlineElement):
-    class S4CrystalElement(S4BeamlineElement):
-        """
-        The base class for Shadow4 grating element.
-        It is made of a S4Grating and an ElementCoordinates instance. It also includes the input beam.
+    """
+    The base class for Shadow4 grating element.
+    It is made of a S4Grating and an ElementCoordinates instance. It also includes the input beam.
 
-        Use derived classes for plane or other curved crystal surfaces.
+    Use derived classes for plane or other curved crystal surfaces.
 
-        Constructor.
+    Constructor.
 
-        Parameters
-        ----------
-        optical_element : instance of OpticalElement, optional
-            The syned optical element.
-        coordinates : instance of ElementCoordinates, optional
-            The syned element coordinates.
-        movements : instance of S4BeamlineElementMovements, optional
-            The S4 element movements.
-        input_beam : instance of S4Beam, optional
-            The S4 incident beam.
+    Parameters
+    ----------
+    optical_element : instance of OpticalElement, optional
+        The syned optical element.
+    coordinates : instance of ElementCoordinates, optional
+        The syned element coordinates.
+    movements : instance of S4BeamlineElementMovements, optional
+        The S4 element movements.
+    input_beam : instance of S4Beam, optional
+        The S4 incident beam.
 
-        Returns
-        -------
-        instance of S4GratingElement.
-        """
+    Returns
+    -------
+    instance of S4GratingElement.
+    """
     def __init__(self,
                  optical_element : S4Grating = None,
                  coordinates : ElementCoordinates = None,
@@ -266,8 +265,7 @@ class S4GratingElement(S4BeamlineElement):
         #
         soe = self.get_optical_element()
 
-        footprint, normal = self._apply_grating_diffraction(input_beam)  # warning, beam is also changed!!
-
+        footprint, normal = self._apply_grating_diffraction(input_beam)
 
         if movements is not None:
             if movements.f_move:
@@ -287,7 +285,6 @@ class S4GratingElement(S4BeamlineElement):
         #
         # TODO" apply grating reflectivity/efficiency
         #
-        # beam_mirr.apply_complex_reflectivities(complex_reflectivity_S, complex_reflectivity_P)
         ########################################################################################
 
 
@@ -323,107 +320,135 @@ class S4GratingElement(S4BeamlineElement):
         ssi = oe.get_surface_shape_instance()
         ccc = oe.get_optical_surface_instance()
 
-        if oe._f_ruling == 5:
+        if oe._f_ruling == 0:
+            ruling = [oe._ruling]
+        elif oe._f_ruling == 1:
             ruling = [oe._ruling,
                         oe._ruling_coeff_linear,
                         oe._ruling_coeff_quadratic,
                         oe._ruling_coeff_cubic,
                         oe._ruling_coeff_quartic]
         else:
-            ruling = [oe._ruling]
+            raise Exception("Not implemented grating with f_ruling=%d" % self._f_ruling)
 
-        # todo: remove if's the interface is the same for Conic, Toroid and NumericalMesh
+
         if isinstance(ssi, Plane) or isinstance(ssi, Sphere) or isinstance(ssi, Paraboloid) \
                 or isinstance(ssi, Ellipsoid) or isinstance(ssi, Hyperboloid) or isinstance(ssi, Conic):
-            beam_mirr, normal = ccc.apply_grating_diffraction_on_beam(
-                beam,
-                ruling=ruling,
-                order=oe._order,
-                f_ruling=oe._f_ruling)
-        # elif isinstance(ssi, Sphere):
-        #     beam_mirr, normal = ccc.apply_grating_diffraction_on_beam(
-        #         beam,
-        #         ruling=ruling,
-        #         order=oe._order,
-        #         f_ruling=oe._f_ruling)
-        # elif isinstance(ssi, Conic):
-        #     beam_mirr, normal = ccc.apply_grating_diffraction_on_beam(
-        #         beam,
-        #         ruling=ruling,
-        #         order=oe._order,
-        #         f_ruling=oe._f_ruling)
+            invert_normal = 1
         elif isinstance(ssi, Toroid):
-            beam_mirr, normal = ccc.apply_grating_diffraction_on_beam(
-                beam,
-                ruling=ruling,
-                order=oe._order,
-                f_ruling=oe._f_ruling)
+            if ccc.f_torus == 0 or ccc.f_torus == 2:
+                invert_normal = 1
+            else:
+                invert_normal = 0
         elif isinstance(ssi, NumericalMesh):
-            beam_mirr, normal = ccc.apply_grating_diffraction_on_beam(
-                beam,
-                ruling=ruling,
-                order=oe._order,
-                f_ruling=oe._f_ruling)
+            invert_normal = 0
         else:
             raise NotImplementedError
+
+        beam_mirr, normal = ccc.apply_grating_diffraction_on_beam(
+            beam,
+            ruling=ruling,
+            order=oe._order,
+            f_ruling=oe._f_ruling,
+            invert_normal=invert_normal)
 
         return beam_mirr, normal
 
 
 if __name__ == "__main__":
-    from shadow4.sources.source_geometrical.source_gaussian import SourceGaussian
-    from shadow4.beam.s4_beam import S4Beam
+    from shadow4.beamline.s4_beamline import S4Beamline
 
-    from syned.beamline.shape import Plane
-    #
-    # source
-    #
-    src = SourceGaussian(
-                 nrays=10000,
-                 sigmaX=1.0e-6,
-                 sigmaY=0.0,
-                 sigmaZ=1.0e-6,
-                 sigmaXprime=0.0002,
-                 sigmaZprime=0.0002,
-                 real_space_center=[0.0,0.0,0.0],
-                 direction_space_center=[0.0,0.0]
-                                 )
-    beam = S4Beam()
-
-    beam.generate_source(src)
-    beam.set_photon_energy_eV(1000.0)
-
-    print(beam.info())
-
-    # plotxy(Beam3.initialize_from_shadow4_beam(beam),1,3,nbins=100,title="SOURCE")
+    beamline = S4Beamline()
 
     #
-    # grating
     #
-    g = S4Grating(
-        name = "my_grating",
-        surface_shape =  Plane(), # SurfaceShape(),
-        boundary_shape = None, # BoundaryShape(),
-        ruling = 600000.0,
-        ruling_coeff_linear = 260818.35944225,
-        ruling_coeff_quadratic = 260818.35944225,
-        ruling_coeff_cubic = 13648.21037618,
-        ruling_coeff_quartic = 0.0,
-        coating = None,
-        coating_thickness = None,
-        order=0,
-        )
+    #
+    from shadow4.sources.source_geometrical.source_geometrical import SourceGeometrical
 
-    coordinates_syned = ElementCoordinates(p = 10.0,
-                                           q = 6.0,
-                                           angle_radial = 88.840655 * numpy.pi / 180,
-                                           angle_radial_out= 87.588577 * numpy.pi / 180,
-                                           angle_azimuthal = 0.0)
+    light_source = SourceGeometrical(name='SourceGeometrical', nrays=50000, seed=5676561)
+    light_source.set_spatial_type_gaussian(sigma_h=0.000279, sigma_v=0.000015)
+    light_source.set_depth_distribution_off()
+    light_source.set_angular_distribution_gaussian(sigdix=0.000021, sigdiz=0.000018)
+    light_source.set_energy_distribution_singleline(1000.000000, unit='eV')
+    light_source.set_polarization(polarization_degree=1.000000, phase_diff=0.000000, coherent_beam=0)
+    beam = light_source.get_beam()
 
+    beamline.set_light_source(light_source)
 
+    # optical element number XX
+    boundary_shape = None
 
-    ge = S4GratingElement(optical_element=g, coordinates=coordinates_syned, input_beam=beam)
+    from shadow4.beamline.optical_elements.mirrors.s4_plane_mirror import S4PlaneMirror
 
-    print(ge.info())
+    optical_element = S4PlaneMirror(name='Plane Mirror', boundary_shape=boundary_shape,
+                                    f_reflec=0, f_refl=0, file_refl='<none>', refraction_index=0.99999 + 0.001j,
+                                    coating_material='Si', coating_density=2.33, coating_roughness=0)
 
-    beam_out = ge.trace_beam()
+    from syned.beamline.element_coordinates import ElementCoordinates
+
+    coordinates = ElementCoordinates(p=0, q=0, angle_radial=1.544616388, angle_azimuthal=1.570796327,
+                                     angle_radial_out=1.544616388)
+    movements = None
+    from shadow4.beamline.optical_elements.mirrors.s4_plane_mirror import S4PlaneMirrorElement
+
+    beamline_element = S4PlaneMirrorElement(optical_element=optical_element, coordinates=coordinates,
+                                            movements=movements, input_beam=beam)
+
+    beam, footprint = beamline_element.trace_beam()
+
+    beamline.append_beamline_element(beamline_element)
+
+    # optical element number XX
+    boundary_shape = None
+
+    from shadow4.beamline.optical_elements.mirrors.s4_plane_mirror import S4PlaneMirror
+
+    optical_element = S4PlaneMirror(name='Plane Mirror', boundary_shape=boundary_shape,
+                                    f_reflec=0, f_refl=0, file_refl='<none>', refraction_index=0.99999 + 0.001j,
+                                    coating_material='Si', coating_density=2.33, coating_roughness=0)
+
+    from syned.beamline.element_coordinates import ElementCoordinates
+
+    coordinates = ElementCoordinates(p=30, q=0, angle_radial=1.532244657, angle_azimuthal=4.71238898,
+                                     angle_radial_out=1.532244657)
+    movements = None
+    from shadow4.beamline.optical_elements.mirrors.s4_plane_mirror import S4PlaneMirrorElement
+
+    beamline_element = S4PlaneMirrorElement(optical_element=optical_element, coordinates=coordinates,
+                                            movements=movements, input_beam=beam)
+
+    beam, footprint = beamline_element.trace_beam()
+
+    beamline.append_beamline_element(beamline_element)
+
+    # optical element number XX
+    boundary_shape = None
+    from shadow4.beamline.optical_elements.gratings.s4_plane_grating import S4PlaneGrating
+
+    optical_element = S4PlaneGrating(name='Plane Grating',
+                                     boundary_shape=None, f_ruling=1, order=-1,
+                                     ruling=800000.0, ruling_coeff_linear=230792.872,
+                                     ruling_coeff_quadratic=30998.343, ruling_coeff_cubic=4276.743,
+                                     ruling_coeff_quartic=0.0,
+                                     )
+    from syned.beamline.element_coordinates import ElementCoordinates
+
+    coordinates = ElementCoordinates(p=0, q=10, angle_radial=1.545112411, angle_azimuthal=3.141592654,
+                                     angle_radial_out=1.519376902)
+    movements = None
+    from shadow4.beamline.optical_elements.gratings.s4_plane_grating import S4PlaneGratingElement
+
+    beamline_element = S4PlaneGratingElement(optical_element=optical_element, coordinates=coordinates,
+                                             movements=movements, input_beam=beam)
+
+    beam, footprint = beamline_element.trace_beam()
+
+    beamline.append_beamline_element(beamline_element)
+
+    # test plot
+    if True:
+        from srxraylib.plot.gol import plot_scatter
+
+        # plot_scatter(beam.get_photon_energy_eV(nolost=1), beam.get_column(23, nolost=1),
+        #              title='(Intensity,Photon Energy)', plot_histograms=0)
+        plot_scatter(1e6 * beam.get_column(1, nolost=1), 1e6 * beam.get_column(3, nolost=1), title='(X,Z) in microns')

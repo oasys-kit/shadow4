@@ -61,6 +61,8 @@ class S4ToroidCrystal(S4Crystal, S4ToroidOpticalElementDecorator):
         0: xraylib, 1: dabax, 2: preprocessor file v1, 3: preprocessor file v2.
     file_refl : str, optional
         for material_constants_library_flag=2,3, the name of the file containing the crystal parameters.
+    dabax : None or instance of DabaxXraylib,
+        The pointer to the dabax library  (used for material_constants_library_flag=1).
 
     Returns
     -------
@@ -89,6 +91,7 @@ class S4ToroidCrystal(S4Crystal, S4ToroidOpticalElementDecorator):
                  min_radius=0.1,
                  maj_radius=1.0,
                  f_torus=0,
+                 dabax=None,
                  ):
         p_focus, q_focus, grazing_angle = 1.0, 1.0, 1e-3
         S4ToroidOpticalElementDecorator.__init__(self, SurfaceCalculation.EXTERNAL,
@@ -113,6 +116,7 @@ class S4ToroidCrystal(S4Crystal, S4ToroidOpticalElementDecorator):
                            f_bragg_a=f_bragg_a,
                            f_ext=f_ext,
                            material_constants_library_flag=material_constants_library_flag,
+                           dabax=dabax,
                            )
 
         self.__inputs = {
@@ -136,6 +140,7 @@ class S4ToroidCrystal(S4Crystal, S4ToroidOpticalElementDecorator):
             "min_radius": min_radius,
             "maj_radius": maj_radius,
             "f_torus": f_torus,
+            "dabax": self._get_dabax_txt(),
             }
 
     def to_python_code(self, **kwargs):
@@ -151,10 +156,12 @@ class S4ToroidCrystal(S4Crystal, S4ToroidOpticalElementDecorator):
         str
             Python code.
         """
-        txt = "\nfrom shadow4.beamline.optical_elements.crystals.s4_toroid_crystal import S4ToroidCrystal"
+        txt = self.to_python_code_boundary_shape()
+        txt_pre = """
 
-        txt_pre = """\noptical_element = S4ToroidCrystal(name='{name}',
-    boundary_shape=None, material='{material}',
+from shadow4.beamline.optical_elements.crystals.s4_toroid_crystal import S4ToroidCrystal
+optical_element = S4ToroidCrystal(name='{name}',
+    boundary_shape=boundary_shape, material='{material}',
     miller_index_h={miller_index_h}, miller_index_k={miller_index_k}, miller_index_l={miller_index_l},
     f_bragg_a={f_bragg_a}, asymmetry_angle={asymmetry_angle},
     is_thick={is_thick}, thickness={thickness},
@@ -165,6 +172,7 @@ class S4ToroidCrystal(S4Crystal, S4ToroidOpticalElementDecorator):
     min_radius={min_radius:g}, # min_radius = sagittal
     maj_radius={maj_radius:g}, # maj_radius = tangential
     f_torus={f_torus},
+    dabax={dabax}, # used when material_constants_library_flag=1,
     )"""
         txt += txt_pre.format(**self.__inputs)
 
@@ -221,7 +229,7 @@ class S4ToroidCrystalElement(S4CrystalElement):
         txt += self.to_python_code_movements()
         txt += "\nfrom shadow4.beamline.optical_elements.crystals.s4_toroid_crystal import S4ToroidCrystalElement"
         txt += "\nbeamline_element = S4ToroidCrystalElement(optical_element=optical_element, coordinates=coordinates, movements=movements, input_beam=beam)"
-        txt += "\n\nbeam, mirr = beamline_element.trace_beam()"
+        txt += "\n\nbeam, footprint = beamline_element.trace_beam()"
         return txt
 
 if __name__ == "__main__":

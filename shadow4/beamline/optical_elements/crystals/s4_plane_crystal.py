@@ -51,6 +51,8 @@ class S4PlaneCrystal(S4Crystal, S4PlaneOpticalElementDecorator):
         0: xraylib, 1: dabax, 2: preprocessor file v1, 3: preprocessor file v2.
     file_refl : str, optional
         for material_constants_library_flag=2,3, the name of the file containing the crystal parameters.
+    dabax : None or instance of DabaxXraylib,
+        The pointer to the dabax library  (used for material_constants_library_flag=1).
 
     Returns
     -------
@@ -77,6 +79,7 @@ class S4PlaneCrystal(S4Crystal, S4PlaneOpticalElementDecorator):
                                                      # 2=shadow preprocessor file v1
                                                      # 3=shadow preprocessor file v2
                  method_efields_management=0,
+                 dabax=None,
                  ):
         S4PlaneOpticalElementDecorator.__init__(self)
         S4Crystal.__init__(self,
@@ -99,6 +102,7 @@ class S4PlaneCrystal(S4Crystal, S4PlaneOpticalElementDecorator):
                            f_ext=f_ext,
                            material_constants_library_flag=material_constants_library_flag,
                            method_efields_management=method_efields_management,
+                           dabax=dabax,
                            )
 
         self.__inputs = {
@@ -120,6 +124,7 @@ class S4PlaneCrystal(S4Crystal, S4PlaneOpticalElementDecorator):
             "f_ext": f_ext,
             "material_constants_library_flag": material_constants_library_flag,
             "method_efields_management": method_efields_management,
+            "dabax": self._get_dabax_txt(),
             }
 
     def to_python_code(self, **kwargs):
@@ -135,10 +140,12 @@ class S4PlaneCrystal(S4Crystal, S4PlaneOpticalElementDecorator):
         str
             Python code.
         """
-        txt = "\nfrom shadow4.beamline.optical_elements.crystals.s4_plane_crystal import S4PlaneCrystal"
+        txt = self.to_python_code_boundary_shape()
+        txt_pre = """
 
-        txt_pre = """\noptical_element = S4PlaneCrystal(name='{name}',
-    boundary_shape=None, material='{material}',
+from shadow4.beamline.optical_elements.crystals.s4_plane_crystal import S4PlaneCrystal
+optical_element = S4PlaneCrystal(name='{name}',
+    boundary_shape=boundary_shape, material='{material}',
     miller_index_h={miller_index_h}, miller_index_k={miller_index_k}, miller_index_l={miller_index_l},
     f_bragg_a={f_bragg_a}, asymmetry_angle={asymmetry_angle},
     is_thick={is_thick}, thickness={thickness},
@@ -147,6 +154,7 @@ class S4PlaneCrystal(S4Crystal, S4PlaneOpticalElementDecorator):
     f_ext={f_ext},
     material_constants_library_flag={material_constants_library_flag}, # 0=xraylib,1=dabax,2=preprocessor v1,3=preprocessor v2
     method_efields_management={method_efields_management}, # 0=new in S4; 1=like in S3
+    dabax={dabax}, # used when material_constants_library_flag=1,
     )"""
         txt += txt_pre.format(**self.__inputs)
 
@@ -200,10 +208,11 @@ class S4PlaneCrystalElement(S4CrystalElement):
         txt += self.to_python_code_movements()
         txt += "\nfrom shadow4.beamline.optical_elements.crystals.s4_plane_crystal import S4PlaneCrystalElement"
         txt += "\nbeamline_element = S4PlaneCrystalElement(optical_element=optical_element,coordinates=coordinates, movements=movements, input_beam=beam)"
-        txt += "\n\nbeam, mirr = beamline_element.trace_beam()"
+        txt += "\n\nbeam, footprint = beamline_element.trace_beam()"
         return txt
 
 if __name__ == "__main__":
+    from dabax.dabax_xraylib import DabaxXraylib
     c = S4PlaneCrystal(
             name="Undefined",
             boundary_shape=None,
@@ -219,7 +228,9 @@ if __name__ == "__main__":
             phot_cent=8000.0,
             file_refl="",
             f_bragg_a=False,
-            f_ext=0,)
+            f_ext=0,
+            material_constants_library_flag=1,
+            dabax=DabaxXraylib())
     # print(c.info())
     # print(c.to_python_code())
 
@@ -228,4 +239,4 @@ if __name__ == "__main__":
     print(ce.info())
     print(ce.to_python_code())
 
-    cc = S4PlaneCrystalElement()
+    # cc = S4PlaneCrystalElement()

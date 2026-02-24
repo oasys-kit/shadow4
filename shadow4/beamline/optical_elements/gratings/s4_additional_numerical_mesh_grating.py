@@ -94,15 +94,17 @@ class S4AdditionalNumericalMeshGrating(S4NumericalMeshGrating):
             Python code.
         """
         txt = self.__ideal_grating.to_python_code()
+        txt += "\n"
         txt += "ideal_grating = optical_element"
         txt += self.__numerical_mesh_grating.to_python_code()
+        txt += "\n"
         txt += "numerical_mesh_grating = optical_element"
 
         txt += self.to_python_code_boundary_shape()
         txt_pre = """
 
-from shadow4.beamline.optical_elements.crystals.s4_additional_numerical_mesh_crystal import S4AdditionalNumericalMeshCrystal
-optical_element = S4AdditionalNumericalMeshCrystal(name='{name:s}', ideal_crystal=ideal_crystal, numerical_mesh_crystal=numerical_mesh_crystal)
+from shadow4.beamline.optical_elements.gratings.s4_additional_numerical_mesh_grating import S4AdditionalNumericalMeshGrating
+optical_element = S4AdditionalNumericalMeshGrating(name='{name:s}', ideal_grating=ideal_grating, numerical_mesh_grating=numerical_mesh_grating)
     """
         txt += txt_pre.format(**self.__inputs)
         return txt
@@ -153,7 +155,7 @@ class S4AdditionalNumericalMeshGratingElement(S4GratingElement):
         txt += self.to_python_code_movements()
         txt += "\nfrom shadow4.beamline.optical_elements.gratings.s4_additional_numerical_mesh_grating import S4AdditionalNumericalMeshGratingElement"
         txt += "\nbeamline_element = S4AdditionalNumericalMeshGratingElement(optical_element=optical_element, coordinates=coordinates, movements=movements, input_beam=beam)"
-        txt += "\n\nbeam, mirr = beamline_element.trace_beam()"
+        txt += "\n\nbeam, footprint = beamline_element.trace_beam()"
         return txt
 
 if __name__ == "__main__":

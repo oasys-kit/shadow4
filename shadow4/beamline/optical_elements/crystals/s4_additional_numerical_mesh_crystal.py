@@ -50,6 +50,7 @@ class S4AdditionalNumericalMeshCrystal(S4NumericalMeshCrystal):
                  f_ext                          =0 if ideal_crystal is None else ideal_crystal._f_ext,
                  material_constants_library_flag=0 if ideal_crystal is None else ideal_crystal._material_constants_library_flag,
                  file_refl                      ="" if ideal_crystal is None else ideal_crystal._file_refl,
+                 dabax                          =None if ideal_crystal is None else ideal_crystal._dabax,
                  )
 
         self.__ideal_crystal         = ideal_crystal
@@ -95,8 +96,10 @@ class S4AdditionalNumericalMeshCrystal(S4NumericalMeshCrystal):
             Python code.
         """
         txt = self.__ideal_crystal.to_python_code()
+        txt += "\n"
         txt += "ideal_crystal = optical_element"
         txt += self.__numerical_mesh_crystal.to_python_code()
+        txt += "\n"
         txt += "numerical_mesh_crystal = optical_element"
 
         txt += self.to_python_code_boundary_shape()
@@ -155,7 +158,7 @@ class S4AdditionalNumericalMeshCrystalElement(S4CrystalElement):
 
         txt += "\nfrom shadow4.beamline.optical_elements.crystals.s4_additional_numerical_mesh_crystal import S4AdditionalNumericalMeshCrystalElement"
         txt += "\nbeamline_element = S4AdditionalNumericalMeshCrystalElement(optical_element=optical_element, coordinates=coordinates, movements=movements, input_beam=beam)"
-        txt += "\n\nbeam, mirr = beamline_element.trace_beam()"
+        txt += "\n\nbeam, footprint = beamline_element.trace_beam()"
         return txt
 
 if __name__ == "__main__":

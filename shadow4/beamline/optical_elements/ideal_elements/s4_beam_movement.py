@@ -148,7 +148,7 @@ class S4BeamMovementElement(S4BeamlineElement):
         txt += self.to_python_code_coordinates()
         txt += "\nfrom shadow4.beamline.optical_elements.ideal_elements.s4_beam_movement import S4BeamMovementElement"
         txt += "\nbeamline_element = S4BeamMovementElement(optical_element=optical_element, coordinates=coordinates, input_beam=beam)"
-        txt += "\n\nbeam, mirr = beamline_element.trace_beam()"
+        txt += "\n\nbeam, foootprint = beamline_element.trace_beam()"
         return txt
 
 if __name__ == "__main__":

@@ -52,6 +52,8 @@ class S4ConicCrystal(S4Crystal, S4ConicOpticalElementDecorator):
         0: xraylib, 1: dabax, 2: preprocessor file v1, 3: preprocessor file v2.
     file_refl : str, optional
         for material_constants_library_flag=2,3, the name of the file containing the crystal parameters.
+    dabax : None or instance of DabaxXraylib,
+        The pointer to the dabax library  (used for material_constants_library_flag=1).
 
     Returns
     -------
@@ -78,6 +80,7 @@ class S4ConicCrystal(S4Crystal, S4ConicOpticalElementDecorator):
                  material_constants_library_flag=0,  # 0=xraylib, 1=dabax
                                                      # 2=shadow preprocessor file v1
                                                      # 3=shadow preprocessor file v2
+                 dabax=None,
                  ):
         S4ConicOpticalElementDecorator.__init__(self, conic_coefficients)
         S4Crystal.__init__(self,
@@ -99,6 +102,7 @@ class S4ConicCrystal(S4Crystal, S4ConicOpticalElementDecorator):
                            f_bragg_a=f_bragg_a,
                            f_ext=f_ext,
                            material_constants_library_flag=material_constants_library_flag,
+                           dabax=dabax,
                            )
 
         self.__inputs = {
@@ -120,6 +124,7 @@ class S4ConicCrystal(S4Crystal, S4ConicOpticalElementDecorator):
             "f_bragg_a": f_bragg_a,
             "f_ext": f_ext,
             "material_constants_library_flag": material_constants_library_flag,
+            "dabax": self._get_dabax_txt(),
             }
 
     def to_python_code(self, **kwargs):
@@ -135,10 +140,12 @@ class S4ConicCrystal(S4Crystal, S4ConicOpticalElementDecorator):
         str
             Python code.
         """
-        txt = "\nfrom shadow4.beamline.optical_elements.crystals.s4_conic_crystal import S4ConicCrystal"
+        txt = self.to_python_code_boundary_shape()
+        txt_pre = """
 
-        txt_pre = """\noptical_element = S4ConicCrystal(name='{name}',
-    boundary_shape=None,
+from shadow4.beamline.optical_elements.crystals.s4_conic_crystal import S4ConicCrystal
+optical_element = S4ConicCrystal(name='{name}',
+    boundary_shape=boundary_shape,
     conic_coefficients={conic_coefficients:s},
     material='{material}', miller_index_h={miller_index_h}, miller_index_k={miller_index_k}, miller_index_l={miller_index_l},
     f_bragg_a={f_bragg_a}, asymmetry_angle={asymmetry_angle},
@@ -147,6 +154,7 @@ class S4ConicCrystal(S4Crystal, S4ConicOpticalElementDecorator):
     file_refl='{file_refl}',
     f_ext={f_ext},
     material_constants_library_flag={material_constants_library_flag}, # 0=xraylib,1=dabax,2=preprocessor v1,3=preprocessor v2
+    dabax={dabax}, # used when material_constants_library_flag=1,
     )"""
         txt += txt_pre.format(**self.__inputs)
 
@@ -199,7 +207,7 @@ class S4ConicCrystalElement(S4CrystalElement):
         txt += self.to_python_code_movements()
         txt += "\nfrom shadow4.beamline.optical_elements.crystals.s4_conic_crystal import S4ConicCrystalElement"
         txt += "\nbeamline_element = S4ConicCrystalElement(optical_element=optical_element, coordinates=coordinates, movements=movements, input_beam=beam)"
-        txt += "\n\nbeam, mirr = beamline_element.trace_beam()"
+        txt += "\n\nbeam, footprint = beamline_element.trace_beam()"
         return txt
 
 if __name__ == "__main__":

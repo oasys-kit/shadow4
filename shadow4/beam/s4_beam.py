@@ -26,18 +26,23 @@ class S4Beam(object):
     Parameters
     ----------
     N : int, optional
-        The number of rays.
+        The number of rays. Not used if array is defined.
 
-    array numpy array, optional
-        The numpy array (N,18) with the data.
+    array : numpy array, optional
+        The numpy array (N, 18) with the data.
+
+    N_cleaned : None or int, optional
+        To initialize a beam with an array that comes from a beam "cleaned from its lost rays", input here
+        the total number of rays including the lost rays (it should be > array.shape[0]).
+
+        Typically this keyword is not used (i.e. leave the default N_cleaned=None).
 
     See Also
     --------
-    shadow4.S4Beam.column_names :
-        columns contents.
+    shadow4.S4Beam.column_names : columns contents.
 
     """
-    def __init__(self, N=1000, array=None):
+    def __init__(self, N=1000, array=None, N_cleaned=None):
         if array is not None:
             N, ncol = array.shape
             if ncol != 18:
@@ -45,6 +50,8 @@ class S4Beam(object):
             self.rays = array.copy()
         else:
             self.rays = numpy.zeros((N,18))
+
+        self._N_cleaned = N_cleaned # this is None unless the beam has been cleaned
 
     @classmethod
     def initialize_from_array(cls, array):
@@ -68,6 +75,7 @@ class S4Beam(object):
     @classmethod
     def initialize_as_pencil(cls, N=1000):
         """
+        Creates a pencil beam (point source of zero divergence).
 
         Parameters
         ----------
@@ -100,7 +108,64 @@ class S4Beam(object):
             A copy of the S4Beam instance.
 
         """
-        return S4Beam.initialize_from_array(self.rays.copy())
+        return S4Beam(array=self.rays.copy(), N_cleaned=self._N_cleaned)
+
+    def clean_lost_rays(self):
+        """
+        Clean the lost rays from the beam. It removed the lost rays from the stored beam. It saves memory.
+        Useful when lost rays are not longer interesting.
+
+        Returns
+        -------
+        S4Beam instance
+            The S4Beam without lost rays.
+
+        """
+        self._N_cleaned = self.get_number_of_rays(nolost=0)
+        self.rays       = self.rays[numpy.where(self.rays[:, 9] > 0.0)]
+
+    def append_beam(self, beam_to_append, update_column_index=True):
+        """
+        Appends the rays of an extra given beam.
+
+        Parameters
+        ----------
+         beam_to_append: instance of S4Beam
+            The beam which rays are going to be appended.
+         update_column_index: bool
+            If True, the indices (from the index column 12) of the appended beam are changed to concatenate the
+            existing indices. If False there is no change (therefore resulting in duplicated indices).
+
+
+        """
+        if not isinstance(beam_to_append, S4Beam): raise Exception("beam_to_append must be an instance of S4Beam")
+        array1 = self.rays
+        array2 = beam_to_append.rays.copy()
+        N1 = self.N
+        N2 = beam_to_append.N
+        if update_column_index:
+            array2[:, 11] = array2[:, 11] + N1
+
+        result = numpy.empty((array1.shape[0] + array2.shape[0], 18))
+        result[:array1.shape[0]] = array1
+        result[array1.shape[0]:] = array2
+
+        self.rays = result
+        if self.is_cleaned() or beam_to_append.is_cleaned():
+            self._N_cleaned = N1 + N2
+
+    def is_cleaned(self):
+        """
+        Tells if the lost rays of the beam have been cleaned using S4Beam.clean_lost_rays().
+
+        Returns
+        -------
+        Boolean
+            True if beam has been cleaned, else False.
+
+        """
+
+        return (False if self._N_cleaned is None else True)
 
     #
     # getters
@@ -112,7 +177,9 @@ class S4Beam(object):
         Parameters
         ----------
         nolost : int, optional
-            0=return all rays, 1=Return only good rays (non-lost rays), 2=Return only lost rays.
+            * 0=return all rays,
+            * 1=Return only good rays (non-lost rays),
+            * 2=Return only lost rays.
 
         Returns
         -------
@@ -131,12 +198,16 @@ class S4Beam(object):
             else:
                 return self.rays[f[0],:].copy()
         elif nolost == 2:
-            f  = numpy.where(self.rays[:, 9] < 0.0)
-            if len(f[0]) == 0:
-                print ('S4Beam.get_rays: no BAD rays, returning empty array')
-                return numpy.empty(0)
+            if self._N_cleaned is None:
+                f  = numpy.where(self.rays[:, 9] < 0.0)
+                if len(f[0]) == 0:
+                    print ('S4Beam.get_rays: no BAD rays, returning empty array.')
+                    return numpy.empty(0)
+                else:
+                    return self.rays[f[0], :].copy()
             else:
-                return self.rays[f[0], :].copy()
+                print ('S4Beam.get_rays: Beam has been CLEANED, returning empty array.')
+                return numpy.empty(0)
 
     @property
     def rays_good(self):
@@ -171,7 +242,18 @@ class S4Beam(object):
         Parameters
         ----------
         nolost : int, optional
-            0=return all rays, 1=Return only good rays (non-lost rays), 2=Return only lost rays.
+            * 0=return the total number of rays,
+            * 1=Return the number of good rays (non-lost rays),
+            * 2=Return the number of STORED lost rays (see Notes).
+
+        Notes
+        -----
+        Note: in general, when the beam "has not been cleaned" (using clean_lost_rays()) the total number of rays is
+        equal to good raus plus lost rays, and all of them are stored in the beam.
+        If the beam has been cleaned, get_number_of_rays(nolost=2), returns the number of the lost rays that are
+        physically stored in the beam. Calling beam.get_number_of_rays(nolost=2) on a beam that has just been
+        beam.clean_lost_rays() will return zero. It may not be zero if the beam is traced after cleaned and not
+        re-clean.
 
         Returns
         -------
@@ -185,12 +267,20 @@ class S4Beam(object):
             print("Error: Empty beam...")
             return 0
 
-        if nolost == 0:
-            return w.size
-        if nolost == 1:
-            return numpy.array(numpy.where(w >= 0)).size
-        if nolost == 2:
-            return numpy.array(numpy.where(w < 0)).size
+        if self.is_cleaned():
+            if nolost == 0:
+                return self._N_cleaned
+            if nolost == 1:
+                return numpy.array(numpy.where(w >= 0)).size
+            if nolost == 2:
+                return numpy.array(numpy.where(w < 0)).size
+        else:
+            if nolost == 0:
+                return w.size
+            if nolost == 1:
+                return numpy.array(numpy.where(w >= 0)).size
+            if nolost == 2:
+                return numpy.array(numpy.where(w < 0)).size
 
         return self.rays.shape[0]
 
@@ -223,7 +313,7 @@ class S4Beam(object):
     @property
     def Nbad(self):
         """
-        Returns the number of bad rays.
+        Returns the number of STORED bad rays (see Notes in get_number_of_rays()).
 
         Returns
         -------
@@ -233,6 +323,19 @@ class S4Beam(object):
         """
         return self.get_number_of_rays(nolost=2)
 
+    @property
+    def Nstored(self):
+        """
+        Returns the number of stored rays (rays.shape[0]).
+
+        Returns
+        -------
+        int
+            The number of stored rays.
+
+        """
+        return self.rays.shape[0]
+
     def get_photon_energy_eV(self, nolost=0):
         """
         Returns a numpy array with the photon energy of the rays in eV.
@@ -240,7 +343,9 @@ class S4Beam(object):
         Parameters
         ----------
         nolost : int, optional
-            0=return all rays, 1=Return only good rays (non-lost rays), 2=Return only lost rays.
+            * 0=return all rays,
+            * 1=Return only good rays (non-lost rays),
+            * 2=Return only lost rays.
 
         Returns
         -------
@@ -257,7 +362,9 @@ class S4Beam(object):
         Parameters
         ----------
         nolost : int, optional
-            0=return all rays, 1=Return only good rays (non-lost rays), 2=Return only lost rays.
+            * 0=return all rays,
+            * 1=Return only good rays (non-lost rays),
+            * 2=Return only lost rays.
 
         Returns
         -------
@@ -308,6 +415,7 @@ class S4Beam(object):
         ----------
         column : int
             Number of column (starting with 1). Possible choice for column are:
+
             *  1   X spatial coordinate [user's unit]
             *  2   Y spatial coordinate [user's unit]
             *  3   Z spatial coordinate [user's unit]
@@ -331,22 +439,22 @@ class S4Beam(object):
             * 20   R= SQRT(X^2+Y^2+Z^2)
             * 21   angle from Y axis
             * 22   the magnitude of the Electromagnetic vector
-            * 23   |E|^2 (total intensity)
+            * 23   `|`E`|`^2 (total intensity)
             * 24   total intensity for s-polarization
             * 25   total intensity for p-polarization
             * 26   photon energy in eV !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
             * 27   K = 2 pi / lambda * col4 [A^-1]
             * 28   K = 2 pi / lambda * col5 [A^-1]
             * 29   K = 2 pi / lambda * col6 [A^-1]
-            * 30   S0-stokes = |Ep|^2 + |Es|^2
-            * 31   S1-stokes = |Ep|^2 - |Es|^2
-            * 32   S2-stokes = 2 |Es| |Ep| cos(phase_s-phase_p)
-            * 33   S3-stokes = 2 |Es| |Ep| sin(phase_s-phase_p)
+            * 30   S0-stokes = `|`Ep`|`^2 + `|`Es`|`^2
+            * 31   S1-stokes = `|`Ep`|`^2 - `|`Es`|`^2
+            * 32   S2-stokes = 2 `|`Es`|` `|`Ep`|` cos(phase_s-phase_p)
+            * 33   S3-stokes = 2 `|`Es`|` `|`Ep`|` sin(phase_s-phase_p)
             * 34   Power = intensity(col 23) * energy (col 11)
-            * 35   Angle-X with Y: |arcsin(X')|
-            * 36   Angle-Z with Y: |arcsin(Z')|
-            * 37   Angle-X with Y: |arcsin(X') - mean(arcsin(X'))|
-            * 38   Angle-Z with Y: |arcsin(Z') - mean(arcsin(Z'))|
+            * 35   Angle-X with Y: `|`arcsin(X')`|`
+            * 36   Angle-Z with Y: `|`arcsin(Z')`|`
+            * 37   Angle-X with Y: `|`arcsin(X') - mean(arcsin(X'))`|`
+            * 38   Angle-Z with Y: `|`arcsin(Z') - mean(arcsin(Z'))`|`
             * 39   Phase difference in rad: Phase (s-polarization) - Phase (p-polarization)
             * 40   Complex amplitude of the electric vector (s-polarization)
             * 41   Complex amplitude of the electric vector (p-polarization)
@@ -479,7 +587,9 @@ class S4Beam(object):
             The number of the columns (column numbers start from 1).
 
         nolost : int, optional
-            0=return all rays, 1=Return only good rays (non-lost rays), 2=Return only lost rays.
+            * 0=return all rays,
+            * 1=Return only good rays (non-lost rays),
+            * 2=Return only lost rays.
 
         Returns
         -------
@@ -499,7 +609,39 @@ class S4Beam(object):
 
     def get_standard_deviation(self,col, nolost=1, ref=0):
         """
-        Returns the standard deviation of one variable in the beam.
+        Returns the weighted standard deviation of one variable in the beam.
+
+        Parameters
+        ----------
+        col : int
+            The column number.
+
+        nolost : int, optional
+            * 0=use all rays,
+            * 1=use only good rays (non-lost rays),
+            * 2=use only lost rays.
+
+        ref : int, optional
+            ref: 0 = no weight, other value = weight with intensity (col23)
+
+        Returns
+        -------
+        float
+            the st dev.
+
+        """
+        x = self.get_column(col, nolost=nolost)
+        if ref == 0:
+            return x.std()
+        else:
+            w = self.get_column(23, nolost=nolost)
+            average = numpy.average(x, weights=w)
+            variance = numpy.average( (x-average)**2, weights=w)
+            return(numpy.sqrt(variance))
+
+    def get_average(self, col, nolost=1, ref=0):
+        """
+        Returns the weighted average of one variable in the beam.
 
         Parameters
         ----------
@@ -508,25 +650,25 @@ class S4Beam(object):
 
 
         nolost : int, optional
-            0=use all rays, 1=use only good rays (non-lost rays), 2=use only lost rays.
+            * 0=use all rays,
+            * 1=use only good rays (non-lost rays),
+            * 2=use only lost rays.
 
         ref : int, optional
-            ref: 0 = no weight, 1=weight with intensity (col23)
+            ref: 0 = no weight, other value = weight with intensity (col23)
 
         Returns
         -------
         float
-            the st dev.
+            the average value.
 
         """
-        x = self.get_column(col,nolost=nolost)
+        x = self.get_column(col, nolost=nolost)
         if ref == 0:
-            return x.std()
+            return numpy.mean(x)
         else:
-            w = self.get_column(23,nolost=nolost)
-            average = numpy.average(x, weights=w)
-            variance = numpy.average( (x-average)**2, weights=w)
-            return(numpy.sqrt(variance))
+            w = self.get_column(23, nolost=nolost)
+            return numpy.average(x, weights=w)
 
     def intensity(self, nolost=0):
         """
@@ -536,7 +678,9 @@ class S4Beam(object):
         ----------
 
         nolost : int, optional
-            0=use all rays, 1=use only good rays (non-lost rays), 2=use only lost rays.
+            * 0=use all rays,
+            * 1=use only good rays (non-lost rays),
+            * 2=use only lost rays.
 
 
         Returns
@@ -545,7 +689,7 @@ class S4Beam(object):
             total intensity.
 
         """
-        w = self.get_column(23,nolost=nolost)
+        w = self.get_column(23, nolost=nolost)
         return w.sum()
 
     def get_good_range(self, icol, nolost=0):
@@ -558,7 +702,9 @@ class S4Beam(object):
             the column number (SHADOW convention, starting from 1)
 
         nolost : int, optional
-            0=use all rays, 1=use only good rays (non-lost rays), 2=use only lost rays.
+            * 0=use all rays,
+            * 1=use only good rays (non-lost rays),
+            * 2=use only lost rays.
 
         Returns
         -------
@@ -657,26 +803,80 @@ class S4Beam(object):
         return vector_norm(v_S), vector_norm(v_P)
 
     def get_jones(self, nolost=0):
+        """
+        Computes Jones vector.
+
+        Parameters
+        ----------
+        nolost : int, optional
+            * 0=use all rays,
+            * 1=use only good rays (non-lost rays),
+            * 2=use only lost rays.
+
+        Returns
+        -------
+        numpy.array
+            The two components of the Jones vector for the rays. Shape: (nrays, 2).
+
+        """
+        j0, j1 = self.get_jones_components(nolost=nolost)
+        J = numpy.zeros((self.N, 2), dtype=complex)
+        J[:, 0] = j0
+        J[:, 1] = j1
+        return J
+
+    def get_jones_components(self, nolost=0):
+        """
+        Computes the components Jones vector.
+
+        Parameters
+        ----------
+        nolost : int, optional
+            * 0=use all rays,
+            * 1=use only good rays (non-lost rays),
+            * 2=use only lost rays.
+
+        Returns
+        -------
+        tuple
+            The two components of the Jones vector for the rays (j1, j1).
+
+        """
         intS = self.get_column(24, nolost=nolost)
         intP = self.get_column(25, nolost=nolost)
         phiS = self.get_column(14, nolost=nolost)
         phiP = self.get_column(15, nolost=nolost)
-        J = numpy.zeros((phiS.size, 2), dtype=complex)
-        J[:, 0] = numpy.sqrt(intS) * numpy.exp(1j * phiS)
-        J[:, 1] = numpy.sqrt(intP) * numpy.exp(1j * phiP)
-        return J
+        j0 = numpy.sqrt(intS) * numpy.exp(1j * phiS)
+        j1 = numpy.sqrt(intP) * numpy.exp(1j * phiP)
+        return j0,j1
 
-    def get_efield_directions(self):
-        vOut = self.get_columns([4, 5, 6]).T
-        E_S = self.get_columns([7, 8, 9]).T
-        E_P = self.get_columns([16, 17, 18]).T
+    def get_efield_directions(self, nolost=0):
+        """
+        Computes the directions of the electric vector field.
+
+        Parameters
+        ----------
+        nolost : int, optional
+            * 0=use all rays,
+            * 1=use only good rays (non-lost rays),
+            * 2=use only lost rays.
+
+        Returns
+        -------
+        tuple
+            (e_S, e_P) the directions (array(nrays, 3)) for the S and P components of the electric field.
+
+        """
+        vOut = self.get_columns([4, 5, 6], nolost=nolost).T
+        E_S  = self.get_columns([7, 8, 9], nolost=nolost).T
+        E_P  = self.get_columns([16, 17, 18], nolost=nolost).T
         modE_S = vector_modulus(E_S)
         modE_P = vector_modulus(E_P)
 
         e_S = numpy.zeros_like(E_S)
         e_P = numpy.zeros_like(E_P)
 
-        for i in range(self.N): # TODO: vectorize? difficult for possible patological cases....
+        for i in range(self.Nstored): # TODO: vectorize? difficult for possible patological cases....
             if modE_S[i] > 0:
                 e_S[i, :] = E_S[i, :] / modE_S[i]
                 tmp = vector_cross(e_S[numpy.newaxis, i, :], vOut[numpy.newaxis, i, :])
@@ -695,6 +895,55 @@ class S4Beam(object):
         return e_S, e_P
 
 
+    def isnan(self, verbose=1):
+        """
+        Informs on the existence of nan and returns the number of rays with nan.
+
+        Parameters
+        ----------
+        verbose : int, optional
+            * 0=No,
+            * 1=verbose output.
+
+
+        Returns
+        -------
+        tuple
+            (N1_all, N1_good) the number of rays with nan in all rays (N1_all) and in good rays (N1_good).
+
+        """
+        x = self.get_rays(nolost=0)
+        N0_all = numpy.isnan(x).sum()
+        N1_all = numpy.isnan(x.sum(axis=1)).sum()
+
+        x = self.get_rays(nolost=1)
+        N0_good = numpy.isnan(x).sum()
+        N1_good = numpy.isnan(x.sum(axis=1)).sum()
+
+        if verbose:
+            print("Number if nan in all rays: ",            N0_all)
+            print("Number of rays with nan in all rays: ",  N1_all)
+            print("Number nan in good rays: ",              N0_good)
+            print("Number of rays with nan in good rays: ", N1_good)
+
+        return N1_all, N1_good
+
+    def fixnan(self, value=0.0):
+        """
+        Replaces nan by zero (or other value).
+
+        Parameters
+        ----------
+        value : float, optional
+            The replacement value.
+
+        """
+        N_all, N_good = self.isnan(verbose=0)
+        if N_all > 0:
+            self.rays[numpy.isnan(self.rays)] = value
+
+        if N_good > 0:
+            print("**WARNING: Fixed nan values in rays that are good! **")
 
     #
     # tools
@@ -719,12 +968,14 @@ class S4Beam(object):
             number of bins of the histogram.
 
         nolost : int, optional
-            0=use all rays, 1=use only good rays (non-lost rays), 2=use only lost rays.
+            * 0=use all rays,
+            * 1=use only good rays (non-lost rays),
+            * 2=use only lost rays.
 
         ref : int (or str), optional
-                 0, None, "no", "NO" or "No":   only count the rays.
-                 23, "Yes", "YES" or "yes":     weight with intensity (look at col=23 |E|^2 total intensity).
-                 other value: use that column as weight.
+                 * 0, None, "no", "NO" or "No":   only count the rays.
+                 * 23, "Yes", "YES" or "yes":     weight with intensity (look at col=23 |E|^2 total intensity).
+                 * other value: use that column as weight.
 
         write : str, optional
                 file name with the histogram (default=None, do not write any file).
@@ -734,10 +985,12 @@ class S4Beam(object):
             (e.g., for changing scale from cm to um then factor=1e4).
 
         calculate_widths : int, optional
-            0: do not calculate full-width at half-maximum (FWHM). 1=Do calculate FWHM.
+            * 0: do not calculate full-width at half-maximum (FWHM),
+            * 1: Do calculate FWHM.
 
         calculate_hew : int, optional
-            0: do not calculate Half-Energy Width (HEW). 1=Do calculate HEW.
+            * 0: do not calculate Half-Energy Width (HEW),
+            * 1: Do calculate HEW.
 
         Returns
         -------
@@ -745,7 +998,7 @@ class S4Beam(object):
             a python dictionary with the calculated histogram. Some of the keys are:
                  'error', 'col', 'write', 'nolost', 'nbins', 'xrange', 'factor'
                  'histogram', 'bins', 'histogram_sigma', 'bin_center', 'bin_left', 'bin_right',
-                 'intensity', 'fwhm', 'nrays', 'good_rays'.
+                 'intensity', 'fwhm', 'nrays', 'good_rays', 'lost_rays'.
 
         """
         # initialize return value
@@ -849,6 +1102,7 @@ class S4Beam(object):
             ticket['fwhm'] = None
             ticket['nrays'] = self.get_number_of_rays(nolost=0)
             ticket['good_rays'] = self.get_number_of_rays(nolost=1)
+            ticket['lost_rays'] = self.get_number_of_rays(nolost=2)
 
             # for practical purposes, writes the points the will define the histogram area
             tmp_b = []
@@ -903,9 +1157,10 @@ class S4Beam(object):
                 # CALCULATE HALF-ENERGY-WIDTH
                 cdf = numpy.cumsum(ticket["histogram"])
                 cdf /= cdf.max()
-                # hew is two times  the x value that has cdf=0.5 (Eq. 9 in https://arxiv.org/pdf/1505.07474v2.pdf)
-                hew = 2 * float(bin_center[numpy.argwhere(cdf > 0.5)][0])
-                ticket["hew"] = hew
+                hew1 = float(bin_center[numpy.argwhere(cdf > 0.25)][0])
+                hew2 = float(bin_center[numpy.argwhere(cdf > 0.75)][0])
+                ticket["hew"] = hew2 - hew1
+
 
         return ticket
 
@@ -929,9 +1184,9 @@ class S4Beam(object):
             The number of bins.
 
         ref : int (or str), optional
-                 0, None, "no", "NO" or "No":   only count the rays.
-                 23, "Yes", "YES" or "yes":     weight with intensity (look at col=23 |E|^2 total intensity).
-                 other value: use that column as weight.
+                 * 0, None, "no", "NO" or "No":   only count the rays.
+                 * 23, "Yes", "YES" or "yes":     weight with intensity (look at col=23 |E|^2 total intensity).
+                 * other value: use that column as weight.
 
         nbins_h: int
             number of bins in H.
@@ -940,7 +1195,9 @@ class S4Beam(object):
             number of bins in V.
 
         nolost : int, optional
-            0=use all rays, 1=use only good rays (non-lost rays), 2=use only lost rays.
+            * 0=use all rays,
+            * 1=use only good rays (non-lost rays),
+            * 2=use only lost rays.
 
         xrange: tuple or list:
             range for H.
@@ -949,7 +1206,9 @@ class S4Beam(object):
             range for V.
 
         calculate_widths: int
-            0=No, 1=calculate FWHM (default), 2=Calculate FWHM and FW at 25% and 75% if Maximum.
+            * 0=No,
+            * 1=calculate FWHM (default),
+            * 2=Calculate FWHM and FW at 25% and 75% if Maximum.
 
         Returns
         -------
@@ -993,6 +1252,7 @@ class S4Beam(object):
             ticket['bin_h_center'] = ticket['bin_v_center'] = ticket['intensity'] = numpy.nan
             ticket['nrays'] = self.get_number_of_rays(nolost=0)
             ticket['good_rays'] = 0
+            ticket['lost_rays'] = 0
             ticket['fwhm_h'] = ticket['fwhm_v'] = None
             if calculate_widths > 0:  ticket['fwhm_coordinates_h'] = ticket['fwhm_coordinates_v'] = (numpy.nan, numpy.nan)
             if calculate_widths == 2: ticket["fw25%m_h"] = ticket["fw75%m_h"] = ticket["fw25%m_v"] = ticket["fw75%m_v"] = None
@@ -1022,6 +1282,7 @@ class S4Beam(object):
             ticket['intensity'] = self.intensity(nolost=nolost)
             ticket['nrays'] = self.get_number_of_rays(nolost=0)
             ticket['good_rays'] = self.get_number_of_rays(nolost=1)
+            ticket['lost_rays'] = self.get_number_of_rays(nolost=2)
 
             # CALCULATE fwhm
 
@@ -1081,6 +1342,82 @@ class S4Beam(object):
 
         return ticket
 
+    def calculate_hew_x(self, nolost=0, bins=100):
+        """
+        Calculate HEW (Half Energy Width) for the Horizontal angle (column 4)
+        Parameters
+        ----------
+
+        nbins : int, optional
+            number of bins of the histogram.
+
+        nolost : int, optional
+            * 0=use all rays,
+            * 1=use only good rays (non-lost rays),
+            * 2=use only lost rays.
+
+        Returns
+        -------
+            float
+                The hew value (in radians).
+        """
+        xp = self.get_column(4, nolost=nolost)
+        w = self.get_column(23, nolost=nolost)
+        h_x, bins_x = numpy.histogram(numpy.abs(xp - numpy.average(xp, weights=w)), bins=bins, weights=w)
+        bin_center = bins_x[:-1] + (bins_x[1] - bins_x[0]) * 0.5
+        cdf_x = numpy.cumsum(h_x)
+        cdf_x /= cdf_x.max()
+        hew_x = 2 * float(bin_center[numpy.argwhere(cdf_x > 0.5)][0])
+        return hew_x
+
+    def calculate_hew_z(self, nolost=0, bins=100):
+        """
+        Calculate HEW (Half Energy Width) for the Vertical angle (column 6)
+        Parameters
+        ----------
+
+        nbins : int, optional
+            number of bins of the histogram.
+
+        nolost : int, optional
+            * 0=use all rays,
+            * 1=use only good rays (non-lost rays),
+            * 2=use only lost rays.
+
+        Returns
+        -------
+            float
+                The hew value (in radians).
+        """
+        zp = self.get_column(6, nolost=nolost)
+        w = self.get_column(23, nolost=nolost)
+        h_z, bins_z = numpy.histogram(numpy.abs(zp - numpy.average(zp, weights=w)), bins=bins, weights=w)
+        bin_center = bins_z[:-1] + (bins_z[1] - bins_z[0]) * 0.5
+        cdf_z = numpy.cumsum(h_z)
+        cdf_z /= cdf_z.max()
+        hew_z = 2 * float(bin_center[numpy.argwhere(cdf_z > 0.5)][0])
+        return hew_z
+
+    def calculate_hew(self, nolost=0, bins=100):
+        """
+        Calculate HEW (Half Energy Width) for the Horizontal and Vertical angles (columns 4 and 6)
+        Parameters
+        ----------
+
+        nbins : int, optional
+            number of bins of the histogram.
+
+        nolost : int, optional
+            * 0=use all rays,
+            * 1=use only good rays (non-lost rays),
+            * 2=use only lost rays.
+
+        Returns
+        -------
+            tuple
+                The hew values (in radians).
+        """
+        return self.calculate_hew_x(nolost=nolost, bins=bins), self.calculate_hew_z(nolost=nolost, bins=bins)
     #
     # setters
     #
@@ -1126,17 +1463,26 @@ class S4Beam(object):
         self.rays[:,10] =  2*numpy.pi/(wavelength * 1e2)
 
     def set_jones(self, J, e_S=None, e_P=None):
-        if self.N != J.shape[0]:
+        if self.Nstored != J.shape[0]:
             raise Exception("Incompatible dimension of J vector: it is (%d,%d), it must be (%d,2)" %
-                            (J.shape[0], J.shape[2], self.N))
+                            (J.shape[0], J.shape[2], self.Nstored))
+
+        j0 = J[:, 0]
+        j1 = J[:, 1]
+        self.set_jones_components(j0, j1, e_S=e_S, e_P=e_P)
+
+    def set_jones_components(self, j0, j1, e_S=None, e_P=None):
+        if self.Nstored != j0.size:
+            raise Exception("Incompatible dimension of j0 vector: it is %d, it must be %d" %
+                            (j1.size, self.Nstored))
 
         if e_S is None or e_P is None:
             ee_S, ee_P = self.get_efield_directions()
             if e_S is None: e_S = ee_S
             if e_P is None: e_P = ee_P
 
-        E_S = vector_multiply_scalar(e_S, numpy.abs(J[:, 0]))
-        E_P = vector_multiply_scalar(e_P, numpy.abs(J[:, 1]))
+        E_S = vector_multiply_scalar(e_S, numpy.abs(j0))
+        E_P = vector_multiply_scalar(e_P, numpy.abs(j1))
 
         self.set_column( 7, E_S[:, 0])
         self.set_column( 8, E_S[:, 1])
@@ -1144,8 +1490,8 @@ class S4Beam(object):
         self.set_column(16, E_P[:, 0])
         self.set_column(17, E_P[:, 1])
         self.set_column(18, E_P[:, 2])
-        self.set_column(14, numpy.angle(J[:, 0]))
-        self.set_column(15, numpy.angle(J[:, 1]))
+        self.set_column(14, numpy.angle(j0))
+        self.set_column(15, numpy.angle(j1))
 
     #
     # info
@@ -1299,7 +1645,8 @@ class S4Beam(object):
             the distance o.e. to image in m.
         rad: boolean, optional
             set False if theta is given in degrees.
-                refraction_index
+        refraction_index : float
+            Define the real part of the refraction index.
         apply_attenuation : int, optional
             A flag to indicate that attenuation must be applied (using linear_attenuation_coefficient).
         linear_attenuation_coefficient : float or numpy array
@@ -1419,10 +1766,10 @@ class S4Beam(object):
         OFFX : float
             translation distance in m along the X axis.
 
-        OFFX : float
+        OFFY : float
             translation distance in m along the Y axis.
 
-        OFFX : float
+        OFFZ : float
             translation distance in m along the Z axis.
 
         X_ROT : float
@@ -1508,10 +1855,10 @@ class S4Beam(object):
         OFFX : float
             translation distance in m along the X axis.
 
-        OFFX : float
+        OFFY : float
             translation distance in m along the Y axis.
 
-        OFFX : float
+        OFFZ : float
             translation distance in m along the Z axis.
 
         X_ROT : float
@@ -2480,7 +2827,7 @@ class S4Beam(object):
     @classmethod
     def load_h5(cls, filename, simulation_name="run001", beam_name="begin"):
         """
-        loads a beam from an h5 file.
+        Loads a beam from an h5 file.
 
         Parameters
         ----------
@@ -2503,7 +2850,7 @@ class S4Beam(object):
         column_names = cls.column_short_names_with_column_number()
 
         try:
-            x = (f["%s/%s/col01 x"%(simulation_name,beam_name)])[:]
+            x = (f["%s/%s/%s" % (simulation_name, beam_name, column_names[0])])[:]
 
             beam = S4Beam(N=x.size)
             rays = numpy.zeros( (x.size,18))
@@ -2584,7 +2931,6 @@ class S4Beam(object):
         Es = self.get_columns([7, 8, 9]).T
         Ep = self.get_columns([16, 17, 18]).T
         v = self.get_columns([4, 5, 6]).T
-        print(Es.shape, Ep.shape, v.shape)
 
         if numpy.any(numpy.abs(vector_modulus(v) -1)  > accuracy):
             out = 0
@@ -2611,25 +2957,79 @@ class S4Beam(object):
         return out
 
 if __name__ == "__main__":
-    print(S4Beam.column_names_with_column_number())
-    print(S4Beam.column_short_names_with_column_number())
-    print(S4Beam.column_names_formatted())
-    print(S4Beam.column_names_formatted_with_column_number())
-    print(S4Beam.get_UVW())
+    if 0:
+        print(S4Beam.column_names_with_column_number())
+        print(S4Beam.column_short_names_with_column_number())
+        print(S4Beam.column_names_formatted())
+        print(S4Beam.column_names_formatted_with_column_number())
+        print(S4Beam.get_UVW())
 
-    B = S4Beam.initialize_as_pencil(N=1000)
-    # print(B.info())
-    #
-    # print("number of rays : ", B.N, B.get_number_of_rays())
-    # print("number of good rays : ", B.Ngood, B.get_number_of_rays(nolost=1))
-    # print("number of bad rays : ", B.Nbad, B.get_number_of_rays(nolost=2))
-    # B = S4Beam.initialize_as_pencil(N=100)
-    # print("all : ", (B.get_rays(nolost=0)).shape, B.rays.shape)
-    # print("good: ", (B.get_rays(nolost=1)).shape, B.rays_good.shape)
-    # print("bad : ", (B.get_rays(nolost=2)).shape, B.rays_bad.shape)
-    #
-    # print(B.focnew_coeffs())
+    if 0:
+        B = S4Beam.initialize_as_pencil(N=1000)
+        print(B.info())
+        print("number of rays : ", B.N, B.get_number_of_rays())
+        print("number of good rays : ", B.Ngood, B.get_number_of_rays(nolost=1))
+        print("number of bad rays : ", B.Nbad, B.get_number_of_rays(nolost=2))
 
-    print(B.efields_orthogonal())
+    if 0:
+        B = S4Beam.initialize_as_pencil(N=2000)
+        print(B.focnew_coeffs())
+        print(B.efields_orthogonal())
+        print(B.get_average(1), B.get_average(1, ref=23))
+        print(B.isnan())
+
+    if 1:  # check cleaned beam
+        B = S4Beam.initialize_as_pencil(N=2000)
+        print("Beam cleaned? ", B.is_cleaned())
+        print("...reflagging 100, and cleaning...")
+        B.rays[100:200, 9] = -1
+        B.clean_lost_rays()
+        print("Beam cleaned? ", B.is_cleaned())
+        print("number of rays : ", B.N, B.get_number_of_rays())
+        print("number of good rays : ", B.Ngood, B.get_number_of_rays(nolost=1))
+        print("number of bad rays : ", B.Nbad, B.get_number_of_rays(nolost=2))
+        print("number of stored rays: ", (B.Nstored))
+
+        print("\n...reflagging 200, and NOT cleaning...")
+        B.rays[1100:1300, 9] = -1
+        print("Beam cleaned? ", B.is_cleaned())
+        print("number of rays : ", B.N, B.get_number_of_rays())
+        print("number of good rays : ", B.Ngood, B.get_number_of_rays(nolost=1))
+        print("number of bad rays : ", B.Nbad, B.get_number_of_rays(nolost=2))
+        print("number of stored rays: ", (B.Nstored))
+        print("all : ", (B.get_rays(nolost=0)).shape, B.rays.shape, B.rays)
+        print("good: ", (B.get_rays(nolost=1)).shape, B.rays_good.shape, B.rays_good)
+        print("bad : ", (B.get_rays(nolost=2)).shape, B.rays_bad.shape, B.rays_bad)
+        print("beam shape: ", B.rays.shape)
+        print(B.get_column(12)[-1], B.rays.shape)
+
+
+    if 0:  # check append beam
+        A = S4Beam.initialize_as_pencil(N=1000)
+
+        B = S4Beam.initialize_as_pencil(N=2000)
+        print("Beam cleaned? ", B.is_cleaned())
+        B.rays[100:200, 11] = -1
+        B.clean_lost_rays()
+        print("Beam cleaned? ", B.is_cleaned())
+        print("last index: ", A.get_column(12)[-1])
+
+
+        A.append_beam(B)
+        print("last index: ", A.get_column(12)[-1])
+        A.append_beam(B)
+        print("last index: ", A.get_column(12)[-1])
+
+        print("number of rays : ", A.N, A.get_number_of_rays())
+        print("number of good rays : ", A.Ngood, A.get_number_of_rays(nolost=1))
+        print("number of bad rays : ", A.Nbad, A.get_number_of_rays(nolost=2))
+        print("number of stored rays: ", (A.Nstored))
+        print("all : ", (A.get_rays(nolost=0)).shape, A.rays.shape, A.rays)
+        print("good: ", (A.get_rays(nolost=1)).shape, A.rays_good.shape, A.rays_good)
+        print("bad : ", (A.get_rays(nolost=2)).shape, A.rays_bad.shape, A.rays_bad)
+        print("rays shape, Nstored: ", A.rays.shape, A.Nstored)
+        print("last index: ", A.get_column(12)[-1])
+
+
 
 

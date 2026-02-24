@@ -41,7 +41,7 @@ class S4AdditionalNumericalMeshMirror(S4NumericalMeshMirror):
                  # inputs related to mirror reflectivity
                  f_reflec=0 if ideal_mirror is None else ideal_mirror._f_reflec,  # reflectivity of surface: 0=no reflectivity, 1=full polarization
                  f_refl=0 if ideal_mirror is None else ideal_mirror._f_refl,  # 0=prerefl file
-                     # 1=electric susceptibility
+                     # 1=refraction index
                      # 2=user defined file (1D reflectivity vs angle)
                      # 3=user defined file (1D reflectivity vs energy)
                      # 4=user defined file (2D reflectivity vs energy and angle)
@@ -51,7 +51,7 @@ class S4AdditionalNumericalMeshMirror(S4NumericalMeshMirror):
                 refraction_index=1+0j if ideal_mirror is None else ideal_mirror._refraction_index,  # refraction index (complex) for f_refl=1)
                 coating_material= ""  if ideal_mirror is None else ideal_mirror._coating,   # string with coating material formula for f_refl=5,6
                 coating_density=  1.0 if ideal_mirror is None else ideal_mirror._coating_density,    # coating material density for f_refl=5,6
-                coating_roughness=0.0 if ideal_mirror is None else ideal_mirror._coating_roughness,  # coating material roughness in A for f_refl=5,6
+                coating_roughness=0.0 if ideal_mirror is None else ideal_mirror._coating_roughness,  # coating material roughness in A for f_refl=0,1,5,6
                 )
 
         self.__ideal_mirror          = ideal_mirror
@@ -179,7 +179,7 @@ class S4AdditionalNumericalMeshMirrorElement(S4MirrorElement):
         txt += self.to_python_code_movements()
         txt += "\nfrom shadow4.beamline.optical_elements.mirrors.s4_additional_numerical_mesh_mirror import S4AdditionalNumericalMeshMirrorElement"
         txt += "\nbeamline_element = S4AdditionalNumericalMeshMirrorElement(optical_element=optical_element, coordinates=coordinates, movements=movements, input_beam=beam)"
-        txt += "\n\nbeam, mirr = beamline_element.trace_beam()"
+        txt += "\n\nbeam, footprint = beamline_element.trace_beam()"
         return txt
 
 if __name__ == "__main__":

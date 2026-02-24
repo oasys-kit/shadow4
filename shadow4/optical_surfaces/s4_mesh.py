@@ -210,9 +210,25 @@ class S4Mesh(S4OpticalSurface):
         self.__v0 = VIN
 
         i_flag = numpy.ones(npoints)
-        answer, success = self._solve(x_start=numpy.zeros(npoints))
 
-        i_flag[numpy.where(success == False)] = -1
+        x_start = numpy.zeros(npoints)
+
+        t_solution = root(self._equation_to_solve, x_start, method='df-sane')
+                          # , tol=1e-15,options = {'line_search': 'cruz', 'fatol': 1e-15})
+
+        answer, success = t_solution['x'], t_solution['success']
+
+        # for key in t_solution.keys():
+        #     tmp = t_solution[key]
+        #     if isinstance(tmp, numpy.ndarray):
+        #         print(">>>", key, tmp.shape)
+        #     else:
+        #         print(">>>", key, tmp)
+
+        if not success:
+            i_flag *= -1
+            raise Exception("Error in S4Mesh: %s" % t_solution['message'])
+
 
         t1 = time.time()
         if is_debug(): print(">>>>> done main loop to find solutions, spent: %g s for %d rays (%g ms/ray)\n\n" % (t1 - t0, npoints, 1000 * (t1 - t0) / npoints))
@@ -379,11 +395,6 @@ class S4Mesh(S4OpticalSurface):
         _, _, z1 = self._surface_vs_t(t)
 
         return z1 - self._line_z(t)
-
-    def _solve(self, x_start: numpy.ndarray):
-        t_solution = root(self._equation_to_solve, x_start, method='df-sane', tol=None)
-
-        return t_solution['x'], t_solution['success']
 
     @classmethod
     def _read_surface_error_h5file(cls, filename):

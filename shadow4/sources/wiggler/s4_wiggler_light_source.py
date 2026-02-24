@@ -376,9 +376,6 @@ class S4WigglerLightSource(S4LightSource):
         NRAYS = self.get_nrays()
         sigmas = syned_electron_beam.get_sigmas_all()
 
-        if self.get_seed() != 0:
-            numpy.random.seed(self.get_seed())
-
         t0 = time.time()
         if wiggler._FLAG_EMITTANCE:
             if numpy.array(numpy.abs(sigmas)).sum() == 0:
@@ -1018,12 +1015,17 @@ class S4WigglerLightSource(S4LightSource):
         instance of S4Beam
         """
 
-        return S4Beam.initialize_from_array(self.__calculate_rays(
-            user_unit_to_m =1.0,
-            F_COHER                               = F_COHER,
+        if self.get_seed() != 0:
+            numpy.random.seed(self.get_seed())
+
+        beam = S4Beam.initialize_from_array(self.__calculate_rays(
+            user_unit_to_m                       = 1.0,
+            F_COHER                              = F_COHER,
             psi_interval_in_units_one_over_gamma = psi_interval_in_units_one_over_gamma,
             psi_interval_number_of_points        = self.get_magnetic_structure()._psi_interval_number_of_points,
         ))
+
+        return beam
 
     def calculate_spectrum(self, output_file=""):
         """
@@ -1111,8 +1113,7 @@ class S4WigglerLightSource(S4LightSource):
         script += "\nbeam = light_source.get_beam()"
         return script
 if __name__ == "__main__":
-    from srxraylib.plot.gol import plot_scatter, set_qt
-    set_qt()
+    from srxraylib.plot.gol import plot_scatter
 
     # e_min = 5000.0 # 70490.0 #
     # e_max = 100000.0 # 70510.0 #
@@ -1190,21 +1191,19 @@ if __name__ == "__main__":
     source = S4Wiggler(
         magnetic_field_periodic=0,  # 0=external, 1=periodic
         file_with_magnetic_field="/nobackup/gurb1/srio/Oasys/SW_BM18_Joel.txt",  # used only if magnetic_field_periodic=0
-        K_vertical=10.0,  # syned Wiggler pars: used only if magnetic_field_periodic=1
-        period_length=0.1,  # syned Wiggler pars: used only if magnetic_field_periodic=1
+        K_vertical=10.0,       # syned Wiggler pars: used only if magnetic_field_periodic=1
+        period_length=0.1,     # syned Wiggler pars: used only if magnetic_field_periodic=1
         number_of_periods=10,  # syned Wiggler pars: used only if magnetic_field_periodic=1
-        emin=100.0,  # Photon energy scan from energy (in eV)
+        emin=100.0,     # Photon energy scan from energy (in eV)
         emax=200000.0,  # Photon energy scan to energy (in eV)
-        # emin=2000.0,  # Photon energy scan from energy (in eV)
-        # emax=2020.0,  # Photon energy scan to energy (in eV)
-        ng_e=51,  # Photon energy scan number of points
-        ng_j=501,  # Number of points in electron trajectory (per period) for internal calculation only
+        ng_e=51,        # Photon energy scan number of points
+        ng_j=501,       # Number of points in electron trajectory (per period) for internal calculation only
         flag_interpolation=2,  #
         psi_interval_number_of_points=101,
-        flag_emittance=1,  # Use emittance (0=No, 1=Yes)
-        shift_x_flag=4,  # 0="No shift", 1="Half excursion", 2="Minimum", 3="Maximum", 4="Value at zero", 5="User value"
-        shift_x_value=0.001,  # used only if shift_x_flag=5
-        shift_betax_flag=4,  # 0="No shift", 1="Half excursion", 2="Minimum", 3="Maximum", 4="Value at zero", 5="User value"
+        flag_emittance=1,       # Use emittance (0=No, 1=Yes)
+        shift_x_flag=4,         # 0="No shift", 1="Half excursion", 2="Minimum", 3="Maximum", 4="Value at zero", 5="User value"
+        shift_x_value=0.001,    # used only if shift_x_flag=5
+        shift_betax_flag=4,     # 0="No shift", 1="Half excursion", 2="Minimum", 3="Maximum", 4="Value at zero", 5="User value"
         shift_betax_value=0.0,  # used only if shift_betax_flag=5
     )
 
@@ -1215,7 +1214,8 @@ if __name__ == "__main__":
                                         electron_beam=electron_beam,
                                         magnetic_structure=source,
                                         nrays=20000,
-                                        seed=5676561)
+                                        seed=0, # 5676561,
+                                        )
 
 
 
@@ -1232,12 +1232,12 @@ if __name__ == "__main__":
     #     photon_energy, flux, spectral_power = light_source.calculate_spectrum()
     #     plot(photon_energy, flux, xtitle="photon energy [eV]", ytitle="Flux photons/s/0.001bw")
     #
-    #
-    # beam = light_source.get_beam()
-    # # test plot
-    # from srxraylib.plot.gol import plot_scatter
-    # rays = beam.get_rays()
-    # plot_scatter(1e6 * rays[:, 0], 1e6 * rays[:, 2], title='(X,Z) in microns',   xrange=[-1800,100], yrange=[-100,100], show=0)
-    # plot_scatter(1e6 * rays[:, 3], 1e6 * rays[:, 5], title='(Xp,Zp) in microns', xrange=[-10000,8000], yrange=[-300,300])
+
+    beam = light_source.get_beam()
+    # test plot
+    from srxraylib.plot.gol import plot_scatter
+    rays = beam.get_rays()
+    plot_scatter(1e6 * rays[:, 0], 1e6 * rays[:, 2], title='(X,Z) in microns',   xrange=[-1800,100], yrange=[-100,100], show=0)
+    plot_scatter(1e6 * rays[:, 3], 1e6 * rays[:, 5], title='(Xp,Zp) in microns', xrange=[-10000,8000], yrange=[-300,300])
 
     print(light_source.get_info())

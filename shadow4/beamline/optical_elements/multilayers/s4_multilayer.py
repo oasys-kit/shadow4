@@ -2,24 +2,21 @@ import numpy
 
 from syned.beamline.shape import Rectangle, Ellipse
 from syned.beamline.element_coordinates import ElementCoordinates
+from syned.beamline.optical_elements.multilayers.multilayer import Multilayer
 
-# TODO: change from syned.beamline.optical_elements.multilayers.multilayer import Multilayer
-from shadow4.beamline.optical_elements.multilayers.syned_multilayer import Multilayer
+from dabax.dabax_xraylib import DabaxXraylib
 
 from shadow4.physical_models.mlayer.mlayer import MLayer
 from shadow4.beamline.s4_beamline_element import S4BeamlineElement
 from shadow4.beam.s4_beam import S4Beam
 from shadow4.beamline.s4_beamline_element_movements import S4BeamlineElementMovements
-
-from shadow4.optical_surfaces.s4_conic import S4Conic
-from shadow4.optical_surfaces.s4_toroid import S4Toroid
-from shadow4.optical_surfaces.s4_mesh import S4Mesh
+from shadow4.tools.logger import is_verbose, is_debug
 
 class S4Multilayer(Multilayer):
     """
-    Shadow4 Mirror Class
-    This is a base class for mirrors.
-    Use derived classes for plane or other curved mirror surfaces.
+    Shadow4 Multilayer Class
+    This is a base class for multilayers.
+    Use derived classes for plane or other curved multilayer surfaces.
 
     Constructor.
 
@@ -31,10 +28,6 @@ class S4Multilayer(Multilayer):
         The boundary shape of the mirror.
     surface_shape : instance of SurfaceShape, optional
         The surface shape of the mirror.
-    f_reflec : int, optional
-         the reflectivity of surface:
-            - 0=no reflectivity,
-            - 1=full polarization.
     f_refl : int, optional
         A flag to indicate the source of reflectivities:
             * 0=prerefl file,
@@ -52,6 +45,8 @@ class S4Multilayer(Multilayer):
             string with material formula (for f_refl=5,6)
     density : float, optional
             material density in g/cm^3 (for f_refl=5,6)
+    dabax : None or instance of DabaxXraylib,
+        The pointer to the dabax library  (used for f_refl=6).
 
     Returns
     -------
@@ -67,6 +62,7 @@ class S4Multilayer(Multilayer):
                  structure='[B/W]x50+Si',
                  period=25.0,
                  Gamma=0.5,
+                 dabax=None,
                  ):
 
         Multilayer.__init__(self,
@@ -81,10 +77,11 @@ class S4Multilayer(Multilayer):
         # reflectivity
         self._f_refl = f_refl
         self._file_refl = file_refl
+        self._dabax = dabax
 
         # support text containg name of variable, help text and unit. Will be stored in self._support_dictionary
         self._add_support_text([
-                    ("f_refl",             "S4: refl. source for f_reflec=1: 0=prerefl, 5=xraylib, 6=dabax", ""),
+                    ("f_refl",             "S4: refl. source: 0=pre_mlayer, 1-3: file, 4=xraylib, 5=dabax", ""),
                     ("file_refl",          "S4: for f_refl=0: file name",               ""),
             ] )
 
@@ -172,6 +169,15 @@ class S4Multilayer(Multilayer):
         footprint, normal, _, _, _, _, _ = sur.apply_specular_reflection_on_beam(beam)
         return footprint, normal
 
+    def _get_dabax_txt(self):
+        if self._f_refl == 5:
+            if isinstance(self._dabax, DabaxXraylib):
+                dabax_txt = 'DabaxXraylib(file_f1f2="%s")' % (self._dabax.get_file_f1f2())
+            else:
+                dabax_txt = "DabaxXraylib()"
+        else:
+            dabax_txt = "None"
+        return dabax_txt
 
 class S4MultilayerElement(S4BeamlineElement):
     """
@@ -294,12 +300,13 @@ class S4MultilayerElement(S4BeamlineElement):
         if soe._f_refl == 0: # prerefl
             preprocessor_file = soe._file_refl
             pr = MLayer()
-            print(">>>>>>>>>>>>>>>>>>>>>>> ", preprocessor_file )
+            if is_verbose(): print("Preprocessor file: ", preprocessor_file )
             pr.read_preprocessor_file(preprocessor_file)
 
-            print(">>>> grazing angle mrad: ", grazing_angle_mrad)
-            print(">>>> grazing angle deg: ", numpy.degrees(grazing_angle_mrad * 1e-3) )
-            print(">>>> energy eV: ", input_beam.get_column(26))
+            if is_verbose():
+                print("grazing angle mrad: ", grazing_angle_mrad)
+                print("grazing angle deg: ", numpy.degrees(grazing_angle_mrad * 1e-3) )
+                print("energy eV: ", input_beam.get_column(26))
             # grazing_angle_deg, photon_energy_ev
             Rs, Rp, phase_s, phase_p = pr.reflectivity(numpy.degrees(grazing_angle_mrad*1e-3),
                                                        input_beam.get_column(26),
@@ -311,6 +318,7 @@ class S4MultilayerElement(S4BeamlineElement):
 
         elif soe._f_refl == 1:  # user angle, mrad ref
 
+            if is_verbose(): print("Reflectivity from file (mrad, refl): ", soe._file_refl)
             values = numpy.loadtxt(soe._file_refl)
 
             mirror_grazing_angles = values[:, 0]
@@ -330,6 +338,7 @@ class S4MultilayerElement(S4BeamlineElement):
 
         elif soe._f_refl == 2:  # user energy
 
+            if is_verbose(): print("Reflectivity from file (eV, refl): ", soe._file_refl)
             beam_energies = input_beam.get_photon_energy_eV()
 
             values = numpy.loadtxt(soe._file_refl)
@@ -346,6 +355,7 @@ class S4MultilayerElement(S4BeamlineElement):
             footprint.apply_reflectivities(numpy.sqrt(Rs), numpy.sqrt(Rp))
 
         elif soe._f_refl == 3:  # user 2D
+            if is_verbose(): print("Reflectivity from file (eV, mrad, refl): ", soe._file_refl)
             values = numpy.loadtxt(soe._file_refl)
 
             beam_energies = input_beam.get_photon_energy_eV()
@@ -387,7 +397,7 @@ class S4MultilayerElement(S4BeamlineElement):
             footprint.apply_reflectivities(numpy.sqrt(Rs), numpy.sqrt(Rp))
 
         elif soe._f_refl == 4: # xraylib
-            print(">>>>>>>>>>>>>>>>>>>>>>> xraylib")
+            if is_verbose(): print("Reflectivity calculated using xraylib")
             pr = MLayer.initialize_from_bilayer_stack_in_compressed_format(
                                     structure=soe._structure,
                                     density_O=None,  roughness_O=0.0,
@@ -398,9 +408,10 @@ class S4MultilayerElement(S4BeamlineElement):
                                     use_xraylib_or_dabax=0,
                                     )
 
-            print(">>>> grazing angle mrad: ", grazing_angle_mrad)
-            print(">>>> grazing angle deg: ", numpy.degrees(grazing_angle_mrad * 1e-3) )
-            print(">>>> energy eV: ", input_beam.get_column(26))
+            if is_verbose():
+                print("grazing angle mrad: ", grazing_angle_mrad)
+                print("grazing angle deg: ", numpy.degrees(grazing_angle_mrad * 1e-3) )
+                print("energy eV: ", input_beam.get_column(26))
             # grazing_angle_deg, photon_energy_ev
             Rs, Rp, phase_s, phase_p = pr.reflectivity(numpy.degrees(grazing_angle_mrad*1e-3),
                                                        input_beam.get_column(26),
@@ -411,7 +422,7 @@ class S4MultilayerElement(S4BeamlineElement):
             # todo: apply phases
 
         elif soe._f_refl == 5: # dabax
-            print(">>>>>>>>>>>>>>>>>>>>>>> dabax")
+            if is_verbose(): print("Reflectivity calculated using dabax")
             pr = MLayer.initialize_from_bilayer_stack_in_compressed_format(
                                     structure=soe._structure,
                                     density_O=None,  roughness_O=0.0,
@@ -420,12 +431,13 @@ class S4MultilayerElement(S4BeamlineElement):
                                     bilayer_thickness=soe._period,
                                     bilayer_gamma=soe._Gamma,
                                     use_xraylib_or_dabax=1,
-                                    dabax=None,
+                                    dabax=soe._dabax,
                                     )
 
-            print(">>>> grazing angle mrad: ", grazing_angle_mrad)
-            print(">>>> grazing angle deg: ", numpy.degrees(grazing_angle_mrad * 1e-3) )
-            print(">>>> energy eV: ", input_beam.get_column(26))
+            if is_verbose():
+                print("grazing angle mrad: ", grazing_angle_mrad)
+                print("grazing angle deg: ", numpy.degrees(grazing_angle_mrad * 1e-3) )
+                print("energy eV: ", input_beam.get_column(26))
             # grazing_angle_deg, photon_energy_ev
             Rs, Rp, phase_s, phase_p = pr.reflectivity(numpy.degrees(grazing_angle_mrad*1e-3),
                                                        input_beam.get_column(26),
@@ -465,21 +477,4 @@ class S4MultilayerElement(S4BeamlineElement):
         self.get_coordinates()._angle_radial     = numpy.pi / 2 - theta_grazing
         self.get_coordinates()._angle_radial_out = numpy.pi / 2 - theta_grazing
         if theta_azimuthal is not None: self.get_coordinates()._angle_azimuthal = theta_azimuthal
-
-if __name__ == "__main__":
-
-    #
-    # from shadow4.sources.source_geometrical.source_geometrical import SourceGeometrical
-    #
-    # light_source = SourceGeometrical(name='SourceGeometrical', nrays=10000, seed=5676561)
-    # light_source.set_spatial_type_gaussian(sigma_h=5e-06, sigma_v=0.000001)
-    # light_source.set_angular_distribution_gaussian(sigdix=0.000001, sigdiz=0.000001)
-    # light_source.set_energy_distribution_singleline(1.000000, unit='A')
-    # light_source.set_polarization(polarization_degree=1.000000, phase_diff=0.000000, coherent_beam=0)
-    # beam = light_source.get_beam()
-
-    # optical element number XX
-    boundary_shape = None
-
-    # from shadow4.beamline.optical_elements.mirrors.s4_ellipsoid_mirror import S4EllipsoidMirror
 

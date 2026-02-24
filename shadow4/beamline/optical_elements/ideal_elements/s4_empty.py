@@ -131,7 +131,7 @@ class S4EmptyElement(S4BeamlineElement):
         txt += self.to_python_code_coordinates()
         txt += "\nfrom shadow4.beamline.optical_elements.ideal_elements.s4_empty import S4EmptyElement"
         txt += "\nbeamline_element = S4EmptyElement(optical_element=optical_element, coordinates=coordinates, input_beam=beam)"
-        txt += "\n\nbeam, mirr = beamline_element.trace_beam()"
+        txt += "\n\nbeam, footprint = beamline_element.trace_beam()"
         return txt
 
 if __name__ == "__main__":

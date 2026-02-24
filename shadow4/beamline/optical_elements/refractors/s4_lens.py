@@ -4,6 +4,8 @@ from syned.beamline.element_coordinates import ElementCoordinates
 from syned.beamline.optical_elements.refractors.lens import Lens
 from syned.beamline.shape import Rectangle, Ellipse, Circle
 
+from dabax.dabax_xraylib import DabaxXraylib
+
 from shadow4.beam.s4_beam import S4Beam
 from shadow4.beamline.s4_beamline_element import S4BeamlineElement
 from shadow4.beamline.s4_beamline_element_movements import S4BeamlineElementMovements
@@ -51,7 +53,7 @@ class S4Lens(Lens, S4RefractiveLensOpticalElementDecorator):
     attenuation_coefficient : float, optional
         For ri_calculation_mode=0, the attenuation coefficient in m^-1 !!!.
     dabax : None or instance of DabaxXraylib,
-        The pointer to the dabax library  (used for f_r_ind > 6).
+        The pointer to the dabax library  (used for ri_calculation_mode=3). If None, the default is used.
     radius : float, optional
         For surface_shape=(1,2), the lens radius in m. (For parabolic lenses, it is the radius at the tip for paraboloid.)
     conic_coefficients1 : None or list, optional
@@ -77,9 +79,9 @@ class S4Lens(Lens, S4RefractiveLensOpticalElementDecorator):
                                  # 3=direct calculation using dabax
                  prerefl_file=None,    # for ri_calculation_mode=0: file name (from prerefl) to get the refraction index.
                  refraction_index=1.0, # for ri_calculation_mode=1: n (real)
-                 attenuation_coefficient=0.0, # for ri_calculation_mode=1: mu in cm^-1 (real)
+                 attenuation_coefficient=0.0, # for ri_calculation_mode=1: mu in m^-1 (real)
                  density=1.0,
-                 dabax=None,
+                 dabax=None,           # for  ri_calculation_mode=3
                  radius=500e-6,        # for surface_shape=(1,2): lens radius [m] (for spherical, or radius at the tip for paraboloid)
                  conic_coefficients1=None,   # for surface_shape = 3: the conic coefficients of the first interface
                  conic_coefficients2=None,  # for surface_shape = 3: the conic coefficients of the second interface
@@ -106,6 +108,15 @@ class S4Lens(Lens, S4RefractiveLensOpticalElementDecorator):
                       material=material,
                       thickness=thickness)
 
+        if ri_calculation_mode == 3:
+            if isinstance(dabax, DabaxXraylib):
+                dabax_txt = 'DabaxXraylib(file_f1f2="%s", file_CrossSec="%s")' % \
+                            (dabax.get_file_f1f2(), dabax.get_file_CrossSec())
+            else:
+                dabax_txt = 'DabaxXraylib()'
+        else:
+            dabax_txt = "None"
+
         self.__inputs = {
             "name": name,
             "boundary_shape":          boundary_shape,
@@ -119,7 +130,7 @@ class S4Lens(Lens, S4RefractiveLensOpticalElementDecorator):
             "refraction_index":        refraction_index,
             "attenuation_coefficient": attenuation_coefficient,
             "density":                 density,
-            "dabax":                   repr(dabax),
+            "dabax":                   dabax_txt,
             "radius":                  radius,
             "conic_coefficients1":     repr(conic_coefficients1),
             "conic_coefficients2":     repr(conic_coefficients2),
@@ -186,16 +197,14 @@ optical_element = S4Lens(name='{name:s}',
      material='{material:s}', # the material for ri_calculation_mode > 1
      density={density:g}, # the density for ri_calculation_mode > 1
      thickness={thickness}, # syned stuff, lens thickness [m] (distance between the two interfaces at the center of the lenses)
-     surface_shape={surface_shape}, # now: 0=plane, 1=sphere, 2=parabola, 3=conic coefficients
-                                    # (in shadow3: 1=sphere 4=paraboloid, 5=plane)
+     surface_shape={surface_shape}, # 0=plane, 1=sphere, 2=parabola, 3=conic coefficients
      convex_to_the_beam={convex_to_the_beam}, # for surface_shape: convexity of the first interface exposed to the beam 0=No, 1=Yes
      cylinder_angle={cylinder_angle}, # for surface_shape: 0=not cylindricaL, 1=meridional 2=sagittal
-     ri_calculation_mode={ri_calculation_mode},   # source of refraction indices and absorption coefficients
-                                     # 0=User, 1=prerefl file, 2=xraylib, 3=dabax
+     ri_calculation_mode={ri_calculation_mode},   # source of refr indices and absorp coeff 0=User, 1=prerefl file, 2=xraylib, 3=dabax
      prerefl_file='{prerefl_file:s}', # for ri_calculation_mode=0: file name (from prerefl) to get the refraction index.
      refraction_index={refraction_index:g}, # for ri_calculation_mode=1: n (real)
-     attenuation_coefficient={attenuation_coefficient:g}, # for ri_calculation_mode=1: mu in cm^-1 (real)
-     dabax={dabax:s}, # the pointer to dabax library
+     attenuation_coefficient={attenuation_coefficient:g}, # for ri_calculation_mode=1: mu in m^-1 (real)
+     dabax={dabax:s}, # if using dabax (ri_calculation_mode=3), instance of DabaxXraylib() (use None for default)
      radius={radius:g}, # for surface_shape=(1,2): lens radius [m] (for spherical, or radius at the tip for paraboloid)
      conic_coefficients1={conic_coefficients1}, # for surface_shape = 3: the conic coefficients for interface 1
      conic_coefficients2={conic_coefficients2}, # for surface_shape = 3: the conic coefficients for interface 2
@@ -242,7 +251,7 @@ def _get_lens_interfaces(lens_optical_surfaces,
             r_ind_obj=1.0,  # (for f_r_ind=0,2): index of refraction in object space.
             r_ind_ima=refraction_index,  # (for f_r_ind=0,1): index of refraction in image space.
             r_attenuation_obj=0.0,  # (for f_r_ind=0,2): attenuation coefficient in object space. Units of UserUnitLength^(-1)
-            r_attenuation_ima=attenuation_coefficient,  # (for f_r_ind=0,1): attenuation coefficient in image space. Units of UserUnitLength^(-1)
+            r_attenuation_ima=attenuation_coefficient,  # (for f_r_ind=0,1): attenuation coefficient in image space. Units of m-1
             file_r_ind_obj="",  # (for f_r_ind=1,3): file generated by PREREFL
             file_r_ind_ima="",  # (for f_r_ind=2,3): file generated by PREREFL
             conic_coefficients=conic_coefficients1,
@@ -260,7 +269,7 @@ def _get_lens_interfaces(lens_optical_surfaces,
             #      (3) file in both object and image space
             r_ind_obj=refraction_index,  # (for f_r_ind=0,2): index of refraction in object space.
             r_ind_ima=1.0,  # (for f_r_ind=0,1): index of refraction in image space.
-            r_attenuation_obj=attenuation_coefficient,  # (for f_r_ind=0,2): attenuation coefficient in object space. Units of UserUnitLength^(-1)
+            r_attenuation_obj=attenuation_coefficient,  # (for f_r_ind=0,2): attenuation coefficient in object space. Units of m^-1
             r_attenuation_ima=0.0,  # (for f_r_ind=0,1): attenuation coefficient in image space. Units of UserUnitLength^(-1)
             file_r_ind_obj="",  # (for f_r_ind=1,3): file generated by PREREFL
             file_r_ind_ima="",  # (for f_r_ind=2,3): file generated by PREREFL
@@ -445,7 +454,7 @@ class S4LensElement(S4BeamlineElement):
         txt += self.to_python_code_movements()
         txt += "\nfrom shadow4.beamline.optical_elements.refractors.s4_lens import S4LensElement"
         txt += "\nbeamline_element = S4LensElement(optical_element=optical_element, coordinates=coordinates, movements=movements, input_beam=beam)"
-        txt += "\n\nbeam, mirr = beamline_element.trace_beam()"
+        txt += "\n\nbeam, footprint = beamline_element.trace_beam()"
         return txt
 
     # def trace_beam(self, **params):
@@ -522,14 +531,14 @@ if __name__ == "__main__":
                  convex_to_the_beam=0, # for surface_shape (1,2): convexity of the first interface exposed to the beam 0=No, 1=Yes
                                        # the second interface has opposite convexity
                  cylinder_angle=0,     # for surface_shape (1,2): 0=not cylindricaL, 1=meridional 2=sagittal
-                 ri_calculation_mode=1,       # source of refraction indices and absorption coefficients
+                 ri_calculation_mode=3,       # source of refraction indices and absorption coefficients
                                  # 0=User
                                  # 1=prerefl file
                                  # 2=direct calculation using xraylib
                                  # 3=direct calculation using dabax
                  prerefl_file="/users/srio/Oasys/reflec.dat",    # for ri_calculation_mode=0: file name (from prerefl) to get the refraction index.
                  refraction_index=1.5, # for ri_calculation_mode=1: n (real)
-                 attenuation_coefficient=1e-3, # for ri_calculation_mode=1: mu in cm^-1 (real)
+                 attenuation_coefficient=1e-3, # for ri_calculation_mode=1: mu in m^-1 (real)
                  radius=0.1,        # for surface_shape=(1,2): lens radius [m] (for spherical, or radius at the tip for paraboloid)
                  conic_coefficients1=None,   # for surface_shape = 3: the conic coefficients of interface 1
                  conic_coefficients2=None,  # for surface_shape = 3: the conic coefficients of interface 2

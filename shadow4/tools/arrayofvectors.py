@@ -1,8 +1,29 @@
-# operations with an array of 3D vectors, v[n_vectors,3]
+#
+"""
 
+Set of functions to make operations with an array of 3D vectors, v[n_vectors,3]
+
+"""
 import numpy
 
 def vector_cross(u ,v):
+    """
+
+    Calculate the vector cross product.
+
+    Parameters
+    ----------
+    u : numpy array shape (n_vectors,3)
+        input vector 1.
+    v : numpy array shape (n_vectors,3)
+        input vector 2.
+
+    Returns
+    -------
+     numpy array shape (n_vectors,3)
+        Result vector.
+
+    """
     # w = u X v
     # u = array (npoints,vector_index)
 
@@ -14,12 +35,42 @@ def vector_cross(u ,v):
     return w
 
 def vector_modulus(u):
+    """
+
+    Calculates the modulus of a vector array.
+
+    Parameters
+    ----------
+    u : numpy array shape (n_vectors,3)
+        input vector 1.
+
+    Returns
+    -------
+    numpy array shape (n_vectors)
+        Result vector modulus.
+
+    """
     return numpy.sqrt( u[: ,0 ]**2 + u[: ,1 ]**2 + u[: ,2 ]**2)
 
 def vector_modulus_square(u):
     return ( u[: ,0 ]**2 + u[: ,1 ]**2 + u[: ,2 ]**2)
 
 def vector_norm(u):
+    """
+
+    Calculate the normalized vector.
+
+    Parameters
+    ----------
+    u : numpy array shape (n_vectors,3)
+        input vector.
+
+    Returns
+    -------
+     numpy array shape (n_vectors,3)
+        Result vector.
+
+    """
     # w = u / |u|
     u_norm = numpy.zeros_like(u)
     uu = numpy.sqrt( u[: ,0 ]**2 + u[: ,1 ]**2 + u[: ,2 ]**2)
@@ -28,11 +79,45 @@ def vector_norm(u):
     return u / u_norm
 
 def vector_dot(u, v):
+    """
+
+    Calculate the dot product of two vectors.
+
+    Parameters
+    ----------
+    u : numpy array shape (n_vectors,3)
+        input vector 1.
+    v : numpy array shape (n_vectors,3)
+        input vector 2.
+
+    Returns
+    -------
+     numpy array shape (n_vectors)
+        Result dot product vector.
+
+    """
     # w = u . v
     return u[: ,0] * v[: ,0] + u[: ,1] * v[: ,1] + u[: ,2] * v[: ,2]
 
 
 def vector_sum(u, v):
+    """
+
+    Calculate the sum of two vectors.
+
+    Parameters
+    ----------
+    u : numpy array shape (n_vectors,3)
+        input vector 1.
+    v : numpy array shape (n_vectors,3)
+        input vector 2.
+
+    Returns
+    -------
+     numpy array shape (n_vectors,3)
+        Result vector.
+
+    """
     # w = u + v
     w = numpy.zeros_like(u)
     for i in range(3):
@@ -40,6 +125,24 @@ def vector_sum(u, v):
     return w
 
 def vector_multiply_scalar(u, k):
+    """
+
+    Calculate the product of a vector by a scalar.
+
+    Parameters
+    ----------
+    u : numpy array shape (n_vectors,3)
+        input vector 1.
+    k : numpy array shape (n_vectors)
+        scalar values to multiply by.
+
+    Returns
+    -------
+     numpy array shape (n_vectors)
+        Result vector.
+
+    """
+
     kk = numpy.array(k)
 
     if kk.size == 1:
@@ -51,6 +154,23 @@ def vector_multiply_scalar(u, k):
         return w
 
 def vector_add_scalar(u, k):
+    """
+
+    Calculate the sum of a vector and a scalar constant.
+
+    Parameters
+    ----------
+    u : numpy array shape (n_vectors,3)
+        input vector 1.
+    k : numpy array shape (n_vectors)
+        scalar values to be added.
+
+    Returns
+    -------
+     numpy array shape (n_vectors)
+        Result vector.
+
+    """
     kk = numpy.array(k)
 
     if kk.size == 1:
@@ -63,6 +183,23 @@ def vector_add_scalar(u, k):
 
 
 def vector_diff(u, v):
+    """
+
+    Calculate the difference of two vectors u - v.
+
+    Parameters
+    ----------
+    u : numpy array shape (n_vectors,3)
+        input vector 1.
+    v : numpy array shape (n_vectors,3)
+        input vector 2.
+
+    Returns
+    -------
+     numpy array shape (n_vectors,3)
+        Result vector.
+
+    """
     # w = u - v
     w = numpy.zeros_like(u)
     for i in range(3):
@@ -70,12 +207,57 @@ def vector_diff(u, v):
     return w
 
 def vector_reflection(v1, normal): # copied from s4_conic()
+    """
+
+    Calculate the reflection of a vector (ray) on a surface.
+
+    Parameters
+    ----------
+    v1 : array of 3D vectors, shape: (n_vectors,3)
+        Incident unit vector.
+    normal : array of 3D vectors, shape: (n_vectors,3)
+        Normal unit vector at the interface.
+
+    Returns
+    -------
+    numpy array
+        The unitary vector along the reflected direction with shape (n_vectors,3).
+    """
+
     # \vec{r} = \vec{i} - 2 (\vec{i} \vec{n}) \vec{n}
     normal_norm = vector_norm(normal)
     return v1 - 2 * vector_multiply_scalar( normal_norm, vector_dot(v1, normal_norm))
 
 def vector_refraction(vin, normal, n1, n2, sgn=1, do_check=0):
-    # http://www.starkeffects.com/snells-law-vector.shtml
+    """
+
+    Calculate the refraction (transmission) vector using Snell's Law in vector form.
+
+    Parameters
+    ----------
+    vin : array of 3D vectors, shape: (n_vectors,3)
+        Incident unit vector.
+    normal : array of 3D vectors, shape: (n_vectors,3)
+        Normal unit vector at the interface.
+    n1 : numpy array
+        The refraction index of the incident mediuma (n_vectors)
+    n2 : numpy array
+        The refraction index of the object transmission (n_vectors).
+    sgn : numpy array
+        +1 or -1 to play and adjust the directions.
+    do_check : int
+        A flag to display incident and refracted angles.
+
+    Returns
+    -------
+    numpy array
+        The unitary vector along the refracted direction with shape (n_vectors,3).
+
+    Reference
+    ---------
+    For a detailed explanation of the vector form of Snell's Law, see:
+    https://www.starkeffects.com/snells-law-vector.shtml
+    """
 
     if sgn is None: sgn = -numpy.sign(vector_dot(vin, normal))
 
@@ -85,7 +267,6 @@ def vector_refraction(vin, normal, n1, n2, sgn=1, do_check=0):
     n_cross_vin = vector_cross(normal_norm, vin_norm)
     n_opp_cross_vin = vector_cross(normal_norm * (-1), vin_norm)
 
-    # sq2 = 1 - vector_multiply_scalar(vector_dot(n_cross_vin, n_cross_vin), (n1/n2)**2)
     sq2 = 1 - vector_dot(n_cross_vin, n_cross_vin) *  (n1 / n2) ** 2
     # vout = (n1/n2) * vector_cross(normal_norm,n_opp_cross_vin) - vector_multiply_scalar(normal_norm, numpy.sqrt(sq2))
     vout = vector_multiply_scalar(vector_cross(normal_norm, n_opp_cross_vin), (n1 / n2)) - vector_multiply_scalar(normal_norm, sgn * numpy.sqrt(sq2))
@@ -99,6 +280,30 @@ def vector_refraction(vin, normal, n1, n2, sgn=1, do_check=0):
     return vout
 
 def vector_scattering(K_IN, H, NORMAL):
+    """
+
+    Calculate the scattering of a wavevector.
+
+    Method:
+
+        - K_OUT_PARALLEL = K_IN_PARALLEL + H_PARALLEL
+
+        - |K_OUT| = |K_IN|
+
+    Parameters
+    ----------
+    K_IN  : numpy array of 3D vectors, shape: (n_vectors,3)
+        Incident wavevector (modulus is 2 pi / wavelength) in cm**-1.
+    H : numpy array of 3D vectors, shape: (n_vectors,3)
+        The diffraction vector.
+    NORMAL : numpy array of 3D vectors, shape: (n_vectors,3)
+        The normal vector.
+
+    Returns
+    -------
+    numpy array
+        The diffracted wavevector with shape (n_vectors,3).
+    """
     H_perp = vector_multiply_scalar(NORMAL, vector_dot(H, NORMAL))
     H_par = vector_diff(H, H_perp)
 
@@ -115,7 +320,7 @@ def vector_rotate_around_axis(u, rotation_axis, angle):
 
     Parameters
     ----------
-    rotation_axis : Vector instance
+    rotation_axis : numpy array of 3D vectors, shape: (n_vectors,3)
         Vector specifying the rotation axis (not necessarily unit vector).
 
     angle : float
@@ -159,6 +364,23 @@ def vector_rotate_around_axis(u, rotation_axis, angle):
     return rotated_vector
 
 def vector_default_efields(DIREC, pol_deg=1.0):
+    """
+
+    Creates two unitary vectors pointing on a sigma and pi-polarization directions. They are perpendicular to the
+    incident direction, and the sum of the squarred moduli is one.
+
+    Parameters
+    ----------
+    DIREC  : numpy array of 3D vectors, shape: (n_vectors,3)
+        The vector with the direction.
+    pol_deg : numpy array shape: (n_vectors)
+        The polarization degree as defined in SHADOW.
+
+    Returns
+    -------
+    tuple
+        (E_S, E_P): the 3D vectors, shape: (n_vectors,3) for the S and P polarizations.
+    """
     # Generates the normalized electric vectors perpendicular to DIREC
     # This is defined on the source plane, so that A_VEC is along the X-axis and AP_VEC is along Z-axis.
     # Then care must be taken so that A will be perpendicular to the ray direction.
