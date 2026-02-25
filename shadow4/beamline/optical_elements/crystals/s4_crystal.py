@@ -15,7 +15,7 @@ from crystalpy.diffraction.DiffractionSetupDabax import DiffractionSetupDabax
 from crystalpy.diffraction.DiffractionSetupShadowPreprocessorV1 import DiffractionSetupShadowPreprocessorV1
 from crystalpy.diffraction.DiffractionSetupShadowPreprocessorV2 import DiffractionSetupShadowPreprocessorV2
 
-from crystalpy.diffraction.GeometryType import BraggDiffraction
+from crystalpy.diffraction.GeometryType import BraggDiffraction, BraggTransmission, LaueDiffraction, LaueTransmission
 from crystalpy.util.Vector import Vector
 from crystalpy.util.ComplexAmplitudePhoton import ComplexAmplitudePhoton
 from crystalpy.diffraction.PerfectCrystalDiffraction import PerfectCrystalDiffraction
@@ -32,6 +32,7 @@ from shadow4.tools.logger import is_verbose, is_debug
 import scipy.constants as codata
 
 class S4Crystal(Crystal):
+    dynamic_theory = 1  # 0 Zachariasen 1 Guigay
     """
     Shadow4 Crystal Class
     This is a base class for perfect crystal in reflection geometry (Bragg), using the diffracted beam.
@@ -95,7 +96,7 @@ class S4Crystal(Crystal):
                  boundary_shape=None,
                  surface_shape=None,
                  material=None,
-                 # diffraction_geometry=DiffractionGeometry.BRAGG,
+                 diffraction_geometry=DiffractionGeometry.BRAGG,
                  miller_index_h=1,
                  miller_index_k=1,
                  miller_index_l=1,
@@ -125,7 +126,7 @@ class S4Crystal(Crystal):
                          surface_shape=surface_shape,
                          boundary_shape=boundary_shape,
                          material=material,
-                         diffraction_geometry=DiffractionGeometry.BRAGG,
+                         diffraction_geometry=diffraction_geometry,
                          miller_index_h=miller_index_h,
                          miller_index_k=miller_index_k,
                          miller_index_l=miller_index_l,
@@ -303,10 +304,19 @@ class S4CrystalElement(S4BeamlineElement):
         """
         oe = self.get_optical_element()
         coor = self.get_coordinates()
+        geo = oe.get_diffraction_geometry()
+        if geo == DiffractionGeometry.BRAGG:
+            geo_type = BraggDiffraction()
+        elif geo == DiffractionGeometry.LAUE:
+            geo_type = LaueDiffraction()
+        elif geo == DiffractionGeometry.BRAGG_T:
+            geo_type = BraggTransmission()
+        else:
+            geo_type = LaueTransmission()
 
         if oe._material_constants_library_flag == 0:
             if is_verbose(): print("\nCreating a diffraction setup (XRAYLIB) for material:", oe._material)
-            diffraction_setup = DiffractionSetupXraylib(geometry_type=BraggDiffraction(),  # todo: use oe._diffraction_geometry
+            diffraction_setup = DiffractionSetupXraylib(geometry_type=geo_type,
                                                  crystal_name=oe._material,  # string
                                                  thickness=oe._thickness,  # meters
                                                  miller_h=oe._miller_index_h,  # int
@@ -316,7 +326,7 @@ class S4CrystalElement(S4BeamlineElement):
                                                  azimuthal_angle=0.0)
         elif oe._material_constants_library_flag == 1:
             if is_verbose(): print("\nCreating a diffraction setup (DABAX) for material:", oe._material)
-            diffraction_setup = DiffractionSetupDabax(geometry_type=BraggDiffraction(),  # todo: use oe._diffraction_geometry
+            diffraction_setup = DiffractionSetupDabax(geometry_type=geo_type,
                                                  crystal_name=oe._material,  # string
                                                  thickness=oe._thickness,  # meters
                                                  miller_h=oe._miller_index_h,  # int
@@ -327,7 +337,7 @@ class S4CrystalElement(S4BeamlineElement):
                                                  dabax=oe._dabax)
         elif oe._material_constants_library_flag == 2:
             if is_verbose(): print("\nCreating a diffraction setup (shadow preprocessor file V1)...")
-            diffraction_setup = DiffractionSetupShadowPreprocessorV1(geometry_type=BraggDiffraction(),  # todo: use oe._diffraction_geometry
+            diffraction_setup = DiffractionSetupShadowPreprocessorV1(geometry_type=geo_type,
                                                  crystal_name=oe._material,            # string
                                                  thickness=oe._thickness,              # meters
                                                  miller_h=oe._miller_index_h,          # int
@@ -338,7 +348,7 @@ class S4CrystalElement(S4BeamlineElement):
                                                  preprocessor_file=oe._file_refl)
         elif oe._material_constants_library_flag == 3:
             if is_verbose(): print("\nCreating a diffraction setup (shadow preprocessor file V2)...")
-            diffraction_setup = DiffractionSetupShadowPreprocessorV2(geometry_type=BraggDiffraction(),  # todo: use oe._diffraction_geometry
+            diffraction_setup = DiffractionSetupShadowPreprocessorV2(geometry_type=geo_type,
                                                  crystal_name=oe._material,            # string
                                                  thickness=oe._thickness,              # meters
                                                  miller_h=oe._miller_index_h,          # int
@@ -645,6 +655,7 @@ class S4CrystalElement(S4BeamlineElement):
             surface_normal=surface_normal,
             thickness=None,
             d_spacing=None,
+            photon_in=photons_in,
         )
 
         # Calculate outgoing Photon.
@@ -652,7 +663,7 @@ class S4CrystalElement(S4BeamlineElement):
         # NEW USING Jones matrix JR
         outgoing_complex_amplitude_photon = perfect_crystal.calculatePhotonOut(photons_in,
                                                                                 apply_reflectivity=True,
-                                                                                calculation_method=1,
+                                                                                calculation_method=soe.dynamic_theory,
                                                                                 is_thick=soe._is_thick,
                                                                                 use_transfer_matrix=0
                                                                                 )
@@ -706,13 +717,22 @@ class S4CrystalElement(S4BeamlineElement):
         #
         e_S, e_P = footprint.get_efield_directions()  # these are \hat{u}_{\sigma,\pi} in Eq. 3
 
-        axis = vector_norm(vector_cross(vIn, vOut))
+        soe = self.get_optical_element()
+        if soe.get_diffraction_geometry() > 1:  # 2:bragg_t, 3:laue_t
+            vOut = vIn
+            es_S = e_S
+            es_P = e_P
+            ee_S = e_S
+            ee_P = e_P
+            axis = e_S  # Dummy assignment, not used
+        else:
+            axis = vector_norm(vector_cross(vIn, vOut))
 
-        es_S = axis  # \hat{u}_{\sigma,i} in Eq. 12
-        es_P = vector_norm(vector_cross(es_S, vIn))  # \hat{u}_{\pi,i} in Eq. 12
+            es_S = axis  # \hat{u}_{\sigma,i} in Eq. 12
+            es_P = vector_norm(vector_cross(es_S, vIn))  # \hat{u}_{\pi,i} in Eq. 12
 
-        ee_S = axis  # \hat{u}_{\sigma,f} in Eq. 13
-        ee_P = vector_norm(vector_cross(ee_S, vOut))  # \hat{u}_{\pi,f} in Eq. 13
+            ee_S = axis  # \hat{u}_{\sigma,f} in Eq. 13
+            ee_P = vector_norm(vector_cross(ee_S, vOut))  # \hat{u}_{\pi,f} in Eq. 13
 
         if is_verbose():
             print(">>>>> e_S, perp vIn: ", e_S[0], vector_dot(e_S, vIn)[0])
