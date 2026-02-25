@@ -538,42 +538,146 @@ class PreRefl(object):
                                                  method=0, # 0=born & wolf, 1=parratt, 2=shadow3
                                                  ):
         """
-        Standalone method to calculate the reflectivity (amplitude) of an interface using Fresnel formulas using optical
-        constants entered by user.
 
-        This is the basic routine for the Fresnel equations.
+Standalone method to calculate the complex Fresnel reflectivity amplitudes
+        (r_s, r_p) of a single interface using different formulations.
+
+        This routine supports three different implementations that correspond
+        to different physical approximations and historical usages.
+
+        ----------------------------------------------------------------------
+        METHOD OVERVIEW
+        ----------------------------------------------------------------------
+
+        method = 0  →  Born & Wolf (full Fresnel equations)
+        ----------------------------------------------------
+        Exact solution of Maxwell boundary conditions at a planar interface.
+
+        Uses Snell's law:
+            n1 sin(theta1) = n2 sin(theta2)
+
+        Fresnel amplitudes:
+
+            r_s = (n1 cos(theta1) - n2 cos(theta2)) /
+                  (n1 cos(theta1) + n2 cos(theta2))
+
+            r_p = (n2 cos(theta1) - n1 cos(theta2)) /
+                  (n2 cos(theta1) + n1 cos(theta2))
+
+        Characteristics:
+            - Fully complex
+            - Correct magnitude and phase
+            - Correct Brewster angle behavior
+            - Correct total internal reflection (TIR)
+            - Correct total external reflection (X-rays)
+            - Correct sigma–pi phase difference
+
+        Valid for:
+            - Visible optics
+            - Infrared
+            - X-rays
+            - Polarization studies
+            - Phase-sensitive problems
+            - Interference simulations
+
+        Recommended when phase or polarization matters.
+
+
+        method = 1  →  Parratt grazing-incidence formulation
+        -----------------------------------------------------
+        Based on the grazing-angle X-ray approximation:
+
+            n = 1 - delta + i beta
+            f = sqrt(phi^2 - 2 delta - 2 i beta)
+            r = (f1 - f2) / (f1 + f2)
+
+        where phi is the grazing angle (rad).
+
+        This corresponds to the small-angle X-ray limit of the
+        s-polarized Fresnel coefficient.
+
+        IMPORTANT:
+            In the present implementation, r_p is set equal to r_s.
+            Therefore polarization effects are not properly described.
+
+        Characteristics:
+            - Valid for grazing-incidence X-rays
+            - Assumes delta, beta << 1
+            - Assumes small angles (mrad)
+            - Good for reflectivity curves
+            - Suitable for multilayer recursion (Parratt method)
+
+        Limitations:
+            - No Brewster angle
+            - No proper p-polarization behavior
+            - Not valid for visible optics
+            - Not valid for moderate angles
+            - Not suitable for polarization phase studies
+
+
+        method = 2  →  Shadow3-style reflectivity approximation
+        --------------------------------------------------------
+        Derived from grazing-incidence X-ray reflectivity formulas.
+
+        Computes reflectivity (intensity) first:
+
+            R = |r|^2
+
+        Then reconstructs amplitude as:
+
+            r ≈ sqrt(R)
+
+        This approach was historically sufficient for ray tracing,
+        where only intensities were required.
+
+        Characteristics:
+            - Good reflectivity magnitude for X-ray mirrors
+            - Designed for ray-tracing simulations
+            - Phase is not physically correct
+            - Sigma–pi phase difference not reliable
+
+        Limitations:
+            - Phase information lost
+            - Not suitable for interference
+            - Not suitable for polarization studies
+            - Not valid for visible optics
+
+
+        ----------------------------------------------------------------------
+        PRACTICAL RECOMMENDATION
+        ----------------------------------------------------------------------
+
+        - Use method=0 (Born & Wolf) whenever phase or polarization matters.
+        - Use method=1 for grazing-incidence X-ray reflectivity curves.
+        - Use method=2 only for intensity-based ray-tracing applications.
+
 
 
         Parameters
         ----------
         photon_energy_ev : float or numpy array
-            The photon energy in eV. This is only used for the Debye-Waller factor, therefore it is not used if
-            roughness_rms_A=0.
+            Photon energy in eV (used only for Debye-Waller factor).
         grazing_angle_mrad : float or numpy array
-            The grazing incident angle in mrad.
-        roughness_rms_A : float or numpy array
-            The rouughness RMS in Angstroms,
-        method : int, optional
-            The equations used for the calculation:
-            0=Born&Wolf [1]_ , 1=Parratt [2]_, 2=shadow3 [3]_
-            Note that Parratt and shadow3 are only good for X-rays. Parratt gives bad p-pol.
-            shadow3 does not calculate correct phase. Therefore, prefer Born&Wolf.
-        coating_material : int, optional
-            The symbol/formula of the coating material.
-        coating_density : int, optional
-            The density in g/cm3 of the coating material.
-        refraction_index_1 : float or numpy array
-            the refraction index (complex) for medium 1 (object).
-        refraction_index_2 : float or numpy array
-            the refraction index (complex) for medium 2 (image).
+            Grazing incident angle in mrad (angle from surface).
+        roughness_rms_A : float
+            Surface roughness RMS in Angstrom.
+        method : int
+            0 = Born & Wolf [1]_ (full Fresnel, recommended)
+            1 = Parratt grazing approximation [2]_ (X-rays)
+            2 = Shadow3 reflectivity approximation [3]_ (intensity-based)
+        refraction_index_1 : complex
+            Refractive index of medium 1 (incident medium).
+        refraction_index_2 : complex
+            Refractive index of medium 2 (transmitted medium).
 
         Returns
         -------
         tuple
-            (rs, rp) the s-polarized and p-pol and amplitude reflectivities
+            (r_s, r_p) complex amplitude reflectivities including
+            optional Debye-Waller roughness factor.
 
         References
-    ----------
+        ----------
         .. [1] Born and Wolf "Principles of Optics" 6th edition, pag 40, eqs 21.
         .. [2] Parratt LG (1954) Surface studies of solids by total reflection of X-rays. Phys Rev 95(2):359–369.
         .. [3] Equations implemented in Shadow3.
@@ -611,7 +715,7 @@ class PreRefl(object):
             f1 = numpy.sqrt(phi ** 2 - 2 * delta1 - 2 * 1j * beta1, dtype=complex)
             f2 = numpy.sqrt(phi ** 2 - 2 * delta2 - 2 * 1j * beta2, dtype=complex)
             rs = (f1 - f2) / (f1 + f2)
-            rp = rs # TODO complete!
+            rp = rs # Approximation valid only for X-rays!
 
         elif method == 2:
             if is_verbose(): print("Fresnel equations from Shadow3")
@@ -634,17 +738,14 @@ class PreRefl(object):
             ratio = ratio1 / ratio2
 
             rp = rs * ratio
-            rs = numpy.sqrt(rs, dtype = complex)
-            rp = numpy.sqrt(rp, dtype = complex)
+            rs = numpy.sqrt(rs, dtype = complex) # approx to calculate reflectivities from intensities; wrong phase!
+            rp = numpy.sqrt(rp, dtype = complex) # approx to calculate reflectivities from intensities; wrong phase!
 
         if roughness_rms_A != 0.0:
             wavelength_m = codata.h * codata.c / codata.e / photon_energy_ev
             debyewaller = numpy.exp( -(4.0 * numpy.pi * numpy.sin(theta1g) * rough1 / (wavelength_m * 1e10))**2 )
         else:
             debyewaller = 1.0
-
-        # runp = 0.5 * (rs + rp)
-        # return numpy.abs(rs)**2 * debyewaller, numpy.abs(rp)**2 * debyewaller, numpy.abs(runp)**2 * debyewaller
 
         return rs * numpy.sqrt(debyewaller), rp * numpy.sqrt(debyewaller)
 
@@ -1098,38 +1199,39 @@ if __name__ == "__main__":
              title="Rh mirror @ 20 keV angle scan; external refraction index")
 
     if False: # theta scan GLASS https://www.rp-photonics.com/fresnel_equations.html , see also fig 1.12 (pag 44) B&W 6th ed.
+          # it shows how method=0 is correct for visible light, but method=1,2 give wrong results (they are valid for X-rays, only)
         from srxraylib.plot.gol import plot
 
         #
         # mirror reflectivity vs angle
         #
 
-
-        angle_deg = numpy.linspace(0.0, 90.0, 100)
+        angle_deg = numpy.linspace(0.0, 90.0, 500)
         angle_mrad = 1e3 * numpy.radians(90.0 - angle_deg)
+        photon_energy_ev = 2.3
 
         RS0 = numpy.zeros_like(angle_deg)
         RS5 = numpy.zeros_like(angle_deg)
 
 
-        rs0_m0, rp0_m0 = PreRefl.reflectivity_amplitudes_fresnel_external(grazing_angle_mrad=angle_mrad, photon_energy_ev=20000,
+        rs0_m0, rp0_m0 = PreRefl.reflectivity_amplitudes_fresnel_external(grazing_angle_mrad=angle_mrad, photon_energy_ev=photon_energy_ev,
                                 roughness_rms_A=0.0, method=0,
                                 refraction_index_1=1.0, refraction_index_2=1.52)
-        rs1_m0, rp1_m0 = PreRefl.reflectivity_amplitudes_fresnel_external(grazing_angle_mrad=angle_mrad, photon_energy_ev=20000,
+        rs1_m0, rp1_m0 = PreRefl.reflectivity_amplitudes_fresnel_external(grazing_angle_mrad=angle_mrad, photon_energy_ev=photon_energy_ev,
                                 roughness_rms_A=5.0, method=0,
                                 refraction_index_1=1.0, refraction_index_2=1.52)
 
-        rs0_m1, rp0_m1 = PreRefl.reflectivity_amplitudes_fresnel_external(grazing_angle_mrad=angle_mrad, photon_energy_ev=20000,
+        rs0_m1, rp0_m1 = PreRefl.reflectivity_amplitudes_fresnel_external(grazing_angle_mrad=angle_mrad, photon_energy_ev=photon_energy_ev,
                                 roughness_rms_A=0.0, method=1,
                                 refraction_index_1=1.0, refraction_index_2=1.52)
-        rs1_m1, rp1_m1 = PreRefl.reflectivity_amplitudes_fresnel_external(grazing_angle_mrad=angle_mrad, photon_energy_ev=20000,
+        rs1_m1, rp1_m1 = PreRefl.reflectivity_amplitudes_fresnel_external(grazing_angle_mrad=angle_mrad, photon_energy_ev=photon_energy_ev,
                                 roughness_rms_A=5.0, method=1,
                                 refraction_index_1=1.0, refraction_index_2=1.52)
 
-        rs0_m2, rp0_m2 = PreRefl.reflectivity_amplitudes_fresnel_external(grazing_angle_mrad=angle_mrad, photon_energy_ev=20000,
+        rs0_m2, rp0_m2 = PreRefl.reflectivity_amplitudes_fresnel_external(grazing_angle_mrad=angle_mrad, photon_energy_ev=photon_energy_ev,
                                 roughness_rms_A=0.0, method=2,
                                 refraction_index_1=1.0, refraction_index_2=1.52)
-        rs1_m2, rp1_m2 = PreRefl.reflectivity_amplitudes_fresnel_external(grazing_angle_mrad=angle_mrad, photon_energy_ev=20000,
+        rs1_m2, rp1_m2 = PreRefl.reflectivity_amplitudes_fresnel_external(grazing_angle_mrad=angle_mrad, photon_energy_ev=photon_energy_ev,
                                 roughness_rms_A=5.0, method=2,
                                 refraction_index_1=1.0, refraction_index_2=1.52)
 
@@ -1138,9 +1240,9 @@ if __name__ == "__main__":
              angle_deg, numpy.abs(rs0_m1) ** 2, angle_deg, numpy.abs(rp0_m1) ** 2,
              angle_deg, numpy.abs(rs0_m2) ** 2, angle_deg, numpy.abs(rp0_m2) ** 2,
              ylog=0, xtitle="Incidence angle (to normal) [deg]",
-             legend=["method 0 - s", "method 0 - p",
-                     "method 1 - s", "method 1 - p !!!",
-                     "method 2 - s", "method 2 - p"],
+             legend=["method 0 Born&Wolf - s", "method 0 Born&Wolf - p",
+                     "method 1 Parratt   - s", "method 1 Parratt   - p !!!",
+                     "method 2 shadow3   - s", "method 2 shadow3   - p"],
              marker=["+","+",None,None,None,None],
              linestyle=["","",None,None,None,None],
              title="GLASS n=1.52", xrange=[0,90], yrange=[0,1],
@@ -1151,15 +1253,14 @@ if __name__ == "__main__":
         P_m1 = numpy.abs((numpy.abs(rp0_m1) ** 2 - numpy.abs(rs0_m1) ** 2) / (numpy.abs(rp0_m1) ** 2 + numpy.abs(rs0_m1) ** 2))
         P_m2 = numpy.abs((numpy.abs(rp0_m2) ** 2 - numpy.abs(rs0_m2) ** 2) / (numpy.abs(rp0_m2) ** 2 + numpy.abs(rs0_m2) ** 2))
 
-        print(">>>>", P_m0)
         plot(
              angle_deg, P_m0,
              angle_deg, P_m1,
              angle_deg, P_m2,
              ylog=0, xtitle="Incidence angle (to normal) [deg]",
-             legend=["method 0",
-                     "method 1 !!!",
-                     "method 2"],
+             legend=["method 0 Born&Wolf ",
+                     "method 1 Parratt   ",
+                     "method 2 shadow3   "],
              marker=["+",None,None],
              linestyle=["",None,None],
              title="GLASS n=1.52 POLARIZATION DEGREE", xrange=[0,90],
@@ -1171,17 +1272,66 @@ if __name__ == "__main__":
         delta_m2 = numpy.angle(rs0_m2) - numpy.angle(rp0_m2)
 
         plot(
+             angle_deg, numpy.angle(rs0_m0),
+             angle_deg, numpy.angle(rs0_m1),
+             angle_deg, numpy.angle(rs0_m2),
+             ylog=0, xtitle="Incidence angle (to normal) [deg]",
+             legend=["method 0 Born&Wolf ",
+                     "method 1 Parratt   ",
+                     "method 2 shadow3   "],
+             marker=["+",None,None],
+             linestyle=["",None,None],
+             title="GLASS n=1.52 phase s", xrange=[0,90],
+             show=0)
+
+        plot(
+             angle_deg, numpy.angle(rp0_m0),
+             angle_deg, numpy.angle(rp0_m1),
+             angle_deg, numpy.angle(rp0_m2),
+             ylog=0, xtitle="Incidence angle (to normal) [deg]",
+             legend=["method 0 Born&Wolf ",
+                     "method 1 Parratt   ",
+                     "method 2 shadow3   "],
+             marker=["+",None,None],
+             linestyle=["",None,None],
+             title="GLASS n=1.52 phase p", xrange=[0,90],
+             show=0)
+
+        plot(
              angle_deg, delta_m0,
              angle_deg, delta_m1,
              angle_deg, delta_m2,
              ylog=0, xtitle="Incidence angle (to normal) [deg]",
-             legend=["method 0",
-                     "method 1",
-                     "method 2"],
+             legend=["method 0 Born&Wolf ",
+                     "method 1 Parratt   ",
+                     "method 2 shadow3   "],
              marker=["+",None,None],
              linestyle=["",None,None],
              title="GLASS n=1.52 delta (phase s - phase p)", xrange=[0,90],
+             show=0)
+
+        # good plots!
+
+        plot(
+          angle_deg, numpy.abs(rs0_m0) ** 2, angle_deg, numpy.abs(rp0_m0) ** 2,
+          ylog=0, xtitle="Incidence angle (to normal) [deg]", legend=["s-pol","p-pol"],
+          title="GLASS n=1.52", xrange=[0, 90], yrange=[0, 1],
+          show=0)
+
+        plot(
+          angle_deg, P_m0,
+          ylog=0, xtitle="Incidence angle (to normal) [deg]",
+          title="GLASS n=1.52 POLARIZATION DEGREE", xrange=[0, 90],
+          show=0)
+
+        plot(
+             angle_deg, numpy.angle(rs0_m0),
+             angle_deg, numpy.angle(rp0_m0),
+             angle_deg, numpy.angle(rs0_m0) - numpy.angle(rp0_m0),
+             ylog=0, xtitle="Incidence angle (to normal) [deg]", legend=["s-pol","p-pol","s-p difference"],
+             title="GLASS n=1.52 phase", xrange=[0,90],
              show=1)
+
 
     if False: # Fresnel Rhomb  GLASS op cit  fig 1.16 (pag 450-51).
         from srxraylib.plot.gol import plot
