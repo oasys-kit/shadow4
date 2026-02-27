@@ -944,36 +944,36 @@ class SourceGeometrical(S4LightSourceBase):
         if self._fsour == 0:  # point
             txt += "\nlight_source.set_spatial_type_point()"
         elif self._fsour == 1:  # rectangle
-            txt += "\nlight_source.set_spatial_type_rectangle(width=%f,height=%f)" % \
+            txt += "\nlight_source.set_spatial_type_rectangle(width=%g,height=%g)" % \
                    (self._wxsou, self._wzsou)
         elif self._fsour == 2:  # ellipse
-            txt += "\nlight_source.set_spatial_type_ellipse(width=%f,height=%f)" % \
+            txt += "\nlight_source.set_spatial_type_ellipse(width=%g,height=%g)" % \
                    (self._wxsou, self._wzsou)
         elif self._fsour == 3:  # Gaussian
-            txt += "\nlight_source.set_spatial_type_gaussian(sigma_h=%s,sigma_v=%f)" % \
+            txt += "\nlight_source.set_spatial_type_gaussian(sigma_h=%g,sigma_v=%g)" % \
                    (self._sigmax, self._sigmaz)
 
         # depth
         if self._fsource_depth == 0:  # off
             txt += "\nlight_source.set_depth_distribution_off()"
         elif self._fsource_depth == 1:  # uniform
-            txt += "\nlight_source.set_depth_distribution_uniform(%f)" % (self._wysou)
+            txt += "\nlight_source.set_depth_distribution_uniform(%g)" % (self._wysou)
         elif self._fsource_depth == 2:  # gaussian
-            txt += "\nlight_source.set_depth_distribution_gaussian(%f)" % (self._wysou)
+            txt += "\nlight_source.set_depth_distribution_gaussian(%g)" % (self._wysou)
 
         # divergence
         if self._fdist == 1:  # flat
-            txt += "\nlight_source.set_angular_distribution_flat(hdiv1=%f,hdiv2=%f,vdiv1=%f,vdiv2=%f)" % \
+            txt += "\nlight_source.set_angular_distribution_flat(hdiv1=%g,hdiv2=%g,vdiv1=%g,vdiv2=%g)" % \
                    (self._hdiv1, self._hdiv2, self._vdiv1, self._vdiv2)
         elif self._fdist == 2:  # Uniform
-            txt += "\nlight_source.set_angular_distribution_uniform(hdiv1=%f,hdiv2=%f,vdiv1=%f,vdiv2=%f)" % \
+            txt += "\nlight_source.set_angular_distribution_uniform(hdiv1=%g,hdiv2=%g,vdiv1=%g,vdiv2=%g)" % \
                    (self._hdiv1, self._hdiv2, self._vdiv1, self._vdiv2)
 
         elif self._fdist == 3:  # Gaussian
-            txt += "\nlight_source.set_angular_distribution_gaussian(sigdix=%f,sigdiz=%f)" % \
+            txt += "\nlight_source.set_angular_distribution_gaussian(sigdix=%g,sigdiz=%g)" % \
                    (self._sigdix, self._sigdiz)
         elif self._fdist == 4:  # cone
-            txt += "\nlight_source.set_angular_distribution_cone(cone_max=%f,cone_min=%f)" % \
+            txt += "\nlight_source.set_angular_distribution_cone(cone_max=%g,cone_min=%g)" % \
                    (self._cone_max, self._cone_min)
         elif self._fdist == 5:  # Zero (collimated) - New in shadow4
             txt += "\nlight_source.set_angular_distribution_collimated()"
@@ -983,7 +983,7 @@ class SourceGeometrical(S4LightSourceBase):
         unit = ['eV', 'A'][self._f_phot]
 
         if self._f_color == 1:  # "Single line":
-            txt += "\nlight_source.set_energy_distribution_singleline(%f, unit='%s')" % \
+            txt += "\nlight_source.set_energy_distribution_singleline(%g, unit='%s')" % \
                    (self._ph[0], unit)
         elif self._f_color == 2:  # "Several lines":
             nlines = (numpy.array(self._ph)).size
@@ -993,28 +993,28 @@ class SourceGeometrical(S4LightSourceBase):
             ff += "]"
             txt += "\nlight_source.set_energy_distribution_severallines(values=%s, unit='%s')" % (ff, unit)
         elif self._f_color == 3:  # "Uniform":
-            txt += "\nlight_source.set_energy_distribution_uniform(value_min=%f, value_max=%f, unit='%s')" % \
+            txt += "\nlight_source.set_energy_distribution_uniform(value_min=%g, value_max=%g, unit='%s')" % \
                    (self._ph[0], self._ph[1], unit)
         elif self._f_color == 4:  # "Relative intensities":
             nlines = (numpy.array(self._ph)).size
             ff = "["
             ww = "["
             for i in range(nlines):
-                ff += "%f," % self._ph[i]
-                ww += "%f," % self._rl[i]
+                ff += "%g," % self._ph[i]
+                ww += "%g," % self._rl[i]
             ff += "]"
             ww += "]"
             txt += "\nlight_source.set_energy_distribution_relativeintensities(values=%s, weights=%s, unit='%s')" % \
                    (ff, ww, unit)
         elif self._f_color == 5:  # "Gaussian":
-            txt += "\nlight_source.set_energy_distribution_gaussian(center=%f, sigma=%f, unit='%s')" % \
+            txt += "\nlight_source.set_energy_distribution_gaussian(center=%g, sigma=%g, unit='%s')" % \
                 (self._ph[0], self._ph[1], unit)
         elif self._f_color == 6:  # "User defined":
             # a = numpy.loadtxt(self.user_defined_file)
             txt += "\nlight_source.set_energy_distribution_userdefined() #### TODO: COMPLETE"
 
         #polarization/coherence
-        txt += "\nlight_source.set_polarization(polarization_degree=%f, phase_diff=%f, coherent_beam=%s)" % \
+        txt += "\nlight_source.set_polarization(polarization_degree=%g, phase_diff=%g, coherent_beam=%s)" % \
                (self._pol_deg, self._pol_angle, self._f_foher)
 
         txt += "\nbeam = light_source.get_beam()"
