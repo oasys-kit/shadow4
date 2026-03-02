@@ -134,7 +134,7 @@ optical_element = S4SphereMultilayer(name='{name:s}', boundary_shape=boundary_sh
     cylinder_direction={cylinder_direction:d},
     convexity={convexity:d},
     radius={radius:f}, # for surface_calculation=1
-    p_focus={p_focus:f}, q_focus={q_focus:f}, grazing_angle={grazing_angle:f}, # for surface_calculation=0
+    p_focus={p_focus:f}, q_focus={q_focus:f}, grazing_angle={grazing_angle:.10f}, # for surface_calculation=0
     f_refl={f_refl:d}, # 0=pre_mlayer, 1=(mrad, refl), 2=(eV, refl), 3=(eV, mrad, refl); 4=xraylib, 5=dabax
     file_refl='{file_refl:s}', # for f_refl=0,1,2,3
     structure='{structure:s}', period={period:f}, Gamma={Gamma:f}, # for f_refl=4,5

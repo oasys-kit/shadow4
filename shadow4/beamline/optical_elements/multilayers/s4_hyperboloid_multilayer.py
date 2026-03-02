@@ -141,7 +141,7 @@ from shadow4.beamline.optical_elements.multilayers.s4_hyperboloid_multilayer imp
 optical_element = S4HyperboloidMultilayer(name='{name:s}', boundary_shape=boundary_shape,
     surface_calculation={surface_calculation:d}, # 0=Internal calculation, 1=External 
     min_axis={min_axis:f}, maj_axis={maj_axis:f}, pole_to_focus={pole_to_focus:f}, # for surface_calculation=1
-    p_focus={p_focus:f}, q_focus={q_focus:f}, grazing_angle={grazing_angle:f}, # for surface_calculation=0
+    p_focus={p_focus:f}, q_focus={q_focus:f}, grazing_angle={grazing_angle:.10f}, # for surface_calculation=0
     is_cylinder={is_cylinder:d}, cylinder_direction={cylinder_direction:d}, convexity={convexity:d},
     f_refl={f_refl:d}, # 0=pre_mlayer, 1=(mrad, refl), 2=(eV, refl), 3=(eV, mrad, refl); 4=xraylib, 5=dabax
     file_refl='{file_refl:s}',

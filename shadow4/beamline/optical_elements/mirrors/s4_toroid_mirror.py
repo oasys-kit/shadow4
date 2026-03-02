@@ -147,7 +147,7 @@ optical_element = S4ToroidMirror(name='{name:s}', boundary_shape=boundary_shape,
     min_radius={min_radius:.6g},  # min_radius = sagittal
     maj_radius={maj_radius:.6g},  # maj_radius = tangential
     f_torus={f_torus},
-    p_focus={p_focus:.6g}, q_focus={q_focus:.6g}, grazing_angle={grazing_angle:g}, # for surface_calculation=0
+    p_focus={p_focus:.6g}, q_focus={q_focus:.6g}, grazing_angle={grazing_angle:.10g}, # for surface_calculation=0
     f_reflec={f_reflec:d}, # reflectivity of surface: 0=no reflectivity, 1=full polarization
     f_refl={f_refl:d}, # for f_reflec=1: file: 0=prerefl, 2=(mrad, refl), 3=(eV, refl), 4=(eV, mrad, refl); 1=refr index, 5=xraylib, 6=dabax
     file_refl='{file_refl:s}', # for f_refl=0,2,3,4
