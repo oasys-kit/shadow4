@@ -62,7 +62,7 @@ class S4PlaneCrystal(S4Crystal, S4PlaneOpticalElementDecorator):
                  name="Plane crystal",
                  boundary_shape=None,
                  material=None,
-                 # diffraction_geometry=DiffractionGeometry.BRAGG,  # ?? not supposed to be in syned...
+                 diffraction_geometry=DiffractionGeometry.BRAGG,  # ?? not supposed to be in syned...enabled by SSLS:YXJ
                  miller_index_h=1,
                  miller_index_k=1,
                  miller_index_l=1,
@@ -87,7 +87,7 @@ class S4PlaneCrystal(S4Crystal, S4PlaneOpticalElementDecorator):
                            surface_shape=self.get_surface_shape_instance(),
                            boundary_shape=boundary_shape,
                            material=material,
-                           # diffraction_geometry=diffraction_geometry,  # ?? not supposed to be in syned...
+                           diffraction_geometry=diffraction_geometry,  # ?? not supposed to be in syned...enabled by SSLS:YXJ
                            miller_index_h=miller_index_h,
                            miller_index_k=miller_index_k,
                            miller_index_l=miller_index_l,
