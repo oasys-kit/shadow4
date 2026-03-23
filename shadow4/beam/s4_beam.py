@@ -446,8 +446,8 @@ class S4Beam(object):
             * 27   K = 2 pi / lambda * col4 [A^-1]
             * 28   K = 2 pi / lambda * col5 [A^-1]
             * 29   K = 2 pi / lambda * col6 [A^-1]
-            * 30   S0-stokes = `|`Ep`|`^2 + `|`Es`|`^2
-            * 31   S1-stokes = `|`Ep`|`^2 - `|`Es`|`^2
+            * 30   S0-stokes = `|`Es`|`^2 + `|`Ep`|`^2
+            * 31   S1-stokes = `|`Es`|`^2 - `|`Ep`|`^2
             * 32   S2-stokes = 2 `|`Es`|` `|`Ep`|` cos(phase_s-phase_p)
             * 33   S3-stokes = 2 `|`Es`|` `|`Ep`|` sin(phase_s-phase_p)
             * 34   Power = intensity(col 23) * energy (col 11)
@@ -497,11 +497,11 @@ class S4Beam(object):
             if column == 30:
                 E2s = numpy.sum(numpy.array([ ray[:,i]*ray[:,i] for i in [6,7,8] ]),axis=0)
                 E2p = numpy.sum(numpy.array([ ray[:,i]*ray[:,i] for i in [15,16,17] ]),axis=0)
-                out =  E2p+E2s
+                out =  E2p + E2s
             if column ==31:
                 E2s = numpy.sum(numpy.array([ ray[:,i]*ray[:,i] for i in [6,7,8] ]),axis=0)
                 E2p = numpy.sum(numpy.array([ ray[:,i]*ray[:,i] for i in [15,16,17] ]),axis=0)
-                out =  E2p-E2s
+                out =  E2s - E2p
             if column == 32:
                 E2s = numpy.sum(numpy.array([ ray[:,i]*ray[:,i] for i in [6,7,8] ]),axis=0)
                 E2p = numpy.sum(numpy.array([ ray[:,i]*ray[:,i] for i in [15,16,17] ]),axis=0)
@@ -556,6 +556,20 @@ class S4Beam(object):
             if column == 41:
                 out =  numpy.sum(numpy.array([ ray[:,i]*ray[:,i] for i in [15,16,17] ]),axis=0)
                 out *= numpy.exp(1j * ray[:, 15 - 1])
+            if column ==42:
+                E2s = numpy.sum(numpy.array([ ray[:,i] * ray[:,i] for i in [6,7,8] ]),axis=0)
+                E2p = numpy.sum(numpy.array([ ray[:,i] * ray[:,i] for i in [15,16,17] ]),axis=0)
+                out =  (E2s - E2p) / (E2s + E2p)
+            if column == 43:
+                E2s = numpy.sum(numpy.array([ ray[:,i] * ray[:,i] for i in [6,7,8] ]),axis=0)
+                E2p = numpy.sum(numpy.array([ ray[:,i] * ray[:,i] for i in [15,16,17] ]),axis=0)
+                Cos = numpy.cos(ray[:,13] - ray[:,14])
+                out =  2 * numpy.sqrt(E2s * E2p) * Cos / (E2s + E2p)
+            if column == 44:
+                E2s = numpy.sum(numpy.array([ ray[:,i]*ray[:,i] for i in [6,7,8] ]),axis=0)
+                E2p = numpy.sum(numpy.array([ ray[:,i]*ray[:,i] for i in [15,16,17] ]),axis=0)
+                Sin = numpy.sin(ray[:,13] - ray[:,14])
+                out =  2 * numpy.sqrt(E2s * E2p) * Sin / (E2s + E2p)
 
         if nolost == 0:
             return out.copy()
@@ -2564,6 +2578,9 @@ class S4Beam(object):
             "Phase difference \u03C6\u209B-\u03C6\u209A",
             "Complex electric field (s-polariz)",
             "Complex electric field (p-polariz)",
+            "P1-normalized-stokes = S1/S0 ",
+            "P2-normalized-stokes = S2/S0",
+            "P3-normalized-stokes = S3/S0",
         ]
 
     @classmethod
@@ -2619,6 +2636,9 @@ class S4Beam(object):
             "[rad]",
             "",
             "",
+            "",
+            "",
+            "",
         ]
 
 
@@ -2664,6 +2684,9 @@ class S4Beam(object):
                 "\u03C6\u209B-\u03C6\u209A", # phase_s - phase_p
                 "complex E\u209B",
                 "complex E\u209A",
+                "P1=S1/S0",
+                "P2=S2/S0",
+                "P3=S3/S0",
         ]
 
     @classmethod
@@ -2740,6 +2763,9 @@ class S4Beam(object):
             r"Phase difference \phi_{s}-\phi_{p}",
             r"complex $\mathbf{E}_{s}$",  # "Es_complex"],
             r"complex $\mathbf{E}_{p}$",  # "Es_complex"],
+            r"$P_1 = S1/S0$",  # "P1"],
+            r"$P_2 = S2/S0$",  # "P2"],
+            r"$P_3 = S3/S0$",  # "P3"],
         ]
 
     @classmethod
@@ -2978,7 +3004,7 @@ if __name__ == "__main__":
         print(B.get_average(1), B.get_average(1, ref=23))
         print(B.isnan())
 
-    if 1:  # check cleaned beam
+    if 0:  # check cleaned beam
         B = S4Beam.initialize_as_pencil(N=2000)
         print("Beam cleaned? ", B.is_cleaned())
         print("...reflagging 100, and cleaning...")
@@ -3029,6 +3055,27 @@ if __name__ == "__main__":
         print("bad : ", (A.get_rays(nolost=2)).shape, A.rays_bad.shape, A.rays_bad)
         print("rays shape, Nstored: ", A.rays.shape, A.Nstored)
         print("last index: ", A.get_column(12)[-1])
+
+    if 0:  # check names
+        names1 = S4Beam.column_names_formatted()
+        names2 = S4Beam.column_names_formatted_with_column_number()
+        names3 = S4Beam.column_names()
+        names4 = S4Beam.column_names_with_column_number()
+        names5 = S4Beam.column_short_names()
+        names6 = S4Beam.column_short_names_with_column_number()
+        names7 = S4Beam.column_units()
+        for i in range(len(names1)):
+            print("\n", "===========================column ", i+1)
+            print("\n", names1[i])
+            print("\n", names1[i])
+            print("\n", names2[i])
+            print("\n", names3[i])
+            print("\n", names4[i])
+            print("\n", names5[i])
+            print("\n", names6[i])
+            print("\n", names7[i])
+
+
 
 
 
