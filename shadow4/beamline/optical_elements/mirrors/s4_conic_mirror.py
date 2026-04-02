@@ -117,7 +117,7 @@ optical_element = S4ConicMirror(name='{name:s}', boundary_shape=boundary_shape,
     f_reflec={f_reflec:d}, # reflectivity of surface: 0=no reflectivity, 1=full polarization
     f_refl={f_refl:d}, # for f_reflec=1: file: 0=prerefl, 2=(mrad, refl), 3=(eV, refl), 4=(eV, mrad, refl); 1=refr index, 5=xraylib, 6=dabax
     file_refl='{file_refl:s}', # for f_refl=0,2,3,4
-    refraction_index={refraction_index:g}, # for f_refl=1
+    refraction_index={refraction_index:.10g}, # for f_refl=1
     coating_material='{coating_material:s}', coating_density={coating_density:g}, # for f_refl=5,6
     coating_roughness={coating_roughness:g}, # for f_refl=0,1,5,6
     dabax={dabax:s}, # if using dabax (f_reflec=1,f_refl=6), instance of DabaxXraylib() (use None for default)

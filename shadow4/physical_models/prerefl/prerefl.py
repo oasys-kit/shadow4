@@ -1517,7 +1517,26 @@ if __name__ == "__main__":
              legend=["real(n)","imag(n)"],
              xtitle="Wavelength [nm]", title="data from database at: https://refractiveindex.info")
 
+    if False: # refractiveindex.info site for optical glass
 
+        prerefl_file = "reflec_refractiveindexinfo_nbk7.dat"
+
+        PreRefl.prerefl_refractiveindexinfo(shelf='specs', book='SCHOTT-optical', page='N-BK7',
+                                output_file=prerefl_file,
+                    WAVELENGTH_MIN=0.3e-6, WAVELENGTH_MAX=2.5e-6, NPOINTS=1000, density=2.2)
+
+        a2 = PreRefl()
+        a2.read_preprocessor_file(filename=prerefl_file)
+
+        wavelength_nm = numpy.linspace(300, 2500, 1500)
+        energy_eV = codata.h * codata.c / codata.e / (wavelength_nm * 1e-9)
+
+        print(">>>> eV: ", energy_eV)
+        nn = a2.get_refraction_index(energy_eV)
+        plot(wavelength_nm, nn.real,
+             wavelength_nm, nn.imag,
+             legend=["real(n)","imag(n)"],
+             xtitle="Wavelength [nm]", title="data from database at: https://refractiveindex.info")
 
     if False: # compare with cxro ii) Si at high energies (similar)
 

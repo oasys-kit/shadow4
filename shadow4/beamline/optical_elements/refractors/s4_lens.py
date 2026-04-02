@@ -202,7 +202,7 @@ optical_element = S4Lens(name='{name:s}',
      cylinder_angle={cylinder_angle}, # for surface_shape: 0=not cylindricaL, 1=meridional 2=sagittal
      ri_calculation_mode={ri_calculation_mode},   # source of refr indices and absorp coeff 0=User, 1=prerefl file, 2=xraylib, 3=dabax
      prerefl_file='{prerefl_file:s}', # for ri_calculation_mode=0: file name (from prerefl) to get the refraction index.
-     refraction_index={refraction_index:g}, # for ri_calculation_mode=1: n (real)
+     refraction_index={refraction_index:.10g}, # for ri_calculation_mode=1: n (real)
      attenuation_coefficient={attenuation_coefficient:g}, # for ri_calculation_mode=1: mu in m^-1 (real)
      dabax={dabax:s}, # if using dabax (ri_calculation_mode=3), instance of DabaxXraylib() (use None for default)
      radius={radius:g}, # for surface_shape=(1,2): lens radius [m] (for spherical, or radius at the tip for paraboloid)
