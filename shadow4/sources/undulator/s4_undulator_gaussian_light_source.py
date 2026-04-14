@@ -243,6 +243,9 @@ class S4UndulatorGaussianLightSource(S4LightSource):
             txt += "    Qa:      %g \n" % (Qa)
         else:
             txt += "No correction for electron energy spread.\n"
+        if u._flag_autoset_flux_central_cone:
+            flux = self.get_flux_central_cone()
+            txt += "Calculated flux in central cone: %g photons/s/0.1bw\n" % flux
 
         txt += "Electron sizes: \n"
         txt += "    sigma_x: %g um \n" % (1e6 * sigma_x)
@@ -449,8 +452,6 @@ class S4UndulatorGaussianLightSource(S4LightSource):
             print("*** Flux Calculation ***")
             print("  Using target E=%f eV; n=%f periods, current=%f => K=%f" % (u._photon_energy, u._harmonic_number, current, K))
             print("  Calculated Flux: %g photons/s/0.1%%bw" % (out))
-            # out2 = 1.431e14 * u.number_of_periods() * current * self.Qn(K, u._harmonic_number)
-            # print("  Another way to get Flux: %g photons/s" % out2)
 
         return out
 
@@ -607,6 +608,9 @@ class S4UndulatorGaussianLightSource(S4LightSource):
 
 if __name__ == "__main__":
 
+    from shadow4.tools.logger import set_verbose
+    set_verbose()
+
     electron_beam = S4ElectronBeam(energy_in_GeV=6, energy_spread=1e-03, current=0.2)
     electron_beam.set_sigmas_all(sigma_x=3.01836e-05, sigma_y=3.63641e-06, sigma_xp=4.36821e-06, sigma_yp=1.37498e-06)
 
@@ -632,74 +636,73 @@ if __name__ == "__main__":
     light_source = S4UndulatorGaussianLightSource(name='GaussianUndulator', electron_beam=electron_beam,
                                           magnetic_structure=source, nrays=5000, seed=5676561)
 
-    # print(light_source.info())
-    #
-    # if True:
-    #     beam = light_source.get_beam()
-    #
-    #     print(beam)
-    #
-    #     # test plot
-    #     from srxraylib.plot.gol import plot_scatter
-    #
-    #     rays = beam.get_rays()
-    #     plot_scatter(1e6 * rays[:, 0], 1e6 * rays[:, 2], title='(X,Z) in microns')
-    #     plot_scatter(1e6 * rays[:, 3], 1e6 * rays[:, 5], title='(Xp,Zp) in microradians')
-    #
-    # if True:
-    #     from srxraylib.plot.gol import plot
-    #
-    #
-    #     flux, ee = light_source.get_flux()
-    #     plot(ee, flux, title="flux")
-    #
-    #     Energies, SizeH, SizeV, DivergenceH, DivergenceV, Labels =\
-    #         light_source.get_size_and_divergence_vs_photon_energy(0.2, 1.479, max_harmonic_number=11)
-    #
-    #     plot(Energies[0, :], SizeH[0, :],
-    #          Energies[1, :], SizeH[1, :],
-    #          Energies[2, :], SizeH[2, :],
-    #          Energies[3, :], SizeH[3, :],
-    #          Energies[4, :], SizeH[4, :],
-    #          Energies[5, :], SizeH[5, :],
-    #          Energies[6, :], SizeH[6, :],
-    #          legend=Labels, title="Size H", show=0)
-    #
-    #     plot(Energies[0, :], SizeV[0, :],
-    #          Energies[1, :], SizeV[1, :],
-    #          Energies[2, :], SizeV[2, :],
-    #          Energies[3, :], SizeV[3, :],
-    #          Energies[4, :], SizeV[4, :],
-    #          Energies[5, :], SizeV[5, :],
-    #          Energies[6, :], SizeV[6, :],
-    #          legend=Labels, title="Size V", show=0)
-    #
-    #     plot(Energies[0, :], DivergenceH[0, :],
-    #          Energies[1, :], DivergenceH[1, :],
-    #          Energies[2, :], DivergenceH[2, :],
-    #          Energies[3, :], DivergenceH[3, :],
-    #          Energies[4, :], DivergenceH[4, :],
-    #          Energies[5, :], DivergenceH[5, :],
-    #          Energies[6, :], DivergenceH[6, :],
-    #          legend=Labels, title="Divergence H", show=0)
-    #
-    #     plot(Energies[0, :], DivergenceV[0, :],
-    #          Energies[1, :], DivergenceV[1, :],
-    #          Energies[2, :], DivergenceV[2, :],
-    #          Energies[3, :], DivergenceV[3, :],
-    #          Energies[4, :], DivergenceV[4, :],
-    #          Energies[5, :], DivergenceV[5, :],
-    #          Energies[6, :], DivergenceV[6, :],
-    #          legend=Labels, title="Divergence V")
-    #
-    #
-    # if True:
-    #     print(light_source.q_a(1.0))
-    #     nes = light_source.norm_energ_spr()
-    #     print("Normalized energy spread: ", nes )
-    #     print("Qa: ", light_source.q_a(nes))
-    #     print("Qs: ", light_source.q_s(nes, factor=0.5))
-    #
-    #     print("Flux: %g photons/s/0.1%%bw" % light_source.get_magnetic_structure()._flux_central_cone)
+    print(light_source.info())
 
-    print(light_source.get_info())
+    if False: # create rays
+        beam = light_source.get_beam()
+
+        print(beam)
+
+        # test plot
+        from srxraylib.plot.gol import plot_scatter
+
+        rays = beam.get_rays()
+        plot_scatter(1e6 * rays[:, 0], 1e6 * rays[:, 2], title='(X,Z) in microns')
+        plot_scatter(1e6 * rays[:, 3], 1e6 * rays[:, 5], title='(Xp,Zp) in microradians')
+
+    if False: # plot spectra
+        from srxraylib.plot.gol import plot
+
+
+        flux, ee = light_source.get_flux()
+        plot(ee, flux, title="flux")
+
+        Energies, SizeH, SizeV, DivergenceH, DivergenceV, Labels =\
+            light_source.get_size_and_divergence_vs_photon_energy(0.2, 1.479, max_harmonic_number=11)
+
+        plot(Energies[0, :], SizeH[0, :],
+             Energies[1, :], SizeH[1, :],
+             Energies[2, :], SizeH[2, :],
+             Energies[3, :], SizeH[3, :],
+             Energies[4, :], SizeH[4, :],
+             Energies[5, :], SizeH[5, :],
+             Energies[6, :], SizeH[6, :],
+             legend=Labels, title="Size H", show=0)
+
+        plot(Energies[0, :], SizeV[0, :],
+             Energies[1, :], SizeV[1, :],
+             Energies[2, :], SizeV[2, :],
+             Energies[3, :], SizeV[3, :],
+             Energies[4, :], SizeV[4, :],
+             Energies[5, :], SizeV[5, :],
+             Energies[6, :], SizeV[6, :],
+             legend=Labels, title="Size V", show=0)
+
+        plot(Energies[0, :], DivergenceH[0, :],
+             Energies[1, :], DivergenceH[1, :],
+             Energies[2, :], DivergenceH[2, :],
+             Energies[3, :], DivergenceH[3, :],
+             Energies[4, :], DivergenceH[4, :],
+             Energies[5, :], DivergenceH[5, :],
+             Energies[6, :], DivergenceH[6, :],
+             legend=Labels, title="Divergence H", show=0)
+
+        plot(Energies[0, :], DivergenceV[0, :],
+             Energies[1, :], DivergenceV[1, :],
+             Energies[2, :], DivergenceV[2, :],
+             Energies[3, :], DivergenceV[3, :],
+             Energies[4, :], DivergenceV[4, :],
+             Energies[5, :], DivergenceV[5, :],
+             Energies[6, :], DivergenceV[6, :],
+             legend=Labels, title="Divergence V")
+
+
+    if False: # check values of electron energy dispersion
+        print(light_source.q_a(1.0))
+        nes = light_source.norm_energ_spr()
+        print("Normalized energy spread: ", nes )
+        print("Qa: ", light_source.q_a(nes))
+        print("Qs: ", light_source.q_s(nes, factor=0.5))
+
+        print("Flux: %g photons/s/0.1%%bw" % light_source.get_magnetic_structure()._flux_central_cone)
+
