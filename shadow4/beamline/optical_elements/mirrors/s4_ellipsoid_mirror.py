@@ -149,7 +149,7 @@ from shadow4.beamline.optical_elements.mirrors.s4_ellipsoid_mirror import S4Elli
 optical_element = S4EllipsoidMirror(name='{name:s}', boundary_shape=boundary_shape,
     surface_calculation={surface_calculation:d}, # 0=Internal calculation, 1=External 
     min_axis={min_axis:f}, maj_axis={maj_axis:f}, pole_to_focus={pole_to_focus:f},
-    p_focus={p_focus:f}, q_focus={q_focus:f}, grazing_angle={grazing_angle:f}, # for surface_calculation=0
+    p_focus={p_focus:f}, q_focus={q_focus:f}, grazing_angle={grazing_angle:.10f}, # for surface_calculation=0
     is_cylinder={is_cylinder:d}, cylinder_direction={cylinder_direction:d}, convexity={convexity:d},
     f_reflec={f_reflec:d}, # reflectivity of surface: 0=no reflectivity, 1=full polarization
     f_refl={f_refl:d}, # for f_reflec=1: file: 0=prerefl, 2=(mrad, refl), 3=(eV, refl), 4=(eV, mrad, refl); 1=refr index, 5=xraylib, 6=dabax
