@@ -42,7 +42,10 @@ class S4Wiggler(Wiggler):
         However, with large number of points, the calculation time is very large, similar to the more accurate option
         flag_interpolaton=0.
     flag_emittance : int, optional
-        Flag: 0=Zero emittance (filament beam), 1=Use emittance.
+        Flag:
+            - 0=Zero emittance (filament beam)
+            - 1=Use emittance
+            - 2=Use emittance, but do not consider natural emission (for testing the electron phase space).
     shift_x_flag : int, optional
         Flag to deplace the X of the electron trajectory trajectory.
     shift_x_value : float, optional
