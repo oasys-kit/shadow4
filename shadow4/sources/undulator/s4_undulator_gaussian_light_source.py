@@ -51,8 +51,8 @@ class S4UndulatorGaussianLightSource(S4LightSource):
                          seed=seed,
                          )
 
-        if magnetic_structure._flag_autoset_flux_central_cone:
-            magnetic_structure._flux_central_cone = self.get_flux_central_cone()
+        if self.get_magnetic_structure()._flag_autoset_flux_central_cone:
+            self.get_magnetic_structure()._flux_central_cone = self.get_flux_central_cone()
 
 
     def calculate_spectrum(self):
