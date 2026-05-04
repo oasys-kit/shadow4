@@ -377,9 +377,9 @@ class S4WigglerLightSource(S4LightSource):
         sigmas = syned_electron_beam.get_sigmas_all()
 
         t0 = time.time()
-        if wiggler._FLAG_EMITTANCE:
+        if wiggler._FLAG_EMITTANCE > 0:
             if numpy.array(numpy.abs(sigmas)).sum() == 0:
-                wiggler._FLAG_EMITTANCE = False
+                wiggler._FLAG_EMITTANCE = 0
 
 
         #
@@ -520,7 +520,7 @@ class S4WigglerLightSource(S4LightSource):
         E_BEAM3_array = numpy.zeros(NRAYS)
 
         t2 = time.time()
-        if wiggler._FLAG_EMITTANCE:
+        if wiggler._FLAG_EMITTANCE > 0:
             moment_xx, moment_xxp, moment_xpxp, moment_zz, moment_zzp, moment_zpzp = syned_electron_beam.get_moments_all()
             sigmaX, sigmaXp, sigmaZ, sigmaZp = sigmas
 
@@ -626,7 +626,10 @@ class S4WigglerLightSource(S4LightSource):
                 # ! C the point defined by (X_TRAJ,Y_TRAJ,0).
 
                 YYY = Y_TRAJ - XXX * numpy.sin(ANGLE)
-                XXX = X_TRAJ + XXX * numpy.cos(ANGLE)
+                if wiggler._FLAG_EMITTANCE == 2: # test case, do not consider photon emission, only electron contribution
+                    XXX =          XXX * numpy.cos(ANGLE)
+                else: # usual case
+                    XXX = X_TRAJ + XXX * numpy.cos(ANGLE)
 
                 rays[itik,0] = XXX
                 rays[itik,1] = YYY
@@ -642,7 +645,11 @@ class S4WigglerLightSource(S4LightSource):
 
             ZZZ = E_BEAMZZZ_array
             YYY = Y_TRAJ_array - E_BEAMXXX_array * numpy.sin(ANGLE_array)
-            XXX = X_TRAJ_array + E_BEAMXXX_array * numpy.cos(ANGLE_array)
+
+            if wiggler._FLAG_EMITTANCE == 2:  # test case, do not consider photon emission, only electron contribution
+                XXX =                E_BEAMXXX_array * numpy.cos(ANGLE_array)
+            else: # usual case
+                XXX = X_TRAJ_array + E_BEAMXXX_array * numpy.cos(ANGLE_array)
 
             rays[:, 0] = XXX
             rays[:, 1] = YYY
@@ -856,8 +863,16 @@ class S4WigglerLightSource(S4LightSource):
             sampled_theta_array[itik] = sampled_theta
         # end loop
 
-        ANGLEV = sampled_theta_array + E_BEAM3_array
-        ANGLEX = ANGLE_array + E_BEAM1_array
+
+
+
+        if wiggler._FLAG_EMITTANCE == 2:  # test case, do not consider photon emission, only electron contribution
+            ANGLEV = E_BEAM3_array
+            ANGLEX = E_BEAM1_array
+        else: # usual case
+            ANGLEV = sampled_theta_array + E_BEAM3_array
+            ANGLEX = ANGLE_array + E_BEAM1_array
+
         DIREC1 = numpy.tan(ANGLEX)
         DIREC2 = numpy.ones_like(DIREC1)
         DIREC3 = numpy.tan(ANGLEV) / numpy.cos(ANGLEX)
@@ -1073,7 +1088,7 @@ class S4WigglerLightSource(S4LightSource):
         txt += "Input Electron parameters: \n"
         txt += "        Electron energy: %f geV\n"%electron_beam.energy()
         txt += "        Electron current: %f A\n"%electron_beam.current()
-        if magnetic_structure._FLAG_EMITTANCE:
+        if magnetic_structure._FLAG_EMITTANCE > 0:
             sigmas = electron_beam.get_sigmas_all()
             txt += "        Electron sigmaX: %g um\n"%(1e6*sigmas[0])
             txt += "        Electron sigmaZ: %g um\n"%(1e6*sigmas[2])
