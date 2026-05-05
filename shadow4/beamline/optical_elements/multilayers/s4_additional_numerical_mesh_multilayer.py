@@ -1,3 +1,4 @@
+import numpy
 from syned.beamline.shape import NumericalMesh
 from syned.beamline.element_coordinates import ElementCoordinates
 
