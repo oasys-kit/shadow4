@@ -1,3 +1,6 @@
+"""
+The s4 transfocator (optical element and beamline element).
+"""
 import numpy
 
 from syned.beamline.element_coordinates import ElementCoordinates

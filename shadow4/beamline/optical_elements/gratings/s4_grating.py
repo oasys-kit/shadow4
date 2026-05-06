@@ -1,3 +1,6 @@
+"""
+The s4 grating base class (optical element and beamline element).
+"""
 import numpy
 import scipy.constants as codata
 

@@ -1,3 +1,6 @@
+"""
+The s4 paraboloid crystal (optical element and beamline element).
+"""
 from syned.beamline.element_coordinates import ElementCoordinates
 
 from shadow4.beam.s4_beam import S4Beam

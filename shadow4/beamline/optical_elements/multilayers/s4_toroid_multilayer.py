@@ -1,3 +1,6 @@
+"""
+The s4 toroid multilayer (optical element and beamline element).
+"""
 from syned.beamline.shape import Toroid
 from shadow4.beam.s4_beam import S4Beam
 from shadow4.beamline.optical_elements.multilayers.s4_multilayer import S4MultilayerElement, S4Multilayer, ElementCoordinates

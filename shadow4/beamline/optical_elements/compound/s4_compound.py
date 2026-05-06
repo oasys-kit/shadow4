@@ -1,3 +1,6 @@
+"""
+The s4 compound optical element (combination of multiple beamline elements).
+"""
 import numpy
 
 from syned.beamline.optical_element import OpticalElement

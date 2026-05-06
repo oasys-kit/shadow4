@@ -1,8 +1,9 @@
-#
 """
+Operations on arrays of 3D vectors with shape ``(n_vectors, 3)``.
 
-Set of functions to make operations with an array of 3D vectors, v[n_vectors,3]
-
+Each function operates element-wise over a batch of vectors so that an entire
+ray bundle can be transformed in a single NumPy call.  All inputs and outputs
+follow the convention ``v[n_vectors, 3]`` unless otherwise stated.
 """
 import numpy
 
@@ -53,6 +54,21 @@ def vector_modulus(u):
     return numpy.sqrt( u[: ,0 ]**2 + u[: ,1 ]**2 + u[: ,2 ]**2)
 
 def vector_modulus_square(u):
+    """
+
+    Calculates the modulus of a vector array to the power 2.
+
+    Parameters
+    ----------
+    u : numpy array shape (n_vectors,3)
+        input vector 1.
+
+    Returns
+    -------
+    numpy array shape (n_vectors)
+        Result vector modulus to the power 2.
+
+    """
     return ( u[: ,0 ]**2 + u[: ,1 ]**2 + u[: ,2 ]**2)
 
 def vector_norm(u):

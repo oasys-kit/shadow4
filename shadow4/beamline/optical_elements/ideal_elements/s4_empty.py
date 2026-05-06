@@ -1,3 +1,6 @@
+"""
+The s4 empty (pass-through) ideal element (optical element and beamline element).
+"""
 import numpy
 from syned.beamline.optical_elements.ideal_elements.screen import Screen
 from syned.beamline.element_coordinates import ElementCoordinates

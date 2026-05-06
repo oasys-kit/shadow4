@@ -1,3 +1,6 @@
+"""
+The s4 sphere crystal (optical element and beamline element).
+"""
 from shadow4.beam.s4_beam import S4Beam
 from shadow4.beamline.optical_elements.crystals.s4_crystal import S4CrystalElement, S4Crystal
 from shadow4.beamline.s4_optical_element_decorators import SurfaceCalculation, S4SphereOpticalElementDecorator

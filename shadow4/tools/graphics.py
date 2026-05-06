@@ -1,3 +1,11 @@
+"""
+Matplotlib-based plotting tools for shadow4 beam data.
+
+Provides :func:`histo1` (1D histogram) and :func:`plotxy` (2D scatter/histogram)
+as the main public interface, mirroring the classic Shadow3 ShadowTools API.
+Column numbers follow the shadow4 convention (1-indexed, columns 1–33).
+"""
+
 import socket
 import getpass
 import datetime
@@ -24,6 +32,7 @@ A2EV = 2.0*numpy.pi/(codata_h*codata_c/codata_ec*1e2)
 
 
 class ArgsError(Exception):
+    """Raised when a plotting function receives an invalid argument."""
     def __init__(self, value):
         self.value = value
 
@@ -32,6 +41,7 @@ class ArgsError(Exception):
 
 
 class NoValueSelectedError(Exception):
+    """Raised when no value is selected from a data set."""
     def __init__(self, value):
         self.value = value
 
@@ -40,6 +50,7 @@ class NoValueSelectedError(Exception):
 
 
 class Histo1_Ticket:
+    """Container for the output of a 1D histogram plot."""
     def __init__(self):
         self.histogram = None
         self.bin_center = None
@@ -54,6 +65,7 @@ class Histo1_Ticket:
 
 
 class plotxy_Ticket:
+    """Container for the output of a 2D scatter/histogram plot."""
     def __init__(self):
         self.figure = None
         self.xrange = None
@@ -251,19 +263,29 @@ def getLabel(col):
     ]
     return Label[col]
 
-def histo1(beam, col, notitle=0, nofwhm=0,  bar=0,  **kwargs):
+def histo1(beam, col, notitle=0, nofwhm=0, bar=0, **kwargs):
     """
-    Plot the histogram of a column, as calculated by Shadow.Beam.histo1 using matplotlib
+    Plot the 1D histogram of a beam column using matplotlib.
 
-    NOTE: This will replaces the old histo1 still available as histo1_old
+    Parameters
+    ----------
+    beam : S4Beam
+        The beam instance to histogram.
+    col : int
+        Shadow column number (1-indexed, 1–33).
+    notitle : int, optional
+        Set to 1 to suppress the plot title.
+    nofwhm : int, optional
+        Set to 1 to suppress the FWHM annotation.
+    bar : int, optional
+        1 for a bar plot, 0 (default) for a line plot.
+    **kwargs :
+        Additional keyword arguments forwarded to :meth:`S4Beam.histo1`.
 
-    :param beam: a Shadow.Beam() instance, or a file name with Shadow binary file
-    :param col: the Shadow column number (start from 1)
-    :param notitle: set to 1 to avoid displaying title
-    :param nofwhm: set to 1 to avoid labeling FWHM value
-    :param bar: 1=bar plot, 0=line plot
-    :param kwargs: keywords accepted by Shadow.Beam.histo1()
-    :return: the dictionary returned by Shadow.beam.histo1() with some keys added.
+    Returns
+    -------
+    dict
+        The ticket dictionary returned by :meth:`S4Beam.histo1`.
     """
 
     title = "histo1"
@@ -336,18 +358,32 @@ def histo1(beam, col, notitle=0, nofwhm=0,  bar=0,  **kwargs):
     return tk2
 
 
-def plotxy(beam,col_h,col_v, nofwhm=1, title="", **kwargs):
+def plotxy(beam, col_h, col_v, nofwhm=1, title="", **kwargs):
   """
+  Plot a 2D scatter/histogram of two beam columns using matplotlib.
 
-  plotxy implementation using matplotlib.
-  Calculations are done using Shadow.beam.histo2()
+  Parameters
+  ----------
+  beam : S4Beam or dict
+      The beam instance, or a pre-computed ticket dictionary from
+      :meth:`S4Beam.histo2` (in which case ``col_h`` and ``col_v`` are
+      ignored and read from the dictionary).
+  col_h : int
+      Shadow column number for the horizontal axis (1-indexed, 1–33).
+  col_v : int
+      Shadow column number for the vertical axis (1-indexed, 1–33).
+  nofwhm : int, optional
+      Set to 0 to annotate FWHM values on the marginal histograms
+      (default 1 suppresses the annotation).
+  title : str, optional
+      Plot title. Defaults to ``"plotxy"``.
+  **kwargs :
+      Additional keyword arguments forwarded to :meth:`S4Beam.histo2`.
 
-  :param beam: it can be a SHADOW binary file, an instance of Shadow.Beam() or a dictionary from Shadow.Beam.histo2
-  :param col_h: The column for the H coordinate in the plot (irrelevant of beam is a dictionary)
-  :param col_v: The column for the H coordinate in the plot (irrelevant of beam is a dictionary)
-  :param nofwhm: set to 0 to label the FWHM value in the plot (default do not label)
-  :param kwargs: keywrods passed to Shadow.Beam.histo2
-  :return: the dictionary returned by Shadow.beam.histo2() with some added keys.
+  Returns
+  -------
+  dict
+      The ticket dictionary returned by :meth:`S4Beam.histo2`.
   """
   if title == "":
       title = "plotxy"

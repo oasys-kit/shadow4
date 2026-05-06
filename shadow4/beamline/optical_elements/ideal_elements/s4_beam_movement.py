@@ -1,3 +1,6 @@
+"""
+The s4 beam movement ideal element (optical element and beamline element).
+"""
 from syned.beamline.optical_element import OpticalElement
 from syned.beamline.element_coordinates import ElementCoordinates
 

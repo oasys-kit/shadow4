@@ -1,3 +1,6 @@
+"""
+The s4 numerical mesh crystal (optical element and beamline element).
+"""
 from syned.beamline.shape import NumericalMesh
 from shadow4.beam.s4_beam import S4Beam
 from shadow4.beamline.optical_elements.crystals.s4_crystal import S4CrystalElement, S4Crystal, ElementCoordinates

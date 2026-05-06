@@ -1,3 +1,6 @@
+"""
+The s4 sphere grating (optical element and beamline element).
+"""
 import numpy
 
 from syned.beamline.shape import Convexity, Direction

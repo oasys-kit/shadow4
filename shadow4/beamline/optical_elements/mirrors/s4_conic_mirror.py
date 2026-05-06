@@ -1,3 +1,6 @@
+"""
+The s4 conic mirror (optical element and beamline element).
+"""
 import numpy
 from syned.beamline.shape import Conic
 from shadow4.beam.s4_beam import S4Beam
