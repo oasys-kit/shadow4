@@ -1,12 +1,7 @@
-.. bar4ro documentation master file, created by
-   sphinx-quickstart on Wed Aug 30 15:58:55 2023.
-   You can adapt this file completely to your liking, but it should at least
-   contain the root `toctree` directive.
-
 Welcome to shadow4's documentation!
 ===================================
 
-shadow4. Ray tracing for x-ray ans sysnchrotron optcal systems.
+shadow4: Ray tracing for x-ray and synchrotron optical systems.
 
 .. toctree::
    :maxdepth: 2
@@ -22,4 +17,10 @@ shadow4. Ray tracing for x-ray ans sysnchrotron optcal systems.
    installation
    api
    examples
-   indicesandtables
+
+Indices and tables
+------------------
+
+* :ref:`genindex`
+* :ref:`modindex`
+* :ref:`search`

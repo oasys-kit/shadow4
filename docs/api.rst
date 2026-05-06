@@ -71,6 +71,7 @@ beamline optical elements
    .. autosummary::
       :toctree: generated/
 
+      shadow4.beamline.optical_elements.mirrors.s4_mirror
       shadow4.beamline.optical_elements.mirrors.s4_plane_mirror
       shadow4.beamline.optical_elements.mirrors.s4_sphere_mirror
       shadow4.beamline.optical_elements.mirrors.s4_toroid_mirror
@@ -86,6 +87,7 @@ beamline optical elements
    .. autosummary::
       :toctree: generated/
 
+      shadow4.beamline.optical_elements.gratings.s4_grating
       shadow4.beamline.optical_elements.gratings.s4_plane_grating
       shadow4.beamline.optical_elements.gratings.s4_sphere_grating
       shadow4.beamline.optical_elements.gratings.s4_toroid_grating
@@ -101,6 +103,7 @@ beamline optical elements
    .. autosummary::
       :toctree: generated/
 
+      shadow4.beamline.optical_elements.crystals.s4_crystal
       shadow4.beamline.optical_elements.crystals.s4_plane_crystal
       shadow4.beamline.optical_elements.crystals.s4_sphere_crystal
       shadow4.beamline.optical_elements.crystals.s4_toroid_crystal
@@ -116,6 +119,7 @@ beamline optical elements
    .. autosummary::
       :toctree: generated/
 
+      shadow4.beamline.optical_elements.multilayers.s4_multilayer
       shadow4.beamline.optical_elements.multilayers.s4_plane_multilayer
       shadow4.beamline.optical_elements.multilayers.s4_sphere_multilayer
       shadow4.beamline.optical_elements.multilayers.s4_toroid_multilayer
@@ -131,9 +135,13 @@ beamline optical elements
    .. autosummary::
       :toctree: generated/
 
+      shadow4.beamline.optical_elements.refractors.s4_interface
       shadow4.beamline.optical_elements.refractors.s4_lens
       shadow4.beamline.optical_elements.refractors.s4_crl
+      shadow4.beamline.optical_elements.refractors.s4_transfocator
       shadow4.beamline.optical_elements.refractors.s4_conic_interface
+      shadow4.beamline.optical_elements.refractors.s4_numerical_mesh_interface
+      shadow4.beamline.optical_elements.refractors.s4_additional_numerical_mesh_interface
 
 * ``shadow4.beamline.optical_elements.ideal_elements`` The ideal elements
 
@@ -143,3 +151,83 @@ beamline optical elements
       shadow4.beamline.optical_elements.ideal_elements.s4_beam_movement
       shadow4.beamline.optical_elements.ideal_elements.s4_empty
       shadow4.beamline.optical_elements.ideal_elements.s4_ideal_lens
+      shadow4.beamline.optical_elements.ideal_elements.s4_ideal_fzp
+
+* ``shadow4.beamline.optical_elements.compound`` The compound elements
+
+   .. autosummary::
+      :toctree: generated/
+
+      shadow4.beamline.optical_elements.compound.s4_compound
+
+
+beamline
+--------
+``shadow4.beamline`` The S4 beamline
+
+.. autosummary::
+   :toctree: generated/
+
+   shadow4.beamline.s4_beamline
+   shadow4.beamline.s4_beamline_element
+   shadow4.beamline.s4_beamline_element_movements
+   shadow4.beamline.s4_optical_element_decorators
+
+
+sources (base classes)
+----------------------
+``shadow4.sources`` The S4 source base classes
+
+.. autosummary::
+   :toctree: generated/
+
+   shadow4.sources.s4_light_source_base
+   shadow4.sources.s4_light_source
+   shadow4.sources.s4_electron_beam
+   shadow4.sources.s4_light_source_from_file
+   shadow4.sources.s4_light_source_from_beamlines
+
+* ``shadow4.sources.wiggler`` The S4 wiggler (optimized)
+
+   .. autosummary::
+      :toctree: generated/
+
+      shadow4.sources.wiggler.s4_wiggler_optimized_light_source
+
+
+optical surfaces
+----------------
+``shadow4.optical_surfaces`` The S4 optical surface implementations
+
+.. autosummary::
+   :toctree: generated/
+
+   shadow4.optical_surfaces.s4_optical_surface
+   shadow4.optical_surfaces.s4_conic
+   shadow4.optical_surfaces.s4_toroid
+   shadow4.optical_surfaces.s4_mesh
+
+
+physical models
+---------------
+``shadow4.physical_models`` Physical model calculators
+
+.. autosummary::
+   :toctree: generated/
+
+   shadow4.physical_models.bragg.bragg
+   shadow4.physical_models.mlayer.mlayer
+   shadow4.physical_models.prerefl.prerefl
+
+
+tools
+-----
+``shadow4.tools`` Utility modules
+
+.. autosummary::
+   :toctree: generated/
+
+   shadow4.tools.arrayofvectors
+   shadow4.tools.beamline_tools
+   shadow4.tools.graphics
+   shadow4.tools.logger

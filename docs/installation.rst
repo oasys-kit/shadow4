@@ -32,7 +32,7 @@ Once you have a copy of the source, you can install it with:
 
 .. code-block:: console
 
-    $ python setup.py build install
+    $ pip install -e .
 
 
 .. _Github repo: https://github.com/oasys-kit/shadow4
