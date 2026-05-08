@@ -1,3 +1,6 @@
+"""
+The s4 sphere mirror (optical element and beamline element).
+"""
 from syned.beamline.shape import Sphere, SphericalCylinder, Convexity, Direction
 from shadow4.beam.s4_beam import S4Beam
 from shadow4.beamline.s4_optical_element_decorators import SurfaceCalculation, S4SphereOpticalElementDecorator

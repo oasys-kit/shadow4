@@ -1,3 +1,6 @@
+"""
+The s4 hyperboloid multilayer (optical element and beamline element).
+"""
 import numpy
 from syned.beamline.shape import Hyperboloid, HyperbolicCylinder, Convexity, Direction
 from shadow4.beam.s4_beam import S4Beam

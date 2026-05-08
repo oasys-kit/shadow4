@@ -1,3 +1,13 @@
+"""
+Crystal structure factor preprocessor for Bragg diffraction calculations.
+
+Provides :func:`create_bragg_preprocessor_file_v2` to generate the SHADOW
+bragg preprocessor file (version 2), which encodes the crystal structure
+factor as a function of photon energy for a given crystal and Miller indices.
+The resulting file is consumed by crystalpy's
+``DiffractionSetupShadowPreprocessorV2``.
+"""
+
 import numpy
 from dabax.dabax_xraylib import DabaxXraylib
 from dabax.common_tools import f0_xop, f0_xop_with_fractional_charge

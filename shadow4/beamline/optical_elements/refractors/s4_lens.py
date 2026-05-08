@@ -1,3 +1,6 @@
+"""
+The s4 refractive lens (optical element and beamline element).
+"""
 import numpy
 
 from syned.beamline.element_coordinates import ElementCoordinates

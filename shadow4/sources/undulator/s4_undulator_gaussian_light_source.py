@@ -434,7 +434,7 @@ class S4UndulatorGaussianLightSource(S4LightSource):
         u = self.get_magnetic_structure()
         syned_electron_beam = self.get_electron_beam()
         current = syned_electron_beam.current()
-        if u._flag_energy_spread:
+        if u._flag_energy_spread or u._flag_autoset_flux_central_cone:
             wavelength = codata.c * codata.h / codata.e / (u._photon_energy / u._harmonic_number)
         else:
             wavelength = codata.c * codata.h / codata.e / u._photon_energy
