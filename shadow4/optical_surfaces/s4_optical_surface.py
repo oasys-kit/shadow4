@@ -14,6 +14,7 @@ from shadow4.tools.arrayofvectors import vector_reflection, vector_refraction, v
 from shadow4.tools.arrayofvectors import vector_cross, vector_dot, vector_multiply_scalar, vector_sum, vector_diff
 from shadow4.tools.arrayofvectors import vector_modulus_square, vector_modulus, vector_norm, vector_rotate_around_axis
 from shadow4.tools.logger import is_verbose, is_debug
+from shadow4.tools.legacy import repr_legacy
 
 class S4OpticalSurface(object):
     """
@@ -574,17 +575,17 @@ class S4OpticalSurface(object):
             return
         else:
             # dimensions
-            fs.write(repr(xx.size) + " " + repr(yy.size) + " \n")
+            fs.write(repr_legacy(xx.size) + " " + repr_legacy(yy.size) + " \n")
             # y array
             for i in range(yy.size):
-                fs.write(' ' + repr(yy[i]))
+                fs.write(' ' + repr_legacy(yy[i]))
             fs.write("\n")
             # for each x element, the x value and the corresponding z(y) profile
             for i in range(xx.size):
                 tmps = ""
                 for j in range(yy.size):
-                    tmps = tmps + "  " + repr(s[j, i])
-                fs.write(' ' + repr(xx[i]) + " " + tmps)
+                    tmps = tmps + "  " + repr_legacy(s[j, i])
+                fs.write(' ' + repr_legacy(xx[i]) + " " + tmps)
                 fs.write("\n")
             fs.close()
             if is_verbose(): print("write_shadow_surface: File for SHADOW " + outFile + " written to disk.")
