@@ -1109,8 +1109,6 @@ class S4Conic(S4OpticalSurface):
 
 
 if __name__ == "__main__":
-    from srxraylib.plot.gol import set_qt
-
     if False:
         ccc = S4Conic.initialize_as_plane()
         x2 = numpy.zeros((3,10))
