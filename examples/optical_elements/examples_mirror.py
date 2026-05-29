@@ -276,8 +276,8 @@ def example_branch_4(do_plot=True, f_refl=0):
                                        coordinates=coordinates_syned,
                                        input_beam=beam0)
     elif f_refl == 1: # refraction index
-        import xraylib
-        refraction_index = xraylib.Refractive_Index("SiC", 2.4797, 3.217)
+        from dabax.dabax_xraylib import DabaxXraylib
+        refraction_index = DabaxXraylib().Refractive_Index("SiC", 2.4797, 3.217)
         mirror1 = S4ConicMirrorElement(optical_element=S4ConicMirror(name="M1",
                                                                      conic_coefficients=[0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, -1.0, 0.0],
                                                                      boundary_shape=boundary_shape,
@@ -479,12 +479,6 @@ def example_branch_5(surface_type, do_plot=True):
 
 
 if __name__ == "__main__":
-
-    # see corresponding Oasys workspace in shadow4/oasys_workspaces
-
-    from srxraylib.plot.gol import set_qt
-    set_qt()
-
     do_plot = True
 
     example_branch_1(do_plot=do_plot) # two plane mirrors

@@ -69,7 +69,6 @@ def crystal_diffraction_with_collimated_beam(do_plot=True):
                                     name="Plane crystal",
                                     boundary_shape=None,
                                     material="YB66",
-                                    diffraction_geometry=DiffractionGeometry.BRAGG,  # ?? not supposed to be in syned...
                                     miller_index_h=4,
                                     miller_index_k=4,
                                     miller_index_l=0,
@@ -80,11 +79,7 @@ def crystal_diffraction_with_collimated_beam(do_plot=True):
                                     phot_cent=8000.0,
                                     file_refl="xcrystal.bra",
                                     f_bragg_a=False,
-                                    # a_bragg=0.0,
-                                    f_johansson=False,
-                                    r_johansson=1.0,
-                                    f_mosaic=False,
-                                    spread_mos=0.4 * numpy.pi / 180,
+
                                     f_ext=0,
                                     material_constants_library_flag=3, # 0=xraylib, 1=dabax
                                     # 2=shadow preprocessor file v1
@@ -120,9 +115,6 @@ def crystal_diffraction_with_collimated_beam(do_plot=True):
 
 
 if __name__ == "__main__":
-    from srxraylib.plot.gol import set_qt
-    set_qt()
-
     crystal_diffraction_with_collimated_beam(do_plot=True)
 
 
