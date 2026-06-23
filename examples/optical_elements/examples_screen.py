@@ -172,9 +172,6 @@ def example_holed_filter(do_plot=True):
 
 
 if __name__ == "__main__":
-    from srxraylib.plot.gol import set_qt
-    set_qt()
-
     do_plot = True
 
     example_screen(do_plot=do_plot)

@@ -477,10 +477,6 @@ class S4Mesh(S4OpticalSurface):
 
 
 if __name__ == "__main__":
-    from srxraylib.plot.gol import set_qt
-    set_qt()
-
-
     def sphere(x, y, radius=5.0):
         return radius - numpy.sqrt(radius ** 2 - x ** 2 - y ** 2)
 
