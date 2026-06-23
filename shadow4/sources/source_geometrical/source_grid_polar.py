@@ -142,6 +142,12 @@ class SourceGridPolar(S4LightSourceBase):
     # getters
     #
 
+    def _get_number_of_polar_points(self, points):
+        # Number of distinct points in a polar grid: the radius=0 ring (origin) is
+        # a single point, not points[1] angular duplicates (issue #70).
+        if points[0] <= 0: return 0
+        return 1 + (points[0] - 1) * points[1]
+
     def get_number_of_points_real_space(self):
         """
         Returns the number of points in real space.
@@ -150,7 +156,7 @@ class SourceGridPolar(S4LightSourceBase):
         -------
         int
         """
-        return self._real_space_points[0] * self._real_space_points[1]
+        return self._get_number_of_polar_points(self._real_space_points)
 
     def get_number_of_points_direction_space(self):
         """
@@ -160,7 +166,7 @@ class SourceGridPolar(S4LightSourceBase):
         -------
         int
         """
-        return self._direction_space_points[0] * self._direction_space_points[1]
+        return self._get_number_of_polar_points(self._direction_space_points)
 
     def get_number_of_points(self):
         """
@@ -187,8 +193,11 @@ class SourceGridPolar(S4LightSourceBase):
         z = numpy.zeros(npoints)
 
         i = -1
-        for radius_ratio in radial_ratio:
-            for angle in angular:
+        for radius_index, radius_ratio in enumerate(radial_ratio):
+            # the origin (radius index 0) is generated only once, not once per
+            # angular sample (issue #70)
+            angles = angular[:1] if radius_index == 0 else angular
+            for angle in angles:
                 i += 1
                 x[i] = self._real_space_width[0]/2 * radius_ratio * numpy.cos(angle)
                 z[i] = self._real_space_width[2]/2 * radius_ratio * numpy.sin(angle)
@@ -208,15 +217,16 @@ class SourceGridPolar(S4LightSourceBase):
         vz = numpy.zeros(npoints)
 
         i = -1
-        for radius_ratio in radial_ratio:
-            for angle in angular:
+        for radius_index, radius_ratio in enumerate(radial_ratio):
+            # the origin (radius index 0) is generated only once, not once per
+            # angular sample (issue #70)
+            angles = angular[:1] if radius_index == 0 else angular
+            for angle in angles:
                 i += 1
                 vx[i] = self._direction_space_width[0]/2 * radius_ratio * numpy.cos(angle)
                 vz[i] = self._direction_space_width[0]/2 * radius_ratio * numpy.sin(angle)
 
         return vx,vz
-
-        return numpy.array([0]), numpy.array([0])
 
     def _get_volume(self):
         # Returns an array (6,npoints) with x,y,z,xp,yp,zp (first index 0,1,2,3,4,5 respectively) with the

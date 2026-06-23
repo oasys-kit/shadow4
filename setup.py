@@ -29,10 +29,13 @@
 #
 # Memorandum: 
 #
-# Install from sources: 
+# Install from sources (developer / editable):
 #     git clone https://github.com/oasys-kit/shadow4
 #     cd shadow4
-#     python -m pip install -e . --no-deps --no-binary :all:
+#     python -m pip install -e . --no-deps --no-build-isolation
+#     # NOTE: use --no-build-isolation, NOT --no-binary :all:. The latter forces an
+#     # isolated source build that writes a setuptools wheel to the pip cache and
+#     # fails with "[Errno 13] Permission denied: ...\\pip\\cache\\wheels\\..." .
 #
 # Upload to pypi (when uploading, increment the version number):
 #     python setup.py register (only once, not longer needed)
