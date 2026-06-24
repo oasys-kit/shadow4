@@ -75,10 +75,11 @@ class S4Beamline(Beamline):
 
     def to_python_code_packed(self,
                               add_head="def run_beamline():",
-                              add_in_lightsource="",
+                              add_in_lightsource=None,
                               add_return="return beam, footprint",
                               add_main="",
-                              filename=""):
+                              filename="",
+                              dry_run=False):
         """
         Returns the python code of to_python_code() wrapped (packed) inside a function.
 
@@ -92,10 +93,11 @@ class S4Beamline(Beamline):
         add_head : str, optional
             The function definition line. Default "def run_beamline():". Use it to declare arguments, e.g.
             "def run_beamline(nrays=None, seed=None):".
-        add_in_lightsource : str, optional
+        add_in_lightsource : None or str, optional
             Code injected after the light source creation and before "beam = light_source.get_beam()", with
             one statement per line. Typically used to reassign nrays/seed, e.g.
             "if nrays is not None: light_source.set_nrays(nrays)". A trailing newline is added if missing.
+            If None (default) no text added.
         add_return : str, optional
             The return statement added at the end of the function body. Default "return beam, footprint".
         add_main : str, optional
@@ -118,18 +120,19 @@ class S4Beamline(Beamline):
 
         script = self.to_python_code()
 
-        if script.count("beam = light_source.get_beam()") != 1:
-            raise ValueError("Expected exactly one 'beam = light_source.get_beam()' to inject before, found %d." %
-                             script.count("beam = light_source.get_beam()"))
+        if add_in_lightsource is not None:
+            if script.count("beam = light_source.get_beam()") != 1:
+                raise ValueError("Expected exactly one 'beam = light_source.get_beam()' to inject before, found %d." %
+                                 script.count("beam = light_source.get_beam()"))
 
-        # ensure the injected block ends with a newline so it does not merge with the get_beam() line
-        if add_in_lightsource != "" and not add_in_lightsource.endswith("\n"):
-            add_in_lightsource += "\n"
+            # ensure the injected block ends with a newline so it does not merge with the get_beam() line
+            if add_in_lightsource != "" and not add_in_lightsource.endswith("\n"):
+                add_in_lightsource += "\n"
 
-        script = script.replace(
-            "beam = light_source.get_beam()",
-            "#new commands inserted here\n" + add_in_lightsource + "\n" + "beam = light_source.get_beam()"
-        )
+            script = script.replace(
+                "beam = light_source.get_beam()",
+                "#new commands inserted here\n" + add_in_lightsource + "\n" + "beam = light_source.get_beam()"
+            )
 
 
         indented_script = '\n'.join('    ' + line for line in script.splitlines())
@@ -141,6 +144,17 @@ class S4Beamline(Beamline):
         final_script += "\n" + indented_return
         final_script += "\n\n" + add_main
         final_script += "\n\n"
+
+        if dry_run:
+            final_script = final_script.replace(
+                "beam = light_source.get_beam()",
+                "beam = None # (dry) beam = light_source.get_beam()"
+            )
+
+            final_script = final_script.replace(
+                "beam, footprint = beamline_element.trace_beam()",
+                "beam, footprint = None, None # (dry) beam, footprint = beamline_element.trace_beam()"
+            )
 
         if filename != "":
             with open(filename, "w", encoding="utf-8") as f:
@@ -810,7 +824,7 @@ if __name__ == "__main__":
             add_in_lightsource="if seed is not None: light_source.set_seed(seed)\nif nrays is not None: light_source.set_nrays(nrays)\n",
             add_return="footprint = footprint if 'footprint' in dir() else None\nreturn beam, footprint, beamline",
             add_main="if __name__ == '__main__':\n    beam, footprint, beamline = run(seed=111, nrays=5001)\n    print('N, seed: ', beam.N, beamline.get_light_source().get_seed())",
-            filename="")
+            filename="", dry_run=1)
         )
 
         assert (bl.to_python_code() == bl2.to_python_code())

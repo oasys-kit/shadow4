@@ -6,7 +6,7 @@ from syned.storage_ring.empty_light_source import EmptyLightSource
 
 class S4LightSourceFromBeamlines(EmptyLightSource):
     """
-    Class to create a light source from a S4Beam in an H5 file.
+    Class to create a light source merging several beamlines.
 
     Parameters
     ----------
@@ -98,14 +98,13 @@ class S4LightSourceFromBeamlines(EmptyLightSource):
         for i in range(n):
 
             bl = self._beamlines[i]
-            print(">>>>>>>>>>>>>>!!!!", bl)
             output_beam, output_mirr = bl.run_beamline()
             out.append(output_beam)
         return out
 
     def get_beam(self):
         """
-        Retirns the S4 beam.
+        Returns the S4 beam.
 
         Parameters
         ----------
@@ -145,15 +144,16 @@ class S4LightSourceFromBeamlines(EmptyLightSource):
         txt = ""
 
         for i in range(n):
-            script = self._beamlines[i].to_python_code()
+            script_i = self._beamlines[i].to_python_code_packed(
+                add_head="def dry_run_beamline_%d():" % (i + 1),
+                add_in_lightsource=None,
+                add_return="return beamline",
+                add_main="",
+                filename="",
+                dry_run=True)
 
-            indented_script = '\n'.join('    ' + line for line in script.splitlines())
-
-            txt += "def run_beamline_%d():\n" % (i + 1)
-            txt += indented_script
-            txt += "\n    return beamline"
+            txt += script_i
             txt += "\n\n"
-
 
 
         txt += "\n#\n#\n#"
@@ -161,7 +161,7 @@ class S4LightSourceFromBeamlines(EmptyLightSource):
         txt += "\nlight_source = S4LightSourceFromBeamlines(name='%s')" % (self.get_name())
         txt += "\n"
         for i in range(n):
-            txt += "\nlight_source.append_beamline(run_beamline_%d(), id='%s', weight=%f)" % \
+            txt += "\nlight_source.append_beamline(dry_run_beamline_%d(), id='%s', weight=%f)" % \
                    (i + 1, self._ids[i], self._weights[i])
 
         txt += "\nbeam = light_source.get_beam()"
