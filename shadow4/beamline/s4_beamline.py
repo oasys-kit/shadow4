@@ -5,6 +5,8 @@ As a reminder, and following the SYNED philosophy, the S4 beamline is a containe
 list of S4 beamline elements.
 
 """
+import copy
+
 from syned.beamline.beamline import Beamline
 from shadow4.beamline.s4_beamline_element import S4BeamlineElement
 import numpy
@@ -69,6 +71,84 @@ class S4Beamline(Beamline):
             The beamline element to append.
         """
         self._beamline_elements_list.append(beamline_element)
+
+
+    def to_python_code_packed(self,
+                              add_head="def run_beamline():",
+                              add_in_lightsource="",
+                              add_return="return beam, footprint",
+                              add_main="",
+                              filename=""):
+        """
+        Returns the python code of to_python_code() wrapped (packed) inside a function.
+
+        The full beamline script (see to_python_code) is indented and placed inside a function definition,
+        so the beamline can be built and run by calling that function. Optional code can be injected right
+        after the light source is created and before its beam is generated ("beam = light_source.get_beam()"),
+        which is the place to reassign, e.g., the number of rays or the seed before running.
+
+        Parameters
+        ----------
+        add_head : str, optional
+            The function definition line. Default "def run_beamline():". Use it to declare arguments, e.g.
+            "def run_beamline(nrays=None, seed=None):".
+        add_in_lightsource : str, optional
+            Code injected after the light source creation and before "beam = light_source.get_beam()", with
+            one statement per line. Typically used to reassign nrays/seed, e.g.
+            "if nrays is not None: light_source.set_nrays(nrays)". A trailing newline is added if missing.
+        add_return : str, optional
+            The return statement added at the end of the function body. Default "return beam, footprint".
+        add_main : str, optional
+            Code appended at module level after the function definition (e.g. a __main__ block or a call to
+            the function). Default "" (nothing added).
+        filename : str, optional
+            If not empty, the generated code is also written to this file. Default "" (not written).
+
+        Returns
+        -------
+        str
+            The python code.
+
+        Raises
+        ------
+        ValueError
+            If the beamline code does not contain exactly one "beam = light_source.get_beam()" line to
+            inject before.
+        """
+
+        script = self.to_python_code()
+
+        if script.count("beam = light_source.get_beam()") != 1:
+            raise ValueError("Expected exactly one 'beam = light_source.get_beam()' to inject before, found %d." %
+                             script.count("beam = light_source.get_beam()"))
+
+        # ensure the injected block ends with a newline so it does not merge with the get_beam() line
+        if add_in_lightsource != "" and not add_in_lightsource.endswith("\n"):
+            add_in_lightsource += "\n"
+
+        script = script.replace(
+            "beam = light_source.get_beam()",
+            "#new commands inserted here\n" + add_in_lightsource + "\n" + "beam = light_source.get_beam()"
+        )
+
+
+        indented_script = '\n'.join('    ' + line for line in script.splitlines())
+
+        final_script = "import numpy as np\n\n"
+        final_script += add_head + "\n"
+        final_script += indented_script
+        indented_return = '\n'.join('    ' + line for line in add_return.splitlines())
+        final_script += "\n" + indented_return
+        final_script += "\n\n" + add_main
+        final_script += "\n\n"
+
+        if filename != "":
+            with open(filename, "w", encoding="utf-8") as f:
+                f.write(final_script)
+                print("File %s written to disk." % filename)
+        return final_script
+
+
 
     def to_python_code(self, **kwargs):
         """
@@ -689,7 +769,7 @@ class S4Beamline(Beamline):
 
 if __name__ == "__main__":
 
-    if False:
+    if False: # check basics - check  to_python_code_packed()
         from shadow4.sources.source_geometrical.source_geometrical import SourceGeometrical
         from shadow4.beamline.optical_elements.mirrors.s4_plane_mirror import S4PlaneMirror, S4PlaneMirrorElement
         from shadow4.beamline.optical_elements.refractors.s4_transfocator import S4Transfocator, S4TransfocatorElement
@@ -698,21 +778,70 @@ if __name__ == "__main__":
         light_source = SourceGeometrical(name='SourceGeometrical', nrays=10000, seed=5676561)
 
         m1 = S4PlaneMirror()
-        # m2 = S4PlaneMirror()
         m2 = S4Transfocator()
 
 
         e1 = S4PlaneMirrorElement(m1, ElementCoordinates())
-        # e2 = S4PlaneMirrorElement(m2, ElementCoordinates())
         e2 = S4TransfocatorElement(m2, ElementCoordinates())
 
-        bl = S4Beamline(light_source=light_source) # , beamline_elements_list=[e1,e2])
+        bl = S4Beamline(light_source=light_source)
 
         print(bl.distances_summary())
 
         print(">>>> oe info: ", bl.oeinfo())
-
         print(">>>> sys info: ", bl.sysinfo())
+        print(">>> python code: ", bl.to_python_code())
+
+        print(">>>>python code packed: \n", bl.to_python_code_packed(
+            add_head="def run(seed=None, nrays=None):",
+            add_in_lightsource="if seed is not None: light_source.set_seed(seed)\nif nrays is not None: light_source.set_nrays(nrays)\n",
+            add_return="footprint = footprint if 'footprint' in dir() else None\nreturn beam, footprint, beamline",
+            add_main="if __name__ == '__main__':\n    beam, footprint, beamline = run(seed=111, nrays=5001)\n    print('N, seed: ', beam.N, beamline.get_light_source().get_seed())",
+            filename="")
+        )
+
+        # duplicate via json
+        tmp = bl.to_json()
+        from syned.util.json_tools import load_from_json_file, load_from_json_text
+        import shadow4
+        bl2 = load_from_json_text(tmp, extra_packages=[shadow4])
+        print("\n\n>>>>python code packed: \n", bl2.to_python_code_packed(
+            add_head="def run(seed=None, nrays=None):",
+            add_in_lightsource="if seed is not None: light_source.set_seed(seed)\nif nrays is not None: light_source.set_nrays(nrays)\n",
+            add_return="footprint = footprint if 'footprint' in dir() else None\nreturn beam, footprint, beamline",
+            add_main="if __name__ == '__main__':\n    beam, footprint, beamline = run(seed=111, nrays=5001)\n    print('N, seed: ', beam.N, beamline.get_light_source().get_seed())",
+            filename="")
+        )
+
+        assert (bl.to_python_code() == bl2.to_python_code())
+
+    if False: # check syned json
+        from shadow4.sources.source_geometrical.source_geometrical import SourceGeometrical
+        from shadow4.beamline.optical_elements.mirrors.s4_plane_mirror import S4PlaneMirror, S4PlaneMirrorElement
+        from shadow4.beamline.optical_elements.refractors.s4_transfocator import S4Transfocator, S4TransfocatorElement
+        from syned.beamline.element_coordinates import ElementCoordinates
+
+        light_source = SourceGeometrical(name='SourceGeometrical', nrays=10000, seed=5676561)
+
+        m1 = S4PlaneMirror()
+        m2 = S4Transfocator()
+
+
+        e1 = S4PlaneMirrorElement(m1, ElementCoordinates())
+        e2 = S4TransfocatorElement(m2, ElementCoordinates())
+
+        bl = S4Beamline(light_source=light_source)
+
+        print(bl.distances_summary())
+
+        tmp = bl.to_json()
+        from syned.util.json_tools import load_from_json_text
+        import shadow4
+        bl2 = load_from_json_text(tmp, extra_packages=[shadow4])
+
+        assert (bl.to_python_code() == bl2.to_python_code())
+
+
 
     if False: # check source from file
         from shadow4.beamline.s4_beamline import S4Beamline
@@ -792,7 +921,7 @@ if __name__ == "__main__":
 
         print(beamline.sourcinfo())
 
-    if 1: # check compound
+    if False: # check compound
         from shadow4.beamline.s4_beamline import S4Beamline
         import numpy as np
 
