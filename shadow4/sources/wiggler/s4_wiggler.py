@@ -342,10 +342,6 @@ source = S4Wiggler(
         return script
 
 if __name__ == "__main__":
-
-    from srxraylib.plot.gol import set_qt
-    set_qt()
-
     e_min = 5000.0 # 70490.0 #
     e_max = 100000.0 # 70510.0 #
     e_min = 70490.0 #

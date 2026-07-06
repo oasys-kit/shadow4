@@ -29,10 +29,13 @@
 #
 # Memorandum: 
 #
-# Install from sources: 
+# Install from sources (developer / editable):
 #     git clone https://github.com/oasys-kit/shadow4
 #     cd shadow4
-#     python -m pip install -e . --no-deps --no-binary :all:
+#     python -m pip install -e . --no-deps --no-build-isolation
+#     # NOTE: use --no-build-isolation, NOT --no-binary :all:. The latter forces an
+#     # isolated source build that writes a setuptools wheel to the pip cache and
+#     # fails with "[Errno 13] Permission denied: ...\\pip\\cache\\wheels\\..." .
 #
 # Upload to pypi (when uploading, increment the version number):
 #     python setup.py register (only once, not longer needed)
@@ -80,7 +83,7 @@ INSTALL_REQUIRES = (
     'setuptools',
     'numpy',
     'scipy',
-    'syned>=1.0.50',
+    'syned>=1.0.56',
     'srxraylib>=1.0.67',
     'crystalpy>=0.0.26',
 )
@@ -89,7 +92,7 @@ README_FILE = os.path.join(os.path.dirname(__file__), 'README.rst')
 LONG_DESCRIPTION = open(README_FILE).read()
 
 setup(name='shadow4',
-      version='0.1.82',
+      version='0.1.86',
       description='shadow implementation in python',
       long_description=LONG_DESCRIPTION,
       long_description_content_type='text/x-rst',

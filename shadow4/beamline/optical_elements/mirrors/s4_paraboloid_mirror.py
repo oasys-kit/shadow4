@@ -1,3 +1,6 @@
+"""
+The s4 paraboloid mirror (optical element and beamline element).
+"""
 from syned.beamline.shape import Paraboloid, ParabolicCylinder, Convexity, Direction, Side
 from shadow4.beamline.s4_optical_element_decorators import SurfaceCalculation, S4ParaboloidOpticalElementDecorator
 from shadow4.beamline.optical_elements.mirrors.s4_mirror import S4MirrorElement, S4Mirror, ElementCoordinates

@@ -1,3 +1,6 @@
+"""
+The s4 additional numerical mesh refractive interface (optical element and beamline element).
+"""
 import numpy
 from syned.beamline.shape import NumericalMesh
 from syned.beamline.element_coordinates import ElementCoordinates

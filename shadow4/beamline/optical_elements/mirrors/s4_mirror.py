@@ -1,3 +1,6 @@
+"""
+The s4 mirror base class (optical element and beamline element).
+"""
 import numpy
 
 from syned.beamline.shape import Rectangle, Ellipse

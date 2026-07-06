@@ -102,7 +102,7 @@ def flux_summary(beamline, spectrum_energy=None, spectrum_flux=None, e_min=None,
     e_min : None or float
         The minimum photon energy in eV. If defined as None, the minimum energy of the photon beam is used.
     e_max : None or float
-        The minimum photon energy in eV. If defined as None, the minimum energy of the photon beam is used.
+        The maximum photon energy in eV. If defined as None, the maximum energy of the photon beam is used.
     nbins : int, optional
         Number of beam for the histogram calculations.
 
