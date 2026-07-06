@@ -72,6 +72,7 @@ PACKAGES = [
     "shadow4.beamline.optical_elements.mirrors",
     "shadow4.beamline.optical_elements.multilayers",
     "shadow4.beamline.optical_elements.crystals",
+    "shadow4.beamline.optical_elements.geometric_laue_crystals",
     "shadow4.beamline.optical_elements.gratings",
     "shadow4.beamline.optical_elements.refractors",
     "shadow4.beamline.optical_elements.compound",
