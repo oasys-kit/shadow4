@@ -93,6 +93,7 @@ class S4SphereGeometricLaueCrystal(S4GeometricLaueCrystal, S4SphereOpticalElemen
                  is_cylinder=False,
                  cylinder_direction=Direction.TANGENTIAL,
                  convexity=Convexity.UPWARD,
+                 poisson_ratio=0.22,
                  dabax=None,
                  ):
         p_focus, q_focus, grazing_angle = 1.0, 1.0, 1e-3
@@ -117,6 +118,7 @@ class S4SphereGeometricLaueCrystal(S4GeometricLaueCrystal, S4SphereOpticalElemen
                            f_bragg_a=f_bragg_a,
                            f_ext=f_ext,
                            material_constants_library_flag=material_constants_library_flag,
+                           poisson_ratio=poisson_ratio,
                            dabax=dabax,
                            )
 
@@ -141,6 +143,7 @@ class S4SphereGeometricLaueCrystal(S4GeometricLaueCrystal, S4SphereOpticalElemen
             "is_cylinder": is_cylinder,
             "cylinder_direction": cylinder_direction,
             "convexity": convexity,
+            "poisson_ratio": poisson_ratio,
             "dabax": self._get_dabax_txt(),
             }
 
@@ -171,6 +174,7 @@ optical_element = S4SphereGeometricLaueCrystal(name='{name}',
     f_ext={f_ext},
     material_constants_library_flag={material_constants_library_flag}, # 0=xraylib,1=dabax,2=preprocessor v1,3=preprocessor v2
     radius={radius:f}, is_cylinder={is_cylinder:d}, cylinder_direction={cylinder_direction:d}, convexity={convexity:d},
+    poisson_ratio={poisson_ratio:f},
     dabax={dabax}, # used when material_constants_library_flag=1,
     )"""
         txt += txt_pre.format(**self.__inputs)
@@ -233,24 +237,64 @@ class S4SphereGeometricLaueCrystalElement(S4GeometricLaueCrystalElement):
         return txt
 
 if __name__ == "__main__":
-    c = S4SphereGeometricLaueCrystal(
-            name="Undefined",
-            boundary_shape=None,
-            material="Si",
-            miller_index_h=1,
-            miller_index_k=1,
-            miller_index_l=1,
-            asymmetry_angle=0.0,
-            thickness=0.010,
-            f_central=False,
-            f_phot_cent=0,
-            phot_cent=8000.0,
-            file_refl="",
-            f_bragg_a=False,
-            f_ext=0,)
 
-    ce = S4SphereGeometricLaueCrystalElement(optical_element=c)
-    print(ce.info())
-    print(ce.to_python_code())
+    from srxraylib.plot.gol import plot_scatter, plot, plot_show
 
-    cc = S4SphereGeometricLaueCrystalElement()
+    from shadow4.tools.logger import set_verbose, printlog
+    set_verbose(0)
+
+    import numpy as np
+    from dabax.dabax_xraylib import DabaxXraylib
+    from shadow4.beamline.s4_beamline import S4Beamline
+
+    beamline = S4Beamline()
+
+    #
+    #
+    #
+    from shadow4.sources.source_geometrical.source_geometrical import SourceGeometrical
+
+    light_source = SourceGeometrical(name='Geometrical Source', nrays=5000, seed=5676561)
+    light_source.set_spatial_type_point()
+    light_source.set_depth_distribution_off()
+    light_source.set_angular_distribution_gaussian(sigdix=0.000885, sigdiz=7.2e-05)
+    light_source.set_energy_distribution_uniform(value_min=9995, value_max=10005, unit='eV')
+    light_source.set_polarization(polarization_degree=1, phase_diff=0, coherent_beam=0)
+    beam = light_source.get_beam()
+
+    beamline.set_light_source(light_source)
+
+    # optical element number XX
+    boundary_shape = None
+
+    from shadow4.beamline.optical_elements.crystals.s4_sphere_crystal import S4SphereCrystal
+
+    # optical_element = S4SphereCrystal(name='Generic Crystal 1:1 focusing (Rowland)',
+    optical_element = S4SphereGeometricLaueCrystal(name='Generic Crystal 1:1 focusing (Rowland)',
+                                      boundary_shape=boundary_shape, material='Si',
+                                      miller_index_h=1, miller_index_k=1, miller_index_l=1,
+                                      f_bragg_a=True, asymmetry_angle=numpy.radians(90),
+                                      is_thick=0, thickness=15.5e-6,
+                                      f_central=1, f_phot_cent=0, phot_cent=10000.0,
+                                      file_refl='bragg.dat',
+                                      f_ext=0,
+                                      material_constants_library_flag=0,
+                                      # 0=xraylib,1=dabax,2=preprocessor v1,3=preprocessor v2
+                                      radius=151.733000e10, is_cylinder=0, cylinder_direction=0, convexity=1,
+                                      dabax=None,  # used when material_constants_library_flag=1,
+                                      )
+    from syned.beamline.element_coordinates import ElementCoordinates
+
+    coordinates = ElementCoordinates(p=30, q=0, angle_radial=1.371743969, angle_azimuthal=0,
+                                     angle_radial_out=1.371743969)
+    movements = None
+    from shadow4.beamline.optical_elements.crystals.s4_sphere_crystal import S4SphereCrystalElement
+
+    beamline_element = S4SphereGeometricLaueCrystalElement(optical_element=optical_element, coordinates=coordinates,
+                                              movements=movements, input_beam=beam)
+
+    beam, footprint = beamline_element.trace_beam()
+
+    beamline.append_beamline_element(beamline_element)
+
+    plot_scatter(footprint.get_column(2, nolost=1), footprint.get_column(1, nolost=1), title='footprint (Y,X) in m')

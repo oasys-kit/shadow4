@@ -19,8 +19,22 @@ from crystalpy.diffraction.GeometryType import LaueDiffraction
 from dabax.dabax_xraylib import DabaxXraylib
 
 from shadow4.tools.logger import is_verbose
+from shadow4.tools.arrayofvectors import vector_modulus, vector_dot, vector_cross, vector_norm
+from shadow4.tools.arrayofvectors import vector_multiply_scalar, vector_diff
 
 import scipy.constants as codata
+
+from shadow4.tools.logger import is_verbose, is_debug
+from shadow4.tools.arrayofvectors import vector_modulus_square, vector_modulus, vector_norm, vector_rotate_around_axis
+from shadow4.tools.logger import is_verbose, is_debug
+
+from crystalpy.diffraction.GeometryType import BraggDiffraction
+from crystalpy.util.Vector import Vector
+from crystalpy.util.ComplexAmplitudePhoton import ComplexAmplitudePhoton
+from crystalpy.diffraction.PerfectCrystalDiffraction import PerfectCrystalDiffraction
+
+from shadow4.optical_surfaces.s4_mesh import S4Mesh
+from shadow4.optical_surfaces.s4_toroid import S4Toroid
 
 class S4GeometricLaueCrystal(Crystal):
     """
@@ -70,6 +84,11 @@ class S4GeometricLaueCrystal(Crystal):
         0: xraylib, 1: dabax, 2: preprocessor file v1, 3: preprocessor file v2.
     file_refl : str, optional
         for material_constants_library_flag=2,3, the name of the file containing the crystal parameters.
+    poisson_ratio : float, optional
+        The (isotropic) Poisson-type elastic constant rho = nu = -s23/s22 of the crystal cut for the
+        given bending axis (free-plate, meridional cylindrical bending -- see Guigay & Sanchez del
+        Rio, Appendix B). Used only by the geometric (bent-crystal) diffraction model; for Si,
+        typically 0.22-0.28 depending on the cut.
     dabax : None or instance of DabaxXraylib,
         The pointer to the dabax library  (used for material_constants_library_flag=1).
 
@@ -97,6 +116,7 @@ class S4GeometricLaueCrystal(Crystal):
                                                     # 2=shadow preprocessor file v1
                                                     # 3=shadow preprocessor file v2
                  file_refl="",
+                 poisson_ratio=0.22,
                  dabax=None,
                  ):
 
@@ -123,6 +143,7 @@ class S4GeometricLaueCrystal(Crystal):
         self._f_ext = f_ext
         self._material_constants_library_flag = material_constants_library_flag
         self._file_refl = file_refl
+        self._poisson_ratio = poisson_ratio
 
         self._dabax = dabax
 
@@ -136,6 +157,7 @@ class S4GeometricLaueCrystal(Crystal):
                     ("f_ext",               "S4: autosetting curved surface parms.",       ""),
                     ("material_constants_library_flag", "S4: crystal data from: 0=xraylib, 1=dabax, 2=file v1, 3=file v1", ""),
                     ("file_refl",           "S4: preprocessor file name",                  ""),
+                    ("poisson_ratio",       "S4: elastic constant rho=nu for bent-crystal geometric diffraction", ""),
             ] )
 
 
@@ -451,7 +473,14 @@ class S4GeometricLaueCrystalElement(S4BeamlineElement):
         #
         # crystal diffraction
         #
+
         footprint, normal = self._apply_crystal_diffraction(input_beam)
+
+        #
+        # for i in range(10):
+        #     print(">>>> ray:", i)
+        #     print("     footprint: ", footprint.rays.shape, footprint.rays[i, 0:3])
+        #     print("     normal: ", normal.shape, normal[:, i])
 
         #
         # apply crystal movements (backwards) and boundaries
@@ -482,12 +511,290 @@ class S4GeometricLaueCrystalElement(S4BeamlineElement):
 
         return output_beam, footprint
 
-    def _apply_crystal_diffraction(self, input_beam):
+    def _apply_crystal_diffraction(self, input_beam, flag_lost_value=-1):
+        """
+        Geometric (purely kinematic) ray tracing through a bent Laue crystal, following the
+        closed-form algorithm of Section 5 ("Ray-tracing methodology for bent Laue crystals") of
+        Guigay & Sanchez del Rio, "Geometrical focusing in Laue crystals".
+
+        For each ray: (1) find the entry point on the (possibly curved) entrance surface; (2) build
+        the local, strain-corrected reciprocal-lattice vector h'(t) along the ray path [Eq. (hpt)];
+        (3) solve in closed form for the diffraction depth t_d at which the ray meets the exact
+        local Bragg condition [Eq. (td)] -- rays for which t_d falls outside [0, T] do not diffract
+        anywhere in the crystal and are flagged lost; (4) compute the exit direction from the local
+        diffraction vector at t_d [Eq. (ih)]; (5) advance the ray to the diffraction point.
+
+        No reflectivity / polarization (Jones-matrix, dynamical-theory) model is applied here: this
+        method only reproduces the *geometric* (direction and diffraction-depth) part of the
+        reference derivation; electric-field columns are left untouched.
+
+        Coordinate mapping to the local shadow4 beamline-element frame (see trace_beam()): the
+        surface normal at the crystal center O is along local -Z (S4Conic/S4Toroid normals point
+        INTO the crystal, which conveniently matches the paper's convention of an *inward* normal
+        n), and the meridional/dispersion direction (along which the bending radius R and the arc
+        length s are measured) is local Y; the sagittal (out-of-dispersion-plane) direction is local
+        X and is not affected by the (purely meridional) cylindrical-bending model used here.
+
+        NOTE: the sign of R (bending radius, positive when the incident beam impinges on the
+        concave side of the bent crystal, matching the free-plate displacement field of Eq. (displ))
+        against syned's Convexity/Sphere.get_radius() convention has not been independently verified
+        against a worked numerical example; check against a known magic-condition case (e.g. Qi
+        et al., 2019/2021) before relying on the sign of the focusing effects.
+
+        NOTE: align_crystal() is inherited unchanged from the Bragg-reflection polariser skeleton
+        and still encodes the Bragg angle relation (phi_0 + phi_h = 2*alpha + pi); the Laue relation
+        used throughout this paper is (phi_0 + phi_h = 2*alpha). align_crystal() most likely needs
+        its own Laue-specific rewrite; this method does not rely on it beyond using the diffraction
+        setup's Bragg-angle machinery (angleBraggCorrected), which is geometry-independent.
+
+        Parameters
+        ----------
+        input_beam : instance of S4Beam
+            The beam (already transformed to the local crystal reference system).
+        flag_lost_value : float
+            Numeric value to set in the flag column (10) for rays that do not satisfy the local
+            Bragg condition anywhere inside the crystal thickness (transmitted, undiffracted, and
+            therefore not modeled by this diffracted-beam element).
+
+        Returns
+        -------
+        tuple
+            (footprint, normal), with footprint an instance of S4Beam (direction and position
+            updated to the diffracted ray and its diffraction point) and normal the (3, nrays)
+            inward unit surface normal at the entry point.
+        """
+
+
+        # geometric and physics for the scattering process:
+        # reflect beam in the crystal and apply crystal reflectivity
+
+        footprint, normal = self.get_optical_element().get_optical_surface_instance().calculate_intercept_on_beam(input_beam)
+
+        if is_debug():
+            print("    >>>>>> intercept: ", footprint.get_columns([1, 2, 3])[:, 0])
+            print("    >>>>>> vout: ", footprint.get_columns([4, 5, 6])[:, 0])
+            print("    >>>>>> normal: ", normal.shape, normal[:, 0])
+
+        penetration_distance, x2, vIn, vOut, r_SS, r_PP = self._calculate_penetration_and_scattering(footprint, normal)
+        jv_out_0, jv_out_1, ee_S, ee_P = self._calculate_jones_and_efield_directions(footprint, normal,
+                                                                                        vIn, vOut, r_SS, r_PP)
+
+        # update beam array with the new direction
+        footprint.set_column(4, vOut[:, 0])
+        footprint.set_column(5, vOut[:, 1])
+        footprint.set_column(6, vOut[:, 2])
+        # update beam array with the new electric fields
+        footprint.set_jones_components(jv_out_0, jv_out_1, e_S=ee_S, e_P=ee_P)
+
+        if is_verbose():
+            print(">>> Orthogonal footprint: ", footprint.efields_orthogonal(),
+              vector_dot(ee_S, ee_P)[0],
+              vector_dot(ee_S, vOut)[0],
+              vector_dot(ee_P, vOut)[0])
+
+            b_S, b_P = footprint.get_efield_directions()
+            print("")
+            print(">>> reflected beam e_S, mod e_s", b_S[0], vector_modulus(b_S)[0])
+            print(">>> reflected beam e_P, mod e_P, e_S.e_P: ", b_P[0], vector_modulus(b_P)[0], vector_dot(b_S, b_P)[0])
+
+
+            print(">>> Intensity foot s, beam in s, foot p,  beam in p:",
+                  footprint.get_column(24)[0], input_beam.get_column(24)[0],
+                  footprint.get_column(25)[0], input_beam.get_column(25)[0],)
+
+        return footprint, normal
+
+    def _calculate_penetration_and_scattering(self, footprint1, normal):
+
         #
-        # geometric treatment of the scattering process for the Laue (transmission) crystal:
-        # to be completely rewritten.
+        # TODO:
+        # introduce the correct calculation of
+        # - penetration_depth (now using zero)
+        # - H' at in-depth interaction point (now using H at intersection with surface)
+        # - scattering angle at interaction point (now using 2 * theta_bragg)
+        # - introduce a model for reflectivities in a second phase
         #
-        pass
+        #
+        footprint = footprint1.duplicate()
+        v1 = footprint.get_columns([4, 5, 6])  # shape (3,nrays)
+        x1 = footprint.get_columns([1, 2, 3])  # shape (3,nrays)
+        nrays = v1.shape[1]
+        #
+        # direction and reflectivity calculation using crystalpy
+        #
+        energies = footprint.get_photon_energy_eV()
+
+        # using crystalpy Vector
+        direction_in = Vector(v1[0], v1[1], v1[2])
+
+        # create crystalpy PerfectCrystalDiffraction instance
+        # Warning:
+        # S4Conic, S4Toroid give normal_z < 0 for concave surfaces (and >0 for convex)
+        # S4mesh give always normal_z > 0
+        # We need for crystalpy the upwards normal
+        soe = self.get_optical_element()
+        ccc = soe.get_optical_surface_instance()
+        if isinstance(ccc, S4Mesh):
+            surface_normal = Vector(normal[0], normal[1], normal[2])  # normal is outwards!
+        elif isinstance(ccc, S4Toroid):
+            if ccc.f_torus == 0 or ccc.f_torus == 2:
+                surface_normal = Vector(normal[0], normal[1], normal[2]).scalarMultiplication(-1.0) # normal is inwards!
+            else:
+                surface_normal = Vector(normal[0], normal[1], normal[2])  # normal is outwards!
+        else: # todo: check with convex surfaces
+            surface_normal = Vector(normal[0], normal[1], normal[2]).scalarMultiplication(-1.0)  # normal is inwards!
+
+        # calculate vector H - Geometrical convention from M.Sanchez del Rio et al., J.Appl.Cryst.(2015). 48, 477-491.
+        bragg_normal = surface_normal.getVectorH(
+            surface_normal,
+            self._crystalpy_diffraction_setup.dSpacingSI(),
+            asymmetry_angle=self._crystalpy_diffraction_setup.asymmetryAngle(),
+            azimuthal_angle=self._crystalpy_diffraction_setup.azimuthalAngle())
+
+        bragg_normal_normalized = bragg_normal.getNormalizedVector()
+
+        print(">>> direction_in: ", direction_in.componentsStack()[:, 0])
+        print(">>> surface_normal: ", surface_normal.componentsStack()[:,0])
+        print(">>> bragg_normal_normalized: ", bragg_normal_normalized.componentsStack()[:,0])
+
+
+        r_S = numpy.ones(nrays, dtype=complex) # TODO: introduce model, Penning-Polder?
+        r_P = numpy.ones(nrays, dtype=complex) # TODO: introduce model, Penning-Polder?
+
+        if is_verbose():
+            print(">> r_S: ", r_S[0], numpy.abs(r_S[0]) ** 2)
+            print(">> r_P: ", r_P[0], numpy.abs(r_P[0]) ** 2)
+
+        #
+        # compute interaction point x2 = x1 + t * v1
+        #
+        penetration_distance = numpy.zeros(nrays, dtype=float) # TODO: compute
+        v1_t = v1.copy()
+        for i in range(3):
+            v1_t[i] = v1_t[i] * penetration_distance
+        x2 = x1 + v1_t # shape (3, nrays)
+
+        #
+        # compute scattering angle and output direction
+        #
+        scattering_angle = 2 * self._crystalpy_diffraction_setup.angleBragg(energies) # TODO: calculate scattering angle at interaction point
+        print(">>> semi-scattering angle [rad]: ", scattering_angle / 2)
+
+        local_bragg_normal_normalized = bragg_normal_normalized # TODO: calculate H' at interaction point
+        axis = direction_in.crossProduct(local_bragg_normal_normalized)  # should be ~(1, 0, 0)
+        direction_out = direction_in.rotateAroundAxis(axis, scattering_angle)
+
+        print(">>> axis: ", axis.componentsStack()[:, 0])
+        print(">>> direction_in: ", direction_in.componentsStack()[:, 0])
+        print(">>> direction_out: ", direction_out.componentsStack()[:, 0])
+        print(">>> semi scattering angle [deg], sin, cos: ", numpy.degrees(0.5 * scattering_angle[0]), numpy.sin(0.5 * scattering_angle[0]), numpy.cos(0.5 * scattering_angle[0]))
+
+        vOut = direction_out.componentsStack().T  # shape (npoints, 3)
+        vIn = v1.T
+
+        return penetration_distance, x2, vIn, vOut, r_S, r_P
+
+    def _calculate_jones_and_efield_directions(self, footprint, normal, vIn, vOut, r_SS, r_PP):
+        """
+        Calculates the Jones vector after crystal diffraction. It also returns the directions of the
+        S and P polarized components of the electric field.
+
+
+        Parameters
+        ----------
+        footprint : instance of S4Beam
+            The input beam
+        normal : numpy array shape (nrays, 3)
+            The normal to the surface at the intercept points.
+        vIn :  numpy array shape (nrays, 3)
+            The incident directions
+        vOut :  numpy array shape (nrays, 3)
+            The incident directions
+        r_SS : numpy array complex shape (nrays)
+            The crystal reflectivity for the S polarization
+        r_PP : numpy array complex shape (nrays)
+            The crystal reflectivity for the P polarization
+
+        Returns
+        -------
+        tuple
+            (jv_out_0, jv_out_1, ee_S, ee_P) the two components of the Jones vector and the two vectors of
+            shape(nrays, 3) with the electric vectors for the S and P polarizations.
+
+        """
+        #
+        # get versors with the sigma and pi directions for:
+        #     e_S, e_P: the incident beam (as it is)
+        #     es_S, es_P: the scattering plane spanned by vIn (incident)
+        #     ee_S, ee_P: the scattering plane spanned by vOut (incident)
+        #
+        # Note that vector_norm() is not needed (for the vectors that should be unitary),
+        # but renormalizing them improves accuracy in the calculation of c, s
+        #
+        e_S, e_P = footprint.get_efield_directions()  # these are \hat{u}_{\sigma,\pi} in Eq. 3
+
+        axis = vector_norm(vector_cross(vIn, vOut))
+
+        es_S = axis  # \hat{u}_{\sigma,i} in Eq. 12
+        es_P = vector_norm(vector_cross(es_S, vIn))  # \hat{u}_{\pi,i} in Eq. 12
+
+        ee_S = axis  # \hat{u}_{\sigma,f} in Eq. 13
+        ee_P = vector_norm(vector_cross(ee_S, vOut))  # \hat{u}_{\pi,f} in Eq. 13
+
+        if is_verbose():
+            print(">>>>> e_S, perp vIn: ", e_S[0], vector_dot(e_S, vIn)[0])
+            print(">>>>> e_P, perp vIn: ", e_P[0], vector_dot(e_P, vIn)[0])
+
+            print(">>>>> axis, mod, perp vIn: ", axis[0], vector_modulus(axis)[0], vector_dot(axis, vIn)[0])
+            print(">>>>> final ee_S, perp vOut: ", ee_S[0], vector_dot(ee_S, vOut)[0])
+            print(">>>>> final ee_P, perp vOut: ", ee_P[0], vector_dot(ee_P, vOut)[0])
+
+        #
+        # Jones calculus of refletivity
+        #
+
+        # Jones matrix (local)
+        J00 = r_SS
+        J01 = 0
+        J10 = 0
+        J11 = r_PP
+
+        # rotation matrix R
+        if True:  # todo delete, only for test
+            # c = e_S[:, 0] # cos of angle between e_S and the x axis
+            c = vector_dot(e_S, ee_S)
+            s = numpy.sqrt(1 - c ** 2)  # sin
+            if is_verbose(): print(">>> s, c, angle: ", s[0], c[0], numpy.degrees(numpy.arctan2(s[0], c[0])))
+            R00 = c
+            R01 = -s
+            R10 = s
+            R11 = c
+            if is_verbose(): print(">>> R angles: ", R00[0], R01[0], R10[0], R11[0])
+
+        R00 = vector_dot(e_S, es_S)
+        R01 = vector_dot(e_S, es_P)
+        R10 = vector_dot(e_P, es_S)
+        R11 = vector_dot(e_P, es_P)
+
+        # J x R(alpha), the Jones matrix to apply to the Jones vector of the incident rays
+        Jrotated_00 = J00 * R00 + J01 * R10  # r_SS * c
+        Jrotated_01 = J00 * R01 + J01 * R11  # -r_SS * s
+        Jrotated_10 = J10 * R00 + J11 * R10  # r_PP * s
+        Jrotated_11 = J10 * R01 + J11 * R11  # r_PP * c
+
+        if is_verbose():
+            print(">>> R dotprd: ", R00[0], R01[0], R10[0], R11[0])
+            print(">>> J: ", Jrotated_00[0], Jrotated_01[0], Jrotated_10[0], Jrotated_11[0])
+            print(">>> |J|: ", numpy.abs(Jrotated_00[0]), numpy.abs(Jrotated_01[0]), numpy.abs(Jrotated_10[0]),
+                  numpy.abs(Jrotated_11[0]))
+
+        # Jones vector of incident rays
+        jv_in_0, jv_in_1 = footprint.get_jones_components()
+        # Jones vector or reflected rays
+        jv_out_0 = Jrotated_00 * jv_in_0 + Jrotated_01 * jv_in_1
+        jv_out_1 = Jrotated_10 * jv_in_0 + Jrotated_11 * jv_in_1
+
+        return jv_out_0, jv_out_1, ee_S, ee_P
 
 if __name__ == "__main__":
     c = S4GeometricLaueCrystal(
@@ -498,14 +805,14 @@ if __name__ == "__main__":
             miller_index_h=1,
             miller_index_k=1,
             miller_index_l=1,
-            asymmetry_angle=0.0,
+            asymmetry_angle=numpy.pi/2,
             is_thick=0,
-            thickness=0.010,
+            thickness=15.5e-6,
             f_central=0,
             f_phot_cent=0,
-            phot_cent=8000.0,
+            phot_cent=10000.0,
             file_refl="",
-            f_bragg_a=False,
+            f_bragg_a=True,
             f_ext=0,)
 
     print(c.info())
