@@ -9,6 +9,8 @@ from shadow4.beamline.s4_beamline_element_movements import S4BeamlineElementMove
 
 from syned.beamline.shape import Sphere, SphericalCylinder, Convexity, Direction
 
+from srxraylib.plot.gol import plot_scatter, plot, plot_image, plot_show
+
 class S4SphereGeometricLaueCrystal(S4GeometricLaueCrystal, S4SphereOpticalElementDecorator):
     """
     Shadow4 Sphere Geometric Laue Crystal Class
@@ -236,65 +238,219 @@ class S4SphereGeometricLaueCrystalElement(S4GeometricLaueCrystalElement):
         txt += "\n\nbeam, footprint = beamline_element.trace_beam()"
         return txt
 
+def caustic(beam):
+    #
+    # caustic
+    #
+    print(">>> Intensity: ", beam.get_intensity(nolost=1))
+    beam_to_analyze = beam.duplicate()
+    y_min, y_max, npositions = 0.01, 10.0, 100
+    x_min, x_max, npoints_x = -0.02, 0.02, 300
+    nolost = 1
+
+    positions = numpy.linspace(y_min, y_max, npositions)
+    out_x = numpy.zeros((npoints_x, npositions))
+    fwhm = numpy.zeros(npositions)
+    center = numpy.zeros(npositions)
+    col = 3
+    ref = 23
+    col_title = "Z (col 3)"
+
+    for i in range(npositions):
+        beami = beam_to_analyze.duplicate()
+        beami.retrace(positions[i], resetY=True)
+        tkt_x = beami.histo1(col, xrange=[x_min, x_max], nbins=npoints_x, nolost=nolost, ref=ref)
+        out_x[:, i] = tkt_x['histogram']
+        fwhm[i] = tkt_x['fwhm']
+        if ref == 23:
+            center[i] = numpy.average(beami.get_column(col, nolost=nolost),
+                                      weights=beami.get_column(23, nolost=nolost))
+        else:
+            center[i] = numpy.average(beami.get_column(col, nolost=nolost))
+    #
+    # plots
+    #
+    print('Result arrays X,Y (shapes): ', out_x.shape, tkt_x['bin_center'].shape, positions.shape)
+    x = tkt_x['bin_center']
+    y = positions
+
+    # 2D
+    plot_image(out_x.T, y, 1e6 * x,
+               title="", ytitle="%s [um] (%d pixels)" % (col_title, x.size),
+               xtitle="Y [m] (%d pixels)" % (y.size), aspect="auto")
+    # FWHM
+    fwhm[fwhm == 0] = "nan"
+    plot(y, 1e6 * fwhm, title="FWHM",
+         xtitle="y [m]", ytitle="FHWH [um]", marker=".")
+    # I0
+    nx, ny = out_x.shape
+    I0 = out_x.T[:, nx // 2]
+    plot(y, I0, title="I at central profile", xtitle="y [m]", ytitle="I0", marker=".")
+    # center
+    plot(y, 1e6 * center, title="CENTER",
+         xtitle="y [m]", ytitle="CENTER [um]", marker=".", yrange=[1e6 * x_min, 1e6 * x_max])
+
+
+
 if __name__ == "__main__":
+    from srxraylib.plot.gol import plot_scatter, plot, plot_image, plot_show
 
-    from srxraylib.plot.gol import plot_scatter, plot, plot_show
+    if 1: # example 1
 
-    from shadow4.tools.logger import set_verbose, printlog
-    set_verbose(0)
 
-    import numpy as np
-    from dabax.dabax_xraylib import DabaxXraylib
-    from shadow4.beamline.s4_beamline import S4Beamline
+        from shadow4.tools.logger import set_verbose, printlog
+        set_verbose(1)
 
-    beamline = S4Beamline()
+        import numpy as np
+        from dabax.dabax_xraylib import DabaxXraylib
+        from shadow4.beamline.s4_beamline import S4Beamline
 
-    #
-    #
-    #
-    from shadow4.sources.source_geometrical.source_geometrical import SourceGeometrical
+        beamline = S4Beamline()
 
-    light_source = SourceGeometrical(name='Geometrical Source', nrays=5000, seed=5676561)
-    light_source.set_spatial_type_point()
-    light_source.set_depth_distribution_off()
-    light_source.set_angular_distribution_gaussian(sigdix=0.000885, sigdiz=7.2e-05)
-    light_source.set_energy_distribution_uniform(value_min=9995, value_max=10005, unit='eV')
-    light_source.set_polarization(polarization_degree=1, phase_diff=0, coherent_beam=0)
-    beam = light_source.get_beam()
+        #
+        #
+        #
+        from shadow4.sources.source_geometrical.source_geometrical import SourceGeometrical
 
-    beamline.set_light_source(light_source)
+        light_source = SourceGeometrical(name='Geometrical Source', nrays=5000, seed=5676561)
+        light_source.set_spatial_type_point()
+        light_source.set_depth_distribution_off()
+        light_source.set_angular_distribution_gaussian(sigdix=0.000885, sigdiz=7.2e-05)
+        light_source.set_energy_distribution_uniform(value_min=9900, value_max=10100, unit='eV')
+        light_source.set_polarization(polarization_degree=1, phase_diff=0, coherent_beam=0)
+        beam = light_source.get_beam()
 
-    # optical element number XX
-    boundary_shape = None
+        beamline.set_light_source(light_source)
 
-    from shadow4.beamline.optical_elements.crystals.s4_sphere_crystal import S4SphereCrystal
+        # optical element number XX
+        boundary_shape = None
 
-    # optical_element = S4SphereCrystal(name='Generic Crystal 1:1 focusing (Rowland)',
-    optical_element = S4SphereGeometricLaueCrystal(name='Generic Crystal 1:1 focusing (Rowland)',
-                                      boundary_shape=boundary_shape, material='Si',
-                                      miller_index_h=1, miller_index_k=1, miller_index_l=1,
-                                      f_bragg_a=True, asymmetry_angle=numpy.radians(90),
-                                      is_thick=0, thickness=15.5e-6,
-                                      f_central=1, f_phot_cent=0, phot_cent=10000.0,
-                                      file_refl='bragg.dat',
-                                      f_ext=0,
-                                      material_constants_library_flag=0,
-                                      # 0=xraylib,1=dabax,2=preprocessor v1,3=preprocessor v2
-                                      radius=151.733000e10, is_cylinder=0, cylinder_direction=0, convexity=1,
-                                      dabax=None,  # used when material_constants_library_flag=1,
-                                      )
-    from syned.beamline.element_coordinates import ElementCoordinates
+        from shadow4.beamline.optical_elements.crystals.s4_sphere_crystal import S4SphereCrystal
 
-    coordinates = ElementCoordinates(p=30, q=0, angle_radial=1.371743969, angle_azimuthal=0,
-                                     angle_radial_out=1.371743969)
-    movements = None
-    from shadow4.beamline.optical_elements.crystals.s4_sphere_crystal import S4SphereCrystalElement
+        # optical_element = S4SphereCrystal(name='Generic Crystal 1:1 focusing (Rowland)',
+        optical_element = S4SphereGeometricLaueCrystal(name='Generic Crystal 1:1 focusing (Rowland)',
+                                          boundary_shape=boundary_shape, material='Si',
+                                          miller_index_h=1, miller_index_k=1, miller_index_l=1,
+                                          f_bragg_a=True, asymmetry_angle=numpy.radians(90),
+                                          is_thick=0, thickness=0.01,
+                                          f_central=1, f_phot_cent=0, phot_cent=10000.0,
+                                          file_refl='bragg.dat',
+                                          f_ext=0,
+                                          material_constants_library_flag=0,
+                                          # 0=xraylib,1=dabax,2=preprocessor v1,3=preprocessor v2
+                                          radius=1.0, is_cylinder=0, cylinder_direction=0, convexity=1,
+                                          dabax=None,  # used when material_constants_library_flag=1,
+                                          )
+        from syned.beamline.element_coordinates import ElementCoordinates
 
-    beamline_element = S4SphereGeometricLaueCrystalElement(optical_element=optical_element, coordinates=coordinates,
-                                              movements=movements, input_beam=beam)
+        coordinates = ElementCoordinates(p=3, q=0, angle_radial=1.371743969, angle_azimuthal=0,
+                                         angle_radial_out=1.371743969)
+        movements = None
+        from shadow4.beamline.optical_elements.crystals.s4_sphere_crystal import S4SphereCrystalElement
 
-    beam, footprint = beamline_element.trace_beam()
+        beamline_element = S4SphereGeometricLaueCrystalElement(optical_element=optical_element, coordinates=coordinates,
+                                                  movements=movements, input_beam=beam)
 
-    beamline.append_beamline_element(beamline_element)
+        beam, footprint = beamline_element.trace_beam()
 
-    plot_scatter(footprint.get_column(2, nolost=1), footprint.get_column(1, nolost=1), title='footprint (Y,X) in m')
+        beamline.append_beamline_element(beamline_element)
+
+        plot_scatter(footprint.get_column(2, nolost=1), footprint.get_column(1, nolost=1), title='footprint (Y,X) in m', show=False)
+
+        from shadow4.tools.beamline_tools import focnew
+
+        t = focnew(beamline, beam)
+        print(t['text'])
+
+        ###
+        ticket = beam.histo1(26, nbins=100, xrange=[np.float64(9950.010761521635), np.float64(10049.981772997284)],
+                             nolost=1, ref=23)
+        title = "I: %.1f " % ticket['intensity']
+        if ticket['fwhm'] is not None: title += "FWHM: %f " % ticket['fwhm']
+        plot(ticket['bin_path'], ticket['histogram_path'],
+             title=title, xtitle="column 26", show=0)
+
+        ###
+        ticket = footprint.histo1(3, nbins=100, xrange=[-0.002, 0.002],
+                             nolost=1, ref=23)
+        title = "I: %.1f " % ticket['intensity']
+        if ticket['fwhm'] is not None: title += "FWHM: %f " % ticket['fwhm']
+        plot(ticket['bin_path'], ticket['histogram_path'],
+             title=title, xtitle="footprint column 3", show=0)
+
+        plot_show()
+        # caustic(beam)
+
+    if 0: # Fig 11 in Qi 2021
+        from srxraylib.plot.gol import plot_scatter, plot, plot_show
+
+        from shadow4.tools.logger import set_verbose, printlog
+
+        set_verbose(1)
+
+        import numpy as np
+        from dabax.dabax_xraylib import DabaxXraylib
+        from shadow4.beamline.s4_beamline import S4Beamline
+
+        beamline = S4Beamline()
+
+        #
+        #
+        #
+        from shadow4.sources.source_geometrical.source_geometrical import SourceGeometrical
+
+        light_source = SourceGeometrical(name='Geometrical Source', nrays=5000, seed=5676561)
+        light_source.set_spatial_type_point()
+        light_source.set_depth_distribution_off()
+        light_source.set_angular_distribution_gaussian(sigdix=0.000885, sigdiz=7.2e-05)
+        # light_source.set_angular_distribution_flat(hdiv1=0, hdiv2=0, vdiv1=0, vdiv2=0)
+        # light_source.set_energy_distribution_singleline(34561, unit='eV')
+        light_source.set_energy_distribution_uniform(value_min=34561.0+100, value_max=34561.0-100, unit='eV')
+        light_source.set_polarization(polarization_degree=1, phase_diff=0, coherent_beam=0)
+        beam = light_source.get_beam()
+
+        beamline.set_light_source(light_source)
+
+        # optical element number XX
+        boundary_shape = None
+
+        from shadow4.beamline.optical_elements.crystals.s4_sphere_crystal import S4SphereCrystal
+
+        # optical_element = S4SphereCrystal(name='Generic Crystal 1:1 focusing (Rowland)',
+        optical_element = S4SphereGeometricLaueCrystal(name='Generic Crystal 1:1 focusing (Rowland)',
+                                                       boundary_shape=boundary_shape, material='Si',
+                                                       miller_index_h=3, miller_index_k=1, miller_index_l=1,
+                                                       f_bragg_a=True, asymmetry_angle=numpy.radians(90),
+                                                       is_thick=0, thickness=0.0005,
+                                                       f_central=1, f_phot_cent=0, phot_cent=34561.0,
+                                                       file_refl='bragg.dat',
+                                                       f_ext=0,
+                                                       material_constants_library_flag=0,
+                                                       # 0=xraylib,1=dabax,2=preprocessor v1,3=preprocessor v2
+                                                       radius=0.5, is_cylinder=1, cylinder_direction=0, convexity=1,
+                                                       dabax=None,  # used when material_constants_library_flag=1,
+                                                       )
+        from syned.beamline.element_coordinates import ElementCoordinates
+
+        coordinates = ElementCoordinates(p=3, q=0, angle_radial=1.371743969, angle_azimuthal=0,
+                                         angle_radial_out=1.371743969)
+        movements = None
+        from shadow4.beamline.optical_elements.crystals.s4_sphere_crystal import S4SphereCrystalElement
+
+        beamline_element = S4SphereGeometricLaueCrystalElement(optical_element=optical_element, coordinates=coordinates,
+                                                               movements=movements, input_beam=beam)
+
+        beam, footprint = beamline_element.trace_beam()
+
+        beamline.append_beamline_element(beamline_element)
+
+        # plot_scatter(footprint.get_column(2, nolost=1), footprint.get_column(1, nolost=1), title='footprint (Y,X) in m')
+
+        from shadow4.tools.beamline_tools import focnew
+
+        t = focnew(beamline, beam)
+        print(t['text'])
+
+
+    plot_show()
+

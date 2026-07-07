@@ -474,7 +474,7 @@ class S4GeometricLaueCrystalElement(S4BeamlineElement):
         # crystal diffraction
         #
 
-        footprint, normal = self._apply_crystal_diffraction(input_beam)
+        footprint, normal = self._apply_crystal_diffraction(input_beam, flag_lost_value=flag_lost_value)
 
         #
         # for i in range(10):
@@ -524,16 +524,19 @@ class S4GeometricLaueCrystalElement(S4BeamlineElement):
         anywhere in the crystal and are flagged lost; (4) compute the exit direction from the local
         diffraction vector at t_d [Eq. (ih)]; (5) advance the ray to the diffraction point.
 
-        No reflectivity / polarization (Jones-matrix, dynamical-theory) model is applied here: this
-        method only reproduces the *geometric* (direction and diffraction-depth) part of the
-        reference derivation; electric-field columns are left untouched.
+        The reflectivity model itself is only a placeholder (unit reflectivity for both
+        polarizations, r_S = r_P = 1, applied through the same Jones-matrix rotation machinery as
+        the Bragg-reflection crystal classes) -- the reference paper is purely geometric/kinematic
+        and gives no reflectivity/dynamical-theory model; that is left as a later TODO (e.g. a
+        Penning-Polder-type model), see _calculate_penetration_and_scattering().
 
         Coordinate mapping to the local shadow4 beamline-element frame (see trace_beam()): the
-        surface normal at the crystal center O is along local -Z (S4Conic/S4Toroid normals point
-        INTO the crystal, which conveniently matches the paper's convention of an *inward* normal
-        n), and the meridional/dispersion direction (along which the bending radius R and the arc
-        length s are measured) is local Y; the sagittal (out-of-dispersion-plane) direction is local
-        X and is not affected by the (purely meridional) cylindrical-bending model used here.
+        local (zeta, eta) meridional-plane basis used in _calculate_penetration_and_scattering() is
+        built from the existing (surface-type-aware) surface_normal -- not hardcoded local axes --
+        so it self-consistently matches whichever inward/outward sign convention that block already
+        applies for S4Mesh / S4Toroid / S4Conic; the sagittal direction is local X, per the
+        S4SphereOpticalElementDecorator / S4Beam.rotate() convention used throughout shadow4, and is
+        not affected by the (purely meridional) cylindrical-bending model used here.
 
         NOTE: the sign of R (bending radius, positive when the incident beam impinges on the
         concave side of the bent crystal, matching the free-plate displacement field of Eq. (displ))
@@ -586,6 +589,20 @@ class S4GeometricLaueCrystalElement(S4BeamlineElement):
         # update beam array with the new electric fields
         footprint.set_jones_components(jv_out_0, jv_out_1, e_S=ee_S, e_P=ee_P)
 
+        # advance the ray to the actual diffraction point (x2, at depth penetration_distance along
+        # the incident direction) and update the optical path accordingly; rays for which
+        # penetration_distance falls outside [0, thickness] do not satisfy the local Bragg
+        # condition anywhere inside the crystal (transmitted, undiffracted -- not modeled by this
+        # diffracted-beam element) and are flagged lost.
+        footprint.set_column(1, x2[0])
+        footprint.set_column(2, x2[1])
+        footprint.set_column(3, x2[2])
+        footprint.set_column(13, footprint.get_column(13) + penetration_distance)
+
+        thickness = self.get_optical_element()._thickness
+        lost = ~numpy.isfinite(penetration_distance) | (penetration_distance < 0.0) | (penetration_distance > thickness)
+        footprint.set_column(10, numpy.where(lost, flag_lost_value, footprint.get_column(10)))
+
         if is_verbose():
             print(">>> Orthogonal footprint: ", footprint.efields_orthogonal(),
               vector_dot(ee_S, ee_P)[0],
@@ -605,29 +622,48 @@ class S4GeometricLaueCrystalElement(S4BeamlineElement):
         return footprint, normal
 
     def _calculate_penetration_and_scattering(self, footprint1, normal):
+        """
+        Computes, for each ray, the diffraction (penetration) depth inside a bent Laue crystal and
+        the resulting exit direction, following the closed-form algorithm of Section 5
+        ("Ray-tracing methodology for bent Laue crystals") of Guigay & Sanchez del Rio,
+        "Geometrical focusing in Laue crystals" (main23.tex in this directory):
 
-        #
-        # TODO:
-        # introduce the correct calculation of
-        # - penetration_depth (now using zero)
-        # - H' at in-depth interaction point (now using H at intersection with surface)
-        # - scattering angle at interaction point (now using 2 * theta_bragg)
-        # - introduce a model for reflectivities in a second phase
-        #
-        #
+        - the local, strain-corrected reciprocal-lattice vector h'(t) along the ray path [Eqs.
+          (hpP), (gradphi), (hpt)];
+        - the diffraction depth t_d at which the ray meets the exact local Bragg condition, in
+          closed form [Eq. (td), using the crystal-level constant of Eq. (phi-sum)];
+        - the exit direction from h'(t_d) [Eq. (ih)].
+
+        Reflectivity is only a placeholder (r_S = r_P = 1): the reference paper is purely
+        geometric/kinematic and gives no reflectivity model; TODO: introduce one (e.g.
+        Penning-Polder) in a second phase.
+
+        Parameters
+        ----------
+        footprint1 : instance of S4Beam
+            The beam at the entrance-surface intercept (position = entry point, direction =
+            incident direction), in the local crystal reference system.
+        normal : numpy array shape (3, nrays)
+            The surface normal at the intercept, as returned by calculate_intercept_on_beam().
+
+        Returns
+        -------
+        tuple
+            (penetration_distance, x2, vIn, vOut, r_S, r_P): penetration_distance and x2 (shape
+            (3, nrays)) are the diffraction depth (along the incident direction) and diffraction
+            point for each ray; vIn, vOut (shape (nrays, 3)) are the incident and exit directions;
+            r_S, r_P (shape (nrays,), complex) are the (placeholder) sigma/pi reflectivities.
+        """
         footprint = footprint1.duplicate()
-        v1 = footprint.get_columns([4, 5, 6])  # shape (3,nrays)
-        x1 = footprint.get_columns([1, 2, 3])  # shape (3,nrays)
+        v1 = footprint.get_columns([4, 5, 6])  # shape (3,nrays), incident direction i0
+        x1 = footprint.get_columns([1, 2, 3])  # shape (3,nrays), entry point P
         nrays = v1.shape[1]
-        #
-        # direction and reflectivity calculation using crystalpy
-        #
+
         energies = footprint.get_photon_energy_eV()
 
         # using crystalpy Vector
         direction_in = Vector(v1[0], v1[1], v1[2])
 
-        # create crystalpy PerfectCrystalDiffraction instance
         # Warning:
         # S4Conic, S4Toroid give normal_z < 0 for concave surfaces (and >0 for convex)
         # S4mesh give always normal_z > 0
@@ -644,19 +680,9 @@ class S4GeometricLaueCrystalElement(S4BeamlineElement):
         else: # todo: check with convex surfaces
             surface_normal = Vector(normal[0], normal[1], normal[2]).scalarMultiplication(-1.0)  # normal is inwards!
 
-        # calculate vector H - Geometrical convention from M.Sanchez del Rio et al., J.Appl.Cryst.(2015). 48, 477-491.
-        bragg_normal = surface_normal.getVectorH(
-            surface_normal,
-            self._crystalpy_diffraction_setup.dSpacingSI(),
-            asymmetry_angle=self._crystalpy_diffraction_setup.asymmetryAngle(),
-            azimuthal_angle=self._crystalpy_diffraction_setup.azimuthalAngle())
-
-        bragg_normal_normalized = bragg_normal.getNormalizedVector()
-
-        print(">>> direction_in: ", direction_in.componentsStack()[:, 0])
-        print(">>> surface_normal: ", surface_normal.componentsStack()[:,0])
-        print(">>> bragg_normal_normalized: ", bragg_normal_normalized.componentsStack()[:,0])
-
+        if is_debug():
+            print(">>> direction_in: ", direction_in.componentsStack()[:, 0])
+            print(">>> surface_normal: ", surface_normal.componentsStack()[:, 0])
 
         r_S = numpy.ones(nrays, dtype=complex) # TODO: introduce model, Penning-Polder?
         r_P = numpy.ones(nrays, dtype=complex) # TODO: introduce model, Penning-Polder?
@@ -666,33 +692,161 @@ class S4GeometricLaueCrystalElement(S4BeamlineElement):
             print(">> r_P: ", r_P[0], numpy.abs(r_P[0]) ** 2)
 
         #
-        # compute interaction point x2 = x1 + t * v1
+        # local (zeta, eta) meridional-plane basis. zeta_hat is the paper's inward normal n --
+        # reusing the surface_normal computed above (already handling the S4Mesh/S4Toroid/S4Conic
+        # sign differences) rather than a hardcoded local axis. eta_hat is tied to the crystal's
+        # own (fixed) local frame -- not to the incident ray's direction, to avoid a sign ambiguity
+        # for divergent/misaligned beams -- via a cross product with the sagittal direction, which
+        # is local X throughout shadow4 (S4SphereOpticalElementDecorator / S4Beam.rotate()
+        # convention): eta_hat = zeta_hat x sagittal_hat.
         #
-        penetration_distance = numpy.zeros(nrays, dtype=float) # TODO: compute
-        v1_t = v1.copy()
-        for i in range(3):
-            v1_t[i] = v1_t[i] * penetration_distance
-        x2 = x1 + v1_t # shape (3, nrays)
+        # zeta_hat is re-oriented, if needed, so that the incident ray always has a positive
+        # component along it (i0 . zeta_hat > 0): a ray reaching the entrance surface must be
+        # travelling INTO the crystal bulk, i.e. along +zeta by the paper's own definition of zeta
+        # (Section 2.1). This self-corrects for the surface_normal sign, which the "todo: check with
+        # convex surfaces" comment above already flags as unverified for S4Conic, and which was
+        # found (empirically) to flip between convexity=Convexity.UPWARD and
+        # convexity=Convexity.DOWNWARD for the same incident direction.
+        #
+        # The zeta_hat x sagittal_hat order (rather than sagittal_hat x zeta_hat) was fixed against
+        # an experimental reference diagram (Si 111, 10 keV, symmetric Laue, theta_B = 11 deg): with
+        # outward normal n = +Z and H = +Y (in the surface, chi = 0, symmetric), h(O) =
+        # h*(sin(alpha0), -cos(alpha0)) in (zeta, eta) only reproduces H = +h*Y for alpha0 = 0 with
+        # this cross-product order (eta_hat = -Y here); the opposite order gives eta_hat = +Y, which
+        # would put h(O) along -Y -- the wrong side.
+        #
+        zeta_hat = surface_normal.componentsStack()  # (3, nrays), already unit
+        zeta_sign = numpy.sign(numpy.sum(v1 * zeta_hat, axis=0))
+        zeta_hat = zeta_hat * zeta_sign[numpy.newaxis, :]
+
+        sagittal_hat = numpy.zeros_like(zeta_hat)
+        sagittal_hat[0, :] = 1.0
+        eta_hat = numpy.cross(zeta_hat, sagittal_hat, axis=0)
+        eta_hat = eta_hat / numpy.linalg.norm(eta_hat, axis=0, keepdims=True)
+
+        i0_zeta = numpy.sum(v1 * zeta_hat, axis=0)
+        i0_eta  = numpy.sum(v1 * eta_hat,  axis=0)
+
+        # entry point in (zeta, eta) coordinates, relative to the crystal-design reference point O
+        # (the local o.e. origin)
+        zeta_P = numpy.sum(x1 * zeta_hat, axis=0)
+        eta_P  = numpy.sum(x1 * eta_hat,  axis=0)
 
         #
-        # compute scattering angle and output direction
+        # crystal / elastic constants (crystal-level, not per-ray)
         #
-        scattering_angle = 2 * self._crystalpy_diffraction_setup.angleBragg(energies) # TODO: calculate scattering angle at interaction point
-        print(">>> semi-scattering angle [rad]: ", scattering_angle / 2)
+        # soe._asymmetry_angle follows the SHADOW convention: the angle between the Bragg planes
+        # and the surface (90 deg for symmetric Laue). The paper's alpha (main23.tex, "the rotation
+        # of h from its direction in the symmetric case") is instead the angle between H and the
+        # surface -- zero for symmetric Laue -- i.e. the complement: alpha = pi/2 - asymmetry_angle.
+        alpha0 = numpy.pi / 2.0 - soe._asymmetry_angle
+        rho = soe._poisson_ratio
+        thickness = soe._thickness  # normal thickness, m
 
-        local_bragg_normal_normalized = bragg_normal_normalized # TODO: calculate H' at interaction point
-        axis = direction_in.crossProduct(local_bragg_normal_normalized)  # should be ~(1, 0, 0)
-        direction_out = direction_in.rotateAroundAxis(axis, scattering_angle)
+        shape = soe.get_surface_shape()
+        R = shape.get_radius() if hasattr(shape, "get_radius") else numpy.inf
 
-        print(">>> axis: ", axis.componentsStack()[:, 0])
-        print(">>> direction_in: ", direction_in.componentsStack()[:, 0])
-        print(">>> direction_out: ", direction_out.componentsStack()[:, 0])
-        print(">>> semi scattering angle [deg], sin, cos: ", numpy.degrees(0.5 * scattering_angle[0]), numpy.sin(0.5 * scattering_angle[0]), numpy.cos(0.5 * scattering_angle[0]))
+        d_spacing = self._crystalpy_diffraction_setup.dSpacingSI()  # m
+        h_mod = 2.0 * numpy.pi / d_spacing                          # 1/m
 
-        vOut = direction_out.componentsStack().T  # shape (npoints, 3)
-        vIn = v1.T
+        # design (tuning) Bragg angle -- used, as in the reference paper, as a fixed crystal-level
+        # property in the closed-form elastic terms below (Eqs. phi-sum, td). Uses the UNCORRECTED
+        # (pure vacuum/kinematic) Bragg angle, angleBragg -- not angleBraggCorrected -- since the
+        # refractive-index correction is a dynamical-theory effect outside the scope of this purely
+        # geometric/kinematic derivation.
+        if soe._f_phot_cent == 0:
+            energy_design = soe._phot_cent
+        else:
+            energy_design = codata.h * codata.c / codata.e * 1e2 / (soe._phot_cent * 1e-8)
+        theta_B = self._crystalpy_diffraction_setup.angleBragg(energy_design)
+        if isinstance(theta_B, (list, tuple, numpy.ndarray)): theta_B = theta_B[0]
 
-        return penetration_distance, x2, vIn, vOut, r_S, r_P
+        # per-ray photon energy -> wavenumber
+        wavelength = codata.h * codata.c / codata.e / energies     # m
+        k = 2.0 * numpy.pi / wavelength                             # 1/m
+
+        #
+        # local (strained) diffraction vector at the entry point P, Eq. (hpP) + (gradphi)
+        #
+        dphi_dzeta_P = (h_mod / R) * (rho * zeta_P * numpy.sin(alpha0) + eta_P * numpy.cos(alpha0))
+        dphi_deta_P  = (h_mod / R) * (eta_P * numpy.sin(alpha0) + zeta_P * numpy.cos(alpha0))
+
+        hP_zeta =  h_mod * numpy.sin(alpha0) - dphi_dzeta_P
+        hP_eta  = -h_mod * numpy.cos(alpha0) - dphi_deta_P
+        hP_mod = numpy.sqrt(hP_zeta ** 2 + hP_eta ** 2)
+
+        #
+        # variation of the diffraction vector along the ray, Eq. (hpt)
+        #
+        phi_0zeta = (h_mod / R) * (rho * numpy.sin(alpha0) * i0_zeta + numpy.cos(alpha0) * i0_eta)
+        phi_0eta  = (h_mod / R) * (numpy.sin(alpha0) * i0_eta + numpy.cos(alpha0) * i0_zeta)
+        ht_zeta = -phi_0zeta
+        ht_eta  = -phi_0eta
+
+        #
+        # diffraction (penetration) depth t_d, Eq. (td), using the closed form of (phi_00+phi_0h)
+        # for cylindrical bending, Eq. (phi-sum) -- a crystal-level constant (not per-ray).
+        #
+        denom = -(h_mod * numpy.cos(theta_B) / R) * (
+                    2.0 * numpy.sin(theta_B - alpha0)
+                    - (1.0 + rho) * numpy.sin(2.0 * alpha0) * numpy.cos(theta_B - alpha0))
+
+        sin_theta_inc = -(hP_zeta * i0_zeta + hP_eta * i0_eta) / hP_mod   # geometric glancing angle at P
+        sin_theta_local_bragg = hP_mod / (2.0 * k)                        # Bragg's law, local spacing
+
+        with numpy.errstate(divide="ignore", invalid="ignore"):
+            penetration_distance = -2.0 * h_mod * (sin_theta_inc - sin_theta_local_bragg) / denom #  !!!! CHANGED SIGN  !!!!!
+
+
+
+        # if is_debug():
+        print(">>> min, max, size penetration_distance [m]: ", penetration_distance.min(), penetration_distance.max(),
+              penetration_distance.size)
+        count = numpy.sum((penetration_distance >= 0) & (penetration_distance <= thickness))
+        print("thickness, Number of elements in [0, thickness]:", thickness, count)
+        count = numpy.sum((penetration_distance >= -thickness) & (penetration_distance <= 0))
+        print("thickness, Number of elements in [-thickness, 0]:", thickness, count)
+        count = numpy.sum((penetration_distance >= -10*thickness) & (penetration_distance <= 10*thickness))
+        print("thickness, Number of elements in [-thickness, thichness]:", thickness, count)
+
+        from srxraylib.plot.gol import plot
+        plot(energies, penetration_distance, linestyle='', marker='.',
+             xtitle="Energy [eV]", ytitle='Penetration depth [m]', show=0)
+
+        #
+        # interaction (diffraction) point x2 = x1 + t_d * v1
+        #
+        x2 = x1 + penetration_distance[numpy.newaxis, :] * v1  # shape (3, nrays)
+
+        #
+        # local diffraction vector at the interaction point, Eq. (hp-at-t), and exit direction,
+        # Eq. (ih): i_h = (k0 + h'(t_d)) / k. The (zeta, eta) correction is embedded back into 3D
+        # via zeta_hat, eta_hat; the incident ray's own sagittal component (already in v1/k0_vec)
+        # is carried through unchanged, consistent with the purely meridional bending model.
+        #
+        h_zeta_td = hP_zeta + penetration_distance * ht_zeta
+        h_eta_td  = hP_eta  + penetration_distance * ht_eta
+
+        h_vec = h_zeta_td[numpy.newaxis, :] * zeta_hat + h_eta_td[numpy.newaxis, :] * eta_hat
+
+        k0_vec = k[numpy.newaxis, :] * v1
+        kh_vec = k0_vec + h_vec
+        kh_mod = numpy.sqrt(kh_vec[0] ** 2 + kh_vec[1] ** 2 + kh_vec[2] ** 2)
+        vOut_arr = (kh_vec / kh_mod).T  # shape (nrays, 3)
+
+        if is_debug():
+            scattering_angle = numpy.arccos(numpy.clip(numpy.sum(v1 * (kh_vec / kh_mod), axis=0), -1.0, 1.0))
+            print(">>> scattering angle [deg]: ", numpy.degrees(scattering_angle[0]))
+            print(">>> direction_out: ", vOut_arr[0])
+
+        scattering_angle = numpy.arccos(numpy.clip(numpy.sum(v1 * (kh_vec / kh_mod), axis=0), -1.0, 1.0))
+        from srxraylib.plot.gol import plot
+        plot(energies, 0.5 * numpy.degrees(scattering_angle), linestyle='', marker='.',
+             xtitle="Energy [eV]", ytitle='Half of Scattering angle [deg]', show=0)
+
+        vIn = v1.T  # shape (npoints, 3)
+
+        return penetration_distance, x2, vIn, vOut_arr, r_S, r_P
 
     def _calculate_jones_and_efield_directions(self, footprint, normal, vIn, vOut, r_SS, r_PP):
         """
