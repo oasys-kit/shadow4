@@ -38,9 +38,10 @@
 #     # fails with "[Errno 13] Permission denied: ...\\pip\\cache\\wheels\\..." .
 #
 # Upload to pypi (when uploading, increment the version number):
-#     python setup.py register (only once, not longer needed)
+#     rm -rf dist
 #     python setup.py sdist
-#     python -m twine upload dist/...
+#     python -m build # (needed in all OASYS libraries, nit needed in addons)
+#     python -m twine upload dist/*
 #          
 # Install from pypi:
 #     pip install shadow4
