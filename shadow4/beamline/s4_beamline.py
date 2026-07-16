@@ -6,6 +6,7 @@ list of S4 beamline elements.
 
 """
 import copy
+import re
 
 from syned.beamline.beamline import Beamline
 from shadow4.beamline.s4_beamline_element import S4BeamlineElement
@@ -21,8 +22,6 @@ from shadow4.beamline.optical_elements.refractors.s4_transfocator import S4Trans
 from shadow4.beamline.optical_elements.refractors.s4_crl import S4CRL
 from shadow4.beamline.optical_elements.absorbers.s4_screen import S4Screen
 from shadow4.beamline.optical_elements.compound.s4_compound import S4Compound
-
-
 
 
 class S4Beamline(Beamline):
@@ -71,7 +70,6 @@ class S4Beamline(Beamline):
             The beamline element to append.
         """
         self._beamline_elements_list.append(beamline_element)
-
 
     def to_python_code_packed(self,
                               add_head="def run_beamline():",
@@ -162,7 +160,170 @@ class S4Beamline(Beamline):
                 print("File %s written to disk." % filename)
         return final_script
 
+    def to_python_code_parallel(self,
+                                number_of_repetitions=None,
+                                number_of_rays=None,
+                                n_jobs=-1,
+                                base_seed=None,
+                                output_file="s4_beam.h5",
+                                filename=""):
+        """
+        Returns standalone python code to trace repeated beamline realizations in parallel.
 
+        Parameters
+        ----------
+        number_of_repetitions : int
+            Number of repeated beamline traces.
+        number_of_rays : int
+            Number of rays per repetition.
+        n_jobs : int, optional
+            Number of joblib workers. Default -1 uses all CPUs reported by joblib.
+        base_seed : int, optional
+            Base seed used to generate the repeated beamline seeds. If None, use the prototype light source seed.
+        output_file : str, optional
+            HDF5 output file used by the generated __main__ block.
+        filename : str, optional
+            If not empty, the generated code is also written to this file. Default "" (not written).
+
+        Returns
+        -------
+        str
+            The python code.
+        """
+
+        from shadow4.tools.parallel import get_parallel_runner_prototype
+
+        prototype_beamline = get_parallel_runner_prototype(self)
+
+        light_source = prototype_beamline.get_light_source()
+        default_seed = int(base_seed) if base_seed is not None else int(light_source.get_seed())
+        default_nrays = int(light_source.get_nrays())
+
+        if number_of_repetitions is None:
+            raise ValueError("number_of_repetitions is required.")
+        default_number_of_repetitions = int(number_of_repetitions)
+
+        default_number_of_rays = (
+            int(number_of_rays)
+            if number_of_rays is not None
+            else int(default_nrays)
+        )
+
+        default_n_jobs = int(n_jobs)
+
+        final_script = "# Auto-generated from Shadow4 S4Beamline.to_python_code_parallel().\n\n"
+        final_script += "from shadow4.tools.parallel import run_parallel_from_generated_script\n\n\n"
+
+        script = prototype_beamline.to_python_code()
+        script, nrays_replacements = re.subn(
+            r"(\bnrays\s*=\s*)[-+]?\d+",
+            r"\1nrays",
+            script,
+            count=1,
+        )
+        script, seed_replacements = re.subn(
+            r"(\bseed\s*=\s*)[-+]?\d+",
+            r"\1seed",
+            script,
+            count=1,
+        )
+
+        if seed_replacements != 1:
+            raise ValueError("Expected exactly one source seed assignment, found %d." % seed_replacements)
+
+        if nrays_replacements != 1:
+            raise ValueError("Expected exactly one source nrays assignment, found %d." % nrays_replacements)
+
+        script = script.replace(
+            "beam = light_source.get_beam()",
+            "if dry_run:\n"
+            "    beam = None\n"
+            "else:\n"
+            "    beam = light_source.get_beam()",
+        )
+
+        script = script.replace(
+            "beam, footprint = beamline_element.trace_beam()",
+            "if dry_run:\n"
+            "    beam, footprint = None, None\n"
+            "else:\n"
+            "    beam, footprint = beamline_element.trace_beam()",
+        )
+
+        indented_script = '\n'.join('    ' + line for line in script.splitlines())
+
+        final_script += "def trace_beamline(seed=%d, nrays=%d, dry_run=False, return_beamline=False):\n" % (default_seed, default_nrays)
+        final_script += "\n"
+        final_script += "    beam, footprint = None, None\n"
+        final_script += "\n"
+        final_script += indented_script
+        final_script += "\n\n"
+        final_script += "    if beam is not None:\n"
+        final_script += "        beam.clean_lost_rays()\n"
+        final_script += "    if footprint is not None:\n"
+        final_script += "        footprint.clean_lost_rays()\n\n"
+        final_script += "    if not return_beamline:\n"
+        final_script += "        beamline = None\n"
+        final_script += "    return seed, beam, footprint, beamline"
+        final_script += "\n\n"
+        final_script += "\n"
+        final_script += "# --------------------------------------------------------------------------------------\n"
+        final_script += "# --------------------------------------------------------------------------------------\n"
+        final_script += "# --------------------------------------------------------------------------------------\n"
+
+        final_script += "\n\n"
+        final_script += "def run_parallel(number_of_repetitions=%d, number_of_rays=%d, n_jobs=%d, base_seed=%d):\n" % (
+            default_number_of_repetitions,
+            default_number_of_rays,
+            default_n_jobs,
+            default_seed,
+        )
+        final_script += "    return run_parallel_from_generated_script(\n"
+        final_script += "        trace_beamline=trace_beamline,\n"
+        final_script += "        script_file=globals().get(\"__file__\"),\n"
+        final_script += "        number_of_repetitions=number_of_repetitions,\n"
+        final_script += "        number_of_rays=number_of_rays,\n"
+        final_script += "        n_jobs=n_jobs,\n"
+        final_script += "        base_seed=base_seed,\n"
+        final_script += "    )\n\n\n"
+
+        final_script += "if __name__ == \"__main__\":\n"
+        final_script += "    number_of_repetitions = %d\n" % default_number_of_repetitions
+        final_script += "    number_of_rays = %d\n" % default_number_of_rays
+        final_script += "    n_jobs = %d\n" % default_n_jobs
+        final_script += "    base_seed = %d\n" % default_seed
+        final_script += "    output_file = %r\n\n" % output_file
+        final_script += "    seed_list, beamline_acc, beam_acc, footprint_acc = run_parallel(\n"
+        final_script += "        number_of_repetitions=number_of_repetitions,\n"
+        final_script += "        number_of_rays=number_of_rays,\n"
+        final_script += "        n_jobs=n_jobs,\n"
+        final_script += "        base_seed=base_seed,\n"
+        final_script += "    )\n\n"
+        final_script += "    beam_acc.write_h5(\n"
+        final_script += "        output_file,\n"
+        final_script += "        overwrite=True,\n"
+        final_script += "        simulation_name=\"run001\",\n"
+        final_script += "        beam_name=\"in_parallel\",\n"
+        final_script += "    )\n\n"
+        final_script += "    print(\"\")\n"
+        final_script += "    print(\"Output file:\", output_file)\n"
+
+        if filename != "":
+            with open(filename, "w", encoding="utf-8") as f:
+                f.write(final_script)
+                print("File %s written to disk." % filename)
+        return final_script
+
+    @staticmethod
+    def _get_default_nrays_from_light_source_or_code(light_source, code_text):
+        if hasattr(light_source, "get_nrays"):
+            return int(light_source.get_nrays())
+
+        nrays_match = re.search(r"\bnrays\s*=\s*([-+]?\d+)", code_text)
+        if nrays_match is None:
+            raise ValueError("Could not determine the number of rays from the light source.")
+
+        return int(nrays_match.group(1))
 
     def to_python_code(self, **kwargs):
         """
@@ -783,7 +944,7 @@ class S4Beamline(Beamline):
 
 if __name__ == "__main__":
 
-    if False: # check basics - check  to_python_code_packed()
+    if 1: # check basics - check  to_python_code_packed()
         from shadow4.sources.source_geometrical.source_geometrical import SourceGeometrical
         from shadow4.beamline.optical_elements.mirrors.s4_plane_mirror import S4PlaneMirror, S4PlaneMirrorElement
         from shadow4.beamline.optical_elements.refractors.s4_transfocator import S4Transfocator, S4TransfocatorElement
@@ -806,12 +967,10 @@ if __name__ == "__main__":
         print(">>>> sys info: ", bl.sysinfo())
         print(">>> python code: ", bl.to_python_code())
 
-        print(">>>>python code packed: \n", bl.to_python_code_packed(
-            add_head="def run(seed=None, nrays=None):",
-            add_in_lightsource="if seed is not None: light_source.set_seed(seed)\nif nrays is not None: light_source.set_nrays(nrays)\n",
-            add_return="footprint = footprint if 'footprint' in dir() else None\nreturn beam, footprint, beamline",
-            add_main="if __name__ == '__main__':\n    beam, footprint, beamline = run(seed=111, nrays=5001)\n    print('N, seed: ', beam.N, beamline.get_light_source().get_seed())",
-            filename="")
+        print(">>>>python code packed: \n", bl.to_python_code_packed(filename=""))
+
+        print(">>>>python code parallel: \n", bl.to_python_code_parallel(10, 1000,
+            filename="tmp.py")
         )
 
         # duplicate via json
@@ -820,10 +979,6 @@ if __name__ == "__main__":
         import shadow4
         bl2 = load_from_json_text(tmp, extra_packages=[shadow4])
         print("\n\n>>>>python code packed: \n", bl2.to_python_code_packed(
-            add_head="def run(seed=None, nrays=None):",
-            add_in_lightsource="if seed is not None: light_source.set_seed(seed)\nif nrays is not None: light_source.set_nrays(nrays)\n",
-            add_return="footprint = footprint if 'footprint' in dir() else None\nreturn beam, footprint, beamline",
-            add_main="if __name__ == '__main__':\n    beam, footprint, beamline = run(seed=111, nrays=5001)\n    print('N, seed: ', beam.N, beamline.get_light_source().get_seed())",
             filename="", dry_run=1)
         )
 
@@ -1018,5 +1173,3 @@ if __name__ == "__main__":
 
         beamline.append_beamline_element(beamline_element)
         print(beamline.oeinfo())
-
-

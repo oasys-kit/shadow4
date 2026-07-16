@@ -38,9 +38,10 @@
 #     # fails with "[Errno 13] Permission denied: ...\\pip\\cache\\wheels\\..." .
 #
 # Upload to pypi (when uploading, increment the version number):
-#     python setup.py register (only once, not longer needed)
+#     rm -rf dist
 #     python setup.py sdist
-#     python -m twine upload dist/...
+#     python -m build # (needed in all OASYS libraries, nit needed in addons)
+#     python -m twine upload dist/*
 #          
 # Install from pypi:
 #     pip install shadow4
@@ -85,13 +86,14 @@ INSTALL_REQUIRES = (
     'syned>=1.0.56',
     'srxraylib>=1.0.67',
     'crystalpy>=0.0.26',
+    'joblib',
 )
 
 README_FILE = os.path.join(os.path.dirname(__file__), 'README.rst')
 LONG_DESCRIPTION = open(README_FILE).read()
 
 setup(name='shadow4',
-      version='0.1.86',
+      version='0.1.87',
       description='shadow implementation in python',
       long_description=LONG_DESCRIPTION,
       long_description_content_type='text/x-rst',
@@ -102,4 +104,3 @@ setup(name='shadow4',
       packages=PACKAGES,
       install_requires=INSTALL_REQUIRES,
      )
-
