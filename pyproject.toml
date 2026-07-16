@@ -26,8 +26,7 @@
 #
 # ###########################################################################*/
 
-#
-# Memorandum: 
+# Memorandum:
 #
 # Install from sources (developer / editable):
 #     git clone https://github.com/oasys-kit/shadow4
@@ -35,26 +34,47 @@
 #     python -m pip install -e . --no-deps --no-build-isolation
 #     # NOTE: use --no-build-isolation, NOT --no-binary :all:. The latter forces an
 #     # isolated source build that writes a setuptools wheel to the pip cache and
-#     # fails with "[Errno 13] Permission denied: ...\\pip\\cache\\wheels\\..." .
+#     # fails with "[Errno 13] Permission denied: ...\pip\cache\wheels\..." .
 #
 # Upload to pypi (when uploading, increment the version number):
 #     rm -rf dist
-#     python setup.py sdist
-#     python -m build # (needed in all OASYS libraries, nit needed in addons)
+#     python -m build          # builds BOTH the sdist and the wheel
 #     python -m twine upload dist/*
-#          
+#
 # Install from pypi:
 #     pip install shadow4
-#
 
-__authors__ = ["M Sanchez del Rio, Luca Rebuffi"]
-__license__ = "MIT"
-__date__ = "2016-now"
+[build-system]
+requires = ["setuptools>=77.0"]
+build-backend = "setuptools.build_meta"
 
-import os
-from setuptools import setup
+[project]
+name = "shadow4"
+version = "0.1.88"
+description = "shadow implementation in python"
+readme = "README.rst"
+license = "MIT"
+# license-files = ["LICENSE"]   # <- uncomment if a LICENSE file exists in the repo
+authors = [
+    { name = "Manuel Sanchez del Rio", email = "srio@esrf.eu" },
+    { name = "Luca Rebuffi", email = "lrebuffi@anl.gov" },
+]
+dependencies = [
+    "setuptools",
+    "numpy",
+    "scipy",
+    "syned>=1.0.56",
+    "srxraylib>=1.0.67",
+    "crystalpy>=0.0.26",
+    "joblib",
+]
 
-PACKAGES = [
+[project.urls]
+Homepage = "https://github.com/oasys-kit/shadow4/"
+Download = "https://github.com/oasys-kit/shadow4/"
+
+[tool.setuptools]
+packages = [
     "shadow4",
     "shadow4.beam",
     "shadow4.sources",
@@ -63,6 +83,7 @@ PACKAGES = [
     "shadow4.sources.undulator",
     "shadow4.sources.wiggler",
     "shadow4.optical_surfaces",
+    "shadow4.physical_models",          # <-- ADDED: was missing (see chat notes)
     "shadow4.physical_models.prerefl",
     "shadow4.physical_models.mlayer",
     "shadow4.physical_models.bragg",
@@ -79,28 +100,8 @@ PACKAGES = [
     "shadow4.tools",
 ]
 
-INSTALL_REQUIRES = (
-    'setuptools',
-    'numpy',
-    'scipy',
-    'syned>=1.0.56',
-    'srxraylib>=1.0.67',
-    'crystalpy>=0.0.26',
-    'joblib',
-)
-
-README_FILE = os.path.join(os.path.dirname(__file__), 'README.rst')
-LONG_DESCRIPTION = open(README_FILE).read()
-
-setup(name='shadow4',
-      version='0.1.87',
-      description='shadow implementation in python',
-      long_description=LONG_DESCRIPTION,
-      long_description_content_type='text/x-rst',
-      author='Manuel Sanchez del Rio, Luca Rebuffi',
-      author_email='srio@esrf.eu',
-      url='https://github.com/oasys-kit/shadow4/',
-      download_url='https://github.com/oasys-kit/shadow4/',
-      packages=PACKAGES,
-      install_requires=INSTALL_REQUIRES,
-     )
+# Alternative to the hand-maintained list above -- discovers subpackages
+# automatically and cannot drift out of sync with the source tree:
+#
+# [tool.setuptools.packages.find]
+# include = ["shadow4*"]
