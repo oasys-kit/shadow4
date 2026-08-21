@@ -50,7 +50,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "shadow4"
-version = "0.1.88"
+version = "0.1.89"
 description = "shadow implementation in python"
 readme = "README.rst"
 license = "MIT"
