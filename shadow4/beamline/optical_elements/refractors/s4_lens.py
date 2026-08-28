@@ -13,6 +13,9 @@ from shadow4.beam.s4_beam import S4Beam
 from shadow4.beamline.s4_beamline_element import S4BeamlineElement
 from shadow4.beamline.s4_beamline_element_movements import S4BeamlineElementMovements
 from shadow4.beamline.optical_elements.refractors.s4_conic_interface import S4ConicInterface, S4ConicInterfaceElement
+from shadow4.beamline.optical_elements.refractors.s4_numerical_mesh_interface import S4NumericalMeshInterface
+from shadow4.beamline.optical_elements.refractors.s4_additional_numerical_mesh_interface import \
+    S4AdditionalNumericalMeshInterface, S4AdditionalNumericalMeshInterfaceElement
 from shadow4.beamline.s4_optical_element_decorators import S4RefractiveLensOpticalElementDecorator
 
 class S4Lens(Lens, S4RefractiveLensOpticalElementDecorator):
@@ -63,6 +66,20 @@ class S4Lens(Lens, S4RefractiveLensOpticalElementDecorator):
         For surface_shape=3, A list with the 10 conic coefficients of interface 1. None is considered as Plane.
     conic_coefficients2 : None or list, optional
         For surface_shape=3, A list with the 10 conic coefficients of interface 2. None is considered as Plane.
+    flag_add_mesh_surface_entrance : int, optional
+        0=No, 1=Yes. If Yes, a numerical mesh (surface height map read from an h5 file) is added on top of
+        the entrance (first) interface native shape (surface_shape/radius/conic_coefficients1). To use the
+        mesh as the sole entrance shape, set surface_shape=0 (native shape is plane, i.e. zero height) so
+        the native and mesh heights are not counted twice.
+    flag_add_mesh_surface_exit : int, optional
+        0=No, 1=Yes. If Yes, a numerical mesh (surface height map read from an h5 file) is added on top of
+        the exit (second) interface native shape (surface_shape/radius/conic_coefficients2). To use the
+        mesh as the sole exit shape, set surface_shape=0 (native shape is plane, i.e. zero height) so the
+        native and mesh heights are not counted twice.
+    mesh_surface_entrance_h5file : str, optional
+        For flag_add_mesh_surface_entrance=1, the h5 file with the entrance interface mesh (surface height map).
+    mesh_surface_exit_h5file : str, optional
+        For flag_add_mesh_surface_exit=1, the h5 file with the exit interface mesh (surface height map).
     """
 
     def __init__(self,
@@ -88,6 +105,10 @@ class S4Lens(Lens, S4RefractiveLensOpticalElementDecorator):
                  radius=500e-6,        # for surface_shape=(1,2): lens radius [m] (for spherical, or radius at the tip for paraboloid)
                  conic_coefficients1=None,   # for surface_shape = 3: the conic coefficients of the first interface
                  conic_coefficients2=None,  # for surface_shape = 3: the conic coefficients of the second interface
+                 flag_add_mesh_surface_entrance=0, # 0=No, 1=Yes: add a numerical mesh on top of the entrance interface native shape
+                 flag_add_mesh_surface_exit=0,     # 0=No, 1=Yes: add a numerical mesh on top of the exit interface native shape
+                 mesh_surface_entrance_h5file='',  # for flag_add_mesh_surface_entrance=1: h5 file with the entrance mesh
+                 mesh_surface_exit_h5file='',      # for flag_add_mesh_surface_exit=1: h5 file with the exit mesh
                  ):
         S4RefractiveLensOpticalElementDecorator.__init__(self,
                                                          surface_shape,
@@ -120,6 +141,11 @@ class S4Lens(Lens, S4RefractiveLensOpticalElementDecorator):
         else:
             dabax_txt = "None"
 
+        self._flag_add_mesh_surface_entrance = flag_add_mesh_surface_entrance
+        self._flag_add_mesh_surface_exit     = flag_add_mesh_surface_exit
+        self._mesh_surface_entrance_h5file   = mesh_surface_entrance_h5file
+        self._mesh_surface_exit_h5file       = mesh_surface_exit_h5file
+
         self.__inputs = {
             "name": name,
             "boundary_shape":          boundary_shape,
@@ -137,6 +163,10 @@ class S4Lens(Lens, S4RefractiveLensOpticalElementDecorator):
             "radius":                  radius,
             "conic_coefficients1":     repr(conic_coefficients1),
             "conic_coefficients2":     repr(conic_coefficients2),
+            "flag_add_mesh_surface_entrance": flag_add_mesh_surface_entrance,
+            "flag_add_mesh_surface_exit":     flag_add_mesh_surface_exit,
+            "mesh_surface_entrance_h5file":   mesh_surface_entrance_h5file,
+            "mesh_surface_exit_h5file":       mesh_surface_exit_h5file,
         }
 
     def interthickness(self):
@@ -211,12 +241,24 @@ class S4Lens(Lens, S4RefractiveLensOpticalElementDecorator):
             txt += "Surface shape 1 is: %s\n" % ss.__class__.__name__
         txt += "Parameters:\n %s\n" % ss.info()
 
+        if self._flag_add_mesh_surface_entrance:
+            txt += "Entrance interface has an additional numerical mesh (added to the native shape) from file: %s\n" % \
+                   self._mesh_surface_entrance_h5file
+        else:
+            txt += "Entrance interface has no additional numerical mesh\n"
+
         ss = self.get_surface_shape_instance()[1]
         if ss is None:
             txt += "Surface shape 2 is: Plane (** UNDEFINED?? **)\n"
         else:
             txt += "Surface shape 2 is: %s\n" % ss.__class__.__name__
         txt += "Parameters:\n %s\n" % ss.info()
+
+        if self._flag_add_mesh_surface_exit:
+            txt += "Exit interface has an additional numerical mesh (added to the native shape) from file: %s\n" % \
+                   self._mesh_surface_exit_h5file
+        else:
+            txt += "Exit interface has no additional numerical mesh\n"
 
         boundary = self.get_boundary_shape()
         if boundary is None:
@@ -286,13 +328,30 @@ optical_element = S4Lens(name='{name:s}',
      radius={radius:g}, # for surface_shape=(1,2): lens radius [m] (for spherical, or radius at the tip for paraboloid)
      conic_coefficients1={conic_coefficients1}, # for surface_shape = 3: the conic coefficients for interface 1
      conic_coefficients2={conic_coefficients2}, # for surface_shape = 3: the conic coefficients for interface 2
+     flag_add_mesh_surface_entrance={flag_add_mesh_surface_entrance}, # 0=No, 1=Yes: add a numerical mesh on top of the entrance interface native shape
+     flag_add_mesh_surface_exit={flag_add_mesh_surface_exit},     # 0=No, 1=Yes: add a numerical mesh on top of the exit interface native shape
+     mesh_surface_entrance_h5file='{mesh_surface_entrance_h5file:s}', # for flag_add_mesh_surface_entrance=1: h5 file with the entrance mesh
+     mesh_surface_exit_h5file='{mesh_surface_exit_h5file:s}',     # for flag_add_mesh_surface_exit=1: h5 file with the exit mesh
      )
     """
         txt += txt_pre.format(**self.__inputs)
         return txt
 
     def get_lens_interfaces(self):
-        return _get_lens_interfaces(lens_optical_surfaces=self.get_optical_surface_instance(),
+        """
+        Creates the two refractive interfaces (entrance and exit) of the lens.
+        If flag_add_mesh_surface_entrance/exit is set, the corresponding interface is wrapped into a
+        S4AdditionalNumericalMeshInterface that adds a numerical mesh (surface height map, loaded from an
+        h5 file) on top of the native interface shape (surface_shape/radius/conic_coefficients). To use
+        the mesh as the sole shape (avoiding double-counting the native and mesh heights), set
+        surface_shape=0 so the native shape is a plane (zero height).
+
+        Returns
+        -------
+        tuple
+            (half_lens_1, half_lens_2), instances of S4ConicInterface or S4AdditionalNumericalMeshInterface.
+        """
+        half_lens_1, half_lens_2 = _get_lens_interfaces(lens_optical_surfaces=self.get_optical_surface_instance(),
                                     boundary_shape=self.get_boundary_shape(),
                                     ri_calculation_mode=self._ri_calculation_mode,
                                     refraction_index=self._refraction_index,
@@ -302,6 +361,28 @@ optical_element = S4Lens(name='{name:s}',
                                     density=self._density,
                                     dabax=self._dabax,
                                     )
+
+        if self._flag_add_mesh_surface_entrance:
+            half_lens_1 = S4AdditionalNumericalMeshInterface(
+                name="First half-lens with additional numerical mesh",
+                ideal_interface=half_lens_1,
+                numerical_mesh_interface=S4NumericalMeshInterface(
+                    surface_data_file=self._mesh_surface_entrance_h5file,
+                    boundary_shape=self.get_boundary_shape(),
+                ),
+            )
+
+        if self._flag_add_mesh_surface_exit:
+            half_lens_2 = S4AdditionalNumericalMeshInterface(
+                name="Second half-lens with additional numerical mesh",
+                ideal_interface=half_lens_2,
+                numerical_mesh_interface=S4NumericalMeshInterface(
+                    surface_data_file=self._mesh_surface_exit_h5file,
+                    boundary_shape=self.get_boundary_shape(),
+                ),
+            )
+
+        return half_lens_1, half_lens_2
 
 def _get_lens_interfaces(lens_optical_surfaces,
                          boundary_shape,
@@ -570,12 +651,15 @@ class S4LensElement(S4BeamlineElement):
         coordinates_1 = ElementCoordinates(p=p, q=oe.get_thickness() * 0.5, angle_radial=angle_radial, angle_radial_out=numpy.pi, angle_azimuthal=angle_azimuthal)
         coordinates_2 = ElementCoordinates(p=oe.get_thickness() * 0.5, q=q, angle_radial=0, angle_radial_out=angle_radial_out, angle_azimuthal=0)
 
-        beamline_element_1 = S4ConicInterfaceElement(optical_element=half_lens_1, coordinates=coordinates_1, movements=movements, input_beam=input_beam)
+        element_class_1 = S4AdditionalNumericalMeshInterfaceElement if isinstance(half_lens_1, S4AdditionalNumericalMeshInterface) else S4ConicInterfaceElement
+        element_class_2 = S4AdditionalNumericalMeshInterfaceElement if isinstance(half_lens_2, S4AdditionalNumericalMeshInterface) else S4ConicInterfaceElement
+
+        beamline_element_1 = element_class_1(optical_element=half_lens_1, coordinates=coordinates_1, movements=movements, input_beam=input_beam)
         beam1, footprint1  = beamline_element_1.trace_beam()
 
         # return beam1, footprint1
 
-        beamline_element_2 = S4ConicInterfaceElement(optical_element=half_lens_2, coordinates=coordinates_2, movements=movements, input_beam=beam1)
+        beamline_element_2 = element_class_2(optical_element=half_lens_2, coordinates=coordinates_2, movements=movements, input_beam=beam1)
         beam2, footprint2  = beamline_element_2.trace_beam()
 
         return beam2, [footprint1, footprint2]
