@@ -1304,9 +1304,13 @@ class MLayer(object):
 
         mlroughness1 = self.pre_mlayer_dict["mlroughness1"]
         mlroughness2 = self.pre_mlayer_dict["mlroughness2"]
+        # only set for instances created with initialize_from_bilayer_stack[_in_compressed_format];
+        # not available (defaults to a smooth substrate) when loaded from a pre_mlayer preprocessor file.
+        roughnessS = self.pre_mlayer_dict.get("roughnessS", 0.0)
 
         R_S, R_P, PHASES, PHASEP = self._fresnel(TFACT, GFACT, NPAIR, SIN_REF, COS_POLE, XLAM,
-                                             DELO, DELE, DELS, BETO, BETE, BETS, t_o, t_e, mlroughness1, mlroughness2)
+                                             DELO, DELE, DELS, BETO, BETE, BETS, t_o, t_e, mlroughness1, mlroughness2,
+                                             roughnessS)
 
         return R_S, R_P, PHASES, PHASEP
 
@@ -1367,7 +1371,8 @@ class MLayer(object):
 
     @classmethod
     def _fresnel(cls, TFACT, GFACT, NPAIR, SIN_REF, COS_POLE, XLAM,
-                delo, dele, dels, beto, bete, bets, t_o, t_e, mlroughness1, mlroughness2):
+                delo, dele, dels, beto, bete, bets, t_o, t_e, mlroughness1, mlroughness2,
+                roughnessS=0.0):
 
         # !C------------------------------------------------------------------------------
         # !C  subroutine FRESNEL
@@ -1514,7 +1519,7 @@ class MLayer(object):
         # !c Nevot-Croce roughness
         # !c DO NOT include refraction index in the roughness formula
 
-        sigma_s2 = 0.0 # ! sigma_s**2.0 !roughn. substrate
+        sigma_s2 = roughnessS**2.0 # ! sigma_s**2.0 !roughn. substrate
         sigma_v2 = 0.0 # ! sigma_v**2.0!roughn. vacuum
 
         # print(">>>> t_e: ", t_e)
