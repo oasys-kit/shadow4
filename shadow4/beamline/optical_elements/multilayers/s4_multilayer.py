@@ -49,6 +49,24 @@ class S4Multilayer(Multilayer):
             The bilayer thickness in Angstroms; used for f_refl=4,5.
     Gamma : float, optional
             The gamma factor thickness(even) / (thickness(odd) + thickness(even)); used for f_refl=4,5.
+    density_O : None or float, optional
+            The density in g/cm3 for the ODD layers; used for f_refl=4,5. If None, it is calculated
+            from the material formula (only works if the ODD material in `structure` is a single
+            element; required if it is a compound, e.g. "B4C").
+    roughness_O : float, optional
+            The roughness RMS in Angstroms for the ODD layers; used for f_refl=4,5.
+    density_E : None or float, optional
+            The density in g/cm3 for the EVEN layers; used for f_refl=4,5. If None, it is calculated
+            from the material formula (only works if the EVEN material in `structure` is a single
+            element; required if it is a compound, e.g. "B4C").
+    roughness_E : float, optional
+            The roughness RMS in Angstroms for the EVEN layers; used for f_refl=4,5.
+    density_S : None or float, optional
+            The density in g/cm3 for the SUBSTRATE; used for f_refl=4,5. If None, it is calculated
+            from the material formula (only works if the SUBSTRATE material in `structure` is a
+            single element; required if it is a compound).
+    roughness_S : float, optional
+            The roughness RMS in Angstroms for the SUBSTRATE; used for f_refl=4,5.
     dabax : None or instance of DabaxXraylib,
         The pointer to the dabax library  (used for f_refl=5).
 
@@ -66,6 +84,12 @@ class S4Multilayer(Multilayer):
                  structure='[B/W]x50+Si',
                  period=25.0,
                  Gamma=0.5,
+                 density_O=None,
+                 roughness_O=0.0,
+                 density_E=None,
+                 roughness_E=0.0,
+                 density_S=None,
+                 roughness_S=0.0,
                  dabax=None,
                  ):
 
@@ -81,12 +105,24 @@ class S4Multilayer(Multilayer):
         # reflectivity
         self._f_refl = f_refl
         self._file_refl = file_refl
+        self._density_O = density_O
+        self._roughness_O = roughness_O
+        self._density_E = density_E
+        self._roughness_E = roughness_E
+        self._density_S = density_S
+        self._roughness_S = roughness_S
         self._dabax = dabax
 
         # support text containg name of variable, help text and unit. Will be stored in self._support_dictionary
         self._add_support_text([
                     ("f_refl",             "S4: refl. source: 0=pre_mlayer, 1-3: file, 4=xraylib, 5=dabax", ""),
                     ("file_refl",          "S4: for f_refl=0: file name",               ""),
+                    ("density_O",          "S4: for f_refl=4,5: ODD layer density (None=from formula)", "g/cm3"),
+                    ("roughness_O",        "S4: for f_refl=4,5: ODD layer roughness RMS",               "A"),
+                    ("density_E",          "S4: for f_refl=4,5: EVEN layer density (None=from formula)", "g/cm3"),
+                    ("roughness_E",        "S4: for f_refl=4,5: EVEN layer roughness RMS",               "A"),
+                    ("density_S",          "S4: for f_refl=4,5: SUBSTRATE density (None=from formula)", "g/cm3"),
+                    ("roughness_S",        "S4: for f_refl=4,5: SUBSTRATE roughness RMS",               "A"),
             ] )
 
     def get_info(self):
@@ -406,9 +442,9 @@ class S4MultilayerElement(S4BeamlineElement):
             if is_verbose(): print("Reflectivity calculated using xraylib")
             pr = MLayer.initialize_from_bilayer_stack_in_compressed_format(
                                     structure=soe._structure,
-                                    density_O=None,  roughness_O=0.0,
-                                    density_E=None,  roughness_E=0.0,
-                                    density_S=None,  roughness_S=0.0,
+                                    density_O=soe._density_O,   roughness_O=soe._roughness_O,
+                                    density_E=soe._density_E,   roughness_E=soe._roughness_E,
+                                    density_S=soe._density_S,   roughness_S=soe._roughness_S,
                                     bilayer_thickness=soe._period,
                                     bilayer_gamma=soe._Gamma,
                                     use_xraylib_or_dabax=0,
@@ -431,9 +467,9 @@ class S4MultilayerElement(S4BeamlineElement):
             if is_verbose(): print("Reflectivity calculated using dabax")
             pr = MLayer.initialize_from_bilayer_stack_in_compressed_format(
                                     structure=soe._structure,
-                                    density_O=None,  roughness_O=0.0,
-                                    density_E=None,  roughness_E=0.0,
-                                    density_S=None,  roughness_S=0.0,
+                                    density_O=soe._density_O,   roughness_O=soe._roughness_O,
+                                    density_E=soe._density_E,   roughness_E=soe._roughness_E,
+                                    density_S=soe._density_S,   roughness_S=soe._roughness_S,
                                     bilayer_thickness=soe._period,
                                     bilayer_gamma=soe._Gamma,
                                     use_xraylib_or_dabax=1,

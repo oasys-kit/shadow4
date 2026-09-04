@@ -39,6 +39,21 @@ class S4ConicMultilayer(S4Multilayer, S4ConicOpticalElementDecorator):
             The bilayer thickness in Angstroms; used for f_refl=4,5.
     Gamma : float, optional
             The gamma factor thickness(even) / (thickness(odd) + thickness(even)); used for f_refl=4,5.
+    density_O : None or float, optional
+            The density in g/cm3 for the ODD layers; used for f_refl=4,5. If None, it is calculated
+            from the material formula (required if the ODD material in `structure` is a compound).
+    roughness_O : float, optional
+            The roughness RMS in Angstroms for the ODD layers; used for f_refl=4,5.
+    density_E : None or float, optional
+            The density in g/cm3 for the EVEN layers; used for f_refl=4,5. If None, it is calculated
+            from the material formula (required if the EVEN material in `structure` is a compound).
+    roughness_E : float, optional
+            The roughness RMS in Angstroms for the EVEN layers; used for f_refl=4,5.
+    density_S : None or float, optional
+            The density in g/cm3 for the SUBSTRATE; used for f_refl=4,5. If None, it is calculated
+            from the material formula (required if the SUBSTRATE material in `structure` is a compound).
+    roughness_S : float, optional
+            The roughness RMS in Angstroms for the SUBSTRATE; used for f_refl=4,5.
     dabax : None or instance of DabaxXraylib,
         The pointer to the dabax library  (used for f_refl=5).
 
@@ -61,6 +76,12 @@ class S4ConicMultilayer(S4Multilayer, S4ConicOpticalElementDecorator):
                  structure='[B/W]x50+Si',
                  period=25.0,
                  Gamma=0.5,
+                 density_O=None,
+                 roughness_O=0.0,
+                 density_E=None,
+                 roughness_E=0.0,
+                 density_S=None,
+                 roughness_S=0.0,
                  dabax=None,
                  ):
         S4ConicOpticalElementDecorator.__init__(self, conic_coefficients)
@@ -73,6 +94,12 @@ class S4ConicMultilayer(S4Multilayer, S4ConicOpticalElementDecorator):
                               structure=structure,
                               period=period,
                               Gamma=Gamma,
+                              density_O=density_O,
+                              roughness_O=roughness_O,
+                              density_E=density_E,
+                              roughness_E=roughness_E,
+                              density_S=density_S,
+                              roughness_S=roughness_S,
                               dabax=dabax,
                               )
 
@@ -85,6 +112,12 @@ class S4ConicMultilayer(S4Multilayer, S4ConicOpticalElementDecorator):
             "structure": structure,
             "period": period,
             "Gamma": Gamma,
+            "density_O": density_O,
+            "roughness_O": roughness_O,
+            "density_E": density_E,
+            "roughness_E": roughness_E,
+            "density_S": density_S,
+            "roughness_S": roughness_S,
             "dabax": self._get_dabax_txt(),
         }
 
@@ -110,6 +143,8 @@ optical_element = S4ConicMultilayer(name='{name:s}', boundary_shape=boundary_sha
     f_refl={f_refl:d}, # 0=pre_mlayer, 1=(mrad, refl), 2=(eV, refl), 3=(eV, mrad, refl); 4=xraylib, 5=dabax
     file_refl='{file_refl:s}', # for f_refl=0,1,2,3
     structure='{structure:s}', period={period:f}, Gamma={Gamma:f}, # for f_refl=4,5
+    density_O={density_O}, roughness_O={roughness_O:f}, density_E={density_E}, roughness_E={roughness_E:f},
+    density_S={density_S}, roughness_S={roughness_S:f}, # for f_refl=4,5
     dabax={dabax:s}, # if using dabax (f_refl=5), instance of DabaxXraylib() (use None for default)
     )
 """

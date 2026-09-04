@@ -54,6 +54,12 @@ class S4AdditionalNumericalMeshMultilayer(S4NumericalMeshMultilayer):
                  structure='[B/W]x50+Si' if ideal_multilayer is None else ideal_multilayer._structure,
                  period=25.0 if ideal_multilayer is None else ideal_multilayer._period,
                  Gamma=0.5 if ideal_multilayer is None else ideal_multilayer._Gamma,
+                 density_O=None if ideal_multilayer is None else ideal_multilayer._density_O,
+                 roughness_O=0.0 if ideal_multilayer is None else ideal_multilayer._roughness_O,
+                 density_E=None if ideal_multilayer is None else ideal_multilayer._density_E,
+                 roughness_E=0.0 if ideal_multilayer is None else ideal_multilayer._roughness_E,
+                 density_S=None if ideal_multilayer is None else ideal_multilayer._density_S,
+                 roughness_S=0.0 if ideal_multilayer is None else ideal_multilayer._roughness_S,
                 )
 
         self.__ideal_multilayer          = ideal_multilayer
