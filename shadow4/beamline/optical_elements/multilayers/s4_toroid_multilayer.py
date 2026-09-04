@@ -50,7 +50,7 @@ class S4ToroidMultilayer(S4Multilayer, S4ToroidOpticalElementDecorator):
             name of user defined file (for f_refl=0,1,2,3).
     structure : str, optional
             A compact string defining the odd material, even material, number of bilayers and
-            substrate material, in the form "[Odd,Even]xNpairs+Substrate" (e.g. "[B/W]x50+Si");
+            substrate material, in the form "[Odd,Even]xNpairs+Substrate" (e.g. "[B,W]x50+Si");
             used for f_refl=4,5.
     period : float, optional
             The bilayer thickness in Angstroms; used for f_refl=4,5.
@@ -100,7 +100,7 @@ class S4ToroidMultilayer(S4Multilayer, S4ToroidOpticalElementDecorator):
                              # 4=direct calculation using xraylib
                              # 5=direct calculation using dabax
                  file_refl="",  # preprocessor file fir f_refl=0
-                 structure='[B/W]x50+Si',
+                 structure='[B,W]x50+Si',
                  period=25.0,
                  Gamma=0.5,
                  density_O=None,

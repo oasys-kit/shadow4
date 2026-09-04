@@ -43,7 +43,7 @@ class S4Multilayer(Multilayer):
             name of user defined file (for f_refl=0,1,2,3).
     structure : str, optional
             A compact string defining the odd material, even material, number of bilayers and
-            substrate material, in the form "[Odd,Even]xNpairs+Substrate" (e.g. "[B/W]x50+Si");
+            substrate material, in the form "[Odd,Even]xNpairs+Substrate" (e.g. "[B,W]x50+Si");
             used for f_refl=4,5.
     period : float, optional
             The bilayer thickness in Angstroms; used for f_refl=4,5.
@@ -81,7 +81,7 @@ class S4Multilayer(Multilayer):
                  # inputs related to mirror reflectivity
                  f_refl=0,      # 0=prerefl file
                  file_refl="<not defined>",  # pre_mlayer preprocessor file for f_refl=0
-                 structure='[B/W]x50+Si',
+                 structure='[B,W]x50+Si',
                  period=25.0,
                  Gamma=0.5,
                  density_O=None,

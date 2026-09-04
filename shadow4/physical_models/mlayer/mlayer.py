@@ -727,7 +727,7 @@ class MLayer(object):
 
     @classmethod
     def initialize_from_bilayer_stack_in_compressed_format(cls,
-        structure='[Pd/B4C]x150+Si',
+        structure='[Pd,B4C]x150+Si',
         density_O=None, roughness_O=0.0,
         density_E=None, roughness_E=0.0,
         density_S=None, roughness_S=0.0,

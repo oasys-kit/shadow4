@@ -51,7 +51,7 @@ class S4AdditionalNumericalMeshMultilayer(S4NumericalMeshMultilayer):
                              # 4=direct calculation using xraylib
                              # 5=direct calculation using dabax
                  file_refl="" if ideal_multilayer is None else ideal_multilayer._file_refl,  # reflectivity file for f_refl=0,1,2,3
-                 structure='[B/W]x50+Si' if ideal_multilayer is None else ideal_multilayer._structure,
+                 structure='[B,W]x50+Si' if ideal_multilayer is None else ideal_multilayer._structure,
                  period=25.0 if ideal_multilayer is None else ideal_multilayer._period,
                  Gamma=0.5 if ideal_multilayer is None else ideal_multilayer._Gamma,
                  density_O=None if ideal_multilayer is None else ideal_multilayer._density_O,
