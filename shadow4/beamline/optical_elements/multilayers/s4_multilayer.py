@@ -26,34 +26,35 @@ class S4Multilayer(Multilayer):
     Parameters
     ----------
     name : str, optional
-        The name of the mirror.
+        The name of the multilayer.
     boundary_shape : instance of BoundaryShape, optional
-        The boundary shape of the mirror.
+        The boundary shape of the multilayer.
     surface_shape : instance of SurfaceShape, optional
-        The surface shape of the mirror.
+        The surface shape of the multilayer.
     f_refl : int, optional
         A flag to indicate the source of reflectivities:
-            * 0=prerefl file,
-            * 1=electric susceptibility,
-            * 2=user defined file (1D angle in mrad, reflectivity),
-            * 3=user defined file (1D energy in eV, reflectivity),
-            * 4=user defined file (2D energy in eV, angle in mrad, reflectivity),
-            * 5=direct calculation using xraylib,
-            * 6=direct calculation using dabax.
+            * 0=prerefl (pre_mlayer) file,
+            * 1=user defined file (1D angle in mrad, reflectivity),
+            * 2=user defined file (1D energy in eV, reflectivity),
+            * 3=user defined file (2D energy in eV, angle in mrad, reflectivity),
+            * 4=direct calculation using xraylib,
+            * 5=direct calculation using dabax.
     file_refl : str, optional
-            name of user defined file (for f_refl=0).
-    refraction_index : complex, optional
-            complex scalar with refraction index n (for f_refl=1).
-    material : str, optional
-            string with material formula (for f_refl=5,6)
-    density : float, optional
-            material density in g/cm^3 (for f_refl=5,6)
+            name of user defined file (for f_refl=0,1,2,3).
+    structure : str, optional
+            A compact string defining the odd material, even material, number of bilayers and
+            substrate material, in the form "[Odd,Even]xNpairs+Substrate" (e.g. "[B/W]x50+Si");
+            used for f_refl=4,5.
+    period : float, optional
+            The bilayer thickness in Angstroms; used for f_refl=4,5.
+    Gamma : float, optional
+            The gamma factor thickness(even) / (thickness(odd) + thickness(even)); used for f_refl=4,5.
     dabax : None or instance of DabaxXraylib,
-        The pointer to the dabax library  (used for f_refl=6).
+        The pointer to the dabax library  (used for f_refl=5).
 
     Returns
     -------
-    instance of S4Mirror.
+    instance of S4Multilayer.
     """
     def __init__(self,
                  name="Undefined",
@@ -90,7 +91,7 @@ class S4Multilayer(Multilayer):
 
     def get_info(self):
         """
-        Returns the specific information of the S4 mirror optical element.
+        Returns the specific information of the S4 multilayer optical element.
 
         Returns
         -------
@@ -184,10 +185,10 @@ class S4Multilayer(Multilayer):
 
 class S4MultilayerElement(S4BeamlineElement):
     """
-    The base class for Shadow4 mirror element.
-    It is made of a S4Mirror and an ElementCoordinates instance. It also includes the input beam.
+    The base class for Shadow4 multilayer element.
+    It is made of a S4Multilayer and an ElementCoordinates instance. It also includes the input beam.
 
-    Use derived classes for plane or other curved crystal surfaces.
+    Use derived classes for plane or other curved multilayer surfaces.
 
     Constructor.
 
@@ -204,7 +205,7 @@ class S4MultilayerElement(S4BeamlineElement):
 
     Returns
     -------
-    instance of S4MirrorElement.
+    instance of S4MultilayerElement.
     """
     def __init__(self,
                  optical_element : S4Multilayer = None,
@@ -223,6 +224,8 @@ class S4MultilayerElement(S4BeamlineElement):
         Parameters
         ----------
         **params
+            flag_lost_value : float, optional
+                The value to flag lost rays with (default=-1).
 
         Returns
         -------

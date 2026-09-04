@@ -21,27 +21,26 @@ class S4ConicMultilayer(S4Multilayer, S4ConicOpticalElementDecorator):
         The boundary shape of the multilayer.
     conic_coefficients : list, ndarray, optional
         The list of the 10 conic coefficients.
-    f_reflec : int, optional
-         the reflectivity of surface:
-            - 0=no reflectivity,
-            - 1=full polarization.
     f_refl : int, optional
         A flag to indicate the source of reflectivities:
-            - 0=prerefl file
-            - 1=electric susceptibility
-            - 2=user defined file (1D angle in mrad, reflectivity)
-            - 3=user defined file (1D energy in eV, reflectivity)
-            - 4=user defined file (2D energy in eV, angle in mrad, reflectivity)
+            - 0=prerefl (pre_mlayer) file
+            - 1=user defined file (1D reflectivity vs angle, in mrad)
+            - 2=user defined file (1D reflectivity vs energy, in eV)
+            - 3=user defined file (2D reflectivity vs energy in eV and angle in mrad)
+            - 4=direct calculation using xraylib
+            - 5=direct calculation using dabax
     file_refl : str, optional
-            name of user defined file (for f_refl=0).
-    refraction_index : complex, optional
-            complex scalar with refraction index n (for f_refl=1).
-    material : str, optional
-            string with material formula (for f_refl=5,6)
-    density : float, optional
-            material density in g/cm^3 (for f_refl=5,6)
+            name of user defined file (for f_refl=0,1,2,3).
+    structure : str, optional
+            A compact string defining the odd material, even material, number of bilayers and
+            substrate material, in the form "[Odd,Even]xNpairs+Substrate" (e.g. "[B/W]x50+Si");
+            used for f_refl=4,5.
+    period : float, optional
+            The bilayer thickness in Angstroms; used for f_refl=4,5.
+    Gamma : float, optional
+            The gamma factor thickness(even) / (thickness(odd) + thickness(even)); used for f_refl=4,5.
     dabax : None or instance of DabaxXraylib,
-        The pointer to the dabax library  (used for f_refl=6).
+        The pointer to the dabax library  (used for f_refl=5).
 
     Returns
     -------
