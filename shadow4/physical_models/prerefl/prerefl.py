@@ -193,7 +193,23 @@ class PreRefl(object):
                                                      photon_energy_ev=10000.0,
                                                      material="SiC",
                                                      density=3.217,):
+        """
+        Standalone method to return the attenuation coefficient using xraylib.
 
+        Parameters
+        ----------
+        photon_energy_ev : float or numpy array
+            The photon energy or array of energies in eV.
+        material : str, optional
+            The symbol/formula of the material.
+        density : float, optional
+            The material density in g/cm3.
+
+        Returns
+        -------
+        float or numpy array
+            The array with attenuation coefficient in cm^-1.
+        """
         try:    import xraylib
         except: raise ImportError("xraylib not available")
 
@@ -347,7 +363,7 @@ class PreRefl(object):
             The photon energy or array of energies in eV.
         material : str, optional
             The symbol/formula of the material.
-        density : float, oprional
+        density : float, optional
             The material density in g/cm3.
         dabax: None or DabaxXraylib, optional
             The pointer to the DabaxXraylib instance (default: None, it uses DabaxXraylib()).
@@ -418,7 +434,7 @@ class PreRefl(object):
         Returns
         -------
         tuple
-            (rs, rp, runp) the s-polarized, p-pol and unpolarized reflectivities
+            (rs, rp) the s-polarized and p-polarized complex amplitude reflectivities
         """
         refraction_index_2 = self.get_refraction_index(photon_energy_ev)
         refraction_index_1 = numpy.ones_like(refraction_index_2)
@@ -455,14 +471,14 @@ class PreRefl(object):
             The rouughness RMS in Angstroms,
         method : int, optional
             0=Born&Wolf, 1=Parratt, 2=shadow3  (avoid using 0 or 1, experimental!!)
-        coating_material : int, optional
+        coating_material : str, optional
             The symbol/formula of the coating material.
-        coating_density : int, optional
+        coating_density : float, optional
             The density in g/cm3 of the coating material.
         Returns
         -------
         tuple
-            (rs, rp, runp) the s-polarized, p-pol and unpolarized reflectivities
+            (rs, rp) the s-polarized and p-polarized complex amplitude reflectivities
         """
         try:    import xraylib
         except: raise ImportError("xraylib not available")
@@ -509,14 +525,14 @@ class PreRefl(object):
             0=Born&Wolf, 1=Parratt, 2=shadow3  (avoid using 0 or 1, experimental!!)
         dabax : None or instance of DabaxXraylib
             A pointer to the dabax library. Use None for default.
-        coating_material : int, optional
+        coating_material : str, optional
             The symbol/formula of the coating material.
-        coating_density : int, optional
+        coating_density : float, optional
             The density in g/cm3 of the coating material.
         Returns
         -------
         tuple
-            (rs, rp, runp) the s-polarized, p-pol and unpolarized reflectivities
+            (rs, rp) the s-polarized and p-polarized complex amplitude reflectivities
         """
         from dabax.dabax_xraylib import DabaxXraylib
         if isinstance(dabax, DabaxXraylib):
@@ -548,8 +564,7 @@ class PreRefl(object):
                                                  method=0, # 0=born & wolf, 1=parratt, 2=shadow3
                                                  ):
         """
-
-Standalone method to calculate the complex Fresnel reflectivity amplitudes
+        Standalone method to calculate the complex Fresnel reflectivity amplitudes
         (r_s, r_p) of a single interface using different formulations.
 
         This routine supports three different implementations that correspond
@@ -792,12 +807,17 @@ Standalone method to calculate the complex Fresnel reflectivity amplitudes
             The minimum photon energy in eV (for creating the tabulated refraction index).
         E_MAX : float, optional
             The maximum photon energy in eV (for creating the tabulated refraction index).
-        E_STEP : float optional
+        E_STEP : float, optional
             The photon energy step in eV.
+        materials_library : None, module xraylib or instance of DabaxXraylib, optional
+            The library used to access the optical constants. If None, xraylib is used when
+            available, falling back to DabaxXraylib() otherwise.
 
         Returns
         -------
-        instance of PreRefl
+        None
+            The preprocessor data is written to disk in FILE. To use it, create a PreRefl
+            instance and load it with PreRefl().read_preprocessor_file(FILE).
         """
 
         if materials_library is None:
@@ -894,12 +914,14 @@ Standalone method to calculate the complex Fresnel reflectivity amplitudes
             The minimum photon energy in eV (for creating the tabulated refraction index).
         E_MAX : float, optional
             The maximum photon energy in eV (for creating the tabulated refraction index).
-        NPOINTS : int optional
+        NPOINTS : int, optional
             The number of points for the photon energy array.
 
         Returns
         -------
-        instance of PreRefl
+        None
+            The preprocessor data is written to disk in output_file. To use it, create a PreRefl
+            instance and load it with PreRefl().read_preprocessor_file(output_file).
         """
         a = numpy.loadtxt(input_file, skiprows=2)
         if a.shape[1] != 3:
@@ -1002,7 +1024,9 @@ Standalone method to calculate the complex Fresnel reflectivity amplitudes
 
         Returns
         -------
-        instance of PreRefl
+        None
+            The preprocessor data is written to disk in output_file. To use it, create a PreRefl
+            instance and load it with PreRefl().read_preprocessor_file(output_file).
 
         References
         ----------

@@ -247,15 +247,15 @@ class MLayer(object):
             The maximum photon energy in eV (for creating the tabulated refraction index).
         S_DENSITY : float, optional
             Density (in g/cm3) for the SUBSTRATE material.
-        S_MATERIAL : float, optional
+        S_MATERIAL : str, optional
             Material formula for the SUBSTRATE material.
         E_DENSITY : float, optional
             Density (in g/cm3) for the EVEN material.
-        E_MATERIAL : float, optional
+        E_MATERIAL : str, optional
             Material formula for the EVEN material.
         O_DENSITY : float, optional
             Density (in g/cm3) for the ODD material.
-        O_MATERIAL : float, optional
+        O_MATERIAL : str, optional
             Material formula for the ODD material.
         N_PAIRS : int, optional
             The number of bilayers of the multilayer. Not used if GRADE_DEPTH=1.
@@ -584,6 +584,14 @@ class MLayer(object):
             The ellipse length in m; used when GRADED_SURFACE=3.
         ell_photon_energy : float, optional
             The photon energy in eV at the center of the ellipse; used when GRADED_SURFACE=3.
+        GRADE_DEPTH : int, optional
+            Flag to indicate if the multilayer has a graded thickness (1) or not (0). If 1,
+            bilayer_pairs, bilayer_thickness and bilayer_gamma are ignored and
+            LIST_N_THICK_GAMMA_ROUGHE_ROUGHO_FROM_TOP_TO_BOTTOM is used instead.
+        LIST_N_THICK_GAMMA_ROUGHE_ROUGHO_FROM_TOP_TO_BOTTOM : None or str, optional
+            Used when GRADE_DEPTH=1. A str with a list definition of multilayer blocks in the
+            form: "[block1, block2, ...]" with each block defined as
+            [Nbilayers, BilayerThickness, BilayerGamma, roughnessEven, roughnessOdd].
         use_xraylib_or_dabax : int, optional
             0=use xraylib, 1=use dabax for the optical constabrs.
         dabax : None or instance of DabaxXraylib,
@@ -738,30 +746,26 @@ class MLayer(object):
 
         Parameters
         ----------
-        material_S : str, optional
-            The symbol of the SUBSTRATE material.
-        density_S : float, optional
-            The density in g/cm3 for the SUBSTRATE layers.
-        roughness_S : float, optional
-            The roughness in A for the SUBSTRATE layers.
-        material_E : str, optional
-            The symbol of the EVEN layer material.
-        density_E : float, optional
-            The density in g/cm3 for the EVEN layers.
-        roughness_E : float, optional
-            The roughness in A for the EVEN layers.
-        material_O : str, optional
-            The symbol of the ODD layer material.
+        structure : str, optional
+            A compact string defining the odd material, even material, number of bilayers and
+            substrate material, in the form "[Odd,Even]xNpairs+Substrate" (e.g. "[Pd,B4C]x150+Si").
         density_O : float, optional
-            The density in g/cm3 for the ODD layers.
+            The density in g/cm3 for the ODD layers. If None, it is calculated from the material formula.
         roughness_O : float, optional
             The roughness in A for the ODD layers.
-        bilayer_pairs : int, optional
-            The number of bilayers.
+        density_E : float, optional
+            The density in g/cm3 for the EVEN layers. If None, it is calculated from the material formula.
+        roughness_E : float, optional
+            The roughness in A for the EVEN layers.
+        density_S : float, optional
+            The density in g/cm3 for the SUBSTRATE layers. If None, it is calculated from the material formula.
+        roughness_S : float, optional
+            The roughness in A for the SUBSTRATE layers.
         bilayer_thickness : float, optional
-            The thickness in A of the bilayers.
+            The thickness in A of the bilayers. Not used if GRADE_DEPTH=1.
         bilayer_gamma : float, optional
             The gamma factor of the bilayer thickness(even) / (thichness(odd) + thichness(even)).
+            Not used if GRADE_DEPTH=1.
         GRADE_SURFACE : int, optional
             Flag for multilayer graded over the surface:
              * 0: No.
@@ -788,6 +792,14 @@ class MLayer(object):
             The ellipse length in m; used when GRADED_SURFACE=3.
         ell_photon_energy : float, optional
             The photon energy in eV at the center of the ellipse; used when GRADED_SURFACE=3.
+        GRADE_DEPTH : int, optional
+            Flag to indicate if the multilayer has a graded thickness (1) or not (0). If 1,
+            bilayer_thickness and bilayer_gamma are ignored and
+            LIST_N_THICK_GAMMA_ROUGHE_ROUGHO_FROM_TOP_TO_BOTTOM is used instead.
+        LIST_N_THICK_GAMMA_ROUGHE_ROUGHO_FROM_TOP_TO_BOTTOM : None or str, optional
+            Used when GRADE_DEPTH=1. A str with a list definition of multilayer blocks in the
+            form: "[block1, block2, ...]" with each block defined as
+            [Nbilayers, BilayerThickness, BilayerGamma, roughnessEven, roughnessOdd].
         use_xraylib_or_dabax : int, optional
             0=use xraylib, 1=use dabax for the optical constabrs.
         dabax : None or instance of DabaxXraylib,
@@ -980,7 +992,7 @@ class MLayer(object):
         theta1 : float, optional
             The minimum value of the incident grazing angle in deg.
         theta2 : float, optional
-            The minimum value of the incident grazing angle in deg.
+            The maximum value of the incident grazing angle in deg.
         h5file : str, optional
             Name of the h5 file to dump calculated data. Set to "" to avoid creating file.
         verbose : int, optional

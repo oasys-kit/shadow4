@@ -34,7 +34,9 @@ def create_bragg_preprocessor_file_v2(
 
     Parameters
     ----------
-    descriptor: str, optional
+    interactive: bool, optional
+        Kept for back compatibility with SHADOW3; not used.
+    DESCRIPTOR: str, optional
         crystal name (as in dabax, xraylib)
     H_MILLER_INDEX: int, optional
         miller index H
@@ -51,7 +53,7 @@ def create_bragg_preprocessor_file_v2(
     E_STEP: float, optional
         photon energy step in eV
     SHADOW_FILE: None or str, optional
-        name for the output file (default=None, no output file)
+        name for the output file (default="bragg.dat"; set to None for no output file)
     material_constants_library: xraylib or instance of DabaxXraylib, optional
         The pointer to the material library to be used to retrieve scattering data.
 
@@ -111,8 +113,9 @@ def bragg_calc2(descriptor="YB66", hh=1, kk=1, ll=1, temper=1.0,
     estep: float, optional
         photon energy step in eV
     ANISO_SEL: int, optional
-        0: Do not use anisotropy.
-        1: Use anisotropy.
+        0: use the scalar `temper` value for every atom (no anisotropic/isotropic data from the crystal).
+        1: compute the isotropic temperature factor from the crystal's anisotropic coefficients.
+        2: compute the anisotropic temperature factor from the crystal's anisotropic coefficients.
     fileout: None or str, optional
         name for the output file (default=None, no output file)
     do_not_prototype: int, optional
@@ -409,17 +412,17 @@ def _temper_factor(sinTheta_lambda, anisos, Miller={'h':1,'k':1,'l':1}, cell={'a
         Sin(theta)/lambda, lambda in units of Angstrom.
     anisos: numpy array
         array of dictionary containing anisotropic coefficients.
-    Miller: dict
+    Miller: dict, optional
         The miller indices, example: {'h':1,'k':1,'l':1}.
-    cell: dict
+    cell: dict, optional
         The cell a,b,c parameters, example: {'a':23.44,'b':23.44,'c':23.44}
     n: int, optional
         number of atomic sites.
 
     Returns
     -------
-    list
-        output results in a 2-elements list: [[isotropic],[anisotropic]].
+    numpy array
+        output results in a 3-row array: [isotropic, anisotropic, start_index] per atomic site.
 
     """
 
