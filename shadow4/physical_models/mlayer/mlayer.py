@@ -659,22 +659,31 @@ class MLayer(object):
                 pre_mlayer_dict["densityS"] = material_constant_library.ElementDensity(material_constant_library.SymbolToAtomicNumber(pre_mlayer_dict["materialS"]))
                 print("Using density for substrate (%s): %f"%(pre_mlayer_dict["materialS"],
                       pre_mlayer_dict["densityS"]))
-            except:
-                raise Exception("Failed to load density for material: %s"%(pre_mlayer_dict["material1"]))
+            except Exception as err:
+                raise Exception(
+                    "Cannot determine density for the SUBSTRATE material '%s': not a recognized single-element "
+                    "symbol, so no default density is available (likely a compound formula). Please supply an "
+                    "explicit density_S value in g/cm3." % (pre_mlayer_dict["materialS"])) from err
         if pre_mlayer_dict["density1"] is None:
             try:
                 pre_mlayer_dict["density1"] = material_constant_library.ElementDensity(material_constant_library.SymbolToAtomicNumber(pre_mlayer_dict["material1"]))
                 print("Using density for layer 1 (even) (%s): %f" % (pre_mlayer_dict["material1"],
                       pre_mlayer_dict["density1"]))
-            except:
-                raise Exception("Failed to load density for material: %s"%(pre_mlayer_dict["material1"]))
+            except Exception as err:
+                raise Exception(
+                    "Cannot determine density for the EVEN material '%s': not a recognized single-element symbol, "
+                    "so no default density is available (likely a compound formula). Please supply an explicit "
+                    "density_E value in g/cm3." % (pre_mlayer_dict["material1"])) from err
         if pre_mlayer_dict["density2"] is None:
             try:
                 pre_mlayer_dict["density2"] = material_constant_library.ElementDensity(material_constant_library.SymbolToAtomicNumber(pre_mlayer_dict["material2"]))
                 print("Using density for layer 2 (odd) (%s): %f" % (pre_mlayer_dict["material2"],
                       pre_mlayer_dict["density2"]))
-            except:
-                raise Exception("Failed to load density for material: %s"%(pre_mlayer_dict["material2"]))
+            except Exception as err:
+                raise Exception(
+                    "Cannot determine density for the ODD material '%s': not a recognized single-element symbol, "
+                    "so no default density is available (likely a compound formula). Please supply an explicit "
+                    "density_O value in g/cm3." % (pre_mlayer_dict["material2"])) from err
 
         if isinstance(pre_mlayer_dict["densityS"],str):
             pre_mlayer_dict["densityS"] = float(pre_mlayer_dict["densityS"])
@@ -887,22 +896,31 @@ class MLayer(object):
                 pre_mlayer_dict["densityS"] = material_constant_library.ElementDensity(material_constant_library.SymbolToAtomicNumber(pre_mlayer_dict["materialS"]))
                 print("Using density for substrate (%s): %f"%(pre_mlayer_dict["materialS"],
                       pre_mlayer_dict["densityS"]))
-            except:
-                raise Exception("Failed to load density for material: %s"%(pre_mlayer_dict["material1"]))
+            except Exception as err:
+                raise Exception(
+                    "Cannot determine density for the SUBSTRATE material '%s': not a recognized single-element "
+                    "symbol, so no default density is available (likely a compound formula). Please supply an "
+                    "explicit density_S value in g/cm3." % (pre_mlayer_dict["materialS"])) from err
         if pre_mlayer_dict["density1"] is None:
             try:
                 pre_mlayer_dict["density1"] = material_constant_library.ElementDensity(material_constant_library.SymbolToAtomicNumber(pre_mlayer_dict["material1"]))
                 print("Using density for layer 1 (even) (%s): %f" % (pre_mlayer_dict["material1"],
                       pre_mlayer_dict["density1"]))
-            except:
-                raise Exception("Failed to load density for material: %s"%(pre_mlayer_dict["material1"]))
+            except Exception as err:
+                raise Exception(
+                    "Cannot determine density for the EVEN material '%s': not a recognized single-element symbol, "
+                    "so no default density is available (likely a compound formula). Please supply an explicit "
+                    "density_E value in g/cm3." % (pre_mlayer_dict["material1"])) from err
         if pre_mlayer_dict["density2"] is None:
             try:
                 pre_mlayer_dict["density2"] = material_constant_library.ElementDensity(material_constant_library.SymbolToAtomicNumber(pre_mlayer_dict["material2"]))
                 print("Using density for layer 2 (odd) (%s): %f" % (pre_mlayer_dict["material2"],
                       pre_mlayer_dict["density2"]))
-            except:
-                raise Exception("Failed to load density for material: %s"%(pre_mlayer_dict["material2"]))
+            except Exception as err:
+                raise Exception(
+                    "Cannot determine density for the ODD material '%s': not a recognized single-element symbol, "
+                    "so no default density is available (likely a compound formula). Please supply an explicit "
+                    "density_O value in g/cm3." % (pre_mlayer_dict["material2"])) from err
 
         if isinstance(pre_mlayer_dict["densityS"],str):
             pre_mlayer_dict["densityS"] = float(pre_mlayer_dict["densityS"])
