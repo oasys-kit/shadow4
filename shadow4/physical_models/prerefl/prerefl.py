@@ -101,11 +101,21 @@ class PreRefl(object):
         index1 = (wnum - QMIN) / QSTEP
         index1 = numpy.array(index1).astype(int)
 
+        QMAX = self.prerefl_dict["QMAX"]
+        EMIN = QMIN * tocm / (2 * numpy.pi)
+        EMAX = QMAX * tocm / (2 * numpy.pi)
+
         if (index1.max() + 1) > (self.prerefl_dict["NREFL"] - 1):
-            raise Exception("Error: Photon energy above (or equal) tabulated upper limit.")
+            raise Exception(
+                "Error: Photon energy %g eV is above (or equal to) the upper limit (%g eV) of the tabulated optical constants. "
+                "Please recreate the preprocessor file with a wider (or shifted) energy range that covers your requested energy." %
+                (energy1.max() if hasattr(energy1, "max") else energy1, EMAX))
 
         if index1.min() < 0:
-            raise Exception("Error: Photon energy below tabulated lower limit.")
+            raise Exception(
+                "Error: Photon energy %g eV is below the lower limit (%g eV) of the tabulated optical constants. "
+                "Please recreate the preprocessor file with a wider (or shifted) energy range that covers your requested energy." %
+                (energy1.min() if hasattr(energy1, "min") else energy1, EMIN))
 
         WNUM0 = QSTEP * index1 + QMIN
         DEL_X = wnum - WNUM0
