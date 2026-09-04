@@ -1208,6 +1208,18 @@ class MLayer(object):
 
             ELFACTOR = numpy.log10(1.0e4 / 30.0e0) / 300.0e0
 
+            index1_array = (numpy.log10(PHOT_ENER / ENER[0]) / ELFACTOR).astype(int)
+            if (index1_array.max() + 1) > (ENER.size - 1):
+                raise Exception(
+                    "Error: Photon energy %g eV is above (or equal to) the upper limit (%g eV) of the tabulated "
+                    "multilayer optical constants. Please recreate the preprocessor file with a wider (or "
+                    "shifted) energy range that covers your requested energy." % (PHOT_ENER.max(), ENER[-1]))
+            if index1_array.min() < 0:
+                raise Exception(
+                    "Error: Photon energy %g eV is below the lower limit (%g eV) of the tabulated multilayer "
+                    "optical constants. Please recreate the preprocessor file with a wider (or shifted) energy "
+                    "range that covers your requested energy." % (PHOT_ENER.min(), ENER[0]))
+
             if is_monochromatic: # just avoid the loop
                 i = 0
                 index1  = int(numpy.log10(PHOT_ENER[i]/ENER[0])/ELFACTOR)
