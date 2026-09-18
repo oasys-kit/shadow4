@@ -1,6 +1,3 @@
-"""
-The s4 crystal base class (optical element and beamline element).
-"""
 import numpy
 
 from syned.beamline.element_coordinates import ElementCoordinates
