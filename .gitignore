@@ -3,6 +3,7 @@ __pycache__/
 *.py[cod]
 
 /shadow4/examples/optical_elements/SiC.dat
+/examples/thin/thin_lens.h5
 /shadow4/sources/bending_magnet/SRANG
 /shadow4/sources/bending_magnet/SRDISTR
 /shadow4/sources/bending_magnet/SRSPEC
