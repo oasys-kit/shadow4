@@ -1,271 +1,405 @@
 # SPDX-License-Identifier: CECILL-2.1
 # Copyright (c) 2026 ESRF - the European Synchrotron
 
-"""Shadow4 thin phase/transmission optical element and numerical helpers."""
+"""
+Shadow4 phase-deflector base class and numerical kernel.
 
+A phase deflector is a thin, normal-incidence-only optical element that
+deflects, attenuates and dephases a beam through the local gradient of the
+optical path difference (OPD) introduced by a spatially-varying material
+thickness -- as opposed to :class:`~shadow4.beamline.optical_elements.refractors.s4_interface.S4Interface`,
+which models a real interface between two materials and refracts the beam
+via Snell's law at a (possibly curved) surface intersection.
+
+Consequences of that distinction:
+
+- A phase deflector has a single material (surrounded by vacuum on both
+  sides), not an object-side/image-side pair: there is nothing on "the
+  other side" of a thin slab to refract into.
+- There is no ray/surface intersection to solve for: the element is always
+  flat and at normal incidence, so a ray reaching it is simply advanced to
+  the element's plane, and the local thickness map is sampled there.
+
+``S4PhaseDeflector`` provides the material/optical-constant side only, and
+leaves the thickness map itself abstract (:meth:`S4PhaseDeflector.get_thickness_map`):
+a concrete element mixes this class with a surface-shape decorator (e.g.
+``S4NumericalMeshOpticalElementDecorator`` for a projected-thickness-map
+element read from a file) and implements ``get_thickness_map()`` from it,
+the same way ``S4Interface`` is mixed with a surface-shape decorator and
+relies on it for ``get_optical_surface_instance()``.
+"""
 from __future__ import annotations
 
+import numpy
 from numpy.typing import ArrayLike
+
 from syned.beamline.element_coordinates import ElementCoordinates
+from syned.beamline.optical_element_with_surface_shape import OpticalElementsWithSurfaceShape
 from syned.beamline.shape import Ellipse, Rectangle
+
+from dabax.dabax_xraylib import DabaxXraylib
 
 from shadow4.beam.s4_beam import S4Beam
 from shadow4.beamline.s4_beamline_element import S4BeamlineElement
 from shadow4.beamline.s4_beamline_element_movements import S4BeamlineElementMovements
-from shadow4.beamline.s4_optical_element_decorators import S4NumericalMeshOpticalElementDecorator
-from shadow4.beamline.optical_elements.refractors.s4_interface import S4Interface
-import numpy
-
-# S4Interface.f_r_ind supports 10 modes because it allows a different material
-# on each side of a (possibly curved) interface. A thin transmission element
-# only ever has one material (the slab), surrounded by vacuum on both sides,
-# so only the "object side" modes are meaningful here; the image side is
-# always pinned to vacuum (r_ind_ima=1.0, r_attenuation_ima=0.0).
-#   ri_calculation_mode -> f_r_ind: 0=user -> 0, 1=prerefl -> 1, 2=xraylib -> 4, 3=dabax -> 7
-_RI_CALCULATION_MODE_TO_F_R_IND = {0: 0, 1: 1, 2: 4, 3: 7}
+from shadow4.beamline.s4_optical_element_decorators import S4OpticalElementDecorator
+from shadow4.physical_models.prerefl.prerefl import PreRefl
 
 
-class S4ThinTransmission(S4Interface, S4NumericalMeshOpticalElementDecorator):
+class S4PhaseDeflector(OpticalElementsWithSurfaceShape, S4OpticalElementDecorator):
     """
-    Shadow4 thin refractive/transmission element.
+    Shadow4 phase-deflector base class.
 
-    Follows the same base-class pattern as the other Shadow4 refractors
-    (e.g. :class:`~shadow4.beamline.optical_elements.refractors.s4_numerical_mesh_interface.S4NumericalMeshInterface`):
-    it inherits ``S4Interface`` for material/optical-constant storage and
-    ``S4NumericalMeshOpticalElementDecorator`` for the mesh. ``thickness_mesh_file``
-    is the only supported mesh source: it must be an HDF5 (or 3-column ASCII)
-    file with the standard OASYS surface convention (a 2D projected thickness
-    map in metres). Passing raw arrays is intentionally not supported, since
-    they cannot be recovered by ``to_python_code()``.
+    This is a base class (analogous to ``S4Interface`` for refractive
+    interfaces): it defines the single-material optical constants, but
+    leaves the thickness map abstract. Use a derived/mixed-in class (e.g.
+    combining this with ``S4NumericalMeshOpticalElementDecorator``) to
+    provide :meth:`get_thickness_map`.
 
-    Unlike a real refractive interface, this element does not compute a
-    Snell's-law ray/surface intersection: it stays flat at normal incidence
-    and only uses the mesh as a projected thickness map to apply attenuation,
-    OPD/phase and phase-gradient angular kicks. Accordingly only the
-    "object side" of ``S4Interface`` is used (the slab material); the image
-    side is always pinned to vacuum since a thin slab has no second material.
+    Parameters
+    ----------
+    name : str, optional
+        The name of the element.
+    boundary_shape : instance of BoundaryShape, optional
+        The boundary shape of the element.
+    surface_shape : instance of SurfaceShape, optional
+        The (thickness) surface shape of the element, normally supplied by
+        the mixed-in surface-shape decorator.
+    material : str, optional
+        String with the material element symbol or compound formula (used
+        when ``f_r_ind`` is 2 or 3).
+    density : float, optional
+        The material density in g/cm^3 (used when ``f_r_ind`` is 2 or 3).
+    f_r_ind : int, optional
+        Source of the optical constants:
+            - (0) constant value,
+            - (1) file generated by the PREREFL preprocessor,
+            - (2) direct calculation using xraylib,
+            - (3) direct calculation using dabax.
+    r_ind : float, optional
+        For ``f_r_ind=0``: the real part of the refraction index.
+    r_attenuation : float, optional
+        For ``f_r_ind=0``: the attenuation coefficient, in m^-1.
+    file_r_ind : str, optional
+        For ``f_r_ind=1``: file generated by the PREREFL preprocessor.
+    dabax : None or instance of DabaxXraylib, optional
+        The pointer to the dabax library (used for ``f_r_ind=3``).
+
+    Returns
+    -------
+    instance of S4PhaseDeflector.
     """
+    def __init__(self,
+                 name="Undefined",
+                 boundary_shape=None,
+                 surface_shape=None,
+                 material="",
+                 density=1.0,
+                 f_r_ind=0,
+                 r_ind=1.0,
+                 r_attenuation=0.0,
+                 file_r_ind="",
+                 dabax=None,
+                 ):
+        OpticalElementsWithSurfaceShape.__init__(self,
+                                                 name=name,
+                                                 surface_shape=surface_shape,
+                                                 boundary_shape=boundary_shape,
+                                                 )
 
-    def __init__(
-        self,
-        name="Undefined",
-        boundary_shape=None,
-        thickness_mesh_file=None,
-        material="",
-        density=1.0,
-        ri_calculation_mode=0,
-        prerefl_file=None,
-        refraction_index=1.0,
-        attenuation_coefficient=0.0,
-        dabax=None,
-        apply_to_lost=True,
-        shift_thickness_to_zero=False,
-        thickness_scaling=1.0,
-        coordinate_scaling=1.0,
-        invert_surface=False,
-    ):
-        if ri_calculation_mode not in _RI_CALCULATION_MODE_TO_F_R_IND:
-            raise ValueError("ri_calculation_mode must be 0, 1, 2 or 3.")
+        if f_r_ind not in (0, 1, 2, 3):
+            raise ValueError("f_r_ind must be 0, 1, 2 or 3.")
 
-        S4NumericalMeshOpticalElementDecorator.__init__(self, xx=None, yy=None, zz=None, surface_data_file=thickness_mesh_file)
-        S4Interface.__init__(
-            self,
-            name=name,
-            boundary_shape=boundary_shape,
-            surface_shape=self.get_surface_shape_instance(),
-            material_object=material,
-            material_image=None,
-            density_object=density,
-            density_image=1.0,
-            f_r_ind=_RI_CALCULATION_MODE_TO_F_R_IND[ri_calculation_mode],
-            r_ind_obj=refraction_index,
-            r_ind_ima=1.0,
-            r_attenuation_obj=attenuation_coefficient,
-            r_attenuation_ima=0.0,
-            file_r_ind_obj=prerefl_file if prerefl_file is not None else "",
-            file_r_ind_ima="",
-            dabax=dabax,
-        )
+        self._material = material
+        self._density = density
+        self._f_r_ind = f_r_ind
+        self._r_ind = r_ind
+        self._r_attenuation = r_attenuation
+        self._file_r_ind = file_r_ind
+        self._dabax = dabax
 
-        if not numpy.isfinite(thickness_scaling):
-            raise ValueError("thickness_scaling must be finite.")
-        if not numpy.isfinite(coordinate_scaling) or coordinate_scaling <= 0.0:
-            raise ValueError("coordinate_scaling must be finite and strictly positive.")
-
-        self._apply_to_lost = apply_to_lost
-        self._shift_thickness_to_zero = shift_thickness_to_zero
-        self._thickness_scaling = float(thickness_scaling)
-        self._coordinate_scaling = float(coordinate_scaling)
-        self._invert_surface = bool(invert_surface)
-
-        self.__inputs = {
-            "name": name,
-            "boundary_shape": boundary_shape,
-            "thickness_mesh_file": thickness_mesh_file,
-            "material": material,
-            "density": density,
-            "ri_calculation_mode": ri_calculation_mode,
-            "prerefl_file": prerefl_file,
-            "refraction_index": refraction_index,
-            "attenuation_coefficient": attenuation_coefficient,
-            "dabax": self._get_dabax_txt(),
-            "apply_to_lost": apply_to_lost,
-            "shift_thickness_to_zero": shift_thickness_to_zero,
-            "thickness_scaling": thickness_scaling,
-            "coordinate_scaling": coordinate_scaling,
-            "invert_surface": invert_surface,
-        }
+        # support text containing name of variable, help text and unit. Will be stored in self._support_dictionary
+        # NOTE: "dabax" is deliberately NOT registered here, matching S4Interface/S4CRL/S4Lens: once a
+        # DabaxXraylib instance has been used (e.g. by get_optical_constants()), it caches an internal
+        # SpecFile object that syned's generic to_dictionary()/to_json() cannot serialize.
+        self._add_support_text([
+                    ("surface_shape",   "Surface (thickness) shape",                                     ""),
+                    ("material",        "Material (element, compound, name or refraction index)",        ""),
+                    ("density",         "Density",                                                       "g/cm3"),
+                    ("f_r_ind",         "Source of optical constants: 0=constant, 1=file, 2=xraylib, 3=dabax", ""),
+                    ("r_ind",           "Refraction index (real part), for f_r_ind=0",                    ""),
+                    ("r_attenuation",   "Attenuation coefficient, for f_r_ind=0",                         "m^-1"),
+                    ("file_r_ind",      "File generated by the PREREFL preprocessor, for f_r_ind=1",      ""),
+            ] )
 
     def get_info(self):
-        txt = "\n\n"
-        txt += "THIN TRANSMISSION ELEMENT\n"
-        txt += "  Thin projected-thickness map with refraction and attenuation\n"
-        txt += "  Normal-incidence element: angle_radial=0, angle_radial_out=pi\n"
-        txt += "  Material: %s\n" % self.get_material_object()
-        txt += "  Density: %g g/cm^3\n" % self._density_object
-        txt += "  ri_calculation_mode (f_r_ind): %d\n" % self._f_r_ind
-        txt += "  apply_to_lost: %s\n" % self._apply_to_lost
-        txt += "  shift_thickness_to_zero: %s\n" % self._shift_thickness_to_zero
-        txt += "  Thickness scaling: %g\n" % self._thickness_scaling
-        txt += "  Coordinate scaling: %g\n" % self._coordinate_scaling
-        txt += "  Invert surface: %s\n" % self._invert_surface
+        """
+        Returns the specific information of the S4 phase-deflector optical
+        element.
 
-        thickness_mesh = self.get_surface_shape_instance()
-        if thickness_mesh is not None and thickness_mesh.has_surface_data_file():
-            txt += "  Thickness data file: %s\n" % thickness_mesh._surface_data_file
+        Returns
+        -------
+        str
+        """
+        txt = "\n\n"
+        txt += "PHASE DEFLECTOR\n"
+        txt += "\n"
+        txt += "Source of material refraction index:\n"
+        if self._f_r_ind == 0:
+            txt += "   constant value\n"
+            txt += "   index of refraction (real part): %g \n" % self._r_ind
+            txt += "   attenuation coefficient: %g m^-1\n" % self._r_attenuation
+        elif self._f_r_ind == 1:
+            txt += "   file generated by prerefl preprocessor: %s \n" % self._file_r_ind
+        elif self._f_r_ind == 2:
+            txt += "   calculated using xraylib\n"
+            txt += "       material: %s\n" % self._material
+            txt += "       density: %g g/cm3\n" % self._density
+        elif self._f_r_ind == 3:
+            txt += "   calculated using dabax\n"
+            txt += "       material: %s\n" % self._material
+            txt += "       density: %g g/cm3\n" % self._density
+
+        txt += "\n"
+        ss = self.get_surface_shape()
+        if ss is None:
+            txt += "Surface shape is: Plane (** UNDEFINED?? **)\n"
         else:
-            txt += "  Thickness data: undefined\n"
+            txt += "Surface shape is: %s\n" % ss.__class__.__name__
 
         boundary = self.get_boundary_shape()
-        if not isinstance(boundary, (Rectangle, Ellipse)):
-            txt += "  Boundaries not considered (infinite)\n"
+        if boundary is None:
+            txt += "Surface boundaries not considered (infinite)\n"
         else:
-            txt += "  Boundary shape: %s\n" % boundary.__class__.__name__
+            txt += "Surface boundaries are: %s\n" % boundary.__class__.__name__
             txt += "    Limits: " + repr(boundary.get_boundaries()) + "\n"
+
         return txt
 
     def get_thickness_map(self, validate=True):
         """
-        Return the internal thickness dictionary used by the numerical kernel.
+        Returns the local projected-thickness map used by the phase-gradient
+        kernel.
 
-        Set ``validate=False`` to inspect the transformed map without rejecting
-        negative values. This is intended for previews; tracing always uses the
-        validated default.
+        Parameters
+        ----------
+        validate : bool, optional
+            Set False to inspect the map without rejecting negative values
+            (intended for previews); tracing always uses the validated
+            default.
+
+        Returns
+        -------
+        dict
+            Dictionary with keys ``"profile"`` (2D array, shape ``(ny, nx)``,
+            in metres), ``"x_axis"`` and ``"y_axis"`` (1D arrays sampling the
+            element's local transverse X and Y axes, in metres).
+
+        Raises
+        ------
+        NotImplementedError
+            This base class does not know how the thickness is represented
+            (mesh, analytic, ...); a concrete subclass (or a mixed-in
+            surface-shape decorator) must provide it.
         """
-        thickness_mesh = self.get_surface_shape_instance()
-        if thickness_mesh is None or not thickness_mesh.has_surface_data_file():
-            raise ValueError("No thickness_mesh_file supplied.")
+        raise NotImplementedError()
 
-        mesh = self.get_optical_surface_instance()
-        x_axis, y_axis = mesh.get_mesh_x_y()
-        # S4Mesh stores its z grid as (len(x_axis), len(y_axis)); the thin-element
-        # kernel below (and numpy.gradient(profile, y_axis, x_axis)) expects the
-        # transposed (len(y_axis), len(x_axis)) convention.
-        profile = mesh.get_mesh_z().T
+    def get_refraction_index(self, photon_energy_eV=None):
+        """
+        Returns the real part of the refraction index.
 
-        x_axis = numpy.asarray(x_axis, dtype=float) * self._coordinate_scaling
-        y_axis = numpy.asarray(y_axis, dtype=float) * self._coordinate_scaling
-        profile = numpy.asarray(profile, dtype=float) * self._thickness_scaling
-        if self._invert_surface:
-            profile = -profile
+        Parameters
+        ----------
+        photon_energy_eV : float or numpy array, optional
+            The photon energy in eV.
 
-        if self._shift_thickness_to_zero:
-            finite = numpy.isfinite(profile)
-            if numpy.any(finite):
-                profile = profile - numpy.nanmin(profile)
-        elif validate and numpy.any(profile[numpy.isfinite(profile)] < 0.0):
-            raise ValueError(
-                "Thickness profile contains negative values. Use "
-                "shift_thickness_to_zero=True to subtract the finite minimum."
+        Returns
+        -------
+        float or numpy array
+        """
+        if self._f_r_ind == 0:
+            return self._r_ind
+        elif self._f_r_ind == 1:
+            pr = PreRefl()
+            pr.read_preprocessor_file(self._file_r_ind)
+            return pr.get_refraction_index(photon_energy_eV).real
+        elif self._f_r_ind == 2:
+            return PreRefl.get_refraction_index_real_external_xraylib(
+                material=self._material, photon_energy_ev=photon_energy_eV, density=self._density,
             )
+        elif self._f_r_ind == 3:
+            return PreRefl.get_refraction_index_real_external_dabax(
+                material=self._material, photon_energy_ev=photon_energy_eV, density=self._density,
+                dabax=self._dabax,
+            )
+        raise ValueError("f_r_ind must be 0, 1, 2 or 3.")
 
-        return {
-            "profile": profile,
-            "x_axis": x_axis,
-            "y_axis": y_axis,
-        }
+    def get_attenuation_coefficient(self, photon_energy_eV=None):
+        """
+        Returns the attenuation coefficient.
+
+        Parameters
+        ----------
+        photon_energy_eV : float or numpy array, optional
+            The photon energy in eV.
+
+        Returns
+        -------
+        float or numpy array
+            The attenuation coefficient, in m^-1.
+        """
+        if self._f_r_ind == 0:
+            return self._r_attenuation
+        elif self._f_r_ind == 1:
+            pr = PreRefl()
+            pr.read_preprocessor_file(self._file_r_ind)
+            return pr.get_attenuation_coefficient(photon_energy_eV) * 100.0  # cm^-1 -> m^-1
+        elif self._f_r_ind == 2:
+            return PreRefl.get_attenuation_coefficient_external_xraylib(
+                photon_energy_ev=photon_energy_eV, material=self._material, density=self._density,
+            ) * 100.0
+        elif self._f_r_ind == 3:
+            return PreRefl.get_attenuation_coefficient_external_dabax(
+                photon_energy_ev=photon_energy_eV, material=self._material, density=self._density,
+                dabax=self._dabax,
+            ) * 100.0
+        raise ValueError("f_r_ind must be 0, 1, 2 or 3.")
 
     def get_optical_constants(self, photon_energy_eV, k):
         """
-        Return per-ray ``delta`` and ``beta`` for the material.
+        Returns per-ray ``delta`` and ``beta``, with ``n = 1 - delta + 1j * beta``.
 
-        Delegates to the inherited ``S4Interface.get_refraction_indices()``/
-        ``get_attenuation_coefficients()`` (constant/prerefl/xraylib/dabax,
-        all already handled there) and keeps only the object-side result,
-        since the image side is always pinned to vacuum for this element.
+        Parameters
+        ----------
+        photon_energy_eV : float or numpy array
+            The photon energy in eV.
+        k : float or numpy array
+            The vacuum wavenumber, ``2*pi/wavelength``, in m^-1.
+
+        Returns
+        -------
+        tuple
+            (delta, beta)
         """
-        n_real, _ = self.get_refraction_indices(photon_energy_eV)
-        mu, _ = self.get_attenuation_coefficients(photon_energy_eV)  # already in m^-1
-
-        n_real = numpy.asarray(n_real, dtype=float)
-        mu = numpy.asarray(mu, dtype=float)
+        n_real = numpy.asarray(self.get_refraction_index(photon_energy_eV), dtype=float)
+        mu = numpy.asarray(self.get_attenuation_coefficient(photon_energy_eV), dtype=float)
         delta = 1.0 - n_real
         beta = mu / (2.0 * numpy.asarray(k, dtype=float))
         return delta, beta
 
     def to_python_code(self, **kwargs):
-        txt = self.to_python_code_boundary_shape()
-        txt += "\nfrom shadow4.beamline.optical_elements.refractors.s4_thin_element import S4ThinTransmission"
-        txt += "\noptical_element = S4ThinTransmission(name='%s', boundary_shape=boundary_shape," % self.__inputs["name"]
-        txt += "\n    thickness_mesh_file=%r," % self.__inputs["thickness_mesh_file"]
-        txt += "\n    material='%s', density=%g," % (self.__inputs["material"], self.__inputs["density"])
-        txt += "\n    ri_calculation_mode=%d, # 0=user, 1=prerefl, 2=xraylib, 3=dabax" % self.__inputs["ri_calculation_mode"]
-        txt += "\n    prerefl_file=%r," % self.__inputs["prerefl_file"]
-        txt += "\n    refraction_index=%.10g," % self.__inputs["refraction_index"]
-        txt += "\n    attenuation_coefficient=%g," % self.__inputs["attenuation_coefficient"]
-        txt += "\n    dabax=%s," % self.__inputs["dabax"]
-        txt += "\n    apply_to_lost=%s," % repr(self.__inputs["apply_to_lost"])
-        txt += "\n    shift_thickness_to_zero=%s," % repr(self.__inputs["shift_thickness_to_zero"])
-        txt += "\n    thickness_scaling=%g," % self.__inputs["thickness_scaling"]
-        txt += "\n    coordinate_scaling=%g," % self.__inputs["coordinate_scaling"]
-        txt += "\n    invert_surface=%s," % repr(self.__inputs["invert_surface"])
-        txt += "\n    )"
+        """
+        Creates the python code for defining the element.
+
+        Raises
+        ------
+        NotImplementedError.
+        """
+        raise NotImplementedError("To be implemented in the children class")
+
+    def to_python_code_boundary_shape(self):
+        """
+        Creates a code block with information of boundary shape.
+
+        Returns
+        -------
+        str
+            The text with the code.
+        """
+        txt = ""
+        bs = self._boundary_shape
+        if bs is None:
+            txt += "\nboundary_shape = None"
+        elif isinstance(bs, Rectangle):
+            txt += "\nfrom syned.beamline.shape import Rectangle"
+            txt += "\nboundary_shape = Rectangle(x_left=%g, x_right=%g, y_bottom=%g, y_top=%g)" % bs.get_boundaries()
+        elif isinstance(bs, Ellipse):
+            txt += "\nfrom syned.beamline.shape import Ellipse"
+            txt += "\nboundary_shape = Ellipse(a_axis_min=%g, a_axis_max=%g, b_axis_min=%g, b_axis_max=%g)" % bs.get_boundaries()
+        else:
+            txt += "\nboundary_shape = None"
         return txt
 
+    def _get_dabax_txt(self):
+        if self._f_r_ind == 3:
+            if isinstance(self._dabax, DabaxXraylib):
+                return 'DabaxXraylib(file_f1f2="%s", file_CrossSec="%s")' % (
+                    self._dabax.get_file_f1f2(), self._dabax.get_file_CrossSec(),
+                )
+            return "DabaxXraylib()"
+        return "None"
 
-class S4ThinTransmissionElement(S4BeamlineElement):
-    """
-    Shadow4 beamline element wrapper for :class:`S4ThinTransmission`.
-    """
 
-    def __init__(
-        self,
-        optical_element: S4ThinTransmission = None,
-        coordinates: ElementCoordinates = None,
-        movements: S4BeamlineElementMovements = None,
-        input_beam: S4Beam = None,
-    ):
-        super().__init__(
-            optical_element=optical_element if optical_element is not None else S4ThinTransmission(),
-            coordinates=coordinates if coordinates is not None else ElementCoordinates(),
-            movements=movements,
-            input_beam=input_beam,
-        )
+class S4PhaseDeflectorElement(S4BeamlineElement):
+    """
+    Shadow4 beamline element wrapper for :class:`S4PhaseDeflector` subclasses.
+
+    Follows the same ``trace_beam`` structure as
+    :class:`~shadow4.beamline.optical_elements.refractors.s4_interface.S4InterfaceElement`
+    (put the beam in the element reference system, apply the element's
+    physics, apply boundaries, transform back to the image plane); the
+    Snell's-law refraction step (``_apply_interface_refraction``) is
+    replaced by :meth:`_apply_phase_deflection`.
+
+    Parameters
+    ----------
+    optical_element : instance of S4PhaseDeflector, optional
+        The shadow4 optical element.
+    coordinates : instance of ElementCoordinates, optional
+        The syned element coordinates.
+    movements : instance of S4BeamlineElementMovements, optional
+        The S4 element movements.
+    input_beam : instance of S4Beam, optional
+        The S4 incident beam.
+
+    Returns
+    -------
+    instance of S4PhaseDeflectorElement.
+    """
+    def __init__(self,
+                 optical_element: S4PhaseDeflector = None,
+                 coordinates: ElementCoordinates = None,
+                 movements: S4BeamlineElementMovements = None,
+                 input_beam: S4Beam = None):
+        super().__init__(optical_element=optical_element if optical_element is not None else S4PhaseDeflector(),
+                         coordinates=coordinates if coordinates is not None else ElementCoordinates(),
+                         movements=movements,
+                         input_beam=input_beam)
         self.__stored_optical_constants = None
 
     def get_stored_optical_constants(self):
+        """
+        When running ``trace_beam()`` the optical constants (delta, beta)
+        are calculated. They are stored for accelerating further calls.
+
+        Returns
+        -------
+        tuple
+            (delta, beta), arrays with the refractive index decrement and
+            the absorption index, one value per ray.
+        """
         return self.__stored_optical_constants
 
-    def _apply_thin_transmission(self, beam, delta, beta, *, flag_lost_value=-1.0, apply_to_lost=True):
+    def _apply_phase_deflection(self, beam, delta, beta, *, flag_lost_value=-1.0, apply_to_lost=True):
         """
-        Apply the thin-element projected-thickness kick to a beam already
-        expressed in the element's local reference frame.
+        Apply the phase-gradient deflection to a beam already expressed in
+        the element's local reference frame.
 
         This plays the same role as ``S4Interface._apply_interface_refraction``
         (called the same way, from :meth:`trace_beam`, right after the beam
         has been put into the element reference system), but instead of a
-        Snell's-law ray/surface intersection with a (possibly curved) mesh,
-        it advances each ray to the flat element plane (Z=0) and then applies
-        the local thickness map's attenuation, OPD/phase and phase-gradient
-        kicks (see :func:`apply_thin_transmission_element`). Kept here (on
-        the beamline element, not on ``S4ThinTransmission``) since everything
-        it needs -- the optical element and the beam already in the local
-        frame -- is already local to :meth:`trace_beam`.
+        Snell's-law ray/surface intersection it advances each ray to the
+        flat element plane (Z=0) and then applies the local thickness map's
+        attenuation, OPD/phase and phase-gradient kicks (see
+        :func:`apply_phase_deflection`). Kept here (on the beamline element,
+        not on ``S4PhaseDeflector``) since everything it needs -- the
+        optical element and the beam already in the local frame -- is
+        already local to :meth:`trace_beam`.
         """
         soe = self.get_optical_element()
         k = beam.get_column(11) * 100.0
         _advance_rays_to_local_surface(beam)
-        return apply_thin_transmission_element(
+        return apply_phase_deflection(
             beam,
             soe.get_thickness_map(),
             k,
@@ -280,15 +414,12 @@ class S4ThinTransmissionElement(S4BeamlineElement):
         """
         Runs (ray tracing) the input beam through the element.
 
-        Follows the same structure as :meth:`S4InterfaceElement.trace_beam`
-        (put the beam in the element reference system, apply the element's
-        physics, apply boundaries, transform back to the image plane); the
-        Snell's-law refraction step (``_apply_interface_refraction``) is
-        replaced by :meth:`_apply_thin_transmission`.
-
         Parameters
         ----------
         **params
+            ``flag_lost_value`` (default -1.0), ``apply_to_lost`` (default
+            True), ``reused_stored_optical_constants`` (default None),
+            ``angle_tolerance`` (default 1e-9).
 
         Returns
         -------
@@ -296,7 +427,7 @@ class S4ThinTransmissionElement(S4BeamlineElement):
             (output_beam, footprint) instances of S4Beam.
         """
         flag_lost_value = params.get("flag_lost_value", -1.0)
-        apply_to_lost = params.get("apply_to_lost", None)
+        apply_to_lost = params.get("apply_to_lost", True)
         reused_stored_optical_constants = params.get("reused_stored_optical_constants", None)
         angle_tolerance = params.get("angle_tolerance", 1e-9)
 
@@ -307,11 +438,11 @@ class S4ThinTransmissionElement(S4BeamlineElement):
         alpha1 = self.get_coordinates().angle_azimuthal()
 
         if not numpy.isclose(angle_radial, 0.0, rtol=0.0, atol=angle_tolerance):
-            raise NotImplementedError("S4ThinTransmission supports only angle_radial=0.")
+            raise NotImplementedError("S4PhaseDeflector supports only angle_radial=0.")
         if not numpy.isclose(angle_radial_out, numpy.pi, rtol=0.0, atol=angle_tolerance):
-            raise NotImplementedError("S4ThinTransmission supports only angle_radial_out=pi.")
+            raise NotImplementedError("S4PhaseDeflector supports only angle_radial_out=pi.")
         if not numpy.isclose(alpha1, 0.0, rtol=0.0, atol=angle_tolerance):
-            raise NotImplementedError("S4ThinTransmission angle_azimuthal rotations are not implemented yet.")
+            raise NotImplementedError("S4PhaseDeflector angle_azimuthal rotations are not implemented yet.")
 
         theta_grazing1 = numpy.pi / 2 - angle_radial
         theta_grazing2 = numpy.pi / 2 - angle_radial_out
@@ -340,15 +471,15 @@ class S4ThinTransmissionElement(S4BeamlineElement):
         movements = self.get_movements()
         if movements is not None:
             if movements.f_move:
-                raise NotImplementedError("S4ThinTransmission movements are not implemented yet.")
+                raise NotImplementedError("S4PhaseDeflector movements are not implemented yet.")
 
         #
-        # apply the thin-element projected-thickness kick
+        # apply the phase-gradient deflection
         #
-        footprint = self._apply_thin_transmission(
+        footprint = self._apply_phase_deflection(
             input_beam, delta, beta,
             flag_lost_value=flag_lost_value,
-            apply_to_lost=soe._apply_to_lost if apply_to_lost is None else apply_to_lost,
+            apply_to_lost=apply_to_lost,
         )
 
         #
@@ -365,14 +496,14 @@ class S4ThinTransmissionElement(S4BeamlineElement):
         return output_beam, footprint
 
     def to_python_code(self, **kwargs):
-        txt = "\n\n# optical element number XX"
-        txt += self.get_optical_element().to_python_code()
-        txt += self.to_python_code_coordinates()
-        txt += self.to_python_code_movements()
-        txt += "\nfrom shadow4.beamline.optical_elements.refractors.s4_thin_element import S4ThinTransmissionElement"
-        txt += "\nbeamline_element = S4ThinTransmissionElement(optical_element=optical_element, coordinates=coordinates, movements=movements, input_beam=beam)"
-        txt += "\n\nbeam, footprint = beamline_element.trace_beam()"
-        return txt
+        """
+        Creates the python code for defining the element.
+
+        Raises
+        ------
+        NotImplementedError.
+        """
+        raise NotImplementedError("To be implemented in the children class")
 
 
 def _advance_rays_to_local_surface(beam: S4Beam) -> None:
@@ -384,11 +515,11 @@ def _advance_rays_to_local_surface(beam: S4Beam) -> None:
 
     This is the flat-plane analogue of the ray/surface intersection that
     ``S4Mesh.apply_refraction_on_beam`` performs for curved interfaces inside
-    ``S4Interface._apply_interface_refraction``: after
+    ``S4Interface._apply_interface_refraction``: after the
     ``S4InterfaceElement``-style rotate/translate, every ray starts at local
     Z = p (the source-to-element distance) and travels in -Z; this brings it
-    to Z = 0 so :func:`apply_thin_transmission_element` can interpolate the
-    thickness map at the ray's actual (possibly divergence-shifted) position.
+    to Z = 0 so :func:`apply_phase_deflection` can interpolate the thickness
+    map at the ray's actual (possibly divergence-shifted) position.
     """
     rays = beam.rays
     tof = -rays[:, 2] / rays[:, 5]
@@ -398,7 +529,7 @@ def _advance_rays_to_local_surface(beam: S4Beam) -> None:
     rays[:, 12] += tof
 
 
-def apply_thin_transmission_element(
+def apply_phase_deflection(
     beam: S4Beam,
     thickness: dict,
     k: ArrayLike,
@@ -410,7 +541,7 @@ def apply_thin_transmission_element(
     duplicate: bool = True,
 ) -> S4Beam:
     """
-    Apply a thin refractive/transmitting phase element to a Shadow4 beam
+    Apply a thin phase-deflector's projected-thickness kick to a beam
     already expressed in the element's local reference frame, i.e. after the
     same "put beam in element reference system" transform that
     ``S4InterfaceElement.trace_beam`` applies before refraction: the
@@ -473,9 +604,9 @@ def apply_thin_transmission_element(
     Shadow4 lost-ray flags are used throughout: column 10 > 0 means alive,
     column 10 < 0 means lost. This function does not use the barc4beams
     ``0 = alive, 1 = lost`` convention. Rays that are already lost are still
-    propagated through the thin-element calculation when they land on valid
-    thickness support if ``apply_to_lost`` is True; their negative flag is
-    preserved.
+    propagated through the phase-deflection calculation when they land on
+    valid thickness support if ``apply_to_lost`` is True; their negative
+    flag is preserved.
     """
     if flag_lost_value >= 0.0:
         raise ValueError("flag_lost_value must be negative for Shadow4 beams.")
@@ -743,68 +874,6 @@ def _interp2d_regular(x_axis, y_axis, values, xs, ys):
 
 
 if __name__ == "__main__":
-    import numpy as np
-    from dabax.dabax_xraylib import DabaxXraylib
-    from shadow4.beamline.s4_beamline import S4Beamline
-
-    beamline = S4Beamline()
-
-    #
-    #
-    #
-    from shadow4.sources.source_geometrical.source_geometrical import SourceGeometrical
-
-    light_source = SourceGeometrical(name='Geometrical Source', nrays=5000, seed=5676561)
-    light_source.set_spatial_type_point()
-    light_source.set_depth_distribution_off()
-    light_source.set_angular_distribution_gaussian(sigdix=1e-05, sigdiz=1e-05)
-    light_source.set_energy_distribution_uniform(value_min=9950, value_max=10050, unit='eV')
-    light_source.set_polarization(polarization_degree=1, phase_diff=0, coherent_beam=0)
-    beam = light_source.get_beam()
-
-    beamline.set_light_source(light_source)
-
-    # optical element number XX
-    boundary_shape = None
-    from shadow4.beamline.optical_elements.refractors.s4_thin_element import S4ThinTransmission
-
-    optical_element = S4ThinTransmission(name='Thin Element SHADOW', boundary_shape=boundary_shape,
-                                         thickness_mesh_file='/home/srio/Oasys2/lens_interface_1.h5',
-                                         material='Be', density=1.85,
-                                         ri_calculation_mode=3,  # 0=user, 1=prerefl, 2=xraylib, 3=dabax
-                                         prerefl_file='<none>',
-                                         refraction_index=1,
-                                         attenuation_coefficient=0,
-                                         dabax=DabaxXraylib(file_f1f2="f1f2_Windt.dat",
-                                                            file_CrossSec="CrossSec_EPDL97.dat"),
-                                         apply_to_lost=True,
-                                         shift_thickness_to_zero=False,
-                                         thickness_scaling=1,
-                                         coordinate_scaling=1,
-                                         invert_surface=False,
-                                         )
-    from syned.beamline.element_coordinates import ElementCoordinates
-
-    coordinates = ElementCoordinates(p=10, q=0, angle_radial=0, angle_azimuthal=0, angle_radial_out=3.141592654)
-    movements = None
-    from shadow4.beamline.optical_elements.refractors.s4_thin_element import S4ThinTransmissionElement
-
-    beamline_element = S4ThinTransmissionElement(optical_element=optical_element, coordinates=coordinates,
-                                                 movements=movements, input_beam=beam)
-
-    beam, footprint = beamline_element.trace_beam()
-
-    beamline.append_beamline_element(beamline_element)
-
-    # test plot
-    if 1:
-        from srxraylib.plot.gol import plot_scatter
-
-        # plot_scatter(beam.get_photon_energy_eV(nolost=1), beam.get_column(23, nolost=1),
-        #              title='(Intensity,Photon Energy)', plot_histograms=0)
-        plot_scatter(1e6 * beam.get_column(1, nolost=1), 1e6 * beam.get_column(3, nolost=1), title='(X,Z) in microns')
-
-    print(optical_element.info())
-    print(optical_element.get_info())
-
-    print(beamline.to_json())
+    i = S4PhaseDeflector()
+    print(i.get_info())
+    print(i.get_surface_shape())
