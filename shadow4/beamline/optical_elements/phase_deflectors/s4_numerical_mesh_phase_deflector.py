@@ -130,6 +130,7 @@ class S4NumericalMeshPhaseDeflector(S4PhaseDeflector, S4NumericalMeshOpticalElem
         if not numpy.isfinite(coordinate_scaling) or coordinate_scaling <= 0.0:
             raise ValueError("coordinate_scaling must be finite and strictly positive.")
 
+        self._surface_data_file = surface_data_file
         self._apply_to_lost = apply_to_lost
         self._shift_thickness_to_zero = shift_thickness_to_zero
         self._thickness_scaling = float(thickness_scaling)
@@ -137,6 +138,10 @@ class S4NumericalMeshPhaseDeflector(S4PhaseDeflector, S4NumericalMeshOpticalElem
         self._invert_surface = bool(invert_surface)
 
         # support text containing name of variable, help text and unit. Will be stored in self._support_dictionary
+        # NOTE: "surface_data_file" is also stored as a plain attribute (self._surface_data_file) above,
+        # duplicating what S4NumericalMeshOpticalElementDecorator already keeps inside the NumericalMesh
+        # surface_shape -- required because syned's to_dictionary()/to_json() resolve each registered key
+        # via eval("self._<key>"), not through get_surface_shape_instance().
         self._add_support_text([
                     ("surface_data_file",       "File with the thickness mesh (HDF5 or 3-column ASCII)", ""),
                     ("apply_to_lost",           "Apply the phase deflection to already-lost rays too",   ""),

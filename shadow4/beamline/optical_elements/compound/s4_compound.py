@@ -59,7 +59,7 @@ class S4Compound(OpticalElement, S4OpticalElementDecorator):
                         )
 
         if oe_list is None:
-            self.oe_list = []
+            self._oe_list = []
         else:
             self._oe_list = oe_list
 
