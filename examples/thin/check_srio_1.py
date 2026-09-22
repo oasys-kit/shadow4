@@ -23,7 +23,7 @@ from syned.beamline.shape import Ellipse
 boundary_shape = Ellipse(a_axis_min=-0.0002, a_axis_max=0.0002, b_axis_min=-0.0002, b_axis_max=0.0002)
 from shadow4.beamline.optical_elements.phase_deflectors.s4_numerical_mesh_phase_deflector import S4NumericalMeshPhaseDeflector
 optical_element = S4NumericalMeshPhaseDeflector(name='Phase Deflector', boundary_shape=boundary_shape,
-    surface_data_file='/home/srio/Oasys2/lens_interface_1.h5',
+    surface_data_file='/home/srio/Oasys2/lens_interface_1b.h5',
     material='Be', density=1.85,
     f_r_ind=3, # 0=constant, 1=file, 2=xraylib, 3=dabax
     file_r_ind='<none>',
@@ -50,6 +50,7 @@ beamline.append_beamline_element(beamline_element)
 # test plot
 if True:
    from srxraylib.plot.gol import plot_scatter
-   # plot_scatter(beam.get_photon_energy_eV(nolost=1), beam.get_column(23, nolost=1), title='(Intensity,Photon Energy)', plot_histograms=0)
+
+   beam.retrace(27.4327)
    plot_scatter(1e6 * beam.get_column(1, nolost=1), 1e6 * beam.get_column(3, nolost=1),
                 title='(X,Z) in microns I= %d' % (beam.get_intensity(nolost=1)))

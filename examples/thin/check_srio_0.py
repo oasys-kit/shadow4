@@ -51,7 +51,7 @@ optical_element = S4Lens(name='Refractive Lens (mesh)',
                          # 0=No, 1=Yes: add a numerical mesh on top of the entrance interface native shape
                          flag_add_mesh_surface_exit=0,
                          # 0=No, 1=Yes: add a numerical mesh on top of the exit interface native shape
-                         mesh_surface_entrance_h5file='/home/srio/Oasys2/lens_interface_1.h5',
+                         mesh_surface_entrance_h5file='/home/srio/Oasys2/lens_interface_1b.h5',
                          # for flag_add_mesh_surface_entrance=1: h5 file with the entrance mesh
                          mesh_surface_exit_h5file='/home/srio/Oasys2/lens_interface_2.h5',
                          # for flag_add_mesh_surface_exit=1: h5 file with the exit mesh
@@ -75,6 +75,5 @@ beamline.append_beamline_element(beamline_element)
 if True:
     from srxraylib.plot.gol import plot_scatter
 
-    # plot_scatter(beam.get_photon_energy_eV(nolost=1), beam.get_column(23, nolost=1), title='(Intensity,Photon Energy)',
-    #              plot_histograms=0)
+    beam.retrace(27.4327)
     plot_scatter(1e6 * beam.get_column(1, nolost=1), 1e6 * beam.get_column(3, nolost=1), title='(X,Z) in microns I= %d' % (beam.get_intensity(nolost=1)))
