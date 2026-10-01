@@ -56,6 +56,11 @@ class S4AdditionalNumericalMeshMosaicCrystal(S4NumericalMeshMosaicCrystal):
                  dabax                          =None if ideal_crystal is None else ideal_crystal._dabax,
                  mosaicity_fwhm_deg              =0.4 if ideal_crystal is None else ideal_crystal._mosaicity_fwhm_deg,
                  mosaicity_profile_flag          =0 if ideal_crystal is None else ideal_crystal._mosaicity_profile_flag,
+                 calculation_method              =0 if ideal_crystal is None else ideal_crystal._calculation_method,
+                 mc_crystallite_thickness_flag   =0 if ideal_crystal is None else ideal_crystal._mc_crystallite_thickness_flag,
+                 mc_crystallite_factor           =0.3 if ideal_crystal is None else ideal_crystal._mc_crystallite_factor,
+                 mc_crystallite_thickness        =1e-6 if ideal_crystal is None else ideal_crystal._mc_crystallite_thickness,
+                 mc_max_energies                 =21 if ideal_crystal is None else ideal_crystal._mc_max_energies,
                  )
 
         self.__ideal_crystal         = ideal_crystal
@@ -181,4 +186,5 @@ class S4AdditionalNumericalMeshMosaicCrystalElement(S4MosaicCrystalElement):
         txt += "\nfrom shadow4.beamline.optical_elements.mosaic_crystals.s4_additional_numerical_mesh_mosaic_crystal import S4AdditionalNumericalMeshMosaicCrystalElement"
         txt += "\nbeamline_element = S4AdditionalNumericalMeshMosaicCrystalElement(optical_element=optical_element, coordinates=coordinates, movements=movements, input_beam=beam)"
         txt += "\n\nbeam, footprint = beamline_element.trace_beam()"
+        if self.get_optical_element()._calculation_method == 1: txt += self.to_python_code_mc_crystallite_plot()
         return txt

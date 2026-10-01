@@ -61,6 +61,25 @@ class S4NumericalMeshMosaicCrystal(S4MosaicCrystal, S4NumericalMeshOpticalElemen
     dabax : None or instance of DabaxXraylib,
         The pointer to the dabax library  (used for material_constants_library_flag=1).
 
+    calculation_method : int, optional
+        The model used for the diffraction in the mosaic crystal:
+        0: macroscopic model (1992 paper), 1: Monte Carlo model (crystallite by crystallite).
+        See S4MosaicCrystal.
+    mc_crystallite_thickness_flag : int, optional
+        For calculation_method=1, how the crystallite thickness t0 is set:
+        0: automatic (mc_crystallite_factor times the primary extinction depth),
+        1: user-defined (mc_crystallite_thickness).
+    mc_crystallite_factor : float, optional
+        For calculation_method=1 and mc_crystallite_thickness_flag=0, the ratio of the
+        crystallite thickness to the primary extinction depth (amplitude, normal to the
+        surface, sigma polarization).
+    mc_crystallite_thickness : float, optional
+        For calculation_method=1 and mc_crystallite_thickness_flag=1, the crystallite
+        thickness in m.
+    mc_max_energies : int, optional
+        For calculation_method=1, the maximum number of photon energies where the crystallite
+        rocking curve is computed (otherwise interpolated). See S4MosaicCrystal.
+
     Returns
     -------
     instance of S4NumericalMeshMosaicCrystal.
@@ -88,6 +107,11 @@ class S4NumericalMeshMosaicCrystal(S4MosaicCrystal, S4NumericalMeshOpticalElemen
                  dabax=None,
                  mosaicity_fwhm_deg=0.4,
                  mosaicity_profile_flag=0,  # 0=Gaussian, 1=External
+                 calculation_method=0,            # 0=macroscopic (1992 paper), 1=Monte Carlo
+                 mc_crystallite_thickness_flag=0, # for calculation_method=1: 0=automatic, 1=user-defined
+                 mc_crystallite_factor=0.3,       # for mc_crystallite_thickness_flag=0: t0 / extinction depth
+                 mc_crystallite_thickness=1e-6,   # for mc_crystallite_thickness_flag=1: t0 in m
+                 mc_max_energies=21,              # for calculation_method=1: max number of crystallite curves
                  ):
 
         S4NumericalMeshOpticalElementDecorator.__init__(self, xx, yy, zz, surface_data_file)
@@ -108,6 +132,11 @@ class S4NumericalMeshMosaicCrystal(S4MosaicCrystal, S4NumericalMeshOpticalElemen
                            dabax=dabax,
                            mosaicity_fwhm_deg=mosaicity_fwhm_deg,
                            mosaicity_profile_flag=mosaicity_profile_flag,
+                           calculation_method=calculation_method,
+                           mc_crystallite_thickness_flag=mc_crystallite_thickness_flag,
+                           mc_crystallite_factor=mc_crystallite_factor,
+                           mc_crystallite_thickness=mc_crystallite_thickness,
+                           mc_max_energies=mc_max_energies,
                            )
         self.__inputs = {
             "name": name,
@@ -129,6 +158,11 @@ class S4NumericalMeshMosaicCrystal(S4MosaicCrystal, S4NumericalMeshOpticalElemen
             "dabax": self._get_dabax_txt(),
             "mosaicity_fwhm_deg": mosaicity_fwhm_deg,
             "mosaicity_profile_flag": mosaicity_profile_flag,
+            "calculation_method": calculation_method,
+            "mc_crystallite_thickness_flag": mc_crystallite_thickness_flag,
+            "mc_crystallite_factor": mc_crystallite_factor,
+            "mc_crystallite_thickness": mc_crystallite_thickness,
+            "mc_max_energies": mc_max_energies,
         }
 
     def to_python_code(self, **kwargs):
@@ -166,6 +200,11 @@ optical_element = S4NumericalMeshMosaicCrystal(name={name!r},boundary_shape=boun
     dabax={dabax}, # used when material_constants_library_flag=1
     mosaicity_fwhm_deg={mosaicity_fwhm_deg},
     mosaicity_profile_flag={mosaicity_profile_flag},  # 0=Gaussian, 1=External
+    calculation_method={calculation_method},  # 0=macroscopic (1992 paper), 1=Monte Carlo
+    mc_crystallite_thickness_flag={mc_crystallite_thickness_flag},  # for Monte Carlo: 0=automatic, 1=user-defined
+    mc_crystallite_factor={mc_crystallite_factor},  # for automatic: crystallite thickness / extinction depth
+    mc_crystallite_thickness={mc_crystallite_thickness},  # for user-defined: crystallite thickness in m
+    mc_max_energies={mc_max_energies},  # for Monte Carlo: max number of energies for the crystallite curves
     )"""
         txt += txt_pre.format(**self.__inputs)
         return txt
@@ -221,4 +260,5 @@ class S4NumericalMeshMosaicCrystalElement(S4MosaicCrystalElement):
         txt += "\nfrom shadow4.beamline.optical_elements.mosaic_crystals.s4_numerical_mesh_mosaic_crystal import S4NumericalMeshMosaicCrystalElement"
         txt += "\nbeamline_element = S4NumericalMeshMosaicCrystalElement(optical_element=optical_element, coordinates=coordinates, movements=movements, input_beam=beam)"
         txt += "\n\nbeam, footprint = beamline_element.trace_beam()"
+        if self.get_optical_element()._calculation_method == 1: txt += self.to_python_code_mc_crystallite_plot()
         return txt

@@ -51,6 +51,24 @@ class S4PlaneMosaicCrystal(S4MosaicCrystal, S4PlaneOpticalElementDecorator):
         for material_constants_library_flag=2,3, the name of the file containing the crystal parameters.
     dabax : None or instance of DabaxXraylib,
         The pointer to the dabax library  (used for material_constants_library_flag=1).
+    calculation_method : int, optional
+        The model used for the diffraction in the mosaic crystal:
+        0: macroscopic model (1992 paper), 1: Monte Carlo model (crystallite by crystallite).
+        See S4MosaicCrystal.
+    mc_crystallite_thickness_flag : int, optional
+        For calculation_method=1, how the crystallite thickness t0 is set:
+        0: automatic (mc_crystallite_factor times the primary extinction depth),
+        1: user-defined (mc_crystallite_thickness).
+    mc_crystallite_factor : float, optional
+        For calculation_method=1 and mc_crystallite_thickness_flag=0, the ratio of the
+        crystallite thickness to the primary extinction depth (amplitude, normal to the
+        surface, sigma polarization).
+    mc_crystallite_thickness : float, optional
+        For calculation_method=1 and mc_crystallite_thickness_flag=1, the crystallite
+        thickness in m.
+    mc_max_energies : int, optional
+        For calculation_method=1, the maximum number of photon energies where the crystallite
+        rocking curve is computed (otherwise interpolated). See S4MosaicCrystal.
 
     Returns
     -------
@@ -74,6 +92,11 @@ class S4PlaneMosaicCrystal(S4MosaicCrystal, S4PlaneOpticalElementDecorator):
                  dabax=None,
                  mosaicity_fwhm_deg=0.4,
                  mosaicity_profile_flag=0,  # 0=Gaussian, 1=External
+                 calculation_method=0,            # 0=macroscopic (1992 paper), 1=Monte Carlo
+                 mc_crystallite_thickness_flag=0, # for calculation_method=1: 0=automatic, 1=user-defined
+                 mc_crystallite_factor=0.3,       # for mc_crystallite_thickness_flag=0: t0 / extinction depth
+                 mc_crystallite_thickness=1e-6,   # for mc_crystallite_thickness_flag=1: t0 in m
+                 mc_max_energies=21,              # for calculation_method=1: max number of crystallite curves
                  ):
         S4PlaneOpticalElementDecorator.__init__(self)
         S4MosaicCrystal.__init__(self,
@@ -92,7 +115,12 @@ class S4PlaneMosaicCrystal(S4MosaicCrystal, S4PlaneOpticalElementDecorator):
                         file_refl=file_refl,
                         dabax=dabax,
                         mosaicity_fwhm_deg=mosaicity_fwhm_deg,
-                        mosaicity_profile_flag=mosaicity_profile_flag,  # 0=Gaussian, 1=Lorentzian
+                        mosaicity_profile_flag=mosaicity_profile_flag,  # 0=Gaussian, 1=External
+                        calculation_method=calculation_method,
+                        mc_crystallite_thickness_flag=mc_crystallite_thickness_flag,
+                        mc_crystallite_factor=mc_crystallite_factor,
+                        mc_crystallite_thickness=mc_crystallite_thickness,
+                        mc_max_energies=mc_max_energies,
                         )
 
         self.__inputs = {
@@ -111,7 +139,12 @@ class S4PlaneMosaicCrystal(S4MosaicCrystal, S4PlaneOpticalElementDecorator):
             "material_constants_library_flag": material_constants_library_flag,
             "dabax": self._get_dabax_txt(),
             "mosaicity_fwhm_deg": mosaicity_fwhm_deg,
-            "mosaicity_profile_flag": mosaicity_profile_flag,  # 0=Gaussian, 1=Lorentzian
+            "mosaicity_profile_flag": mosaicity_profile_flag,  # 0=Gaussian, 1=External
+            "calculation_method": calculation_method,
+            "mc_crystallite_thickness_flag": mc_crystallite_thickness_flag,
+            "mc_crystallite_factor": mc_crystallite_factor,
+            "mc_crystallite_thickness": mc_crystallite_thickness,
+            "mc_max_energies": mc_max_energies,
             }
 
     def to_python_code(self, **kwargs):
@@ -140,7 +173,12 @@ optical_element = S4PlaneMosaicCrystal(name='{name}',
     material_constants_library_flag={material_constants_library_flag}, # 0=xraylib,1=dabax,2=preprocessor v1,3=preprocessor v2
     dabax={dabax}, # used when material_constants_library_flag=1,
     mosaicity_fwhm_deg={mosaicity_fwhm_deg},
-    mosaicity_profile_flag={mosaicity_profile_flag},  # 0=Gaussian, 1=Lorentzian
+    mosaicity_profile_flag={mosaicity_profile_flag},  # 0=Gaussian, 1=External
+    calculation_method={calculation_method},  # 0=macroscopic (1992 paper), 1=Monte Carlo
+    mc_crystallite_thickness_flag={mc_crystallite_thickness_flag},  # for Monte Carlo: 0=automatic, 1=user-defined
+    mc_crystallite_factor={mc_crystallite_factor},  # for automatic: crystallite thickness / extinction depth
+    mc_crystallite_thickness={mc_crystallite_thickness},  # for user-defined: crystallite thickness in m
+    mc_max_energies={mc_max_energies},  # for Monte Carlo: max number of energies for the crystallite curves
     )"""
         txt += txt_pre.format(**self.__inputs)
 
@@ -195,6 +233,7 @@ class S4PlaneMosaicCrystalElement(S4MosaicCrystalElement):
         txt += "\nfrom shadow4.beamline.optical_elements.mosaic_crystals.s4_plane_mosaic_crystal import S4PlaneMosaicCrystalElement"
         txt += "\nbeamline_element = S4PlaneMosaicCrystalElement(optical_element=optical_element,coordinates=coordinates, movements=movements, input_beam=beam)"
         txt += "\n\nbeam, footprint = beamline_element.trace_beam()"
+        if self.get_optical_element()._calculation_method == 1: txt += self.to_python_code_mc_crystallite_plot()
         return txt
 
 
@@ -233,6 +272,7 @@ if __name__ == "__main__":
                                      # method_efields_management=0,  # 0=new in S4; 1=like in S3
                                      dabax=DabaxXraylib(file_f0="f0_InterTables.dat", file_f1f2="f1f2_Windt.dat"),
                                      # used when material_constants_library_flag=1,
+                                     calculation_method=1,
                                      )
     from syned.beamline.element_coordinates import ElementCoordinates
 
@@ -249,11 +289,13 @@ if __name__ == "__main__":
 
     # test plot
     if True:
-        from srxraylib.plot.gol import plot_scatter
+        from srxraylib.plot.gol import plot_scatter, plot_show
 
         plot_scatter(beam.get_photon_energy_eV(nolost=1), beam.get_column(23, nolost=1),
-                     title='(Intensity,Photon Energy)', plot_histograms=0)#, yrange=[0,1.1])
-        plot_scatter(1e6 * beam.get_column(1, nolost=1), 1e6 * beam.get_column(3, nolost=1), title='(X,Z) in microns')
+                     title='(Intensity,Photon Energy)', plot_histograms=0, show=0)#, yrange=[0,1.1])
+        plot_scatter(1e6 * beam.get_column(1, nolost=1), 1e6 * beam.get_column(3, nolost=1), title='(X,Z) in microns',
+                     show=0)
+        plot_show()
 
 
     print(beamline_element.info())

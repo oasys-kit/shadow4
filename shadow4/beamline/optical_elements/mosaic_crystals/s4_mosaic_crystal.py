@@ -74,6 +74,33 @@ class S4MosaicCrystal(Crystal):
         for material_constants_library_flag=2,3, the name of the file containing the crystal parameters.
     dabax : None or instance of DabaxXraylib,
         The pointer to the dabax library  (used for material_constants_library_flag=1).
+    calculation_method : int, optional
+        The model used for the diffraction in the mosaic crystal:
+        0: macroscopic model (Sanchez del Rio et al., Rev. Sci. Instrum. 63, 932 (1992)):
+        Zachariasen/Sears reflectivity as the ray weight, Bragg exit direction, and a
+        sampled penetration point.
+        1: Monte Carlo model (module s4_mosaic_crystal_monte_carlo): each ray is traced crystallite by
+        crystallite through the crystal, as in the code RTbent (L. Alianelli, 2002).
+        Multiple reflections, primary extinction (through the crystallite thickness) and
+        the exit point on the crystal surface are then included.
+    mc_crystallite_thickness_flag : int, optional
+        For calculation_method=1, how the thickness t0 of the crystallites is set:
+        0: automatic, t0 = mc_crystallite_factor times the primary extinction depth,
+        1: user-defined, t0 = mc_crystallite_thickness.
+    mc_crystallite_factor : float, optional
+        For calculation_method=1 and mc_crystallite_thickness_flag=0, the ratio of the
+        crystallite thickness to the primary extinction depth. The depth is the amplitude
+        extinction depth, normal to the surface, for sigma polarization. Values of 0.1-0.3
+        reproduce the Zachariasen/Sears reflectivity; larger values include primary
+        extinction.
+    mc_crystallite_thickness : float, optional
+        For calculation_method=1 and mc_crystallite_thickness_flag=1, the crystallite
+        thickness t0 (normal to the surface) in m.
+    mc_max_energies : int, optional
+        For calculation_method=1, the maximum number of photon energies where the crystallite
+        rocking curve is computed with crystalpy. If the beam has more distinct energies, the
+        curves are computed on a regular grid of mc_max_energies energies between the lowest
+        and the highest energy, and the crystallite parameters are interpolated linearly.
 
     Returns
     -------
@@ -98,6 +125,11 @@ class S4MosaicCrystal(Crystal):
                  dabax=None,
                  mosaicity_fwhm_deg=0.4,
                  mosaicity_profile_flag=0,  # 0=Gaussian, 1=External
+                 calculation_method=0,            # 0=macroscopic (1992 paper), 1=Monte Carlo
+                 mc_crystallite_thickness_flag=0, # for calculation_method=1: 0=automatic, 1=user-defined
+                 mc_crystallite_factor=0.3,       # for mc_crystallite_thickness_flag=0: t0 / extinction depth
+                 mc_crystallite_thickness=1e-6,   # for mc_crystallite_thickness_flag=1: t0 in m
+                 mc_max_energies=21,              # for calculation_method=1: max number of crystallite curves
                  ):
 
 
@@ -119,11 +151,27 @@ class S4MosaicCrystal(Crystal):
         self._phot_cent = phot_cent
         self._material_constants_library_flag = material_constants_library_flag
         self._file_refl = file_refl
+        self._calculation_method = calculation_method
+        self._mc_crystallite_thickness_flag = mc_crystallite_thickness_flag
+        self._mc_crystallite_factor = mc_crystallite_factor
+        self._mc_crystallite_thickness = mc_crystallite_thickness
+        self._mc_max_energies = mc_max_energies
 
         self._dabax = dabax
 
         if mosaicity_profile_flag != 0:
             raise NotImplementedError("Only the Gaussian mosaicity profile (mosaicity_profile_flag=0) is implemented.")
+        if calculation_method not in (0, 1):
+            raise ValueError("calculation_method must be 0 (macroscopic) or 1 (Monte Carlo).")
+        if calculation_method == 1:
+            if mc_crystallite_thickness_flag not in (0, 1):
+                raise ValueError("mc_crystallite_thickness_flag must be 0 (automatic) or 1 (user-defined).")
+            if mc_crystallite_thickness_flag == 0 and not (numpy.isfinite(mc_crystallite_factor) and mc_crystallite_factor > 0):
+                raise ValueError("mc_crystallite_factor must be finite and positive.")
+            if mc_crystallite_thickness_flag == 1 and not (numpy.isfinite(mc_crystallite_thickness) and mc_crystallite_thickness > 0):
+                raise ValueError("mc_crystallite_thickness must be finite and positive (in m).")
+            if int(mc_max_energies) != mc_max_energies or mc_max_energies < 1:
+                raise ValueError("mc_max_energies must be an integer >= 1.")
 
         # support text containg name of variable, help text and unit. Will be stored in self._support_dictionary
         self._mosaicity_fwhm_deg = mosaicity_fwhm_deg
@@ -137,6 +185,11 @@ class S4MosaicCrystal(Crystal):
                     ("file_refl",           "S4: preprocessor file name",                  ""),
                     ("mosaicity_fwhm_deg", "Mosaicity fwhm", "deg"),
                     ("mosaicity_profile_flag", "Mosaic distribution profile 0=Gaussian, 1=External", ""),
+                    ("calculation_method",     "Calculation method: 0=macroscopic, 1=Monte Carlo", ""),
+                    ("mc_crystallite_thickness_flag", "MC Crystallite thickness 0=automatic, 1=user-defined", ""),
+                    ("mc_crystallite_factor",  "MC Crystallite ratio (for automatic)", ""),
+                    ("mc_crystallite_thickness", "MC Crystallite thickness (for user-defined)", "m"),
+                    ("mc_max_energies", "MC Max number of energies for the crystallite curves", ""),
             ] )
 
 
@@ -194,6 +247,17 @@ class S4MosaicCrystal(Crystal):
             txt += "Surface boundaries are: %s\n" % boundary.__class__.__name__
             txt += "    Limits: " + repr( boundary.get_boundaries()) + "\n"
             txt += boundary.info()
+
+        txt += "\n"
+        if self._calculation_method == 0:
+            txt += "Calculation method: macroscopic ray-tracing (1992 model)\n"
+        elif self._calculation_method == 1:
+            txt += "Calculation method: Monte Carlo (crystallite by crystallite)\n"
+            if self._mc_crystallite_thickness_flag == 0:
+                txt += "    Crystallite thickness equal to %.3f times the primary extinction depth\n" % self._mc_crystallite_factor
+            elif self._mc_crystallite_thickness_flag == 1:
+                txt += "    Crystallite thickness = %.4f um\n" % (1e6 * self._mc_crystallite_thickness)
+            txt += "    Crystallite rocking curves computed at up to %d energies\n" % self._mc_max_energies
 
         return txt
 
@@ -266,7 +330,42 @@ class S4MosaicCrystalElement(S4BeamlineElement):
                          input_beam=input_beam)
 
         self._crystalpy_diffraction_setup = None
+        self._mc_crystallite_profiles = None   # set by trace_beam with calculation_method=1
 
+
+    def get_mc_crystallite_profiles(self):
+        """
+        Returns the crystallite rocking curves used in the last Monte Carlo trace
+        (calculation_method=1).
+
+        The curves are computed with crystalpy at the distinct photon energies of the beam, or at
+        mc_max_energies energies on a regular grid between its lowest and highest energy.
+
+        Returns
+        -------
+        list or None
+            None if no Monte Carlo trace has been done. Otherwise, a list with one dict per
+            computed energy, with keys:
+
+            * energy [eV], theta_B [rad] (Bragg angle), depth [m] (amplitude primary extinction
+              depth, sigma polarization, normal to the surface), t0 [m] (crystallite thickness),
+              deviation [rad] (numpy array, angle from theta_B of the scan points);
+            * "s" and "p": dicts for each polarization, with reflectivity (numpy array, the
+              rocking curve of a perfect t0 slab at the deviation points), gaussian (numpy
+              array, the Gaussian used by the Monte Carlo, same integral and FWHM), width [rad]
+              (FWHM), peak (of the Gaussian), maximum (of the rocking curve), integrated [rad]
+              (integrated reflectivity, including the tails beyond the scan) and f_primary
+              (integrated / kinematic integrated reflectivity Q t0 / sin(theta_B); 1 means no
+              primary extinction).
+
+        Examples
+        --------
+        >>> beam, footprint = beamline_element.trace_beam()
+        >>> for prof in beamline_element.get_mc_crystallite_profiles():
+        ...     print(prof["energy"], prof["s"]["width"], prof["s"]["integrated"])
+        ...     # plot(1e6 * prof["deviation"], prof["s"]["reflectivity"], 1e6 * prof["deviation"], prof["s"]["gaussian"])
+        """
+        return self._mc_crystallite_profiles
 
     def set_crystalpy_diffraction_setup(self):
         """
@@ -370,6 +469,35 @@ class S4MosaicCrystalElement(S4BeamlineElement):
 
         if is_verbose(): print(coor.info())
 
+    def to_python_code_mc_crystallite_plot(self):
+        """
+        Creates a (commented) code block that plots the crystallite rocking curves used in the
+        Monte Carlo calculation (calculation_method=1), with their Gaussian approximations.
+        To be appended to to_python_code() after the call to trace_beam().
+
+        Returns
+        -------
+        str
+            The text with the code.
+        """
+        return r"""
+# Uncomment to plot the crystallite diffraction profiles (one plot per computed energy)
+# import numpy
+# from srxraylib.plot.gol import plot
+# for prof in beamline_element.get_mc_crystallite_profiles():
+#     plot(1e6 * prof["deviation"], prof["s"]["reflectivity"],
+#          1e6 * prof["deviation"], prof["s"]["gaussian"],
+#          1e6 * prof["deviation"], prof["p"]["reflectivity"],
+#          1e6 * prof["deviation"], prof["p"]["gaussian"],
+#          legend=[r"Crystallite profile S (FWHM=%.1f $\mu$rad, int-ref=%.1f $\mu$rad)" % (1e6 * prof["s"]["width"], 1e6 * prof["s"]["integrated"]),
+#                  "Approximated Gaussian profile S",
+#                  r"Crystallite profile P (FWHM=%.1f $\mu$rad, int-ref=%.1f $\mu$rad)" % (1e6 * prof["p"]["width"], 1e6 * prof["p"]["integrated"]),
+#                  "Approximated Gaussian profile P"],
+#          title=r"Crystallite E=%.3f eV; $\theta_B$=%.2f deg; ext-depth(ampl)=%.3f $\mu$m; thickness=%.3f $\mu$m" % (
+#              prof["energy"], numpy.degrees(prof["theta_B"]), 1e6 * prof["depth"], 1e6 * prof["t0"]),
+#          xtitle=r"$\theta-\theta_B$ [$\mu$rad]", ytitle="Reflectivity", grid=1)
+"""
+
     def trace_beam(self, **params):
         """
         Runs (ray tracing) the input beam through the element.
@@ -449,8 +577,12 @@ class S4MosaicCrystalElement(S4BeamlineElement):
         #
         # crystal diffraction
         #
-        footprint, normal = self._apply_crystal_diffraction(input_beam)
-
+        if soe._calculation_method == 0:
+            footprint, normal = self._apply_crystal_diffraction(input_beam)
+        elif soe._calculation_method == 1:
+            footprint, normal = self._apply_monte_carlo(input_beam, flag_lost_value=flag_lost_value)
+        else:
+            raise ValueError("calculation_method must be 0 (macroscopic) or 1 (Monte Carlo).")
         #
         # apply crystal movements (backwards) and boundaries
         #
@@ -923,6 +1055,260 @@ class S4MosaicCrystalElement(S4BeamlineElement):
 
         return jv_out_0, jv_out_1, ee_S, ee_P
 
+    #
+    # Monte Carlo routines
+    #
+    def _apply_monte_carlo(self, input_beam, flag_lost_value=-1):
+        """
+        Applies mosaic crystal diffraction to the input beam using the Monte Carlo model
+        (calculation_method=1).
+
+        Calculates the surface intercepts and traces each ray crystallite by crystallite
+        through the crystal (_apply_monte_carlo_to_rays). Then updates the beam positions
+        (exit points on the crystal surface), directions, Jones components, electric field
+        directions and optical paths. The steps after the Monte Carlo are the same as in
+        _apply_crystal_diffraction.
+
+        Parameters
+        ----------
+        input_beam : instance of S4Beam
+            The incident beam in the optical element reference system.
+        flag_lost_value : float, optional
+            The value set in the flag column for the rays that are not reflected
+            (transmitted through the crystal or stopped at the safety cap).
+
+        Returns
+        -------
+        tuple
+            (footprint, normal), where footprint is the updated S4Beam and normal
+            is a numpy array of shape (3, nrays) containing the surface normals
+            at the intercept points.
+        """
+
+        footprint, normal = self.get_optical_element().get_optical_surface_instance().calculate_intercept_on_beam(input_beam)
+
+        if is_debug():
+            print("    >>>>>> intercept: ", footprint.get_columns([1, 2, 3])[:, 0])
+            print("    >>>>>> vout: ", footprint.get_columns([4, 5, 6])[:, 0])
+            print("    >>>>>> normal: ", normal.shape, normal[:, 0])
+
+
+        # Monte Carlo: exit points, directions, amplitudes and paths inside the crystal
+        rIn, rOut, vIn, vOut, r_SS, r_PP, path_in, lost = self._apply_monte_carlo_to_rays(footprint, normal)
+        flag = footprint.get_column(10)
+        flag[lost] = flag_lost_value
+        footprint.set_column(10, flag)
+
+        jv_out_0, jv_out_1, ee_S, ee_P = self._calculate_jones_and_efield_directions(footprint, normal,
+                                                                                        vIn, vOut, r_SS, r_PP)
+        # update beam array with the new position
+        footprint.set_column(1, rOut[:, 0])
+        footprint.set_column(2, rOut[:, 1])
+        footprint.set_column(3, rOut[:, 2])
+        # update beam array with the new direction
+        footprint.set_column(4, vOut[:, 0])
+        footprint.set_column(5, vOut[:, 1])
+        footprint.set_column(6, vOut[:, 2])
+        # update beam array with the new electric fields
+        footprint.set_jones_components(jv_out_0, jv_out_1, e_S=ee_S, e_P=ee_P)
+        # update optical path
+        # note that
+        # 1) unlike the macroscopic model, rOut is the exit point on the crystal surface, so path_in
+        #    is the whole path travelled inside the crystal (all hops between entry and exit).
+        # 2) we are adding the path not the optical path as we are not considering the refraction index with
+        #    the crystal. This is an approximation!
+        footprint.set_column(13, footprint.get_column(13) + path_in)
+
+        if is_verbose():
+            print(">>> Orthogonal footprint: ", footprint.efields_orthogonal(),
+                vector_dot(ee_S, ee_P)[0],
+                vector_dot(ee_S, vOut)[0],
+                vector_dot(ee_P, vOut)[0])
+
+            b_S, b_P = footprint.get_efield_directions()
+            print("")
+            print(">>> reflected beam e_S, mod e_s", b_S[0], vector_modulus(b_S)[0])
+            print(">>> reflected beam e_P, mod e_P, e_S.e_P: ", b_P[0], vector_modulus(b_P)[0], vector_dot(b_S, b_P)[0])
+
+
+            print(">>> Intensity foot s, beam in s, foot p,  beam in p:",
+                    footprint.get_column(24)[0], input_beam.get_column(24)[0],
+                    footprint.get_column(25)[0], input_beam.get_column(25)[0],)
+
+
+        return footprint, normal
+
+    def _apply_monte_carlo_to_rays(self, footprint, normal):
+        """
+        Traces the rays crystallite by crystallite through the mosaic crystal (calculation_method=1).
+
+        The model is that of RTbent (L. Alianelli, 2002), as validated in the project
+        monte-carlo-mosaics; the algorithm and its approximations are described in the module
+        s4_mosaic_crystal_monte_carlo:
+
+        * The crystal is a slab of thickness self.get_optical_element()._thickness under the
+          tangent plane at the entry point of each ray. It is filled with crystallites of
+          thickness t0 (mc_crystallite_thickness_flag, mc_crystallite_factor,
+          mc_crystallite_thickness), whose normals follow the Gaussian mosaic distribution
+          (mosaicity_fwhm_deg) about the surface normal.
+        * Each crystallite reflects with the rocking curve of a perfect t0 slab, computed with
+          crystalpy for the photon energy of the ray, approximated by a Gaussian of the same
+          FWHM and integrated reflectivity. Otherwise the ray crosses it. Reflections take the
+          exact Bragg direction.
+        * The ray is traced until it leaves the crystal. It is reflected if it has been
+          reflected an odd number of times, and transmitted otherwise. Only reflected rays are
+          kept; their intensity is multiplied by exp(-mu * path_in).
+
+        Polarization: the crystallite curve differs for S and P. Each ray is traced once, with
+        the S (P) curve with probability Is/I (Ip/I), and its S (P) amplitude is divided by the
+        square root of that probability, while the other amplitude is set to zero. The expected
+        S and P reflected intensities are then exact (incoherent sum, as usual for mosaic
+        crystals).
+
+        Parameters
+        ----------
+        footprint : instance of S4Beam
+            The incident beam at the surface intercepts, in the optical element reference system.
+        normal : numpy array of shape (3, nrays)
+            The surface normals at the intercept points (any orientation).
+
+        Returns
+        -------
+        tuple
+            (rIn, rOut, vIn, vOut, r_SS, r_PP, path_in, lost):
+            rIn : numpy array (nrays, 3), the entry points on the surface [m].
+            rOut : numpy array (nrays, 3), the exit points on the surface [m].
+            vIn : numpy array (nrays, 3), the incident directions.
+            vOut : numpy array (nrays, 3), the exit directions (the specular direction on the
+            surface for rays that are not reflected).
+            r_SS, r_PP : complex numpy arrays (nrays,), the amplitude factors for S and P
+            polarizations (0 for rays that are not reflected).
+            path_in : numpy array (nrays,), the path length inside the crystal [m].
+            lost : boolean numpy array (nrays,), True for good incident rays that are not
+            reflected (transmitted, or stopped at the safety cap).
+        """
+        from shadow4.beamline.optical_elements.mosaic_crystals.s4_mosaic_crystal_monte_carlo import \
+            crystallite_parameters, trace_mosaic_monte_carlo
+
+        if self._crystalpy_diffraction_setup is None:
+            self.set_crystalpy_diffraction_setup()
+
+        setup = self._crystalpy_diffraction_setup
+        soe = self.get_optical_element()
+        if soe._thickness <= 0 or not numpy.isfinite(soe._thickness):
+            raise ValueError("Crystal thickness must be finite and positive for the Monte Carlo model.")
+        kappa = numpy.radians(soe._mosaicity_fwhm_deg) / numpy.sqrt(8 * numpy.log(2))
+        if not numpy.isfinite(kappa) or kappa <= 0:
+            raise ValueError("Gaussian mosaicity FWHM must be finite and positive.")
+
+        surface_normal = self._incident_facing_normal(footprint, normal).T   # (nrays, 3), toward the beam
+        rIn = footprint.get_columns([1, 2, 3]).T
+        vIn = footprint.get_columns([4, 5, 6]).T
+        nrays = rIn.shape[0]
+        good = footprint.get_column(10) > 0
+
+        # defaults for the rays that are not reflected
+        rOut = rIn.copy()
+        vOut = vector_reflection(vIn, surface_normal)
+        r_SS = numpy.zeros(nrays, dtype=complex)
+        r_PP = numpy.zeros(nrays, dtype=complex)
+        path_in = numpy.zeros(nrays)
+        lost = numpy.zeros(nrays, dtype=bool)
+        self._mc_crystallite_profiles = None
+        if not good.any():
+            return rIn, rOut, vIn, vOut, r_SS, r_PP, path_in, lost
+
+        rng = numpy.random.default_rng(numpy.random.randint(0, 2 ** 31 - 1))  # reproducible with numpy.random.seed
+
+        energies = footprint.get_photon_energy_eV()[good]
+        theta_B = setup.angleBragg(energies)
+        wavelength = codata.h * codata.c / (codata.e * energies)                  # m
+        mu = -2 * numpy.pi / wavelength * numpy.imag(setup.psi0(energies))       # m^-1
+
+        cp, self._mc_crystallite_profiles = crystallite_parameters(setup, energies,
+                                    soe._mc_crystallite_thickness_flag,
+                                    soe._mc_crystallite_factor,
+                                    soe._mc_crystallite_thickness,
+                                    max_energies=int(soe._mc_max_energies),
+                                    return_profiles=True)
+
+        # polarization channel of each ray
+        Itot = footprint.get_column(23)[good]
+        Is = footprint.get_column(24)[good]
+        p_s = numpy.ones_like(Itot)
+        numpy.divide(Is, Itot, out=p_s, where=Itot > 0)
+        channel_s = rng.random(energies.size) < p_s
+        peak = numpy.where(channel_s, cp["peak_s"], cp["peak_p"])
+        width = numpy.where(channel_s, cp["width_s"], cp["width_p"])
+
+        res = trace_mosaic_monte_carlo(rIn[good], vIn[good], surface_normal[good],
+                                       theta_B, mu, soe._thickness, kappa,
+                                       cp["t0"] / numpy.tan(theta_B), peak, width,
+                                       flag_direction=1, rng=rng)
+
+        reflected = res["flag"] == 1
+        weight = numpy.exp(-mu * res["path"])
+        amp_s = numpy.zeros(energies.size)
+        amp_p = numpy.zeros(energies.size)
+        numpy.divide(weight, p_s, out=amp_s, where=reflected & channel_s)
+        numpy.divide(weight, 1 - p_s, out=amp_p, where=reflected & ~channel_s)
+
+        idx = numpy.flatnonzero(good)
+        refl_idx = idx[reflected]
+        rOut[refl_idx] = res["X_out"][reflected]
+        vOut[refl_idx] = res["V_out"][reflected]
+        path_in[refl_idx] = res["path"][reflected]
+        r_SS[idx] = numpy.sqrt(amp_s)
+        r_PP[idx] = numpy.sqrt(amp_p)
+        lost[idx[~reflected]] = True
+
+        st = res["stats"]
+        if st["violations"] > 0:
+            print("Warning: mosaic Monte Carlo thinning bound exceeded %d times (max ratio %.3f)" %
+                  (st["violations"], st["max_ratio"]))
+        if is_verbose():
+            def stat(label, values, weights=None):
+                if values.size == 0:
+                    print(f"   {label:>36s}: (no rays)")
+                    return
+                mean = numpy.average(values, weights=weights)
+                std = numpy.sqrt(numpy.average((values - mean) ** 2, weights=weights))
+                print(f"   {label:>36s}: mean: {mean:10.5g}, stdev: {round(std, 10):10.5g}, "
+                      f"min: {values.min():10.5g}, max: {values.max():10.5g}")
+
+            n_good = energies.size
+            n_refl = int(reflected.sum())
+            w_refl = weight[reflected]
+            Ip = footprint.get_column(25)[good]
+            I_out = amp_s * Is + amp_p * Ip
+            nref_refl = res["n_reflections"][reflected]
+            offset = numpy.linalg.norm(res["X_out"][reflected] - rIn[good][reflected], axis=1)
+            print("\nMonte Carlo mosaic crystal: tracing")
+            print(f"   crystal thickness: {1e3 * soe._thickness:g} mm, mosaicity FWHM: {soe._mosaicity_fwhm_deg:g} deg "
+                  f"(rms tilt per component {1e6 * kappa:.5g} urad), exit direction: exact Bragg")
+            print(f"   polarization channels: S {int(channel_s.sum())}, P {int((~channel_s).sum())}")
+            print(f"   good incident rays: {n_good}, reflected: {n_refl} ({n_refl / n_good:.4f}), "
+                  f"transmitted: {int(numpy.sum(res['flag'] == 0))}, "
+                  f"stopped at the safety cap: {int(numpy.sum(res['flag'] == -1))}")
+            print(f"   reflected intensity / incident intensity (good rays): {I_out.sum() / Itot.sum():.5g}")
+            stat("Bragg angle [deg]", numpy.degrees(theta_B))
+            stat("absorption mu [cm-1]", 1e-2 * mu)
+            stat("tthi = t0/tan(thetaB) [um]", 1e6 * cp["t0"] / numpy.tan(theta_B))
+            stat("weight exp(-mu path) (refl.)", w_refl)
+            stat("path inside [um] (refl., weighted)", 1e6 * res["path"][reflected], w_refl)
+            stat("exit offset [um] (refl., weighted)", 1e6 * offset, w_refl)
+            stat("reflections (refl., weighted)", nref_refl.astype(float), w_refl)
+            stat("crystallites crossed (all rays)", res["n_hops"].astype(float))
+            if n_refl > 0:
+                share = [w_refl[nref_refl == k].sum() / w_refl.sum() for k in (1, 3, 5)]
+                print(f"   {'share of 1/3/5 reflections':>36s}: {share[0]:.4f} / {share[1]:.4f} / {share[2]:.4f} "
+                      f"(of the reflected intensity)")
+            print(f"   thinning: {st['iterations']} iterations, {st['candidates']} candidate crystallites, "
+                  f"{st['reflections']} reflections, bound violations: {st['violations']} "
+                  f"(max ratio {st['max_ratio']:.3f}, must be <= 1)")
+
+        return rIn, rOut, vIn, vOut, r_SS, r_PP, path_in, lost
+
 
 if __name__ == "__main__":
     c = S4MosaicCrystal(
@@ -951,4 +1337,5 @@ if __name__ == "__main__":
 
     ce = S4MosaicCrystalElement(optical_element=c)
     print(ce.info())
+    print(ce.to_python_code_mc_crystallite_plot())
 
