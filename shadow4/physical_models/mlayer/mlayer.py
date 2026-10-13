@@ -247,15 +247,15 @@ class MLayer(object):
             The maximum photon energy in eV (for creating the tabulated refraction index).
         S_DENSITY : float, optional
             Density (in g/cm3) for the SUBSTRATE material.
-        S_MATERIAL : float, optional
+        S_MATERIAL : str, optional
             Material formula for the SUBSTRATE material.
         E_DENSITY : float, optional
             Density (in g/cm3) for the EVEN material.
-        E_MATERIAL : float, optional
+        E_MATERIAL : str, optional
             Material formula for the EVEN material.
         O_DENSITY : float, optional
             Density (in g/cm3) for the ODD material.
-        O_MATERIAL : float, optional
+        O_MATERIAL : str, optional
             Material formula for the ODD material.
         N_PAIRS : int, optional
             The number of bilayers of the multilayer. Not used if GRADE_DEPTH=1.
@@ -584,6 +584,14 @@ class MLayer(object):
             The ellipse length in m; used when GRADED_SURFACE=3.
         ell_photon_energy : float, optional
             The photon energy in eV at the center of the ellipse; used when GRADED_SURFACE=3.
+        GRADE_DEPTH : int, optional
+            Flag to indicate if the multilayer has a graded thickness (1) or not (0). If 1,
+            bilayer_pairs, bilayer_thickness and bilayer_gamma are ignored and
+            LIST_N_THICK_GAMMA_ROUGHE_ROUGHO_FROM_TOP_TO_BOTTOM is used instead.
+        LIST_N_THICK_GAMMA_ROUGHE_ROUGHO_FROM_TOP_TO_BOTTOM : None or str, optional
+            Used when GRADE_DEPTH=1. A str with a list definition of multilayer blocks in the
+            form: "[block1, block2, ...]" with each block defined as
+            [Nbilayers, BilayerThickness, BilayerGamma, roughnessEven, roughnessOdd].
         use_xraylib_or_dabax : int, optional
             0=use xraylib, 1=use dabax for the optical constabrs.
         dabax : None or instance of DabaxXraylib,
@@ -651,22 +659,31 @@ class MLayer(object):
                 pre_mlayer_dict["densityS"] = material_constant_library.ElementDensity(material_constant_library.SymbolToAtomicNumber(pre_mlayer_dict["materialS"]))
                 print("Using density for substrate (%s): %f"%(pre_mlayer_dict["materialS"],
                       pre_mlayer_dict["densityS"]))
-            except:
-                raise Exception("Failed to load density for material: %s"%(pre_mlayer_dict["material1"]))
+            except Exception as err:
+                raise Exception(
+                    "Cannot determine density for the SUBSTRATE material '%s': not a recognized single-element "
+                    "symbol, so no default density is available (likely a compound formula). Please supply an "
+                    "explicit density_S value in g/cm3." % (pre_mlayer_dict["materialS"])) from err
         if pre_mlayer_dict["density1"] is None:
             try:
                 pre_mlayer_dict["density1"] = material_constant_library.ElementDensity(material_constant_library.SymbolToAtomicNumber(pre_mlayer_dict["material1"]))
                 print("Using density for layer 1 (even) (%s): %f" % (pre_mlayer_dict["material1"],
                       pre_mlayer_dict["density1"]))
-            except:
-                raise Exception("Failed to load density for material: %s"%(pre_mlayer_dict["material1"]))
+            except Exception as err:
+                raise Exception(
+                    "Cannot determine density for the EVEN material '%s': not a recognized single-element symbol, "
+                    "so no default density is available (likely a compound formula). Please supply an explicit "
+                    "density_E value in g/cm3." % (pre_mlayer_dict["material1"])) from err
         if pre_mlayer_dict["density2"] is None:
             try:
                 pre_mlayer_dict["density2"] = material_constant_library.ElementDensity(material_constant_library.SymbolToAtomicNumber(pre_mlayer_dict["material2"]))
                 print("Using density for layer 2 (odd) (%s): %f" % (pre_mlayer_dict["material2"],
                       pre_mlayer_dict["density2"]))
-            except:
-                raise Exception("Failed to load density for material: %s"%(pre_mlayer_dict["material2"]))
+            except Exception as err:
+                raise Exception(
+                    "Cannot determine density for the ODD material '%s': not a recognized single-element symbol, "
+                    "so no default density is available (likely a compound formula). Please supply an explicit "
+                    "density_O value in g/cm3." % (pre_mlayer_dict["material2"])) from err
 
         if isinstance(pre_mlayer_dict["densityS"],str):
             pre_mlayer_dict["densityS"] = float(pre_mlayer_dict["densityS"])
@@ -710,7 +727,7 @@ class MLayer(object):
 
     @classmethod
     def initialize_from_bilayer_stack_in_compressed_format(cls,
-        structure='[Pd/B4C]x150+Si',
+        structure='[Pd,B4C]x150+Si',
         density_O=None, roughness_O=0.0,
         density_E=None, roughness_E=0.0,
         density_S=None, roughness_S=0.0,
@@ -738,30 +755,26 @@ class MLayer(object):
 
         Parameters
         ----------
-        material_S : str, optional
-            The symbol of the SUBSTRATE material.
-        density_S : float, optional
-            The density in g/cm3 for the SUBSTRATE layers.
-        roughness_S : float, optional
-            The roughness in A for the SUBSTRATE layers.
-        material_E : str, optional
-            The symbol of the EVEN layer material.
-        density_E : float, optional
-            The density in g/cm3 for the EVEN layers.
-        roughness_E : float, optional
-            The roughness in A for the EVEN layers.
-        material_O : str, optional
-            The symbol of the ODD layer material.
+        structure : str, optional
+            A compact string defining the odd material, even material, number of bilayers and
+            substrate material, in the form "[Odd,Even]xNpairs+Substrate" (e.g. "[Pd,B4C]x150+Si").
         density_O : float, optional
-            The density in g/cm3 for the ODD layers.
+            The density in g/cm3 for the ODD layers. If None, it is calculated from the material formula.
         roughness_O : float, optional
             The roughness in A for the ODD layers.
-        bilayer_pairs : int, optional
-            The number of bilayers.
+        density_E : float, optional
+            The density in g/cm3 for the EVEN layers. If None, it is calculated from the material formula.
+        roughness_E : float, optional
+            The roughness in A for the EVEN layers.
+        density_S : float, optional
+            The density in g/cm3 for the SUBSTRATE layers. If None, it is calculated from the material formula.
+        roughness_S : float, optional
+            The roughness in A for the SUBSTRATE layers.
         bilayer_thickness : float, optional
-            The thickness in A of the bilayers.
+            The thickness in A of the bilayers. Not used if GRADE_DEPTH=1.
         bilayer_gamma : float, optional
             The gamma factor of the bilayer thickness(even) / (thichness(odd) + thichness(even)).
+            Not used if GRADE_DEPTH=1.
         GRADE_SURFACE : int, optional
             Flag for multilayer graded over the surface:
              * 0: No.
@@ -788,6 +801,14 @@ class MLayer(object):
             The ellipse length in m; used when GRADED_SURFACE=3.
         ell_photon_energy : float, optional
             The photon energy in eV at the center of the ellipse; used when GRADED_SURFACE=3.
+        GRADE_DEPTH : int, optional
+            Flag to indicate if the multilayer has a graded thickness (1) or not (0). If 1,
+            bilayer_thickness and bilayer_gamma are ignored and
+            LIST_N_THICK_GAMMA_ROUGHE_ROUGHO_FROM_TOP_TO_BOTTOM is used instead.
+        LIST_N_THICK_GAMMA_ROUGHE_ROUGHO_FROM_TOP_TO_BOTTOM : None or str, optional
+            Used when GRADE_DEPTH=1. A str with a list definition of multilayer blocks in the
+            form: "[block1, block2, ...]" with each block defined as
+            [Nbilayers, BilayerThickness, BilayerGamma, roughnessEven, roughnessOdd].
         use_xraylib_or_dabax : int, optional
             0=use xraylib, 1=use dabax for the optical constabrs.
         dabax : None or instance of DabaxXraylib,
@@ -875,22 +896,31 @@ class MLayer(object):
                 pre_mlayer_dict["densityS"] = material_constant_library.ElementDensity(material_constant_library.SymbolToAtomicNumber(pre_mlayer_dict["materialS"]))
                 print("Using density for substrate (%s): %f"%(pre_mlayer_dict["materialS"],
                       pre_mlayer_dict["densityS"]))
-            except:
-                raise Exception("Failed to load density for material: %s"%(pre_mlayer_dict["material1"]))
+            except Exception as err:
+                raise Exception(
+                    "Cannot determine density for the SUBSTRATE material '%s': not a recognized single-element "
+                    "symbol, so no default density is available (likely a compound formula). Please supply an "
+                    "explicit density_S value in g/cm3." % (pre_mlayer_dict["materialS"])) from err
         if pre_mlayer_dict["density1"] is None:
             try:
                 pre_mlayer_dict["density1"] = material_constant_library.ElementDensity(material_constant_library.SymbolToAtomicNumber(pre_mlayer_dict["material1"]))
                 print("Using density for layer 1 (even) (%s): %f" % (pre_mlayer_dict["material1"],
                       pre_mlayer_dict["density1"]))
-            except:
-                raise Exception("Failed to load density for material: %s"%(pre_mlayer_dict["material1"]))
+            except Exception as err:
+                raise Exception(
+                    "Cannot determine density for the EVEN material '%s': not a recognized single-element symbol, "
+                    "so no default density is available (likely a compound formula). Please supply an explicit "
+                    "density_E value in g/cm3." % (pre_mlayer_dict["material1"])) from err
         if pre_mlayer_dict["density2"] is None:
             try:
                 pre_mlayer_dict["density2"] = material_constant_library.ElementDensity(material_constant_library.SymbolToAtomicNumber(pre_mlayer_dict["material2"]))
                 print("Using density for layer 2 (odd) (%s): %f" % (pre_mlayer_dict["material2"],
                       pre_mlayer_dict["density2"]))
-            except:
-                raise Exception("Failed to load density for material: %s"%(pre_mlayer_dict["material2"]))
+            except Exception as err:
+                raise Exception(
+                    "Cannot determine density for the ODD material '%s': not a recognized single-element symbol, "
+                    "so no default density is available (likely a compound formula). Please supply an explicit "
+                    "density_O value in g/cm3." % (pre_mlayer_dict["material2"])) from err
 
         if isinstance(pre_mlayer_dict["densityS"],str):
             pre_mlayer_dict["densityS"] = float(pre_mlayer_dict["densityS"])
@@ -980,7 +1010,7 @@ class MLayer(object):
         theta1 : float, optional
             The minimum value of the incident grazing angle in deg.
         theta2 : float, optional
-            The minimum value of the incident grazing angle in deg.
+            The maximum value of the incident grazing angle in deg.
         h5file : str, optional
             Name of the h5 file to dump calculated data. Set to "" to avoid creating file.
         verbose : int, optional
@@ -1178,6 +1208,18 @@ class MLayer(object):
 
             ELFACTOR = numpy.log10(1.0e4 / 30.0e0) / 300.0e0
 
+            index1_array = (numpy.log10(PHOT_ENER / ENER[0]) / ELFACTOR).astype(int)
+            if (index1_array.max() + 1) > (ENER.size - 1):
+                raise Exception(
+                    "Error: Photon energy %g eV is above (or equal to) the upper limit (%g eV) of the tabulated "
+                    "multilayer optical constants. Please recreate the preprocessor file with a wider (or "
+                    "shifted) energy range that covers your requested energy." % (PHOT_ENER.max(), ENER[-1]))
+            if index1_array.min() < 0:
+                raise Exception(
+                    "Error: Photon energy %g eV is below the lower limit (%g eV) of the tabulated multilayer "
+                    "optical constants. Please recreate the preprocessor file with a wider (or shifted) energy "
+                    "range that covers your requested energy." % (PHOT_ENER.min(), ENER[0]))
+
             if is_monochromatic: # just avoid the loop
                 i = 0
                 index1  = int(numpy.log10(PHOT_ENER[i]/ENER[0])/ELFACTOR)
@@ -1262,9 +1304,13 @@ class MLayer(object):
 
         mlroughness1 = self.pre_mlayer_dict["mlroughness1"]
         mlroughness2 = self.pre_mlayer_dict["mlroughness2"]
+        # only set for instances created with initialize_from_bilayer_stack[_in_compressed_format];
+        # not available (defaults to a smooth substrate) when loaded from a pre_mlayer preprocessor file.
+        roughnessS = self.pre_mlayer_dict.get("roughnessS", 0.0)
 
         R_S, R_P, PHASES, PHASEP = self._fresnel(TFACT, GFACT, NPAIR, SIN_REF, COS_POLE, XLAM,
-                                             DELO, DELE, DELS, BETO, BETE, BETS, t_o, t_e, mlroughness1, mlroughness2)
+                                             DELO, DELE, DELS, BETO, BETE, BETS, t_o, t_e, mlroughness1, mlroughness2,
+                                             roughnessS)
 
         return R_S, R_P, PHASES, PHASEP
 
@@ -1325,7 +1371,8 @@ class MLayer(object):
 
     @classmethod
     def _fresnel(cls, TFACT, GFACT, NPAIR, SIN_REF, COS_POLE, XLAM,
-                delo, dele, dels, beto, bete, bets, t_o, t_e, mlroughness1, mlroughness2):
+                delo, dele, dels, beto, bete, bets, t_o, t_e, mlroughness1, mlroughness2,
+                roughnessS=0.0):
 
         # !C------------------------------------------------------------------------------
         # !C  subroutine FRESNEL
@@ -1472,7 +1519,7 @@ class MLayer(object):
         # !c Nevot-Croce roughness
         # !c DO NOT include refraction index in the roughness formula
 
-        sigma_s2 = 0.0 # ! sigma_s**2.0 !roughn. substrate
+        sigma_s2 = roughnessS**2.0 # ! sigma_s**2.0 !roughn. substrate
         sigma_v2 = 0.0 # ! sigma_v**2.0!roughn. vacuum
 
         # print(">>>> t_e: ", t_e)

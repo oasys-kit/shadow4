@@ -19,8 +19,8 @@ class S4ParaboloidMultilayer(S4Multilayer, S4ParaboloidOpticalElementDecorator):
         The boundary shape of the multilayer.
     surface_calculation : int, optional
         flag:
-            0 = SurfaceCalculation.INTERNAL,
-            1 = SurfaceCalculation.EXTERNAL.
+            0 = SurfaceCalculation.INTERNAL (surface computed from p_focus, q_focus, grazing_angle),
+            1 = SurfaceCalculation.EXTERNAL (surface computed from parabola_parameter, pole_to_focus).
     is_cylinder : int, optional
         flag:
             0=No (there is revolution symmetry along Y)
@@ -29,35 +29,55 @@ class S4ParaboloidMultilayer(S4Multilayer, S4ParaboloidOpticalElementDecorator):
         NONE = -1, UPWARD = 0, DOWNWARD = 1.
     convexity : int (as defined by Convexity), optional
         NONE = -1, UPWARD = 0, DOWNWARD = 1.
-    parabola_parameter : float, optional
-        For surface_calculation=0, The parabola parameter PARAM (y^2 = 2 PARAM z)
-    at_infinity : int, optional
-        For surface_calculation=0, flag to indicate that
+    at_infinity : int (as defined by Side), optional
+        Used for both surface_calculation=0 and 1, flag to indicate that:
             0: the source is at infinity (focusing paraboloid) = Side.SOURCE.
             1: the image is at infinity (collimating paraboloid) = Side.IMAGE.
+    p_focus : float, optional
+        For surface_calculation=0 (INTERNAL), the distance from the source to the center of the optical element.
+    q_focus : float, optional
+        For surface_calculation=0 (INTERNAL), the distance from the center of the optical element to the image.
+    grazing_angle : float, optional
+        For surface_calculation=0 (INTERNAL), the grazing angle in rad.
+    parabola_parameter : float, optional
+        For surface_calculation=1 (EXTERNAL), the parabola parameter PARAM (y^2 = 2 PARAM z)
     pole_to_focus : float, optional
-        For surface_calculation=0, the p or q distance (from focus to center of the optical element).
-    f_reflec : int, optional
-         the reflectivity of surface:
-            - 0=no reflectivity,
-            - 1=full polarization.
+        For surface_calculation=1 (EXTERNAL), the p or q distance (from focus to center of the optical element).
     f_refl : int, optional
         A flag to indicate the source of reflectivities:
-            - 0=prerefl file
-            - 1=electric susceptibility
-            - 2=user defined file (1D angle in mrad, reflectivity)
-            - 3=user defined file (1D energy in eV, reflectivity)
-            - 4=user defined file (2D energy in eV, angle in mrad, reflectivity)
+            * 0=prerefl (pre_mlayer) file,
+            * 1=user defined file (1D angle in mrad, reflectivity),
+            * 2=user defined file (1D energy in eV, reflectivity),
+            * 3=user defined file (2D energy in eV, angle in mrad, reflectivity),
+            * 4=direct calculation using xraylib,
+            * 5=direct calculation using dabax.
     file_refl : str, optional
-            name of user defined file (for f_refl=0).
-    refraction_index : complex, optional
-            complex scalar with refraction index n (for f_refl=1).
-    material : str, optional
-            string with material formula (for f_refl=5,6)
-    density : float, optional
-            material density in g/cm^3 (for f_refl=5,6)
-    dabax : None or instance of DabaxXraylib,
-        The pointer to the dabax library  (used for f_refl=6).
+        name of user defined file (for f_refl=0,1,2,3).
+    structure : str, optional
+        A compact string defining the odd material, even material, number of bilayers and
+        substrate material, in the form "[Odd,Even]xNpairs+Substrate" (e.g. "[B,W]x50+Si");
+        used for f_refl=4,5.
+    period : float, optional
+        The bilayer thickness in Angstroms; used for f_refl=4,5.
+    Gamma : float, optional
+        The gamma factor thickness(even) / (thickness(odd) + thickness(even)); used for f_refl=4,5.
+    density_O : None or float, optional
+        The density in g/cm3 for the ODD layers; used for f_refl=4,5. If None, it is calculated
+        from the material formula (required if the ODD material in `structure` is a compound).
+    roughness_O : float, optional
+        The roughness RMS in Angstroms for the ODD layers; used for f_refl=4,5.
+    density_E : None or float, optional
+        The density in g/cm3 for the EVEN layers; used for f_refl=4,5. If None, it is calculated
+        from the material formula (required if the EVEN material in `structure` is a compound).
+    roughness_E : float, optional
+        The roughness RMS in Angstroms for the EVEN layers; used for f_refl=4,5.
+    density_S : None or float, optional
+        The density in g/cm3 for the SUBSTRATE; used for f_refl=4,5. If None, it is calculated
+        from the material formula (required if the SUBSTRATE material in `structure` is a compound).
+    roughness_S : float, optional
+        The roughness RMS in Angstroms for the SUBSTRATE; used for f_refl=4,5.
+    dabax : None or instance of DabaxXraylib, optional
+        The pointer to the dabax library (used for f_refl=5).
 
     Returns
     -------
@@ -84,9 +104,15 @@ class S4ParaboloidMultilayer(S4Multilayer, S4ParaboloidOpticalElementDecorator):
                              # 4=direct calculation using xraylib
                              # 5=direct calculation using dabax
                  file_refl="",  # preprocessor file fir f_refl=0
-                 structure='[B/W]x50+Si',
+                 structure='[B,W]x50+Si',
                  period=25.0,
                  Gamma=0.5,
+                 density_O=None,
+                 roughness_O=0.0,
+                 density_E=None,
+                 roughness_E=0.0,
+                 density_S=None,
+                 roughness_S=0.0,
                  dabax=None,
                  ):
         S4ParaboloidOpticalElementDecorator.__init__(self, surface_calculation, is_cylinder, cylinder_direction, convexity,
@@ -100,6 +126,12 @@ class S4ParaboloidMultilayer(S4Multilayer, S4ParaboloidOpticalElementDecorator):
                               structure=structure,
                               period=period,
                               Gamma=Gamma,
+                              density_O=density_O,
+                              roughness_O=roughness_O,
+                              density_E=density_E,
+                              roughness_E=roughness_E,
+                              density_S=density_S,
+                              roughness_S=roughness_S,
                               dabax=dabax,
                               )
 
@@ -121,6 +153,12 @@ class S4ParaboloidMultilayer(S4Multilayer, S4ParaboloidOpticalElementDecorator):
             "structure": structure,
             "period": period,
             "Gamma": Gamma,
+            "density_O": density_O,
+            "roughness_O": roughness_O,
+            "density_E": density_E,
+            "roughness_E": roughness_E,
+            "density_S": density_S,
+            "roughness_S": roughness_S,
             "dabax": self._get_dabax_txt(),
         }
 
@@ -150,6 +188,8 @@ optical_element = S4ParaboloidMultilayer(name='{name:s}', boundary_shape=boundar
     f_refl={f_refl:d}, # 0=pre_mlayer, 1=(mrad, refl), 2=(eV, refl), 3=(eV, mrad, refl); 4=xraylib, 5=dabax
     file_refl='{file_refl:s}', # for f_refl=0,1,2,3
     structure='{structure:s}', period={period:f}, Gamma={Gamma:f}, # for f_refl=4,5
+    density_O={density_O}, roughness_O={roughness_O:f}, density_E={density_E}, roughness_E={roughness_E:f},
+    density_S={density_S}, roughness_S={roughness_S:f}, # for f_refl=4,5
     dabax={dabax:s}, # if using dabax (f_refl=5), instance of DabaxXraylib() (use None for default)
     )
 """

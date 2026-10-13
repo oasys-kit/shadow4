@@ -37,6 +37,7 @@ class S4AdditionalNumericalMeshInterface(S4NumericalMeshInterface):
 
         """
         S4NumericalMeshInterface.__init__(self, name=name,
+            boundary_shape=None if ideal_interface is None else ideal_interface.get_boundary_shape(),
             xx=None if numerical_mesh_interface is None else numerical_mesh_interface._curved_surface_shape._xx,
             yy=None if numerical_mesh_interface is None else numerical_mesh_interface._curved_surface_shape._yy,
             zz=None if numerical_mesh_interface is None else numerical_mesh_interface._curved_surface_shape._zz,
