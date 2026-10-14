@@ -919,9 +919,10 @@ class S4MosaicCrystalElement(S4BeamlineElement):
         w = numpy.exp(-0.5 * (theta_diff / kappa)**2) / (kappa * numpy.sqrt(2 * numpy.pi))
 
 
+        # Is, Ip: intensities along the sigma and pi directions of the scattering plane (not of the beam)
         Itot = footprint.get_column(23)
-        Is = footprint.get_column(24)
-        Ip = footprint.get_column(25)
+        Is = self._sigma_intensity_in_scattering_plane(footprint, surface_normal.T)
+        Ip = numpy.maximum(Itot - Is, 0.0)
 
         # Itot = Is + Ip exactly but can be zero for degenerate zero-amplitude rays.
         # Guard the division so a single such ray does not raise below.
@@ -963,6 +964,39 @@ class S4MosaicCrystalElement(S4BeamlineElement):
 
         return rin, rout, s_cm / 100.0
                 
+
+    def _sigma_intensity_in_scattering_plane(self, footprint, surface_normal):
+        """
+        Intensity of the incident field along the sigma direction of the scattering plane.
+
+        The scattering plane is that of the nominal (specular) reflection, spanned by the incident
+        direction and the surface normal, so sigma_i = vIn x n / |vIn x n| (the sign is irrelevant).
+        This differs from the sigma intensity of the beam (column 24) when the crystal is rotated
+        around the beam (orientation angle not multiple of 180 deg). At normal incidence the beam
+        sigma direction is used.
+
+        Parameters
+        ----------
+        footprint : instance of S4Beam
+            The incident beam (columns 4-6 are the incident directions).
+        surface_normal : numpy array of shape (nrays, 3)
+            The surface normals.
+
+        Returns
+        -------
+        numpy array of shape (nrays,)
+            `|`E . sigma_i`|`^2. The pi intensity is the total intensity (column 23) minus this value.
+        """
+        vIn = footprint.get_columns([4, 5, 6]).T
+        j0, j1 = footprint.get_jones_components()
+        e_S, e_P = footprint.get_efield_directions()
+        sigma_i = vector_cross(vIn, surface_normal)
+        mod_sigma_i = vector_modulus(sigma_i)
+        normal_incidence = mod_sigma_i < 1e-8
+        sigma_i[~normal_incidence] /= mod_sigma_i[~normal_incidence, numpy.newaxis]
+        sigma_i[normal_incidence] = e_S[normal_incidence]
+        E_sigma_i = j0 * vector_dot(e_S, sigma_i) + j1 * vector_dot(e_P, sigma_i)
+        return numpy.abs(E_sigma_i) ** 2
 
     def _calculate_jones_and_efield_directions(self, footprint, normal, vIn, vOut, r_SS, r_PP,
                                                r_SP=0.0, r_PS=0.0, use_standard=1):
@@ -1179,7 +1213,9 @@ class S4MosaicCrystalElement(S4BeamlineElement):
           kept; their intensity is multiplied by exp(-mu * path_in).
 
         Polarization: the crystallite curve differs for S and P. Each ray is traced once, with
-        the S (P) curve with probability Is/I (Ip/I), and its S (P) amplitude is divided by the
+        the S (P) curve with probability Is/I (Ip/I), where Is and Ip are the intensities along the
+        sigma and pi directions of the scattering plane (see _sigma_intensity_in_scattering_plane),
+        and its S (P) amplitude is divided by the
         square root of that probability, while the other amplitude is set to zero. The expected
         S and P reflected intensities are then exact (incoherent sum, as usual for mosaic
         crystals).
@@ -1251,11 +1287,18 @@ class S4MosaicCrystalElement(S4BeamlineElement):
                                     max_energies=int(soe._mc_max_energies),
                                     return_profiles=True)
 
-        # polarization channel of each ray
+        # polarization channel of each ray. The probability of the S channel is the fraction of the intensity
+        # along the sigma direction of the scattering plane (not the sigma of the beam, which differs when the
+        # crystal is rotated around the beam). The exit direction is not known before tracing, so the plane of the
+        # nominal (specular) reflection, spanned by vIn and the surface normal, is used. Any p_s in (0,1) gives
+        # unbiased S and P intensities (amplitudes are divided by p_s and 1-p_s); p_s is clipped so that both
+        # channels can be sampled when the real scattering plane differs slightly from the nominal one.
         Itot = footprint.get_column(23)[good]
-        Is = footprint.get_column(24)[good]
+        Is = self._sigma_intensity_in_scattering_plane(footprint, surface_normal)[good]
+        Ip = numpy.maximum(Itot - Is, 0.0)
         p_s = numpy.ones_like(Itot)
         numpy.divide(Is, Itot, out=p_s, where=Itot > 0)
+        p_s = numpy.clip(p_s, 1e-3, 1 - 1e-3)
         channel_s = rng.random(energies.size) < p_s
         peak = numpy.where(channel_s, cp["peak_s"], cp["peak_p"])
         width = numpy.where(channel_s, cp["width_s"], cp["width_p"])
@@ -1298,7 +1341,6 @@ class S4MosaicCrystalElement(S4BeamlineElement):
             n_good = energies.size
             n_refl = int(reflected.sum())
             w_refl = weight[reflected]
-            Ip = footprint.get_column(25)[good]
             I_out = amp_s * Is + amp_p * Ip
             nref_refl = res["n_reflections"][reflected]
             offset = numpy.linalg.norm(res["X_out"][reflected] - rIn[good][reflected], axis=1)
