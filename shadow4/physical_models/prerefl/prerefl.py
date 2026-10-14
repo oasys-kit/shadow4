@@ -613,7 +613,7 @@ class PreRefl(object):
         Based on the grazing-angle X-ray approximation:
 
             n = 1 - delta + i beta
-            f = sqrt(phi^2 - 2 delta - 2 i beta)
+            f = sqrt(phi^2 - 2 delta + 2 i beta)
             r = (f1 - f2) / (f1 + f2)
 
         where phi is the grazing angle (rad).
@@ -737,8 +737,9 @@ class PreRefl(object):
             beta1 = numpy.imag(refraction_index_1)
             delta2 = 1.0 - numpy.real(refraction_index_2)
             beta2 = numpy.imag(refraction_index_2)
-            f1 = numpy.sqrt(phi ** 2 - 2 * delta1 - 2 * 1j * beta1, dtype=complex)
-            f2 = numpy.sqrt(phi ** 2 - 2 * delta2 - 2 * 1j * beta2, dtype=complex)
+            # n = 1 - delta + i beta => n^2 - cos^2(phi) ~ phi^2 - 2 delta + 2 i beta
+            f1 = numpy.sqrt(phi ** 2 - 2 * delta1 + 2 * 1j * beta1, dtype=complex)
+            f2 = numpy.sqrt(phi ** 2 - 2 * delta2 + 2 * 1j * beta2, dtype=complex)
             rs = (f1 - f2) / (f1 + f2)
             rp = rs # Approximation valid only for X-rays!
 
