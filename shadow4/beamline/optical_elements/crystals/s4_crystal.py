@@ -118,7 +118,7 @@ class S4Crystal(Crystal):
                                                     # 2=shadow preprocessor file v1
                                                     # 3=shadow preprocessor file v2
                  file_refl="",
-                 method_efields_management=0, # 0=S4, 1=S3
+                 method_efields_management=0, # 0=S4, 1=S3, 2=S4 with standard Jones algebra (validation)
                  dabax=None,
                  ):
 
@@ -164,7 +164,7 @@ class S4Crystal(Crystal):
                     ("f_ext",               "S4: autosetting curved surface parms.",       ""),
                     ("material_constants_library_flag", "S4: crystal data from: 0=xraylib, 1=dabax, 2=file v1, 3=file v1", ""),
                     ("file_refl",           "S4: preprocessor file name",                  ""),
-                    ("method_efields_management", "flag 0:new in S4; 1=like S3",           ""),
+                    ("method_efields_management", "flag 0:new in S4; 1=like S3; 2=S4 standard Jones", ""),
             ] )
 
 
@@ -518,7 +518,8 @@ class S4CrystalElement(S4BeamlineElement):
         # reflect beam in the crystal and apply crystal reflectivity
         #
 
-        if self.get_optical_element()._method_efields_management == 0: # S4
+        method_efields_management = self.get_optical_element()._method_efields_management
+        if method_efields_management in (0, 2): # S4 (0: Jones algebra in SHADOW frame, 2: standard Jones algebra)
             footprint, normal = self.get_optical_element().get_optical_surface_instance().calculate_intercept_on_beam(input_beam)
 
             if is_debug():
@@ -527,14 +528,20 @@ class S4CrystalElement(S4BeamlineElement):
                 print("    >>>>>> normal: ", normal.shape, normal[:, 0])
 
             vIn, vOut, r_SS, r_PP = self._calculate_perfect_crystal_scattering(footprint, normal)
-            jv_out_0, jv_out_1, ee_S, ee_P = self._calculate_jones_and_efield_directions(footprint, normal,
+            if method_efields_management == 0:
+                jv_out_0, jv_out_1, ee_S, ee_P = self._calculate_jones_and_efield_directions(footprint, normal,
                                                                                             vIn, vOut, r_SS, r_PP)
+                use_standard = 0
+            else:
+                jv_out_0, jv_out_1, ee_S, ee_P = self._calculate_jones_and_efield_directions_standard(footprint,
+                                                                                            vIn, vOut, r_SS, r_PP)
+                use_standard = 1
             # update beam array with the new direction
             footprint.set_column(4, vOut[:, 0])
             footprint.set_column(5, vOut[:, 1])
             footprint.set_column(6, vOut[:, 2])
             # update beam array with the new electric fields
-            footprint.set_jones_components(jv_out_0, jv_out_1, e_S=ee_S, e_P=ee_P)
+            footprint.set_jones_components(jv_out_0, jv_out_1, e_S=ee_S, e_P=ee_P, use_standard=use_standard)
 
             if is_verbose():
                 print(">>> Orthogonal footprint: ", footprint.efields_orthogonal(),
@@ -778,6 +785,73 @@ class S4CrystalElement(S4BeamlineElement):
         jv_out_0 = Jrotated_00 * jv_in_0 + Jrotated_01 * jv_in_1
         jv_out_1 = Jrotated_10 * jv_in_0 + Jrotated_11 * jv_in_1
 
+        return jv_out_0, jv_out_1, ee_S, ee_P
+
+    def _calculate_jones_and_efield_directions_standard(self, footprint, vIn, vOut, r_SS, r_PP,
+                                                        r_SP=0.0, r_PS=0.0):
+        """
+        Same as _calculate_jones_and_efield_directions(), but using only the standard Jones algebra
+        (right-handed frames, rotation angle and passive rotation matrix) as in M. Sanchez del Rio et al.,
+        "Producing and Measuring Circularly Polarized X-rays: A Jones and Mueller-Stokes Treatment of Crystal
+        Phase Plates" (unpublished draft). Used with method_efields_management=2, to validate the default
+        calculation (method_efields_management=0); both give the same electric fields.
+
+        Steps:
+        * Jones vector of the incident ray in the right-handed lab basis (x, y, k) = (u_s, -u_p, v):
+          E_lab = (E_s, -E_p).
+        * Angle chi of the crystal sigma direction u_s,i = v x v' / `|`v x v'`|`, measured from x toward y.
+        * E_comp = R(chi) E_lab, with R(chi) = [[cos chi, sin chi], [-sin chi, cos chi]] (passive rotation).
+        * E_out = J0 E_comp, with J0 = [[r_SS, r_SP], [r_PS, r_PP]] in the standard convention.
+        * E_out are the components in the right-handed basis (u_s,f, -u_p,f, v') of the scattered ray.
+          Note that the last step of the standard treatment of a rotated element, the realignment with
+          R(-chi) back to the lab frame, is not applicable: the beam does not return to the incident frame
+          after a reflection; the field is expressed in the frame of the scattered ray instead.
+
+        Parameters
+        ----------
+        footprint : instance of S4Beam
+            The input beam
+        vIn :  numpy array shape (nrays, 3)
+            The incident directions
+        vOut :  numpy array shape (nrays, 3)
+            The output directions
+        r_SS, r_PP : numpy array complex shape (nrays)
+            The crystal reflectivity for the S and P polarizations.
+        r_SP, r_PS : complex or numpy array complex shape (nrays), optional
+            The off-diagonal elements of the Jones matrix, in the standard convention.
+
+        Returns
+        -------
+        tuple
+            (jv_out_0, jv_out_1, ee_S, ee_P): the two components of the Jones vector in the STANDARD convention
+            (store them with set_jones_components(..., use_standard=1)), and the sigma and pi directions
+            u_s,f and u_p,f = u_s,f x v' (SHADOW convention) of the scattered ray, shape (nrays, 3).
+        """
+        e_S, e_P = footprint.get_efield_directions()
+        E_lab_x, E_lab_y = footprint.get_jones_components(use_standard=1)
+        x_lab = e_S
+        y_lab = -e_P                                # right-handed: x_lab x y_lab = v
+
+        axis = vector_cross(vIn, vOut)
+        mod_axis = vector_modulus(axis)
+        forward = mod_axis < 1e-8                   # forward scattering: keep the incident sigma (chi = 0)
+        axis[~forward] /= mod_axis[~forward, numpy.newaxis]
+        axis[forward] = e_S[forward]
+        sigma_i = axis
+
+        chi = numpy.arctan2(vector_dot(sigma_i, y_lab), vector_dot(sigma_i, x_lab))
+        c, s = numpy.cos(chi), numpy.sin(chi)
+
+        # E_comp = R(chi) E_lab
+        E_comp_x =  c * E_lab_x + s * E_lab_y
+        E_comp_y = -s * E_lab_x + c * E_lab_y
+
+        # E_out = J0 E_comp
+        jv_out_0 = r_SS * E_comp_x + r_SP * E_comp_y
+        jv_out_1 = r_PS * E_comp_x + r_PP * E_comp_y
+
+        ee_S = sigma_i
+        ee_P = vector_norm(vector_cross(ee_S, vOut))
         return jv_out_0, jv_out_1, ee_S, ee_P
 
     def _apply_crystal_diffraction_and_reflectivities_S3(self, beam): #TODO delete

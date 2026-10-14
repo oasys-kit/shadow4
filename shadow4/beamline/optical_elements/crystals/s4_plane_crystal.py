@@ -156,7 +156,7 @@ optical_element = S4PlaneCrystal(name='{name}',
     file_refl='{file_refl}',
     f_ext={f_ext},
     material_constants_library_flag={material_constants_library_flag}, # 0=xraylib,1=dabax,2=preprocessor v1,3=preprocessor v2
-    method_efields_management={method_efields_management}, # 0=new in S4; 1=like in S3
+    method_efields_management={method_efields_management}, # 0=new in S4; 1=like in S3; 2=S4 standard Jones
     dabax={dabax}, # used when material_constants_library_flag=1,
     )"""
         txt += txt_pre.format(**self.__inputs)
