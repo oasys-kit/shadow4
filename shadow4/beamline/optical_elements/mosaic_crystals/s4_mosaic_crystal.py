@@ -964,11 +964,15 @@ class S4MosaicCrystalElement(S4BeamlineElement):
         return rin, rout, s_cm / 100.0
                 
 
-    def _calculate_jones_and_efield_directions(self, footprint, normal, vIn, vOut, r_SS, r_PP):
+    def _calculate_jones_and_efield_directions(self, footprint, normal, vIn, vOut, r_SS, r_PP,
+                                               r_SP=0.0, r_PS=0.0, use_standard=1):
         """
         Calculates the Jones vector after crystal diffraction. It also returns the directions of the
         S and P polarized components of the electric field.
 
+        All the calculation is done in the SHADOW convention: Jones vectors along (u_s, u_p) with u_p = u_s x v
+        (left-handed basis). The Jones matrix of the element J = [[r_SS, r_SP], [r_PS, r_PP]] is applied in
+        the scattering-plane basis after the rotation R (projection of the incident field onto that basis).
 
         Parameters
         ----------
@@ -979,31 +983,45 @@ class S4MosaicCrystalElement(S4BeamlineElement):
         vIn :  numpy array shape (nrays, 3)
             The incident directions
         vOut :  numpy array shape (nrays, 3)
-            The incident directions
+            The output directions
         r_SS : numpy array complex shape (nrays)
             The crystal reflectivity for the S polarization
         r_PP : numpy array complex shape (nrays)
             The crystal reflectivity for the P polarization
+        r_SP, r_PS : complex or numpy array complex shape (nrays), optional
+            The off-diagonal (sigma-pi coupling) elements of the Jones matrix (zero for charge scattering).
+        use_standard : int, optional
+            Convention of the Jones matrix elements given in input:
+            * 1 (default): standard convention (right-handed basis (u_s, -u_p, v), as in the literature). The
+              matrix is converted to the SHADOW convention with S4Beam.jones_matrix_standard_to_shadow(), which
+              changes the sign of r_SP and r_PS.
+            * 0: SHADOW convention (basis (u_s, u_p, v)), no conversion.
+            The diagonal elements r_SS, r_PP are the same in both conventions.
 
         Returns
         -------
         tuple
-            (jv_out_0, jv_out_1, ee_S, ee_P) the two components of the Jones vector and the two vectors of
-            shape(nrays, 3) with the electric vectors for the S and P polarizations.
+            (jv_out_0, jv_out_1, ee_S, ee_P) the two components of the Jones vector (SHADOW convention) and
+            the two vectors of shape(nrays, 3) with the electric vectors for the S and P polarizations.
 
         """
         #
         # get versors with the sigma and pi directions for:
         #     e_S, e_P: the incident beam (as it is)
         #     es_S, es_P: the scattering plane spanned by vIn (incident)
-        #     ee_S, ee_P: the scattering plane spanned by vOut (incident)
+        #     ee_S, ee_P: the scattering plane spanned by vOut (output)
         #
         # Note that vector_norm() is not needed (for the vectors that should be unitary),
         # but renormalizing them improves accuracy in the calculation of c, s
         #
         e_S, e_P = footprint.get_efield_directions()  # these are \hat{u}_{\sigma,\pi} in Eq. 3
 
-        axis = vector_norm(vector_cross(vIn, vOut))
+        axis = vector_cross(vIn, vOut)
+        mod_axis = vector_modulus(axis)
+        # forward scattering (vOut ~ vIn): scattering plane undefined, keep the incident sigma direction (R = identity)
+        forward = mod_axis < 1e-8
+        axis[~forward] /= mod_axis[~forward, numpy.newaxis]
+        axis[forward] = e_S[forward]
 
         es_S = axis  # \hat{u}_{\sigma,i} in Eq. 12
         es_P = vector_norm(vector_cross(es_S, vIn))  # \hat{u}_{\pi,i} in Eq. 12
@@ -1024,22 +1042,23 @@ class S4MosaicCrystalElement(S4BeamlineElement):
         #
 
         # Jones matrix (local)
-        J00 = r_SS
-        J01 = 0
-        J10 = 0
-        J11 = r_PP
+        J00, J01, J10, J11 = r_SS, r_SP, r_PS, r_PP
+        if use_standard:
+            J00, J01, J10, J11 = S4Beam.jones_matrix_standard_to_shadow(J00, J01, J10, J11)
 
-        # rotation matrix R
-        R00 = vector_dot(e_S, es_S)
-        R01 = vector_dot(e_S, es_P)
-        R10 = vector_dot(e_P, es_S)
-        R11 = vector_dot(e_P, es_P)
+        # rotation matrix R (passive): projects the incident field onto the scattering-plane basis,
+        # R_jk = (scattering versor j) . (incident versor k)
+        R00 = vector_dot(es_S, e_S)
+        R01 = vector_dot(es_S, e_P)
+        R10 = vector_dot(es_P, e_S)
+        R11 = vector_dot(es_P, e_P)
 
         # J x R(alpha), the Jones matrix to apply to the Jones vector of the incident rays
-        Jrotated_00 = J00 * R00 + J01 * R10  # r_SS * c
-        Jrotated_01 = J00 * R01 + J01 * R11  # -r_SS * s
-        Jrotated_10 = J10 * R00 + J11 * R10  # r_PP * s
-        Jrotated_11 = J10 * R01 + J11 * R11  # r_PP * c
+        # (for diagonal J: [[r_SS c, r_SS s], [-r_PP s, r_PP c]])
+        Jrotated_00 = J00 * R00 + J01 * R10
+        Jrotated_01 = J00 * R01 + J01 * R11
+        Jrotated_10 = J10 * R00 + J11 * R10
+        Jrotated_11 = J10 * R01 + J11 * R11
 
         if is_verbose():
             print(">>> R dotprd: ", R00[0], R01[0], R10[0], R11[0])

@@ -446,9 +446,9 @@ class S4Beam(object):
             * 27   K = 2 pi / lambda * col4 [A^-1]
             * 28   K = 2 pi / lambda * col5 [A^-1]
             * 29   K = 2 pi / lambda * col6 [A^-1]
-            * 30   S0-stokes = `|`Es`|`^2 + `|`Ep`|`^2
-            * 31   S1-stokes = `|`Es`|`^2 - `|`Ep`|`^2
-            * 32   S2-stokes = 2 `|`Es`|` `|`Ep`|` cos(phase_s-phase_p)
+            * 30   S0- = `|`Es`|`^2 + `|`Ep`|`^2
+            * 31   S1- = `|`Es`|`^2 - `|`Ep`|`^2
+            * 32   S2- = -2 `|`Es`|` `|`Ep`|` cos(phase_s-phase_p)
             * 33   S3-stokes = 2 `|`Es`|` `|`Ep`|` sin(phase_s-phase_p)
             * 34   Power = intensity(col 23) * energy (col 11)
             * 35   Angle-X with Y: `|`arcsin(X')`|`
@@ -456,12 +456,23 @@ class S4Beam(object):
             * 37   Angle-X with Y: `|`arcsin(X') - mean(arcsin(X'))`|`
             * 38   Angle-Z with Y: `|`arcsin(Z') - mean(arcsin(Z'))`|`
             * 39   Phase difference in rad: Phase (s-polarization) - Phase (p-polarization)
-            * 40   Complex amplitude of the electric vector (s-polarization)
-            * 41   Complex amplitude of the electric vector (p-polarization)
+            * 40   Complex amplitude of the electric vector (s-polarization) = `|`Es`|` exp(i phase_s)
+            * 41   Complex amplitude of the electric vector (p-polarization) = `|`Ep`|` exp(i phase_p)
+            * 42   P1 normalized Stokes = S1/S0
+            * 43   P2 normalized Stokes = S2/S0
+            * 44   P3 normalized Stokes = S3/S0
 
         Notes
         -----
         Column 11 in Shadow3 is column 26 in Shadow4.
+
+        The Stokes parameters (columns 30-33 and 42-44) follow the conventions of M. Sanchez del Rio et al.,
+        "Producing and Measuring Circularly Polarized X-rays: A Jones and Mueller-Stokes Treatment of Crystal
+        Phase Plates" (unpublished draft): S0=`|`Ex`|`^2+`|`Ey`|`^2, S1=`|`Ex`|`^2-`|`Ey`|`^2, S2=2 Re(Ex Ey*),
+        S3=2 Im(Ex* Ey), time factor exp(-i w t), S3>0 for left circular polarization (counter-clockwise for an
+        observer looking toward the source). They are computed in the right-handed basis (u_s, -u_p, v), i.e.,
+        Ex=Es, Ey=-Ep, because the SHADOW basis (u_s, u_p, v), with u_p = u_s x v, is left-handed. Therefore S2
+        has the opposite sign of the SHADOW3 column 32 (S0, S1 and S3 are as in SHADOW3).
 
         nolost : int, optional
             * 0=return all rays,
@@ -502,11 +513,11 @@ class S4Beam(object):
                 E2s = numpy.sum(numpy.array([ ray[:,i]*ray[:,i] for i in [6,7,8] ]),axis=0)
                 E2p = numpy.sum(numpy.array([ ray[:,i]*ray[:,i] for i in [15,16,17] ]),axis=0)
                 out =  E2s - E2p
-            if column == 32:
+            if column == 32: # sign opposite to SHADOW3, see Notes in docstring
                 E2s = numpy.sum(numpy.array([ ray[:,i]*ray[:,i] for i in [6,7,8] ]),axis=0)
                 E2p = numpy.sum(numpy.array([ ray[:,i]*ray[:,i] for i in [15,16,17] ]),axis=0)
                 Cos = numpy.cos(ray[:,13]-ray[:,14])
-                out =  2*numpy.sqrt(E2s*E2p)*Cos
+                out =  -2*numpy.sqrt(E2s*E2p)*Cos
             if column == 33:
                 E2s = numpy.sum(numpy.array([ ray[:,i]*ray[:,i] for i in [6,7,8] ]),axis=0)
                 E2p = numpy.sum(numpy.array([ ray[:,i]*ray[:,i] for i in [15,16,17] ]),axis=0)
@@ -551,20 +562,20 @@ class S4Beam(object):
             if column == 39:
                 out = ray[:, 14 - 1] - ray[:, 15 - 1]
             if column == 40:
-                out =  numpy.sum(numpy.array([ ray[:,i]*ray[:,i] for i in [6,7,8] ]),axis=0)
-                out *= numpy.exp(1j * ray[:, 14 - 1])
+                E2s = numpy.sum(numpy.array([ ray[:,i]*ray[:,i] for i in [6,7,8] ]),axis=0)
+                out = numpy.sqrt(E2s) * numpy.exp(1j * ray[:, 14 - 1])
             if column == 41:
-                out =  numpy.sum(numpy.array([ ray[:,i]*ray[:,i] for i in [15,16,17] ]),axis=0)
-                out *= numpy.exp(1j * ray[:, 15 - 1])
+                E2p = numpy.sum(numpy.array([ ray[:,i]*ray[:,i] for i in [15,16,17] ]),axis=0)
+                out = numpy.sqrt(E2p) * numpy.exp(1j * ray[:, 15 - 1])
             if column ==42:
                 E2s = numpy.sum(numpy.array([ ray[:,i] * ray[:,i] for i in [6,7,8] ]),axis=0)
                 E2p = numpy.sum(numpy.array([ ray[:,i] * ray[:,i] for i in [15,16,17] ]),axis=0)
                 out =  (E2s - E2p) / (E2s + E2p)
-            if column == 43:
+            if column == 43: # sign opposite to SHADOW3, see Notes in docstring
                 E2s = numpy.sum(numpy.array([ ray[:,i] * ray[:,i] for i in [6,7,8] ]),axis=0)
                 E2p = numpy.sum(numpy.array([ ray[:,i] * ray[:,i] for i in [15,16,17] ]),axis=0)
                 Cos = numpy.cos(ray[:,13] - ray[:,14])
-                out =  2 * numpy.sqrt(E2s * E2p) * Cos / (E2s + E2p)
+                out =  -2 * numpy.sqrt(E2s * E2p) * Cos / (E2s + E2p)
             if column == 44:
                 E2s = numpy.sum(numpy.array([ ray[:,i]*ray[:,i] for i in [6,7,8] ]),axis=0)
                 E2p = numpy.sum(numpy.array([ ray[:,i]*ray[:,i] for i in [15,16,17] ]),axis=0)
@@ -816,7 +827,7 @@ class S4Beam(object):
 
         return vector_norm(v_S), vector_norm(v_P)
 
-    def get_jones(self, nolost=0):
+    def get_jones(self, nolost=0, use_standard=0):
         """
         Computes Jones vector.
 
@@ -826,6 +837,8 @@ class S4Beam(object):
             * 0=use all rays,
             * 1=use only good rays (non-lost rays),
             * 2=use only lost rays.
+        use_standard : int, optional
+            * 0=SHADOW convention (default), 1=standard convention. See get_jones_components().
 
         Returns
         -------
@@ -833,13 +846,13 @@ class S4Beam(object):
             The two components of the Jones vector for the rays. Shape: (nrays, 2).
 
         """
-        j0, j1 = self.get_jones_components(nolost=nolost)
-        J = numpy.zeros((self.N, 2), dtype=complex)
+        j0, j1 = self.get_jones_components(nolost=nolost, use_standard=use_standard)
+        J = numpy.zeros((j0.size, 2), dtype=complex)
         J[:, 0] = j0
         J[:, 1] = j1
         return J
 
-    def get_jones_components(self, nolost=0):
+    def get_jones_components(self, nolost=0, use_standard=0):
         """
         Computes the components Jones vector.
 
@@ -849,11 +862,17 @@ class S4Beam(object):
             * 0=use all rays,
             * 1=use only good rays (non-lost rays),
             * 2=use only lost rays.
+        use_standard : int, optional
+            * 0 (default): SHADOW convention, components along (u_s, u_p), with u_p = u_s x v. This basis
+              (u_s, u_p, v) is left-handed: u_s x u_p = -v.
+            * 1: standard convention, components along the right-handed basis (u_s, -u_p, v), i.e., the second
+              component changes sign. This is the convention of the Stokes parameters (columns 30-33) and of
+              Jones/Mueller formulas in the literature.
 
         Returns
         -------
         tuple
-            The two components of the Jones vector for the rays (j1, j1).
+            The two components of the Jones vector for the rays (j0, j1).
 
         """
         intS = self.get_column(24, nolost=nolost)
@@ -862,7 +881,29 @@ class S4Beam(object):
         phiP = self.get_column(15, nolost=nolost)
         j0 = numpy.sqrt(intS) * numpy.exp(1j * phiS)
         j1 = numpy.sqrt(intP) * numpy.exp(1j * phiP)
+        if use_standard: j1 = -j1
         return j0,j1
+
+    @classmethod
+    def jones_matrix_standard_to_shadow(cls, J00, J01, J10, J11):
+        """
+        Converts a Jones matrix from the standard convention (basis (u_s, -u_p, v), right-handed) to the SHADOW
+        convention (basis (u_s, u_p, v), left-handed): J_shadow = F J_std F, with F = diag(1, -1).
+        The conversion is its own inverse, so it also converts from SHADOW to standard.
+
+        Diagonal elements are not changed; the off-diagonal (sigma-pi coupling) elements change sign.
+
+        Parameters
+        ----------
+        J00, J01, J10, J11 : complex or numpy arrays
+            The Jones matrix elements [[J00, J01], [J10, J11]] (i.e., r_ss, r_sp, r_ps, r_pp).
+
+        Returns
+        -------
+        tuple
+            (J00, J01, J10, J11) in the other convention.
+        """
+        return J00, -J01, -J10, J11
 
     def get_efield_directions(self, nolost=0):
         """
@@ -1476,19 +1517,47 @@ class S4Beam(object):
         """
         self.rays[:,10] =  2*numpy.pi/(wavelength * 1e2)
 
-    def set_jones(self, J, e_S=None, e_P=None):
+    def set_jones(self, J, e_S=None, e_P=None, use_standard=0):
+        """
+        Sets the electric fields from a Jones vector. See set_jones_components().
+
+        Parameters
+        ----------
+        J : numpy array
+            The Jones vectors, shape (nrays, 2).
+        e_S, e_P : numpy arrays, optional
+            The directions of the sigma and pi components, shape (nrays, 3).
+        use_standard : int, optional
+            0=SHADOW convention (default), 1=standard convention.
+        """
         if self.Nstored != J.shape[0]:
             raise Exception("Incompatible dimension of J vector: it is (%d,%d), it must be (%d,2)" %
-                            (J.shape[0], J.shape[2], self.Nstored))
+                            (J.shape[0], J.shape[1], self.Nstored))
 
         j0 = J[:, 0]
         j1 = J[:, 1]
-        self.set_jones_components(j0, j1, e_S=e_S, e_P=e_P)
+        self.set_jones_components(j0, j1, e_S=e_S, e_P=e_P, use_standard=use_standard)
 
-    def set_jones_components(self, j0, j1, e_S=None, e_P=None):
+    def set_jones_components(self, j0, j1, e_S=None, e_P=None, use_standard=0):
+        """
+        Sets the electric fields (columns 7-9, 14-18) from the components of the Jones vector.
+
+        Parameters
+        ----------
+        j0, j1 : numpy arrays
+            The complex components of the Jones vector, shape (nrays).
+        e_S, e_P : numpy arrays, optional
+            The directions of the sigma and pi components, shape (nrays, 3). If None, they are calculated
+            with get_efield_directions(). e_P must be e_S x v (SHADOW convention).
+        use_standard : int, optional
+            * 0 (default): (j0, j1) are in the SHADOW convention, i.e., along (e_S, e_P).
+            * 1: (j0, j1) are in the standard convention, i.e., along (e_S, -e_P). See get_jones_components().
+        """
         if self.Nstored != j0.size:
             raise Exception("Incompatible dimension of j0 vector: it is %d, it must be %d" %
-                            (j1.size, self.Nstored))
+                            (j0.size, self.Nstored))
+
+        if use_standard: j1 = -j1
 
         if e_S is None or e_P is None:
             ee_S, ee_P = self.get_efield_directions()
@@ -2568,7 +2637,7 @@ class S4Beam(object):
             "Kz = 2\u03C0 / \u03BB * Z'",
             "S0-stokes = |E\u209B|\u00B2 + |E\u209A|\u00B2",
             "S1-stokes = |E\u209B|\u00B2 - |E\u209A|\u00B2",
-            "S2-stokes = 2 |E\u209B| |E\u209A| cos(\u03C6\u209B-\u03C6\u209A)",
+            "S2-stokes = -2 |E\u209B| |E\u209A| cos(\u03C6\u209B-\u03C6\u209A)",
             "S3-stokes = 2 |E\u209B| |E\u209A| sin(\u03C6\u209B-\u03C6\u209A)",
             "Power = Intensity(col 23) * Energy (col 26)",
             "Angle-X with Y = |arcsin(X')|",
