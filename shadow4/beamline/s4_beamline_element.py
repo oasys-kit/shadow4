@@ -131,9 +131,9 @@ class S4BeamlineElement(BeamlineElement):
         movements = self.get_movements()
         if isinstance(movements, S4BeamlineElementMovements):
             txt = "\nfrom shadow4.beamline.s4_beamline_element_movements import S4BeamlineElementMovements"
-            txt += "\nmovements = S4BeamlineElementMovements(f_move=%d, offset_x=%g, offset_y=%g, offset_z=%g, rotation_x=%g, rotation_y=%g, rotation_z=%g)" % \
-                   (movements.f_move, movements.offset_x, movements.offset_y, movements.offset_z,
-                    movements.rotation_x, movements.rotation_y, movements.rotation_z)
+            txt += "\nmovements = S4BeamlineElementMovements(f_move=%d, offset_x=%r, offset_y=%r, offset_z=%r, rotation_x=%r, rotation_y=%r, rotation_z=%r)" % \
+                   ((movements.f_move,) + tuple(float(x) for x in (movements.offset_x, movements.offset_y, movements.offset_z,
+                                                                   movements.rotation_x, movements.rotation_y, movements.rotation_z)))
         else:
             txt = "\nmovements = None"
 
@@ -150,6 +150,9 @@ class S4BeamlineElement(BeamlineElement):
         """
         coordinates = self.get_coordinates()
         txt = "\nfrom syned.beamline.element_coordinates import ElementCoordinates"
-        txt += "\ncoordinates = ElementCoordinates(p=%.10g, q=%.10g, angle_radial=%.10g, angle_azimuthal=%.10g, angle_radial_out=%.10g)" % \
-               (coordinates.p(), coordinates.q(), coordinates.angle_radial(), coordinates.angle_azimuthal(), coordinates.angle_radial_out())
+        # full round-trip precision (repr): a rounded angle (e.g. %.10g gives pi=3.141592654, error 4e-10 rad) is
+        # enough to spoil the extinction of crystal polarizers in the exported scripts
+        txt += "\ncoordinates = ElementCoordinates(p=%r, q=%r, angle_radial=%r, angle_azimuthal=%r, angle_radial_out=%r)" % \
+               tuple(float(x) for x in (coordinates.p(), coordinates.q(), coordinates.angle_radial(),
+                                        coordinates.angle_azimuthal(), coordinates.angle_radial_out()))
         return txt
