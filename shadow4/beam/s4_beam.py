@@ -1538,6 +1538,66 @@ class S4Beam(object):
         j1 = J[:, 1]
         self.set_jones_components(j0, j1, e_S=e_S, e_P=e_P, use_standard=use_standard)
 
+    def calculate_jones_scattering(self, v_out, r_SS, r_PP, r_SP=0.0, r_PS=0.0, use_standard=1):
+        """
+        Jones calculus of the scattering (reflection, diffraction) of the rays of this beam (the incident beam,
+        with directions in columns 4-6) into the directions v_out.
+
+        The incident field is projected onto the sigma and pi directions of the scattering plane (spanned by the
+        incident and scattered directions), the Jones matrix J = [[r_SS, r_SP], [r_PS, r_PP]] is applied, and the
+        result is expressed along the sigma and pi directions of the scattered rays. All in the SHADOW convention
+        (u_pi = u_sigma x direction).
+
+        Parameters
+        ----------
+        v_out : numpy array, shape (nrays, 3)
+            The directions of the scattered rays.
+        r_SS, r_PP : complex or numpy array (nrays)
+            The complex amplitudes (reflectivities) for the sigma and pi polarizations.
+        r_SP, r_PS : complex or numpy array (nrays), optional
+            The off-diagonal elements of the Jones matrix (zero for charge scattering).
+        use_standard : int, optional
+            Convention of the Jones matrix elements given in input: 1 (default) standard convention, converted with
+            jones_matrix_standard_to_shadow() (only r_SP and r_PS change sign); 0 SHADOW convention.
+
+        Returns
+        -------
+        tuple
+            (j0, j1, e_S, e_P): the Jones vector of the scattered rays (SHADOW convention) and the sigma and pi
+            directions (nrays, 3) of the scattered rays. Use set_jones_components(j0, j1, e_S=e_S, e_P=e_P) to
+            store them in the beam of the scattered rays.
+        """
+        v_in = self.get_columns([4, 5, 6]).T
+        e_S, e_P = self.get_efield_directions()
+
+        # sigma direction of the scattering plane; in forward scattering (v_out ~ v_in) the plane is undefined
+        # and the incident sigma direction is kept (R = identity)
+        axis = vector_cross(v_in, v_out)
+        mod_axis = vector_modulus(axis)
+        forward = mod_axis < 1e-8
+        axis[~forward] /= mod_axis[~forward, numpy.newaxis]
+        axis[forward] = e_S[forward]
+
+        es_S = axis                                  # sigma, pi of the scattering plane, incident ray
+        es_P = vector_norm(vector_cross(es_S, v_in))
+        ee_S = axis                                  # sigma, pi of the scattering plane, scattered ray
+        ee_P = vector_norm(vector_cross(ee_S, v_out))
+
+        J00, J01, J10, J11 = r_SS, r_SP, r_PS, r_PP
+        if use_standard:
+            J00, J01, J10, J11 = self.jones_matrix_standard_to_shadow(J00, J01, J10, J11)
+
+        # passive rotation R: projection of the incident field onto the scattering-plane basis
+        R00 = vector_dot(es_S, e_S)
+        R01 = vector_dot(es_S, e_P)
+        R10 = vector_dot(es_P, e_S)
+        R11 = vector_dot(es_P, e_P)
+
+        j0_in, j1_in = self.get_jones_components()
+        j0 = (J00 * R00 + J01 * R10) * j0_in + (J00 * R01 + J01 * R11) * j1_in
+        j1 = (J10 * R00 + J11 * R10) * j0_in + (J10 * R01 + J11 * R11) * j1_in
+        return j0, j1, ee_S, ee_P
+
     def set_jones_components(self, j0, j1, e_S=None, e_P=None, use_standard=0):
         """
         Sets the electric fields (columns 7-9, 14-18) from the components of the Jones vector.

@@ -312,21 +312,8 @@ class S4MirrorElement(S4BeamlineElement):
 
         footprint, normal = self.get_optical_element()._apply_mirror_reflection(input_beam)
 
-        if movements is not None:
-            if movements.f_move:
-                footprint.rot_back(OFFX=movements.offset_x,
-                                   OFFY=movements.offset_y,
-                                   OFFZ=movements.offset_z,
-                                   X_ROT=movements.rotation_x,
-                                   Y_ROT=movements.rotation_y,
-                                   Z_ROT=movements.rotation_z)
         #
-        # apply mirror boundaries
-        #
-        footprint.apply_boundaries_syned(soe.get_boundary_shape(), flag_lost_value=flag_lost_value)
-
-        #
-        # apply mirror reflectivity
+        # mirror reflectivity (complex amplitudes rs, rp)
         #
 
         rs = 1.0
@@ -471,12 +458,31 @@ class S4MirrorElement(S4BeamlineElement):
             else:
                 raise Exception("Not implemented source of mirror reflectivity")
 
-        # TODO:
-        # WARNING This application of the rs and rp coefficients does not take into account:
-        # 1) The possible rotation of the sigma and pi directions by the oe orientation angle
+        #
+        # apply the reflectivity with the Jones calculus: the incident field is projected onto the sigma and pi
+        # directions of the scattering plane of each ray (which differ from the sigma, pi of the beam when the
+        # mirror is rotated around the beam, or for curved surfaces), multiplied by rs, rp, and expressed along the
+        # sigma and pi directions of the reflected ray (perpendicular to the reflected direction).
+        # This is done in the same frame as the reflection (before undoing the mirror movements).
+        #
+        nrays = footprint.get_number_of_rays()
+        rs = numpy.broadcast_to(numpy.asarray(rs, dtype=complex), (nrays,))
+        rp = numpy.broadcast_to(numpy.asarray(rp, dtype=complex), (nrays,))
+        j0, j1, e_S, e_P = input_beam.calculate_jones_scattering(footprint.get_columns([4, 5, 6]).T, rs, rp)
+        footprint.set_jones_components(j0, j1, e_S=e_S, e_P=e_P)
 
-        footprint.apply_reflectivities(numpy.abs(rs), numpy.abs(rp))
-        footprint.add_phases(numpy.angle(rs), numpy.angle(rp))
+        if movements is not None:
+            if movements.f_move:
+                footprint.rot_back(OFFX=movements.offset_x,
+                                   OFFY=movements.offset_y,
+                                   OFFZ=movements.offset_z,
+                                   X_ROT=movements.rotation_x,
+                                   Y_ROT=movements.rotation_y,
+                                   Z_ROT=movements.rotation_z)
+        #
+        # apply mirror boundaries
+        #
+        footprint.apply_boundaries_syned(soe.get_boundary_shape(), flag_lost_value=flag_lost_value)
 
         #
         # TODO: write angle.xx for comparison
