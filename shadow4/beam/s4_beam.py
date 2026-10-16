@@ -1538,7 +1538,7 @@ class S4Beam(object):
         j1 = J[:, 1]
         self.set_jones_components(j0, j1, e_S=e_S, e_P=e_P, use_standard=use_standard)
 
-    def calculate_jones_scattering(self, v_out, r_SS, r_PP, r_SP=0.0, r_PS=0.0, use_standard=1):
+    def calculate_jones_scattering(self, v_out, r_SS, r_PP, r_SP=0.0, r_PS=0.0, use_standard=1, sigma_axis=None):
         """
         Jones calculus of the scattering (reflection, diffraction) of the rays of this beam (the incident beam,
         with directions in columns 4-6) into the directions v_out.
@@ -1559,6 +1559,11 @@ class S4Beam(object):
         use_standard : int, optional
             Convention of the Jones matrix elements given in input: 1 (default) standard convention, converted with
             jones_matrix_standard_to_shadow() (only r_SP and r_PS change sign); 0 SHADOW convention.
+        sigma_axis : numpy array, shape (nrays, 3), optional
+            The sigma direction of the plane where the Jones matrix is defined. If None (default), it is the normal to
+            the scattering plane, v_in x v_out. It must be given for the transmitted (forward-diffracted) beam of a
+            crystal, where v_out = v_in but the sigma and pi amplitudes refer to the diffraction plane (k0, kh),
+            e.g., sigma_axis = v_in x H, with H the diffraction vector.
 
         Returns
         -------
@@ -1570,13 +1575,16 @@ class S4Beam(object):
         v_in = self.get_columns([4, 5, 6]).T
         e_S, e_P = self.get_efield_directions()
 
-        # sigma direction of the scattering plane; in forward scattering (v_out ~ v_in) the plane is undefined
-        # and the incident sigma direction is kept (R = identity)
-        axis = vector_cross(v_in, v_out)
-        mod_axis = vector_modulus(axis)
-        forward = mod_axis < 1e-8
-        axis[~forward] /= mod_axis[~forward, numpy.newaxis]
-        axis[forward] = e_S[forward]
+        if sigma_axis is not None:
+            axis = vector_norm(numpy.array(sigma_axis, dtype=float))
+        else:
+            # sigma direction of the scattering plane; in forward scattering (v_out ~ v_in) the plane is undefined
+            # and the incident sigma direction is kept (R = identity)
+            axis = vector_cross(v_in, v_out)
+            mod_axis = vector_modulus(axis)
+            forward = mod_axis < 1e-8
+            axis[~forward] /= mod_axis[~forward, numpy.newaxis]
+            axis[forward] = e_S[forward]
 
         es_S = axis                                  # sigma, pi of the scattering plane, incident ray
         es_P = vector_norm(vector_cross(es_S, v_in))
