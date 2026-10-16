@@ -42,6 +42,10 @@ Approximations (negligible for mosaic widths << 1 rad): the tilt density is Gaus
 tilt vector; the skipped hops have the mean length tthi/cos(gamma0).
 """
 import numpy
+try:
+    from numpy import trapezoid
+except ImportError:
+    from numpy import trapz as trapezoid  # numpy < 2.0 has no numpy.trapezoid
 
 from crystalpy.diffraction.PerfectCrystalDiffraction import PerfectCrystalDiffraction
 from crystalpy.util.ComplexAmplitudePhoton import ComplexAmplitudePhoton
@@ -106,7 +110,7 @@ def _integrated(x, y, tail_fraction=0.3):
     C is the mean of y x^2 over the outer tail_fraction of the scan (averaging the
     oscillations of the thin-slab curve), and C / |x_end| is added.
     """
-    total = numpy.trapezoid(y, x)
+    total = trapezoid(y, x)
     for side in (x < -(1 - tail_fraction) * abs(x[0]), x > (1 - tail_fraction) * x[-1]):
         if side.sum() > 2:
             C = numpy.mean(y[side] * x[side] ** 2)
