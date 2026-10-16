@@ -66,8 +66,6 @@ class S4PhasePlateCrystal(Crystal):
         Asymmetric crystal 0:No, 1:Yes.
     asymmetry_angle : float, optional
         For f_bragg_a=1, the asymmetry angle (angle between crystal planes and surface) in rads.
-    is_thick : int, optional
-        Use thick crystal approximation. Must be 0 (the transmitted beam requires a finite thickness).
     thickness : float, optional
         The crystal thickness in m.
     f_central : int, optional
@@ -84,9 +82,6 @@ class S4PhasePlateCrystal(Crystal):
     detune_half_darwin_widths : float, optional
         For f_detune=2, the detuning in units of the Darwin half width (sigma polarization, symmetric reflection,
         as given by crystalpy darwinHalfwidthS), as in Hirano et al. (1993) NIM A 336, 343.
-    f_ext : inf, optional
-        Flag for autosetting the crystal surface parameters.
-        0: internal/calculated parameters, 1:external/user defined parameters. TODO: delete?
     material_constants_library_flag : int, optional
         Flag for indicating the origin of the crystal data:
         0: xraylib, 1: dabax, 2: preprocessor file v1, 3: preprocessor file v2.
@@ -109,7 +104,6 @@ class S4PhasePlateCrystal(Crystal):
                  miller_index_l=1,
                  f_bragg_a=False,
                  asymmetry_angle=0.0,
-                 is_thick=0,
                  thickness=100e-6,
                  f_central=0,
                  f_phot_cent=0,
@@ -117,7 +111,6 @@ class S4PhasePlateCrystal(Crystal):
                  f_detune=0,
                  detune_angle=0.0,
                  detune_half_darwin_widths=0.0,
-                 f_ext=0,
                  material_constants_library_flag=0, # 0=xraylib, 1=dabax
                                                     # 2=shadow preprocessor file v1
                                                     # 3=shadow preprocessor file v2
@@ -145,8 +138,6 @@ class S4PhasePlateCrystal(Crystal):
         self._detune_angle = detune_angle
         self._detune_half_darwin_widths = detune_half_darwin_widths
         self._f_bragg_a = f_bragg_a
-        self._is_thick = is_thick
-        self._f_ext = f_ext
         self._material_constants_library_flag = material_constants_library_flag
         self._file_refl = file_refl
         self._dabax = dabax
@@ -160,8 +151,6 @@ class S4PhasePlateCrystal(Crystal):
                     ("detune_angle",        "S4: for f_detune=1: detuning angle",          "rad"),
                     ("detune_half_darwin_widths", "S4: for f_detune=2: detuning in Darwin half widths", ""),
                     ("f_bragg_a",           "S4: use asymmetric cut",                      ""),
-                    ("is_thick",            "S4: use thick crystal approximation (must be 0)", ""),
-                    ("f_ext",               "S4: autosetting curved surface parms.",       ""),
                     ("material_constants_library_flag", "S4: crystal data from: 0=xraylib, 1=dabax, 2=file v1, 3=file v1", ""),
                     ("file_refl",           "S4: preprocessor file name",                  ""),
             ] )
@@ -427,9 +416,6 @@ class S4PhasePlateCrystalElement(S4BeamlineElement):
             if not change_reference_system_out:
                 print("change_reference_system_out = False: skipping reference change from o.e. to image")
 
-        if self.get_optical_element()._is_thick:
-            raise ValueError("Phase plate crystal: the transmitted beam requires a finite thickness (is_thick=0).")
-
         if self._crystalpy_diffraction_setup is None:
             self.set_crystalpy_diffraction_setup()
         self.align_crystal()
@@ -592,14 +578,12 @@ if __name__ == "__main__":
             miller_index_k=1,
             miller_index_l=1,
             asymmetry_angle=0.0,
-            is_thick=0,
             thickness=100e-6,
             f_central=0,
             f_phot_cent=0,
             phot_cent=8000.0,
             file_refl="",
-            f_bragg_a=False,
-            f_ext=0,)
+            f_bragg_a=False,)
 
     print(c.info())
     ce = S4PhasePlateCrystalElement(optical_element=c)

@@ -29,8 +29,6 @@ class S4PlanePhasePlateCrystal(S4PhasePlateCrystal, S4PlaneOpticalElementDecorat
         The Miller index L.
     asymmetry_angle : float, optional
         For f_bragg_a=1, the asymmetry angle (angle between crystal planes and surface) in rads.
-    is_thick : int, optional
-        Use thick crystal approximation. Must be 0.
     thickness : float, optional
         The crystal thickness in m.
     f_central : int, optional
@@ -49,8 +47,6 @@ class S4PlanePhasePlateCrystal(S4PhasePlateCrystal, S4PlaneOpticalElementDecorat
         for material_constants_library_flag=2,3, the name of the file containing the crystal parameters.
     f_bragg_a : int, optional
         Asymmetric crystal 0:No, 1:Yes.
-    f_ext : inf, optional
-        Flag for autosetting the crystal surface parameters.
     material_constants_library_flag : int, optional
         Flag for indicating the origin of the crystal data:
         0: xraylib, 1: dabax, 2: preprocessor file v1, 3: preprocessor file v2.
@@ -69,7 +65,6 @@ class S4PlanePhasePlateCrystal(S4PhasePlateCrystal, S4PlaneOpticalElementDecorat
                  miller_index_k=1,
                  miller_index_l=1,
                  asymmetry_angle=0.0,
-                 is_thick=0,
                  thickness=100e-6,
                  f_central=False,
                  f_phot_cent=0,
@@ -79,7 +74,6 @@ class S4PlanePhasePlateCrystal(S4PhasePlateCrystal, S4PlaneOpticalElementDecorat
                  detune_half_darwin_widths=0.0,
                  file_refl="",
                  f_bragg_a=False,
-                 f_ext=0,
                  material_constants_library_flag=0,  # 0=xraylib, 1=dabax
                                                      # 2=shadow preprocessor file v1
                                                      # 3=shadow preprocessor file v2
@@ -95,7 +89,6 @@ class S4PlanePhasePlateCrystal(S4PhasePlateCrystal, S4PlaneOpticalElementDecorat
                            miller_index_k=miller_index_k,
                            miller_index_l=miller_index_l,
                            asymmetry_angle=asymmetry_angle,
-                           is_thick=is_thick,
                            thickness=thickness,
                            f_central=f_central,
                            f_phot_cent=f_phot_cent,
@@ -105,7 +98,6 @@ class S4PlanePhasePlateCrystal(S4PhasePlateCrystal, S4PlaneOpticalElementDecorat
                            detune_half_darwin_widths=detune_half_darwin_widths,
                            file_refl=file_refl,
                            f_bragg_a=f_bragg_a,
-                           f_ext=f_ext,
                            material_constants_library_flag=material_constants_library_flag,
                            dabax=dabax,
                            )
@@ -118,7 +110,6 @@ class S4PlanePhasePlateCrystal(S4PhasePlateCrystal, S4PlaneOpticalElementDecorat
             "miller_index_k": miller_index_k,
             "miller_index_l": miller_index_l,
             "asymmetry_angle": repr(float(asymmetry_angle)),
-            "is_thick": is_thick,
             "thickness": repr(float(thickness)),
             "f_central": f_central,
             "f_phot_cent": f_phot_cent,
@@ -128,7 +119,6 @@ class S4PlanePhasePlateCrystal(S4PhasePlateCrystal, S4PlaneOpticalElementDecorat
             "detune_half_darwin_widths": repr(float(detune_half_darwin_widths)),
             "file_refl": file_refl,
             "f_bragg_a": f_bragg_a,
-            "f_ext": f_ext,
             "material_constants_library_flag": material_constants_library_flag,
             "dabax": self._get_dabax_txt(),
             }
@@ -154,11 +144,12 @@ optical_element = S4PlanePhasePlateCrystal(name='{name}',
     boundary_shape=boundary_shape, material='{material}',
     miller_index_h={miller_index_h}, miller_index_k={miller_index_k}, miller_index_l={miller_index_l},
     f_bragg_a={f_bragg_a}, asymmetry_angle={asymmetry_angle},
-    is_thick={is_thick}, thickness={thickness},
+    thickness={thickness},
     f_central={f_central}, f_phot_cent={f_phot_cent}, phot_cent={phot_cent},
-    f_detune={f_detune}, detune_angle={detune_angle}, detune_half_darwin_widths={detune_half_darwin_widths}, # 0=No, 1=angle, 2=Darwin half widths
+    f_detune={f_detune}, # 0=No, 1=angle, 2=Darwin half widths
+    detune_angle={detune_angle}, # used if f_detune=1
+    detune_half_darwin_widths={detune_half_darwin_widths}, # used if f_detune=2 
     file_refl='{file_refl}',
-    f_ext={f_ext},
     material_constants_library_flag={material_constants_library_flag}, # 0=xraylib,1=dabax,2=preprocessor v1,3=preprocessor v2
     dabax={dabax}, # used when material_constants_library_flag=1,
     )"""
