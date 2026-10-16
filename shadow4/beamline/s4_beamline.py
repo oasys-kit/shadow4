@@ -16,6 +16,7 @@ from shadow4.beamline.optical_elements.ideal_elements.s4_empty import S4Empty
 from shadow4.beamline.optical_elements.mirrors.s4_mirror import S4Mirror
 from shadow4.beamline.optical_elements.crystals.s4_crystal import S4Crystal
 from shadow4.beamline.optical_elements.mosaic_crystals.s4_mosaic_crystal import S4MosaicCrystal
+from shadow4.beamline.optical_elements.phase_plate_crystals.s4_phase_plate_crystal import S4PhasePlateCrystal
 from shadow4.beamline.optical_elements.gratings.s4_grating import S4Grating
 from shadow4.beamline.optical_elements.multilayers.s4_multilayer import S4Multilayer
 from shadow4.beamline.optical_elements.refractors.s4_lens import S4Lens
@@ -794,6 +795,8 @@ class S4Beamline(Beamline):
                 TEXT = "CRYSTAL"
             elif isinstance(oe, S4MosaicCrystal):
                 TEXT = "MOSAIC CRYSTAL"
+            elif isinstance(oe, S4PhasePlateCrystal):
+                TEXT = "PHASE PLATE CRYSTAL"
             elif isinstance(oe, S4Grating):
                 TEXT = "GRATING"
             elif isinstance(oe, S4Multilayer):
@@ -887,6 +890,8 @@ class S4Beamline(Beamline):
                 oetype = "CRYSTAL"
             elif isinstance(oe, S4MosaicCrystal):
                 oetype = "MOSAIC CRYSTAL"
+            elif isinstance(oe, S4PhasePlateCrystal):
+                oetype = "PHASE PLATE"
             elif isinstance(oe, S4Grating):
                 oetype = "GRATING"
             elif isinstance(oe, S4Multilayer):
