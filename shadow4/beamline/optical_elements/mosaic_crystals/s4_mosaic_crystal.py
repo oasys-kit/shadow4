@@ -521,7 +521,6 @@ class S4MosaicCrystalElement(S4BeamlineElement):
         change_reference_system_out = params.get("change_reference_system_out", True)
 
         if is_verbose():
-            print(">>>>>> change_reference_system: ", change_reference_system_in, change_reference_system_out)
             if not change_reference_system_in:
                 print("change_reference_system_in = False: skipping reference change to o.e.")
             if not change_reference_system_out:

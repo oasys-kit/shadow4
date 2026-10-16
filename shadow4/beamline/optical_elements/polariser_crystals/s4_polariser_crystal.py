@@ -406,7 +406,6 @@ class S4PolariserCrystalElement(S4BeamlineElement):
         flag_lost_value = params.get("flag_lost_value", -1)
         change_reference_system_in = params.get("change_reference_system_in", True)
         change_reference_system_out = params.get("change_reference_system_out", True)
-        print(">>>>>> change_reference_system: ", change_reference_system_in, change_reference_system_out)
 
         if is_verbose():
             if not change_reference_system_in:
