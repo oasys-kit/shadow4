@@ -789,9 +789,6 @@ class S4Conic(S4OpticalSurface):
                     TPAR1[i] = -(BB[i] + numpy.sqrt(DETER)) * DENOM
                     TPAR2[i] = -(BB[i] - numpy.sqrt(DETER)) * DENOM
 
-        if TPAR2.size == 1:
-            TPAR2 = numpy.asscalar(TPAR2)
-
         # todo: return here the complex solutions and make the choice in choose_solution ?
         return TPAR1.real, TPAR2.real, IFLAG
 
