@@ -717,6 +717,16 @@ class PreRefl(object):
 
         sin_theta2 = refraction_index_1 * sin_theta1 / refraction_index_2
         cos_theta2 = numpy.sqrt(1 - sin_theta2**2, dtype=complex)
+        # choose the physical root for the transmitted wave in medium 2 (time factor exp(-i omega t)):
+        # - propagating wave (|Re| >= |Im| of n2 cos(theta2)): outgoing wave, Re(n2 cos(theta2)) >= 0;
+        # - evanescent wave (total reflection): decaying wave, Im(n2 cos(theta2)) >= 0.
+        # The principal root is not always the physical one: e.g., for total internal reflection with an absorbing
+        # incident medium (n2/n1 with a negative imaginary part) it gives a growing wave, and the phases of rs, rp
+        # (and the handedness of the polarization) are reversed.
+        n2_cos_theta2 = refraction_index_2 * cos_theta2
+        propagating = numpy.abs(numpy.real(n2_cos_theta2)) >= numpy.abs(numpy.imag(n2_cos_theta2))
+        flip = numpy.where(propagating, numpy.real(n2_cos_theta2) < 0, numpy.imag(n2_cos_theta2) < 0)
+        cos_theta2 = numpy.where(flip, -cos_theta2, cos_theta2)
 
 
         if method == 0: # Born & Wolf 6th edition, pag 40
