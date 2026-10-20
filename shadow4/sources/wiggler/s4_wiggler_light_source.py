@@ -702,8 +702,8 @@ class S4WigglerLightSource(S4LightSource):
 
                 fm_i = (fm_s + fm_p) * cte
 
-                i1D =  Sampler1D(fm_i, angle_array_reduced)
-                CDF1[:, i] = i1D.cdf()
+                i1D =  Sampler1D(fm_i, angle_array_reduced)  # (requires srxraylib with the trapezoidal cdf,
+                CDF1[:, i] = i1D.cdf()                       # otherwise psi is shifted by half a bin)
                 FM1[:, i] = fm_i # todo: delete?
                 # PSI1[i] = psi1
 
