@@ -233,7 +233,12 @@ class S4BendingMagnetLightSource(S4LightSource):
 
         r_aladdin = self.get_magnetic_structure().radius()
 
-        if r_aladdin < 0:
+        # Handedness of the radiation out of the orbit plane: phase difference phi_pi - phi_sigma = POL_ANGLE * sign(psi).
+        # It depends on the sense of rotation of the electrons, i.e., on the sign of the magnetic field (not on the
+        # sign of the radius). For B < 0 the electrons are deflected toward +x (clockwise seen from above, see below)
+        # and the radiation above the orbit plane is right-handed (POL_ANGLE = +90 deg, S3 < 0, for an observer
+        # looking toward the source); for B > 0 the handedness is reversed.
+        if self.get_magnetic_structure().magnetic_field() > 0:
             POL_ANGLE = -numpy.pi / 2
         else:
             POL_ANGLE = numpy.pi / 2
