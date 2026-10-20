@@ -591,7 +591,7 @@ class S4WigglerLightSource(S4LightSource):
         do_loop = 0
 
         if do_loop:
-            POL_ANGLE_array = numpy.radians(-90.0 * numpy.sign(CURV_array))
+            POL_ANGLE_array = numpy.radians(90.0 * numpy.sign(CURV_array))
             R_MAGNET_array = numpy.abs(1.0 / CURV_array)
             for itik in range(NRAYS):
 
@@ -637,7 +637,10 @@ class S4WigglerLightSource(S4LightSource):
         else:
 
             # EPSI_PATH = EPSI_PATH_array - PATH0  # now refer to wiggler's origin
-            POL_ANGLE_array = numpy.radians(-90.0 * numpy.sign(CURV_array))
+            # handedness: phase difference phi_pi - phi_sigma = POL_ANGLE * sign(psi). CURV > 0 means that the electron
+            # turns toward +x (clockwise seen from above): the radiation above the orbit plane is right-handed
+            # (POL_ANGLE = +90 deg, S3 < 0, for an observer looking toward the source), as for a bending magnet with B < 0.
+            POL_ANGLE_array = numpy.radians(90.0 * numpy.sign(CURV_array))
 
             R_MAGNET_array = numpy.abs(1.0 / CURV_array)
             ibad = numpy.argwhere( numpy.abs(CURV_array) < 1e-10)
