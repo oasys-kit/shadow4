@@ -884,6 +884,117 @@ class S4Beam(object):
         if use_standard: j1 = -j1
         return j0,j1
 
+    def get_polarization_ellipse(self, flag_return=0, iray=0, nolost=1):
+        """
+        Computes the polarization ellipse from the Stokes parameters of the rays (columns 30-33).
+
+        The ellipse is described in the standard (right-handed) frame (x, y, k) = (u_s, -u_p, v), as seen by an
+        observer placed downstream and looking toward the source, with time dependence exp(-i w t)
+        (conventions of C. Detlefs et al., Eur. Phys. J. Special Topics 208, 359 (2012)).
+
+        Parameters
+        ----------
+        flag_return : int, optional
+            * 0 (default): ellipse of the polarized part of the beam, from the Stokes parameters averaged over the
+              rays. It assumes that the u_s directions of the rays are approximately parallel.
+            * 1: ellipses of all the rays (the values are arrays with the number of rays as last dimension).
+            * 2: ellipse of the ray iray.
+        iray : int, optional
+            The index of the ray (among the rays selected by nolost). Used only with flag_return=2.
+        nolost : int, optional
+            * 0=use all rays,
+            * 1=use only good rays (non-lost rays) (default),
+            * 2=use only lost rays.
+
+        Returns
+        -------
+        dict
+            * "psi": azimuth of the major axis, measured from x (u_s) counter-clockwise, in [0, pi) (rad).
+              For circular polarization it is undefined and set to zero.
+            * "chi": ellipticity angle, tan|chi| = b/a, in [-pi/4, pi/4] (rad). chi > 0 (S3 > 0) is left-handed
+              (counter-clockwise rotation for the observer), chi < 0 is right-handed, chi = 0 is linear.
+            * "a", "b": semi-major and semi-minor axes (a**2 + b**2 = polarized intensity = dop * S0).
+            * "S": Stokes parameters (S0, S1, S2, S3), shape (4,) or (4, nrays).
+            * "P": normalized Stokes parameters (P1, P2, P3) = (S1, S2, S3) / S0, shape (3,) or (3, nrays).
+            * "dop": degree of polarization. It is one for a single ray (every ray is fully polarized), and it
+              can be smaller than one for the average over the rays (flag_return=0).
+
+        Examples
+        --------
+        Ellipse of the beam, and data to plot it (curve along x = u_s, y = -u_p):
+
+        >>> ell = beam.get_polarization_ellipse(flag_return=0)
+        >>> print(numpy.degrees(ell["psi"]), numpy.degrees(ell["chi"]), ell["dop"])
+        >>> x, y = S4Beam.get_polarization_ellipse_curve(ell)
+        >>> # plt.plot(x, y); plt.gca().set_aspect('equal')
+
+        Ellipses of all the rays (e.g., histogram of the ellipticity, or curves of the first 20 rays):
+
+        >>> ell = beam.get_polarization_ellipse(flag_return=1)
+        >>> # plt.hist(numpy.degrees(ell["chi"]), bins=100)
+        >>> X, Y = S4Beam.get_polarization_ellipse_curve(ell)       # shape (nrays, npoints)
+        >>> # for i in range(20): plt.plot(X[i], Y[i])
+
+        Ellipse of a single ray, and its axes:
+
+        >>> ell = beam.get_polarization_ellipse(flag_return=2, iray=0)
+        >>> x, y = S4Beam.get_polarization_ellipse_curve(ell)
+        >>> a, b, psi = ell["a"], ell["b"], ell["psi"]
+        >>> # plt.plot([-a * numpy.cos(psi), a * numpy.cos(psi)], [-a * numpy.sin(psi), a * numpy.sin(psi)])  # major
+        >>> # plt.plot([b * numpy.sin(psi), -b * numpy.sin(psi)], [-b * numpy.cos(psi), b * numpy.cos(psi)])  # minor
+
+        """
+        S0, S1, S2, S3 = [self.get_column(col, nolost=nolost) for col in [30, 31, 32, 33]]
+        if flag_return == 0:
+            S0, S1, S2, S3 = S0.mean(), S1.mean(), S2.mean(), S3.mean()
+        elif flag_return == 2:
+            S0, S1, S2, S3 = S0[iray], S1[iray], S2[iray], S3[iray]
+        elif flag_return != 1:
+            raise ValueError("flag_return must be 0 (average), 1 (all rays) or 2 (ray iray)")
+
+        with numpy.errstate(divide='ignore', invalid='ignore'):          # rays with zero intensity give nan
+            Ipol = numpy.sqrt(S1 ** 2 + S2 ** 2 + S3 ** 2)                 # polarized intensity
+            dop = Ipol / S0
+            psi = numpy.mod(0.5 * numpy.arctan2(S2, S1), numpy.pi)         # azimuth of the major axis, [0, pi)
+            psi = numpy.where(numpy.isclose(psi, numpy.pi), 0.0, psi)      # pi - epsilon is the same direction as 0
+            psi = numpy.where(numpy.sqrt(S1 ** 2 + S2 ** 2) < 1e-6 * S0, 0.0, psi)  # circular: psi undefined
+            chi = 0.5 * numpy.arcsin(numpy.clip(S3 / Ipol, -1, 1))       # ellipticity angle, > 0 left-handed
+            a = numpy.sqrt(Ipol) * numpy.cos(chi)                         # semi-axes
+            b = numpy.sqrt(Ipol) * numpy.abs(numpy.sin(chi))
+            P = numpy.array([S1 / S0, S2 / S0, S3 / S0])
+        S = numpy.array([S0, S1, S2, S3])
+        if flag_return != 1: psi = float(psi)
+        return dict(psi=psi, chi=chi, a=a, b=b, S=S, P=P, dop=dop)
+
+    @classmethod
+    def get_polarization_ellipse_curve(cls, ell, npoints=361):
+        """
+        Computes the curve of the polarization ellipse(s) returned by get_polarization_ellipse(), for plotting.
+
+        The ellipse with semi-axes (a, b) is rotated by psi. It starts on the major axis and is traced in the sense
+        of rotation of the electric field for increasing time: counter-clockwise for chi > 0 (left-handed), clockwise
+        for chi < 0 (right-handed), for an observer looking toward the source.
+
+        Parameters
+        ----------
+        ell : dict
+            The output of get_polarization_ellipse().
+        npoints : int, optional
+            The number of points over one period.
+
+        Returns
+        -------
+        tuple
+            (x, y), the components along x = u_s and y = -u_p. Shape (npoints,) for a single ellipse
+            (flag_return=0 or 2), or (nrays, npoints) for all the rays (flag_return=1).
+
+        """
+        tau = numpy.linspace(0, 2 * numpy.pi, npoints)
+        a, b, psi, chi = [numpy.asarray(ell[k])[..., numpy.newaxis] for k in ["a", "b", "psi", "chi"]]
+        xx = a * numpy.cos(tau)
+        yy = numpy.sign(chi) * b * numpy.sin(tau)
+        return xx * numpy.cos(psi) - yy * numpy.sin(psi), xx * numpy.sin(psi) + yy * numpy.cos(psi)
+
     @classmethod
     def jones_matrix_standard_to_shadow(cls, J00, J01, J10, J11):
         """
