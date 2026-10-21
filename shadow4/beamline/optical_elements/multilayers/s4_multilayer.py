@@ -426,8 +426,6 @@ class S4MultilayerElement(S4BeamlineElement):
 
                 Rs = get_interpolator_weight_2D(mirror_energies, mirror_grazing_angles, mirror_reflectivities)
                 Rp = Rs
-                footprint.apply_reflectivities(numpy.sqrt(Rs), numpy.sqrt(Rp))
-                footprint.apply_reflectivities(numpy.sqrt(Rs), numpy.sqrt(Rp))
 
             elif values.shape[1] == 4:
                 mirror_reflectivities_s = values[:, 2]
