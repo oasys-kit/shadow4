@@ -48,6 +48,37 @@ def _pysru_analytical_trajectory_plane_undulator(K=1.87, gamma=2544.03131115, la
     # note that v_x,v_y,v_z are beta (in units of c): V_v[m  s**-1] = c * v_v
     return np.vstack((t, x, y, z, v_x, v_y, v_z, a_x, a_y, a_z))
 
+def _stokes_from_fields(e_x, e_y):
+    """
+    Normalized Stokes parameters (P1, P2, P3) of the complex electric field components e_x (horizontal) and e_y
+    (vertical) calculated in the frame of the undulator emission codes (internal, pySRU, SRW): x horizontal, y vertical,
+    z along the beam, right-handed, with time dependence exp(-i w t) (verified with the Lienard-Wiechert field).
+
+    This frame is the SHADOW standard frame (u_sigma, -u_pi, v) rotated by 180 deg around the beam: the Stokes
+    parameters are the same in both frames, but the direction (x, y) of the emission codes corresponds to the SHADOW
+    direction (X', Z') = (-x, y). The emission is calculated in the quadrant x >= 0, y >= 0; for a planar undulator,
+    P2 changes sign with the sign of x * y and P3 with the sign of y (mirror symmetry in y; in x the symmetry includes
+    a time reversal, i.e., a complex conjugation of the field).
+
+    Parameters
+    ----------
+    e_x, e_y : numpy arrays (complex)
+        The field components (any shape).
+
+    Returns
+    -------
+    numpy array
+        Shape (3,) + e_x.shape with (P1, P2, P3); zero where the intensity is zero.
+    """
+    S0 = numpy.abs(e_x) ** 2 + numpy.abs(e_y) ** 2
+    S = numpy.array([numpy.abs(e_x) ** 2 - numpy.abs(e_y) ** 2,
+                     2 * numpy.real(e_x * numpy.conj(e_y)),
+                     2 * numpy.imag(numpy.conj(e_x) * e_y)])
+    with numpy.errstate(divide='ignore', invalid='ignore'):
+        P = numpy.where(S0 > 0, S / S0, 0.0)
+    return P
+
+
 # adapted from pySRU:  energy_radiated_approximation_and_farfield()
 def _pysru_energy_radiated_approximation_and_farfield(omega=2.53465927101e17, electron_current=1.0,
                                                       trajectory=None, x=0.00 , y=0.0, D=None):
@@ -103,8 +134,15 @@ def _pysru_energy_radiated_approximation_and_farfield(omega=2.53465927101e17, el
     Alpha_0 = (1.0 / (1.0 - n_chap[0] * trajectory_v_x[0]
                       - n_chap[1] * trajectory_v_y[0] - n_chap[2] * trajectory_v_z[0]))
 
-    terme_bord += ((n_chap[1] * A3[-1] - n_chap[2] * A2[-1]) * Alpha_1 * Alpha2[-1])
-    terme_bord -= ((n_chap[1] * A3[0]  - n_chap[2] * A2[0])  * Alpha_0 * Alpha2[0])
+    # boundary terms of the integration by parts: the vector -n x (n x beta) / (1 - n.beta) exp(i phi) at the two
+    # ends of the trajectory, i.e., the three components of the integrand (in pySRU only the first component was
+    # used for the three components, which breaks the symmetry of E_y and E_z, visible where the field is weak)
+    def _edge(i, alpha):
+        return numpy.array([ n_chap[1] * A3[i] - n_chap[2] * A2[i],
+                            -n_chap[0] * A3[i] + n_chap[2] * A1[i],
+                             n_chap[0] * A2[i] - n_chap[1] * A1[i]]) * alpha * Alpha2[i]
+    terme_bord += _edge(-1, Alpha_1)
+    terme_bord -= _edge(0, Alpha_0)
     E += terme_bord
     E *= c6**0.5
     return E
@@ -319,8 +357,9 @@ def _undul_phot(E_ENERGY,INTENSITY, LAMBDAU, NPERIODS, K, EMIN, EMAX, NG_E, MAXA
             'theta'            : theta,
             'phi'              : phi,
             'trajectory'       : T,
-            'e_amplitude_sigma': EFIELD_X, # todo: verify!
-            'e_amplitude_pi'   : EFIELD_Y, # todo: verify!
+            'e_amplitude_sigma': EFIELD_X, # field components in the frame of the emission code (see _stokes_from_fields)
+            'e_amplitude_pi'   : EFIELD_Y,
+            'stokes'           : _stokes_from_fields(EFIELD_X, EFIELD_Y), # (P1, P2, P3) on the polar grid
             }
 
     # from srxraylib.plot.gol import plot

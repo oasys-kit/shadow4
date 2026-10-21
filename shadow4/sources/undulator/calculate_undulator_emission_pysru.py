@@ -56,7 +56,7 @@ except:
 
 import numpy
 from scipy import interpolate
-from shadow4.sources.undulator.calculate_undulator_emission import _get_radiation_interpolated_cartesian
+from shadow4.sources.undulator.calculate_undulator_emission import _get_radiation_interpolated_cartesian, _stokes_from_fields
 
 def _pysru_wofry_2D_run(photon_energy,
                         energy_in_GeV=6,
@@ -298,8 +298,9 @@ def _undul_phot_pySRU(E_ENERGY, INTENSITY, LAMBDAU, NPERIODS, K, EMIN, EMAX, NG_
             'theta'            : theta,
             'phi'              : phi,
             'trajectory'       : T,
-            'e_amplitude_sigma': efield_x,  # todo: verify!
-            'e_amplitude_pi'   : efield_y,  # todo: verify!
+            'e_amplitude_sigma': efield_x,  # field components in the frame of the emission code (see _stokes_from_fields)
+            'e_amplitude_pi'   : efield_y,
+            'stokes'           : _stokes_from_fields(efield_x, efield_y),  # (P1, P2, P3) on the polar grid
             'CART_radiation'   : radiation_interpolated,
             'CART_x'           : vx / distance,  # angle in rad
             'CART_y'           : vz / distance,  # angle in rad

@@ -752,6 +752,9 @@ class S4UndulatorLightSource(S4LightSource):
         THETABM[numpy.where(myrand < 0.5)] *= -1.0
         myrand = numpy.random.random(NRAYS)
         PHI[numpy.where(myrand < 0.5)] *= -1.0
+        # quadrant of the emission direction, used for the polarization (see below)
+        SIGN_X = numpy.sign(PHI)       # horizontal
+        SIGN_Z = numpy.sign(THETABM)   # vertical
 
         if undulator.get_flag_emittance():
             if electron_beam_x_at_waist:
@@ -811,39 +814,46 @@ class S4UndulatorLightSource(S4LightSource):
         AP_VEC = vector_norm(AP_VEC)
 
         #
-        # obtain polarization for each ray (interpolation)
+        # obtain polarization for each ray (interpolation of the normalized Stokes parameters P1, P2, P3 of the
+        # calculated emission, in the polar grid of the quadrant x >= 0, y >= 0 of the emission codes)
         #
-        if undulator._ng_e == 1: # 2D interpolation
-            sampled_photon_energy = numpy.array(sampled_photon_energy) # be sure is an array
-            fn = interpolate.RegularGridInterpolator(
-                (self.__result_radiation["theta"], self.__result_radiation["phi"]),
-                self.__result_radiation["polarization"][0])
+        STOKES = self.__result_radiation["stokes"]  # shape (3, n_energies, n_theta, n_phi)
+        P_RAYS = numpy.zeros((3, NRAYS))
+        for k in range(3):
+            if undulator._ng_e == 1: # 2D interpolation
+                fn = interpolate.RegularGridInterpolator(
+                    (self.__result_radiation["theta"], self.__result_radiation["phi"]), STOKES[k, 0])
+                pts = numpy.dstack( (sampled_theta, sampled_phi) )[0]
+            else: # 3D interpolation
+                fn = interpolate.RegularGridInterpolator(
+                    (self.__result_radiation["photon_energy"], self.__result_radiation["theta"],
+                     self.__result_radiation["phi"]), STOKES[k])
+                pts = numpy.dstack( (numpy.array(sampled_photon_energy), sampled_theta, sampled_phi) )[0]
+            P_RAYS[k] = fn(pts)
 
-            pts = numpy.dstack( (sampled_theta, sampled_phi) )
-            pts = pts[0]
-            POL_DEG = fn(pts)
-        else: # 3D interpolation
-            fn = interpolate.RegularGridInterpolator(
-                (self.__result_radiation["photon_energy"], self.__result_radiation["theta"], self.__result_radiation["phi"]),
-                self.__result_radiation["polarization"])
+        # every ray is fully polarized: renormalize (the interpolation may reduce the degree of polarization)
+        P_NORM = numpy.sqrt((P_RAYS ** 2).sum(axis=0))
+        P_RAYS[0, P_NORM == 0] = 1.0           # no emission calculated (zero intensity): sigma polarization
+        P_NORM[P_NORM == 0] = 1.0
+        P_RAYS /= P_NORM
 
-            pts = numpy.dstack( (sampled_photon_energy,
-                                 sampled_theta,
-                                 sampled_phi) )
-            pts = pts[0]
-            POL_DEG = fn(pts)
+        # quadrant: the Stokes parameters of the emission codes are the SHADOW standard ones (frame rotated by 180 deg
+        # around the beam), and the direction (x, y) of the emission codes is the SHADOW direction (X', Z') = (-x, y).
+        # For a planar undulator, the mirror symmetry y -> -y (trajectory in the plane y = 0) changes the sign of E_y
+        # (P2 and P3 change sign), and the symmetry x -> -x (with time reversal, i.e., complex conjugation) changes
+        # E_y into -E_y* (P2 changes sign, P3 does not). Therefore P2 changes sign with x * y = -X' Z', and P3 with
+        # y = Z'.
+        P_RAYS[1] *= -SIGN_X * SIGN_Z
+        P_RAYS[2] *= SIGN_Z
 
-        #     ! C
-        #     ! C   WaNT A**2 = AX**2 + AZ**2 = 1 , instead of A_VEC**2 = 1 .
-        #     ! C
+        # amplitudes and phases (standard Jones vector (E_sigma, -E_pi), see S4Beam):
+        # |E_sigma| = sqrt((1 + P1) / 2), |E_pi| = sqrt((1 - P1) / 2), phase_pi - phase_sigma = atan2(-P3, -P2)
+        AX = numpy.sqrt(numpy.clip(0.5 * (1.0 + P_RAYS[0]), 0, 1))
+        AZ = numpy.sqrt(numpy.clip(0.5 * (1.0 - P_RAYS[0]), 0, 1))
+        POL_ANGLE = numpy.arctan2(-P_RAYS[2], -P_RAYS[1])
 
-        DENOM = numpy.sqrt(1.0 - 2.0 * POL_DEG + 2.0 * POL_DEG**2)
-        AX = POL_DEG/DENOM
         for i in range(3):
             A_VEC[:, i] *= AX
-
-        AZ = (1.0 - POL_DEG) / DENOM
-        for i in range(3):
             AP_VEC[:, i] *= AZ
 
         rays[:, 6:9] =  A_VEC
@@ -852,15 +862,12 @@ class S4UndulatorLightSource(S4LightSource):
         # ! C
         # ! C Now the phases of A_VEC and AP_VEC.
         # ! C
-
-        POL_ANGLE = 0.5 * numpy.pi
-
         if F_COHER == 1:
             PHASEX = 0.0
         else:
             PHASEX = numpy.random.random(NRAYS) * 2 * numpy.pi
 
-        PHASEZ = PHASEX + POL_ANGLE * numpy.sign(ANGLEV)
+        PHASEZ = PHASEX + POL_ANGLE
 
         rays[:, 13] = PHASEX
         rays[:, 14] = PHASEZ

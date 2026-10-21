@@ -24,6 +24,7 @@ from copy import deepcopy
 import numpy
 import sys
 from scipy import interpolate
+from shadow4.sources.undulator.calculate_undulator_emission import _stokes_from_fields
 
 def _srw_stokes0_to_arrays(stk):
   Shape = (4,stk.mesh.ny,stk.mesh.nx,stk.mesh.ne)
@@ -262,6 +263,9 @@ def _undul_phot_SRW(E_ENERGY, INTENSITY, LAMBDAU, NPERIODS, K, EMIN, EMAX, NG_E,
     # !C SHADOW defines the degree of polarization by |E| instead of |E|^2
     # !C i.e.  P = |Ex|/(|Ex|+|Ey|)   instead of   |Ex|^2/(|Ex|^2+|Ey|^2)
     pol_deg = wModSigma / (wModSigma + wModPi)
+    # normalized Stokes parameters on the cartesian grid (they depend on the relative phase only, and are smooth:
+    # they are interpolated to the polar grid, instead of the phases of the field components that may wrap)
+    stokes_cart = _stokes_from_fields(wSigma[:, :, :, 0], wPi[:, :, :, 0])
     x = numpy.linspace(mesh.xStart, mesh.xFin, mesh.nx)
     y = numpy.linspace(mesh.yStart, mesh.yFin, mesh.ny)
     e = numpy.linspace(mesh.eStart, mesh.eFin, mesh.ne)
@@ -279,8 +283,10 @@ def _undul_phot_SRW(E_ENERGY, INTENSITY, LAMBDAU, NPERIODS, K, EMIN, EMAX, NG_E,
     efield_s_angle = numpy.zeros_like(Z2)
     efield_p_mod   = numpy.zeros_like(Z2)
     efield_p_angle = numpy.zeros_like(Z2)
+    STOKES         = numpy.zeros((3, NG_E, NG_T, NG_P))
 
     for ie in range(e.size):
+      tck_stokes = [_srw_interpol_object(x, y, stokes_cart[k, ie]) for k in range(3)]
       tck = _srw_interpol_object(x, y, radiation[ie])
       tck_pol_deg = _srw_interpol_object(x, y, pol_deg[ie])
       tck_efield_s_mod = _srw_interpol_object(x, y, wModSigma[ie])
@@ -305,6 +311,7 @@ def _undul_phot_SRW(E_ENERGY, INTENSITY, LAMBDAU, NPERIODS, K, EMIN, EMAX, NG_E,
           efield_s_angle[ie, itheta, iphi] = tck_efield_s_angle(X, Y)
           efield_p_mod[ie, itheta, iphi] = tck_efield_p_mod(X, Y)
           efield_p_angle[ie, itheta, iphi] = tck_efield_p_angle(X, Y)
+          for k in range(3): STOKES[k, ie, itheta, iphi] = tck_stokes[k](X, Y)
 
     out = { 'radiation'             : Z2,
             'polarization'          : POL_DEG,
@@ -314,6 +321,7 @@ def _undul_phot_SRW(E_ENERGY, INTENSITY, LAMBDAU, NPERIODS, K, EMIN, EMAX, NG_E,
             'trajectory'            : None,
             'e_amplitude_sigma'     : efield_s_mod * numpy.exp(1j * efield_s_angle),
             'e_amplitude_pi'        : efield_p_mod * numpy.exp(1j * efield_p_angle),
+            'stokes'                : STOKES, # (P1, P2, P3) on the polar grid (see _stokes_from_fields)
             'CART_radiation'        : radiation,
             'CART_polarizartion'    : pol_deg,
             'CART_x'                : x / distance, # angle in rad
