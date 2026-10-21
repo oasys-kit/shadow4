@@ -320,14 +320,9 @@ class S4MirrorElement(S4BeamlineElement):
         rp = 1.0
 
         if soe._f_reflec == 1: # apply reflectivity
-            v_out = input_beam.get_columns([4, 5, 6])
             angle_in = numpy.arccos(v_in[0,:] * normal[0,:] +
                                     v_in[1,:] * normal[1,:] +
                                     v_in[2,:] * normal[2,:])
-
-            angle_out = numpy.arccos(v_out[0,:] * normal[0,:] +
-                                     v_out[1,:] * normal[1,:] +
-                                     v_out[2,:] * normal[2,:])
 
             grazing_angle_mrad = 1e3 * (numpy.pi / 2 - angle_in)
 
