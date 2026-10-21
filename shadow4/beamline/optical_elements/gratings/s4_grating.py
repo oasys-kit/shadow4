@@ -355,6 +355,17 @@ class S4GratingElement(S4BeamlineElement):
             f_ruling=oe._f_ruling,
             invert_normal=invert_normal)
 
+        #
+        # electric fields of the diffracted rays with the Jones calculus: the incident field is projected onto the
+        # sigma and pi directions of the scattering plane of each ray (spanned by the incident and diffracted
+        # directions) and expressed along the sigma and pi directions of the diffracted ray, so that E_s, E_p and
+        # the diffracted direction are perpendicular. No grating efficiency is applied (r_s = r_p = 1).
+        #
+        nrays = beam_mirr.get_number_of_rays()
+        ones = numpy.ones(nrays, dtype=complex)
+        j0, j1, e_S, e_P = beam.calculate_jones_scattering(beam_mirr.get_columns([4, 5, 6]).T, ones, ones)
+        beam_mirr.set_jones_components(j0, j1, e_S=e_S, e_P=e_P)
+
         return beam_mirr, normal
 
 

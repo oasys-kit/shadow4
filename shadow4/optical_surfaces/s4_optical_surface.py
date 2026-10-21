@@ -436,7 +436,11 @@ class S4OpticalSurface(object):
         GSCATTER = vector_multiply_scalar(VTAN, G_MODR)
 
         K_OUT_PAR = vector_sum(K_IN_PAR, GSCATTER)
-        K_OUT_NOR = vector_multiply_scalar(VNOR,  numpy.sqrt(kin**2 - vector_modulus_square(K_OUT_PAR)))
+        K_OUT_NOR2 = kin**2 - vector_modulus_square(K_OUT_PAR)
+        # evanescent order (|k_out,par| > k): the ray is lost (the direction is set along the surface, avoiding NaN)
+        evanescent = K_OUT_NOR2 < 0
+        flag[evanescent] = -100
+        K_OUT_NOR = vector_multiply_scalar(VNOR,  numpy.sqrt(numpy.maximum(K_OUT_NOR2, 0.0)))
         K_OUT = vector_sum(K_OUT_PAR, K_OUT_NOR)
         V_OUT = vector_norm(K_OUT)
 
