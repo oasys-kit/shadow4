@@ -1471,7 +1471,7 @@ class MLayer(object):
             # ! Fresnel formula "P" (in function of incidence angle and critical angle)
             ffep = (fe / re2 - fo / ro2) / (fe / re2 + fo / ro2)
             ffop = -ffep
-            ffvp = (fv - fo / ro2) / (fv + fo / ro2)
+            ffvp = (fv - fo / rs2) / (fv + fo / rs2) # fo is the substrate here (not the odd layer)
             ffsp = (fe / re2 - fs / rs2) / (fe / re2 + fs / rs2)
 
         # ! another way

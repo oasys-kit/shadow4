@@ -306,32 +306,12 @@ class S4MultilayerElement(S4BeamlineElement):
         # footprint, normal = self.apply_local_reflection(input_beam)
         footprint, normal = self.get_optical_element()._apply_multilayer_reflection(input_beam)
 
-        if movements is not None:
-            if movements.f_move:
-                footprint.rot_back(OFFX=movements.offset_x,
-                                   OFFY=movements.offset_y,
-                                   OFFZ=movements.offset_z,
-                                   X_ROT=movements.rotation_x,
-                                   Y_ROT=movements.rotation_y,
-                                   Z_ROT=movements.rotation_z)
         #
-        # apply mirror boundaries
+        # multilayer reflectivity (complex amplitudes rs, rp)
         #
-        footprint.apply_boundaries_syned(soe.get_boundary_shape(), flag_lost_value=flag_lost_value)
-
-        #
-        # apply mirror reflectivity
-        # TODO: add phase
-        #
-
-        v_out = input_beam.get_columns([4, 5, 6])
         angle_in = numpy.arccos(v_in[0,:] * normal[0,:] +
                                 v_in[1,:] * normal[1,:] +
                                 v_in[2,:] * normal[2,:])
-
-        angle_out = numpy.arccos(v_out[0,:] * normal[0,:] +
-                                 v_out[1,:] * normal[1,:] +
-                                 v_out[2,:] * normal[2,:])
 
         grazing_angle_mrad = 1e3 * (numpy.pi / 2 - angle_in)
 
@@ -355,8 +335,7 @@ class S4MultilayerElement(S4BeamlineElement):
                                                        Y=footprint.get_column(2))
             # from srxraylib.plot.gol import plot
             # plot(input_beam.get_column(26), Rs**2)
-            footprint.apply_reflectivities(Rs, Rp)
-            # todo: apply phases
+            rs, rp = Rs * numpy.exp(-1j * phase_s), Rp * numpy.exp(-1j * phase_p) # see note on the time convention
 
         elif soe._f_refl == 1:  # user angle, mrad ref
 
@@ -376,7 +355,7 @@ class S4MultilayerElement(S4BeamlineElement):
                               left=mirror_reflectivities[0],
                               right=mirror_reflectivities[-1])
             Rp = Rs
-            footprint.apply_reflectivities(numpy.sqrt(Rs), numpy.sqrt(Rp))
+            rs, rp = numpy.sqrt(Rs), numpy.sqrt(Rp) # the phase is not managed!
 
         elif soe._f_refl == 2:  # user energy
 
@@ -394,7 +373,7 @@ class S4MultilayerElement(S4BeamlineElement):
                               left=mirror_reflectivities[0],
                               right=mirror_reflectivities[-1])
             Rp = Rs
-            footprint.apply_reflectivities(numpy.sqrt(Rs), numpy.sqrt(Rp))
+            rs, rp = numpy.sqrt(Rs), numpy.sqrt(Rp) # the phase is not managed!
 
         elif soe._f_refl == 3:  # user 2D
             if is_verbose(): print("Reflectivity from file (eV, mrad, refl): ", soe._file_refl)
@@ -434,7 +413,7 @@ class S4MultilayerElement(S4BeamlineElement):
                 Rs = get_interpolator_weight_2D(mirror_energies, mirror_grazing_angles, mirror_reflectivities_s)
                 Rp = get_interpolator_weight_2D(mirror_energies, mirror_grazing_angles, mirror_reflectivities_p)
 
-            footprint.apply_reflectivities(numpy.sqrt(Rs), numpy.sqrt(Rp))
+            rs, rp = numpy.sqrt(Rs), numpy.sqrt(Rp) # the phase is not managed!
 
         elif soe._f_refl == 4: # xraylib
             if is_verbose(): print("Reflectivity calculated using xraylib")
@@ -458,8 +437,7 @@ class S4MultilayerElement(S4BeamlineElement):
                                                        Y=footprint.get_column(2))
             # from srxraylib.plot.gol import plot
             # plot(input_beam.get_column(26), Rs**2)
-            footprint.apply_reflectivities(Rs, Rp)
-            # todo: apply phases
+            rs, rp = Rs * numpy.exp(-1j * phase_s), Rp * numpy.exp(-1j * phase_p) # see note on the time convention
 
         elif soe._f_refl == 5: # dabax
             if is_verbose(): print("Reflectivity calculated using dabax")
@@ -484,11 +462,39 @@ class S4MultilayerElement(S4BeamlineElement):
                                                        Y=footprint.get_column(2))
             # from srxraylib.plot.gol import plot
             # plot(input_beam.get_column(26), Rs**2)
-            footprint.apply_reflectivities(Rs, Rp)
-            # todo: apply phases
+            rs, rp = Rs * numpy.exp(-1j * phase_s), Rp * numpy.exp(-1j * phase_p) # see note on the time convention
 
         else:
             raise Exception("Not implemented source of multilayer reflectivity")
+
+        #
+        # apply the reflectivity with the Jones calculus: the incident field is projected onto the sigma and pi
+        # directions of the scattering plane of each ray, multiplied by rs, rp, and expressed along the sigma and pi
+        # directions of the reflected ray. This is done in the same frame as the reflection (before undoing the
+        # multilayer movements).
+        # Note on the time convention: MLayer uses n = 1 - delta - i beta (time factor exp(+i omega t)) and returns
+        # the moduli and phases of the amplitudes in that convention. SHADOW4 uses exp(-i omega t), therefore the
+        # amplitudes are the complex conjugates: rs = |rs| exp(-i phase_s), rp = |rp| exp(-i phase_p). The sign of rp
+        # is that of Born & Wolf (as in PreRefl), consistent with the pi directions u_pi = u_sigma x v.
+        #
+        nrays = footprint.get_number_of_rays()
+        rs = numpy.broadcast_to(numpy.asarray(rs, dtype=complex), (nrays,))
+        rp = numpy.broadcast_to(numpy.asarray(rp, dtype=complex), (nrays,))
+        j0, j1, e_S, e_P = input_beam.calculate_jones_scattering(footprint.get_columns([4, 5, 6]).T, rs, rp)
+        footprint.set_jones_components(j0, j1, e_S=e_S, e_P=e_P)
+
+        if movements is not None:
+            if movements.f_move:
+                footprint.rot_back(OFFX=movements.offset_x,
+                                   OFFY=movements.offset_y,
+                                   OFFZ=movements.offset_z,
+                                   X_ROT=movements.rotation_x,
+                                   Y_ROT=movements.rotation_y,
+                                   Z_ROT=movements.rotation_z)
+        #
+        # apply multilayer boundaries
+        #
+        footprint.apply_boundaries_syned(soe.get_boundary_shape(), flag_lost_value=flag_lost_value)
 
 
         #
