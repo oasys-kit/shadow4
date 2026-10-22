@@ -770,7 +770,10 @@ class S4MosaicCrystalElement(S4BeamlineElement):
             reflectivity = numpy.where(sin_theta > 0, reflectivity, 0.0)
             return numpy.sqrt(reflectivity).astype(complex)
 
-        return amplitude(Q_s), amplitude(Q_p)
+        # The sigma and pi waves are scattered coherently by the crystallites, with the polarization factor
+        # C = cos(2 theta_B) for pi: the pi amplitude has the sign of C (negative for theta_B > 45 deg, which reverses
+        # the handedness of the reflected beam), as for perfect crystals.
+        return amplitude(Q_s), numpy.sign(numpy.cos(2 * theta_bragg)) * amplitude(Q_p)
 
     def _calculate_mosaic_reflection(self, footprint, normal):
         """
@@ -1195,10 +1198,24 @@ class S4MosaicCrystalElement(S4BeamlineElement):
 
         reflected = res["flag"] == 1
         weight = numpy.exp(-mu * res["path"])
+        # unbiased estimate of the reflected intensity of each ray (from the sampled channel)
+        I_est = numpy.zeros(energies.size)
+        numpy.divide(weight * Is, p_s, out=I_est, where=reflected & channel_s)
+        numpy.divide(weight * Ip, 1 - p_s, out=I_est, where=reflected & ~channel_s)
+        # Amplitudes of both polarizations for every reflected ray, to keep the coherence between sigma and pi
+        # (the Stokes parameters S2, S3; a ray traced in a single channel would be linearly polarized).
+        # Approximation: the ratio r_pi / r_sigma is the one of the macroscopic model at the same incidence angle
+        # (including the sign of the polarization factor cos(2 theta_B)); the kinematic ratio cos(2 theta_B) is used
+        # where the macroscopic r_sigma vanishes. The modulus is set so that the reflected intensity is I_est:
+        # |r_sigma|^2 (Is + |ratio|^2 Ip) = I_est. Therefore the total intensity is unbiased, while the fluctuations
+        # of r_pi / r_sigma from path to path are not accounted for.
+        r_s_macro, r_p_macro = self._calculate_mosaic_reflectivity(footprint, normal)
+        r_s_macro, r_p_macro = r_s_macro[good], r_p_macro[good]
+        ratio = numpy.cos(2 * theta_B).astype(complex)
+        numpy.divide(r_p_macro, r_s_macro, out=ratio, where=numpy.abs(r_s_macro) > 0)
+        denominator = Is + numpy.abs(ratio) ** 2 * Ip
         amp_s = numpy.zeros(energies.size)
-        amp_p = numpy.zeros(energies.size)
-        numpy.divide(weight, p_s, out=amp_s, where=reflected & channel_s)
-        numpy.divide(weight, 1 - p_s, out=amp_p, where=reflected & ~channel_s)
+        numpy.divide(I_est, denominator, out=amp_s, where=denominator > 0)
 
         idx = numpy.flatnonzero(good)
         refl_idx = idx[reflected]
@@ -1206,7 +1223,7 @@ class S4MosaicCrystalElement(S4BeamlineElement):
         vOut[refl_idx] = res["V_out"][reflected]
         path_in[refl_idx] = res["path"][reflected]
         r_SS[idx] = numpy.sqrt(amp_s)
-        r_PP[idx] = numpy.sqrt(amp_p)
+        r_PP[idx] = numpy.sqrt(amp_s) * ratio
         lost[idx[~reflected]] = True
 
         st = res["stats"]
@@ -1226,7 +1243,7 @@ class S4MosaicCrystalElement(S4BeamlineElement):
             n_good = energies.size
             n_refl = int(reflected.sum())
             w_refl = weight[reflected]
-            I_out = amp_s * Is + amp_p * Ip
+            I_out = I_est
             nref_refl = res["n_reflections"][reflected]
             offset = numpy.linalg.norm(res["X_out"][reflected] - rIn[good][reflected], axis=1)
             print("\nMonte Carlo mosaic crystal: tracing")
