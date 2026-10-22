@@ -538,10 +538,21 @@ class S4InterfaceElement(S4BeamlineElement):
         # refract beam in the mirror surface
         #
 
-        # TODO (maybe): no check for total reflection is done...
+        # The rays in total internal reflection are lost. The electric fields of the refracted rays are calculated
+        # with the Jones calculus, without the Fresnel transmission amplitudes (t_s = t_p = 1).
         # TODO (maybe): implement correctly in shadow4 via Fresnel equations for the transmitted beam
 
         footprint, normal = soe._apply_interface_refraction(input_beam, n1, n2, mu1, apply_attenuation=1)
+
+        # interface movement (backwards):
+        if movements is not None:
+            if movements.f_move:
+                footprint.rot_back(OFFX=movements.offset_x,
+                                   OFFY=movements.offset_y,
+                                   OFFZ=movements.offset_z,
+                                   X_ROT=movements.rotation_x,
+                                   Y_ROT=movements.rotation_y,
+                                   Z_ROT=movements.rotation_z)
 
         #
         # apply mirror boundaries

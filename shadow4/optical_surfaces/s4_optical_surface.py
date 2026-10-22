@@ -294,8 +294,33 @@ class S4OpticalSurface(object):
 
         # note that sgn=None tells vector_refraction to compute the right sign of the sqrt.
         # This is equivalent to change the direction of the normal in the case that it is an inwards normal.
-        v2t = vector_refraction(v1.T, normal.T, refraction_index_object, refraction_index_image, sgn=None)
+        # total internal reflection (no refracted ray): the ray is lost (and keeps its direction, avoiding NaN)
+        sin2_theta1 = vector_modulus_square(vector_cross(vector_norm(normal.T), vector_norm(v1.T)))
+        tir = sin2_theta1 * (numpy.real(refraction_index_object) / numpy.real(refraction_index_image)) ** 2 > 1
+        flag[tir] = -100
+        with numpy.errstate(invalid='ignore'):
+            v2t = vector_refraction(v1.T, normal.T, refraction_index_object, refraction_index_image, sgn=None)
+        v2t[tir] = v1.T[tir]
         v2 = v2t.T
+
+        #
+        # electric fields of the refracted rays: Jones calculus without the Fresnel transmission amplitudes
+        # (t_s = t_p = 1). The Jones matrix in the plane of incidence is the identity, therefore the field is rotated
+        # with the ray (around v_in x v_out, by the deviation angle), so that E_s, E_p and the refracted direction
+        # are perpendicular. The rotation is applied to the sigma and pi directions of the incident ray, so the
+        # Jones vector is unchanged and the sigma and pi directions of the refracted rays follow those of the incident
+        # rays (instead of the plane of incidence of each ray, that changes from ray to ray, e.g., in a lens).
+        #
+        e_S, e_P = beam.get_efield_directions()
+        axis = vector_cross(v1.T, v2t)
+        deviation = numpy.arctan2(vector_modulus(axis), vector_dot(v1.T, v2t))
+        forward = vector_modulus(axis) == 0         # no deviation: the axis is undefined (and not needed)
+        axis[forward] = e_S[forward]
+        deviation[forward] = 0.0
+        j0, j1 = beam.get_jones_components() # not changed
+        newbeam.set_jones_components(j0, j1,
+                                     e_S=vector_rotate_around_axis(e_S, axis, deviation),
+                                     e_P=vector_rotate_around_axis(e_P, axis, deviation))
 
         # ;
         # ; writes the beam arrays
