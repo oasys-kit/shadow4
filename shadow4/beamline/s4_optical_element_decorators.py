@@ -32,6 +32,8 @@ Basically it adds some methods:
 
 
 import numpy
+import inspect
+import functools
 import os
 
 from syned.beamline.shape import Direction, Convexity
@@ -50,7 +52,43 @@ from shadow4.tools.logger import is_verbose, is_debug
 class S4OpticalElementDecorator(object):
     """
     Base abstract class.
+
+    The arguments passed to the constructor of every shadow4 optical element (the outermost constructor called) are
+    recorded in the attribute _s4_init_kwargs. They are written in the json files (see
+    S4BeamlineElement.to_dictionary) and used by shadow4.tools.json_tools to rebuild the optical element by calling
+    its constructor, so that all the quantities derived in the constructor (e.g., the optical surface, or the inputs
+    used by to_python_code) are correctly restored.
     """
+
+    def __init_subclass__(cls, **kwargs):
+        super().__init_subclass__(**kwargs)
+        if "__init__" not in cls.__dict__: return
+        original_init = cls.__dict__["__init__"]
+        signature = inspect.signature(original_init)
+
+        @functools.wraps(original_init)
+        def __init__(self, *args, **kw):
+            outermost = not getattr(self, "_s4_recording_init", False)
+            if outermost:
+                self._s4_recording_init = True
+                try:
+                    bound = signature.bind(self, *args, **kw)
+                    bound.apply_defaults()
+                    init_kwargs = {}
+                    for name, value in list(bound.arguments.items())[1:]: # skip self
+                        if signature.parameters[name].kind == inspect.Parameter.VAR_KEYWORD:
+                            init_kwargs.update(value)
+                        elif signature.parameters[name].kind != inspect.Parameter.VAR_POSITIONAL:
+                            init_kwargs[name] = value
+                    self._s4_init_kwargs = init_kwargs
+                except TypeError:
+                    self._s4_init_kwargs = None
+            try:
+                original_init(self, *args, **kw)
+            finally:
+                if outermost: self._s4_recording_init = False
+
+        cls.__init__ = __init__
 
     def __init__(self):
         pass

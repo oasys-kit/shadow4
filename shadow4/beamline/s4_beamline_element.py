@@ -79,6 +79,18 @@ class S4BeamlineElement(BeamlineElement):
         """
         self.__movements = movements
 
+    def to_dictionary(self):
+        """
+        Returns a dictionary with the element fields (for json files). In addition to the SYNED fields, it contains
+        the constructor arguments of the shadow4 optical element and the movements (see shadow4.tools.json_tools).
+
+        Returns
+        -------
+        dict
+        """
+        from shadow4.tools.json_tools import add_shadow4_items_to_dictionary
+        return add_shadow4_items_to_dictionary(super().to_dictionary(), self)
+
     def trace_beam(self, **params):
         """
         Performs the ray tracing (trace). To be implemented in the derived classes.

@@ -1011,9 +1011,9 @@ if __name__ == "__main__":
 
         # duplicate via json
         tmp = bl.to_json()
-        from syned.util.json_tools import load_from_json_file, load_from_json_text
+        from shadow4.tools.json_tools import load_from_json_text
         import shadow4
-        bl2 = load_from_json_text(tmp, extra_packages=[shadow4])
+        bl2 = load_from_json_text(tmp)
         print("\n\n>>>>python code packed: \n", bl2.to_python_code_packed(
             filename="", dry_run=1)
         )
@@ -1040,9 +1040,9 @@ if __name__ == "__main__":
         print(bl.distances_summary())
 
         tmp = bl.to_json()
-        from syned.util.json_tools import load_from_json_text
+        from shadow4.tools.json_tools import load_from_json_text
         import shadow4
-        bl2 = load_from_json_text(tmp, extra_packages=[shadow4])
+        bl2 = load_from_json_text(tmp)
 
         assert (bl.to_python_code() == bl2.to_python_code())
 
