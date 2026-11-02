@@ -1664,7 +1664,7 @@ class S4Beam(object):
         v_out : numpy array, shape (nrays, 3)
             The directions of the scattered rays.
         r_SS, r_PP : complex or numpy array (nrays)
-            The complex amplitudes (reflectivities) for the sigma and pi polarizations.
+            The complex amplitudes (reflection, diffraction or transmission) for the sigma and pi polarizations.
         r_SP, r_PS : complex or numpy array (nrays), optional
             The off-diagonal elements of the Jones matrix (zero for charge scattering).
         use_standard : int, optional

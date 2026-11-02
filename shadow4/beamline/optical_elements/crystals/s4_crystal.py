@@ -89,6 +89,11 @@ class S4Crystal(Crystal):
         for material_constants_library_flag=2,3, the name of the file containing the crystal parameters.
     dabax : None or instance of DabaxXraylib,
         The pointer to the dabax library  (used for material_constants_library_flag=1).
+    method_efields_management : int, optional
+        Method for the electric fields of the diffracted rays:
+        0 (default): Jones calculus in the SHADOW frame (S4Beam.calculate_jones_scattering);
+        1: method of SHADOW3 (kept for reference, not valid for rotated elements);
+        2: Jones calculus in the standard frame (validation; gives the same fields as 0).
 
     Returns
     -------
@@ -513,10 +518,24 @@ class S4CrystalElement(S4BeamlineElement):
         return output_beam, footprint
 
     def _apply_crystal_diffraction(self, input_beam):
-        #
-        # geometric and physics for the scattering process:
-        # reflect beam in the crystal and apply crystal reflectivity
-        #
+        """
+        Diffracts the beam (in the frame of the crystal surface) and applies the complex amplitudes of the crystal.
+
+        For each ray, the intercept with the crystal surface and the local normal are calculated, the diffracted
+        direction and the amplitudes r_sigma, r_pi are obtained with crystalpy for the ray direction and photon energy,
+        and the electric fields of the diffracted rays are calculated with the Jones calculus in the scattering plane
+        of each ray, according to method_efields_management (see S4Crystal).
+
+        Parameters
+        ----------
+        input_beam : instance of S4Beam
+            The beam in the frame of the crystal surface.
+
+        Returns
+        -------
+        tuple
+            (footprint, normal): the diffracted beam on the crystal surface (instance of S4Beam) and the normals.
+        """
 
         method_efields_management = self.get_optical_element()._method_efields_management
         if method_efields_management in (0, 2): # S4 (0: Jones algebra in SHADOW frame, 2: standard Jones algebra)

@@ -56,6 +56,11 @@ class S4PlaneCrystal(S4Crystal, S4PlaneOpticalElementDecorator):
         for material_constants_library_flag=2,3, the name of the file containing the crystal parameters.
     dabax : None or instance of DabaxXraylib,
         The pointer to the dabax library  (used for material_constants_library_flag=1).
+    method_efields_management : int, optional
+        Method for the electric fields of the diffracted rays:
+        0 (default): Jones calculus in the SHADOW frame (S4Beam.calculate_jones_scattering);
+        1: method of SHADOW3 (kept for reference, not valid for rotated elements);
+        2: Jones calculus in the standard frame (validation; gives the same fields as 0).
 
     Returns
     -------

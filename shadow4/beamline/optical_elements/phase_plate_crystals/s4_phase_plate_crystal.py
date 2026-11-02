@@ -238,6 +238,7 @@ class S4PhasePlateCrystal(Crystal):
         return txt
 
     def _get_dabax_txt(self):
+        """Returns the python code that creates the DabaxXraylib instance (for to_python_code()), or "None"."""
         if self._material_constants_library_flag == 1:
             if isinstance(self._dabax, DabaxXraylib):
                 dabax_txt = 'DabaxXraylib(file_f0="%s", file_f1f2="%s")' % (self._dabax.get_file_f0(), self._dabax.get_file_f1f2())

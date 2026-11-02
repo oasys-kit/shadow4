@@ -125,7 +125,8 @@ def _pysru_energy_radiated_approximation_and_farfield(omega=2.53465927101e17, el
     integrand[2] -= ( n_chap[0]*A2 - n_chap[1]*A1) * Alpha2
 
     for k in range(3):
-        E[k] = np.trapz(integrand[k], trajectory_t)
+        try:    E[k] = np.trapezoid(integrand[k], trajectory_t)
+        except: E[k] = np.trapz(integrand[k], trajectory_t) # numpy < 2
     E *= omega * 1j
 
     terme_bord = np.full((3), 0. + 1j * 0., dtype=complex)

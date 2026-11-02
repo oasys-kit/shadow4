@@ -395,7 +395,7 @@ class S4MultilayerElement(S4BeamlineElement):
 
                 interpolated_weight = numpy.zeros(beam_energies.shape[0])
                 for energy, angle, i in zip(beam_energies, grazing_angle_mrad, range(interpolated_weight.shape[0])):
-                    interpolated_weight[i] = interpolator(energy, angle)
+                    interpolated_weight[i] = interpolator(energy, angle)[0, 0]
                 interpolated_weight[numpy.where(numpy.isnan(interpolated_weight))] = 0.0
 
                 return interpolated_weight

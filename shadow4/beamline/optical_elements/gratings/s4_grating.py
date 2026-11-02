@@ -319,6 +319,24 @@ class S4GratingElement(S4BeamlineElement):
         return output_beam, footprint
 
     def _apply_grating_diffraction(self, beam):
+        """
+        Diffracts the beam (in the frame of the grating surface) in the selected order.
+
+        The diffracted directions are calculated with the grating equation for the local ruling. The electric fields
+        of the diffracted rays are calculated with the Jones calculus in the scattering plane of each ray, with unit
+        amplitudes (r_sigma = r_pi = 1, the grating efficiency is not applied), so that they remain perpendicular to
+        the diffracted directions. Rays in evanescent orders are flagged as lost.
+
+        Parameters
+        ----------
+        beam : instance of S4Beam
+            The beam in the frame of the grating surface.
+
+        Returns
+        -------
+        tuple
+            (footprint, normal): the diffracted beam on the grating surface (instance of S4Beam) and the normals.
+        """
         oe = self.get_optical_element()
         ssi = oe.get_surface_shape_instance()
         ccc = oe.get_optical_surface_instance()
