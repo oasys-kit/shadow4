@@ -79,7 +79,7 @@ class S4LightSourceFromBeamlines(EmptyLightSource):
         id : str, optional
             the beamline id.
         weight : float, optional
-            the intensity weigh for the beamline.
+            the intensity weight for the beamline.
 
         """
 
@@ -100,6 +100,7 @@ class S4LightSourceFromBeamlines(EmptyLightSource):
             self._weights.append(1.0)
 
     def _get_beams(self):
+        # runs the beamlines and returns the list of the beams at their end (not weighted)
         out = []
         n = self.number_of_beamlines()
         for i in range(n):
@@ -111,31 +112,62 @@ class S4LightSourceFromBeamlines(EmptyLightSource):
 
     def get_beam(self):
         """
-        Returns the S4 beam.
+        Returns the beam: the beams at the end of the beamlines (each beamline is run), merged.
 
-        Parameters
-        ----------
-        copy : int
-            Returns the beam stored in the class (0) or a copy of it (1).
+        Notes
+        -----
+        The intensity of the beam of each beamline is multiplied by its weight. For the beam at the source position,
+        use get_source_beam().
 
         Returns
         -------
-            S4Beam instance
-            The S4 beam.
+        S4Beam instance
+            The merged beam.
 
         """
         beam = None
         beams = self._get_beams()
         for i in range(len(beams)):
-            output_beam, output_mirr = self._beamlines[i].run_beamline()
+            output_beam = beams[i]
+            if self._weights[i] != 1.0:
+                output_beam.apply_attenuation(numpy.sqrt(self._weights[i])) # weight is intensity, attenuator is amplitude!
             if i == 0:
                 beam = output_beam
             else:
                 beam.append_beam(output_beam, update_column_index=True)
-                if self._weights[i] != 1.0:
-                    beam.apply_attenuation(numpy.sqrt(self._weights[i])) # weight is intensity, attenuator is amplitude!
         return beam
 
+    def get_source_beam(self):
+        """
+        Returns the beam at the source position: the beams of the light sources of the beamlines, merged.
+
+        Notes
+        -----
+        get_beam() returns the merged beams at the end of the beamlines. The beam at the source is needed, e.g., to
+        calculate the transmission of the beamlines (see shadow4.tools.beamline_tools.flux_summary()). The beams are
+        weighted as in get_beam(). If the light source of a beamline is also an S4LightSourceFromBeamlines, its
+        beam at the source position is used.
+
+        Returns
+        -------
+        S4Beam instance
+            The merged beam at the source position.
+
+        """
+        beam = None
+        for i in range(self.number_of_beamlines()):
+            light_source = self._beamlines[i].get_light_source()
+            if isinstance(light_source, S4LightSourceFromBeamlines):
+                source_beam = light_source.get_source_beam()
+            else:
+                source_beam = light_source.get_beam()
+            if self._weights[i] != 1.0:
+                source_beam.apply_attenuation(numpy.sqrt(self._weights[i])) # weight is intensity, attenuator is amplitude!
+            if i == 0:
+                beam = source_beam
+            else:
+                beam.append_beam(source_beam, update_column_index=True)
+        return beam
 
     def to_python_code(self, **kwargs):
         """

@@ -9,6 +9,7 @@ except ImportError:
     from numpy import trapz as trapezoid  # numpy < 2.0 has no numpy.trapezoid
 import scipy.constants as codata
 from shadow4.sources.s4_light_source_base import S4LightSourceBase
+from shadow4.sources.s4_light_source_from_beamlines import S4LightSourceFromBeamlines
 
 def beamline_get_source_beam(beamline):
     """
@@ -23,10 +24,19 @@ def beamline_get_source_beam(beamline):
     -------
     instance of S4Beam
         The beam at the source position.
+
+    Notes
+    -----
+    If the light source is an S4LightSourceFromBeamlines (e.g., from a parallel run), the beam at the source position
+    is the merged beam of the light sources of its beamlines (S4LightSourceFromBeamlines.get_source_beam()), and not
+    its get_beam(), which returns the merged beams at the end of the beamlines.
     """
     n = beamline.get_beamline_elements_number()
     light_source = beamline.get_light_source()
-    if n == 0:
+    if isinstance(light_source, S4LightSourceFromBeamlines):
+        # get_beam() would return the merged beams at the end of the beamlines, not at the source
+        beam0 = light_source.get_source_beam()
+    elif n == 0:
         beam0 = light_source.get_beam()
     else:
         beam0 = beamline.get_beamline_element_at(0).get_input_beam()
