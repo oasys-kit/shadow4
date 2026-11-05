@@ -128,7 +128,7 @@ def build_accumulated_beamline(trace_beamline, seed_list, number_of_rays):
     from shadow4.beamline.s4_beamline import S4Beamline
     from shadow4.sources.s4_light_source_from_beamlines import S4LightSourceFromBeamlines
 
-    light_source_acc = S4LightSourceFromBeamlines(name="Accumulate Parallel Run")
+    light_source_acc = S4LightSourceFromBeamlines(name="Accumulate Parallel Run", flag_homogeneous=1)
 
     for seed in seed_list:
         _, _, _, beamline = trace_beamline(

@@ -12,15 +12,19 @@ class S4LightSourceFromBeamlines(EmptyLightSource):
     ----------
     name : str, optional
         A name.
-    beamlines : list, optiona
+    beamlines : list, optional
         A list with the beamlines (instances of S4Beamline).
     ids : list, optional
         A list with the ids or names (str).
     weights : list, optional
         A list with the weights (float).
+    flag_homogeneous : int, optional
+        1 if the beamlines have identical light sources (e.g., a parallel run where only the seed changes). In this
+        case, calculate_spectrum() returns the spectrum of the light source of the first beamline (the weights are
+        not applied). 0 (default) for heterogeneous beamlines (the spectrum cannot be calculated).
 
     """
-    def __init__(self, name="Undefined", beamlines=None, ids=None, weights=None):
+    def __init__(self, name="Undefined", beamlines=None, ids=None, weights=None, flag_homogeneous=0):
         super().__init__(name=name)
 
         if  beamlines is None:
@@ -43,11 +47,14 @@ class S4LightSourceFromBeamlines(EmptyLightSource):
             if len(weights) != self.number_of_beamlines(): raise Exception("Invalid weights.")
             self._weights = weights
 
+        self._flag_homogeneous = flag_homogeneous
+
         self._set_support_text([
             ("name","Name",""),
             ("beamlines","Beamlines",""),
             ("weights", "Weights", ""),
             ("ids", "ID names", ""),
+            ("flag_homogeneous", "Flag homogeneous beamlines", ""),
             ] )
 
     def number_of_beamlines(self):
@@ -158,7 +165,7 @@ class S4LightSourceFromBeamlines(EmptyLightSource):
 
         txt += "\n#\n#\n#"
         txt += "\nfrom shadow4.sources.s4_light_source_from_beamlines import S4LightSourceFromBeamlines"
-        txt += "\nlight_source = S4LightSourceFromBeamlines(name='%s')" % (self.get_name())
+        txt += "\nlight_source = S4LightSourceFromBeamlines(name='%s', flag_homogeneous=%d)" % (self.get_name(), self._flag_homogeneous)
         txt += "\n"
         for i in range(n):
             txt += "\nlight_source.append_beamline(dry_run_beamline_%d(), id='%s', weight=%f)" % \
@@ -169,14 +176,31 @@ class S4LightSourceFromBeamlines(EmptyLightSource):
 
     def calculate_spectrum(self, **params):
         """
-        To be implemented in a derived class.
+        Calculates the spectrum of the light source, for homogeneous beamlines (flag_homogeneous=1).
+
+        Parameters
+        ----------
+        **params
+            Parameters passed to the calculate_spectrum() method of the light source of the first beamline.
+
+        Returns
+        -------
+        tuple
+            The spectrum, as returned by the calculate_spectrum() method of the light source of the first beamline
+            (the weights are not applied).
 
         Raises
         ------
-        NotImplementedError()
+        Exception
+            If the beamlines are heterogeneous (flag_homogeneous=0), or if there are no beamlines.
 
         """
-        raise NotImplementedError()
+        if self.number_of_beamlines() == 0:
+            raise Exception("Spectrum cannot be calculated: no beamlines")
+        if self._flag_homogeneous:
+            return self._beamlines[0].get_light_source().calculate_spectrum(**params)
+        else:
+            raise Exception("Spectrum cannot be calculated for heterogeneous beamlines")
 
     def get_info(self):
         """
@@ -187,7 +211,11 @@ class S4LightSourceFromBeamlines(EmptyLightSource):
         str
         """
         n = self.number_of_beamlines()
-        txt = "LightSource created by merging %d beamlines:" % n
+        if self._flag_homogeneous:
+            yy = "homogeneous"
+        else:
+            yy = "heterogeneous"
+        txt = "LightSource created by merging %d %s beamlines:" % (n, yy)
 
         for i in range(n):
             txt += "\n beamline %d, id: '%s', weight: %f" % (i + 1, self._ids[i], self._weights[i])
@@ -202,13 +230,31 @@ if __name__ == "__main__":
         #
         #
         #
-        from shadow4.sources.source_geometrical.source_geometrical import SourceGeometrical
-        light_source = SourceGeometrical(name='Geometrical Source', nrays=10000, seed=12345)
-        light_source.set_spatial_type_gaussian(sigma_h=0.000553, sigma_v=0.000029)
-        light_source.set_depth_distribution_off()
-        light_source.set_angular_distribution_uniform(hdiv1=-0.000000, hdiv2=0.000000, vdiv1=-0.000030, vdiv2=0.000030)
-        light_source.set_energy_distribution_singleline(10850.000000, unit='eV')
-        light_source.set_polarization(polarization_degree=1.000000, phase_diff=0.000000, coherent_beam=0)
+        # electron beam
+        from shadow4.sources.s4_electron_beam import S4ElectronBeam
+        electron_beam = S4ElectronBeam(energy_in_GeV=6, energy_spread=0.001, current=0.2)
+        electron_beam.set_sigmas_all(sigma_x=3.34603e-05, sigma_y=7.2815e-06, sigma_xp=4.5174e-06, sigma_yp=1.9407e-06)
+        electron_beam.set_dispersion_all(0, 0, 0, 0)
+
+        # magnetic structure
+        from shadow4.sources.undulator.s4_undulator_gaussian import S4UndulatorGaussian
+        source = S4UndulatorGaussian(
+            period_length=0.017,  # syned Undulator parameter (length in m)
+            number_of_periods=117.647,  # syned Undulator parameter
+            photon_energy=18000.0,  # Photon energy (in eV)
+            delta_e=20.0,  # Photon energy width (in eV)
+            ng_e=100,  # Photon energy scan number of points
+            flag_emittance=1,  # when sampling rays: Use emittance (0=No, 1=Yes)
+            flag_energy_spread=0,  # when sampling rays: Use e- energy spread (0=No, 1=Yes)
+            harmonic_number=1,  # harmonic number
+            flag_autoset_flux_central_cone=1,  # value to set the flux peak
+            flux_central_cone=668967299633458.4,  # value to set the flux peak
+        )
+
+        # light source
+        from shadow4.sources.undulator.s4_undulator_gaussian_light_source import S4UndulatorGaussianLightSource
+        light_source = S4UndulatorGaussianLightSource(name='Undulator Gaussian', electron_beam=electron_beam,
+                                                      magnetic_structure=source, nrays=10000, seed=5676561)
         beam = light_source.get_beam()
 
         beamline.set_light_source(light_source)
@@ -241,11 +287,13 @@ if __name__ == "__main__":
 
         return beamline
 
-    a = S4LightSourceFromBeamlines(beamlines=[get_beamline(), get_beamline()], ids=['11', '22'], weights=None)
+    a = S4LightSourceFromBeamlines(beamlines=[get_beamline(), get_beamline()], ids=['11', '22'], weights=None, flag_homogeneous=1)
     a.append_beamline(get_beamline())
     print(a.info())
     print(a.get_info())
     beam = a.get_beam()
     print(beam, beam.N)
     print('script: ', a.to_python_code())
+    spectrum = a.calculate_spectrum()
+    print('spectrum: %d arrays of %d points' % (len(spectrum), spectrum[0].size))
 
