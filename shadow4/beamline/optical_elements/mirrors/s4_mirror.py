@@ -460,7 +460,7 @@ class S4MirrorElement(S4BeamlineElement):
         # sigma and pi directions of the reflected ray (perpendicular to the reflected direction).
         # This is done in the same frame as the reflection (before undoing the mirror movements).
         #
-        nrays = footprint.get_number_of_rays()
+        nrays = footprint.get_number_of_rays_stored()
         rs = numpy.broadcast_to(numpy.asarray(rs, dtype=complex), (nrays,))
         rp = numpy.broadcast_to(numpy.asarray(rp, dtype=complex), (nrays,))
         j0, j1, e_S, e_P = input_beam.calculate_jones_scattering(footprint.get_columns([4, 5, 6]).T, rs, rp)

@@ -249,7 +249,7 @@ class S4Beam(object):
         Notes
         -----
         Note: in general, when the beam "has not been cleaned" (using clean_lost_rays()) the total number of rays is
-        equal to good raus plus lost rays, and all of them are stored in the beam.
+        equal to good rays plus lost rays, and all of them are stored in the beam.
         If the beam has been cleaned, get_number_of_rays(nolost=2), returns the number of the lost rays that are
         physically stored in the beam. Calling beam.get_number_of_rays(nolost=2) on a beam that has just been
         beam.clean_lost_rays() will return zero. It may not be zero if the beam is traced after cleaned and not
@@ -282,6 +282,24 @@ class S4Beam(object):
             if nolost == 2:
                 return numpy.array(numpy.where(w < 0)).size
 
+        return self.rays.shape[0]
+
+    def get_number_of_rays_stored(self):
+        """
+        Returns the number of rays stored in the beam (rays.shape[0]).
+
+        Notes
+        -----
+        For a beam that has not been cleaned, it is equal to get_number_of_rays(nolost=0). For a cleaned beam (see
+        clean_lost_rays()), get_number_of_rays(nolost=0) also counts the lost rays that have been removed, so arrays
+        with one value per ray (e.g., reflectivities) must be dimensioned with get_number_of_rays_stored().
+
+        Returns
+        -------
+        int
+            The number of stored rays.
+
+        """
         return self.rays.shape[0]
 
     @property
@@ -334,7 +352,7 @@ class S4Beam(object):
             The number of stored rays.
 
         """
-        return self.rays.shape[0]
+        return self.get_number_of_rays_stored()
 
     def get_photon_energy_eV(self, nolost=0):
         """

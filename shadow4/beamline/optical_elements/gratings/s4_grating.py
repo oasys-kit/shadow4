@@ -379,7 +379,7 @@ class S4GratingElement(S4BeamlineElement):
         # directions) and expressed along the sigma and pi directions of the diffracted ray, so that E_s, E_p and
         # the diffracted direction are perpendicular. No grating efficiency is applied (r_s = r_p = 1).
         #
-        nrays = beam_mirr.get_number_of_rays()
+        nrays = beam_mirr.get_number_of_rays_stored()
         ones = numpy.ones(nrays, dtype=complex)
         j0, j1, e_S, e_P = beam.calculate_jones_scattering(beam_mirr.get_columns([4, 5, 6]).T, ones, ones)
         beam_mirr.set_jones_components(j0, j1, e_S=e_S, e_P=e_P)

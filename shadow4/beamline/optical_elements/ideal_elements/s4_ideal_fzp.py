@@ -147,7 +147,7 @@ class S4IdealFZPElement(S4BeamlineElement):
             Kxin = Kmod * xpin
             Kzin = Kmod * zpin
 
-            nrays = input_beam.N
+            nrays = input_beam.get_number_of_rays_stored()
 
             n = numpy.zeros(nrays)
             d = numpy.zeros(nrays)
