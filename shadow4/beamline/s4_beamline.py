@@ -305,7 +305,7 @@ class S4Beamline(Beamline):
         final_script += "        output_file,\n"
         final_script += "        overwrite=True,\n"
         final_script += "        simulation_name=\"run001\",\n"
-        final_script += "        beam_name=\"in_parallel\",\n"
+        final_script += "        beam_name=\"begin\",\n"
         final_script += "    )\n\n"
         final_script += "    print(\"\")\n"
         final_script += "    print(\"Output file:\", output_file)\n"
