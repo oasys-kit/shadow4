@@ -36,8 +36,8 @@ def main():
             handle["surface_file/Z"] = profile   # OASYS HDF5 order is (y, x).
 
         optic = S4NumericalMeshPhaseDeflector(
-            name="Thin wedge", surface_data_file=str(mesh), f_r_ind=0,
-            r_ind=1.0 - delta, r_attenuation=attenuation,
+            name="Thin wedge", surface_data_file=str(mesh), ri_calculation_mode=0,
+            refraction_index=1.0 - delta, attenuation_coefficient=attenuation,
         )
         coordinates = ElementCoordinates(p=p, q=q, angle_radial=0.0, angle_radial_out=np.pi)
         element = S4NumericalMeshPhaseDeflectorElement(

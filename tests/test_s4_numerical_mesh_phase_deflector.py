@@ -85,9 +85,9 @@ class TestS4PhaseDeflectorBase:
     def test_default_construction_does_not_raise(self):
         S4PhaseDeflector()
 
-    def test_rejects_invalid_f_r_ind(self):
+    def test_rejects_invalid_ri_calculation_mode(self):
         with pytest.raises(ValueError):
-            S4PhaseDeflector(f_r_ind=4)
+            S4PhaseDeflector(ri_calculation_mode=4)
 
     def test_get_thickness_map_is_abstract(self):
         with pytest.raises(NotImplementedError):
@@ -102,7 +102,7 @@ class TestS4PhaseDeflectorBase:
         assert "PHASE DEFLECTOR" in txt
 
     def test_get_optical_constants_user_mode_matches_manual_formula(self):
-        oe = S4PhaseDeflector(f_r_ind=0, r_ind=1.0 - 3e-6, r_attenuation=12.0)
+        oe = S4PhaseDeflector(ri_calculation_mode=0, refraction_index=1.0 - 3e-6, attenuation_coefficient=12.0)
         k = numpy.array([1e11, 2e11])
         delta, beta = oe.get_optical_constants(photon_energy_eV=numpy.array([10000.0, 20000.0]), k=k)
         assert numpy.allclose(delta, 3e-6)
@@ -110,7 +110,10 @@ class TestS4PhaseDeflectorBase:
 
     def test_support_dictionary_registers_new_fields(self):
         oe = S4PhaseDeflector(material="Be", density=1.85)
-        for key in ("surface_shape", "material", "density", "f_r_ind", "r_ind", "r_attenuation", "file_r_ind"):
+        for key in (
+            "surface_shape", "material", "density", "ri_calculation_mode",
+            "prerefl_file", "refraction_index", "attenuation_coefficient",
+        ):
             assert key in oe._support_dictionary
         # regression: a DabaxXraylib instance caches a non-JSON-serializable
         # SpecFile once used; "dabax" must stay out of the support dictionary
@@ -354,9 +357,9 @@ class TestS4NumericalMeshPhaseDeflectorConstruction:
         with pytest.raises(ValueError):
             S4NumericalMeshPhaseDeflector(coordinate_scaling=-1.0)
 
-    def test_rejects_invalid_f_r_ind(self):
+    def test_rejects_invalid_ri_calculation_mode(self):
         with pytest.raises(ValueError):
-            S4NumericalMeshPhaseDeflector(f_r_ind=4)
+            S4NumericalMeshPhaseDeflector(ri_calculation_mode=4)
 
     def test_default_construction_does_not_raise(self):
         S4NumericalMeshPhaseDeflector()
@@ -386,7 +389,7 @@ class TestGetThicknessMap:
         # transpose it to the (ny, nx) convention used by apply_phase_deflection.
         oe, x_axis, y_axis, z_nx_ny = _make_phase_deflector(
             tmp_path, lambda X, Y: numpy.abs(X) + 0.0 * Y, nx=21, ny=9,
-            material="Be", density=1.85, f_r_ind=0,
+            material="Be", density=1.85, ri_calculation_mode=0,
         )
         tm = oe.get_thickness_map()
         assert tm["profile"].shape == (9, 21)
@@ -445,20 +448,21 @@ class TestToPythonCode:
         oe = S4NumericalMeshPhaseDeflector(name="pd2")
         code = oe.to_python_code()
         assert "surface_data_file=None," in code
+        assert "prerefl_file=None," in code
         assert "'None'" not in code
 
     def test_string_fields_are_quoted(self, tmp_path):
         oe, *_ = _make_phase_deflector(tmp_path, lambda X, Y: numpy.abs(X) + numpy.abs(Y),
-                                        f_r_ind=1, file_r_ind="material.dat")
+                                        ri_calculation_mode=1, prerefl_file="material.dat")
         code = oe.to_python_code()
-        assert "file_r_ind='material.dat'," in code
+        assert "prerefl_file='material.dat'," in code
         assert "surface_data_file='%s'," % str(tmp_path / "mesh.h5") in code
 
     def test_generated_code_reproduces_thickness_map(self, tmp_path):
         oe, x_axis, y_axis, z_nx_ny = _make_phase_deflector(
             tmp_path, lambda X, Y: numpy.abs(X) + numpy.abs(Y), nx=17, ny=11,
-            material="Be", density=1.85, f_r_ind=0,
-            r_ind=0.999999, r_attenuation=10.0,
+            material="Be", density=1.85, ri_calculation_mode=0,
+            refraction_index=0.999999, attenuation_coefficient=10.0,
         )
         tm_before = oe.get_thickness_map()
 
@@ -471,7 +475,7 @@ class TestToPythonCode:
         assert numpy.allclose(tm_after["profile"], tm_before["profile"])
         assert numpy.allclose(tm_after["x_axis"], tm_before["x_axis"])
         assert regenerated._material == "Be"
-        assert regenerated._r_attenuation == 10.0
+        assert regenerated.get_attenuation_coefficient() == 10.0
 
 
 # ---------------------------------------------------------------------------
@@ -482,8 +486,8 @@ class TestTraceBeam:
     def _element(self, tmp_path, **kwargs):
         oe, x_axis, y_axis, z_nx_ny = _make_phase_deflector(
             tmp_path, lambda X, Y: numpy.zeros_like(X),  # flat, zero thickness
-            material="Be", density=1.85, f_r_ind=0,
-            r_ind=1.0 - 1e-6, r_attenuation=10.0,
+            material="Be", density=1.85, ri_calculation_mode=0,
+            refraction_index=1.0 - 1e-6, attenuation_coefficient=10.0,
             half_width=2e-3, half_height=2e-3,
             **kwargs,
         )
@@ -594,8 +598,8 @@ class TestTraceBeam:
         oe, x_axis, y_axis, z_nx_ny = _make_phase_deflector(
             tmp_path, lambda X, Y: 1e-2 + a * X, nx=9, ny=9,
             half_width=2e-3, half_height=2e-3,
-            material="Be", f_r_ind=0,
-            r_ind=1.0 - 5e-6, r_attenuation=0.0,
+            material="Be", ri_calculation_mode=0,
+            refraction_index=1.0 - 5e-6, attenuation_coefficient=0.0,
         )
         p, q = 3.0, 2.0
         coordinates = ElementCoordinates(p=p, q=q, angle_radial=0.0, angle_radial_out=numpy.pi)
@@ -615,8 +619,8 @@ class TestTraceBeam:
         oe, x_axis, y_axis, z_nx_ny = _make_phase_deflector(
             tmp_path, lambda X, Y: numpy.full_like(X, 4e-6), nx=5, ny=5,
             half_width=2e-3, half_height=2e-3,
-            material="Be", f_r_ind=0,
-            r_ind=1.0 - 6e-6, r_attenuation=0.0,
+            material="Be", ri_calculation_mode=0,
+            refraction_index=1.0 - 6e-6, attenuation_coefficient=0.0,
         )
         coordinates = ElementCoordinates(p=3.0, q=2.0, angle_radial=0.0, angle_radial_out=numpy.pi)
         beam = S4Beam.initialize_as_pencil(4)
