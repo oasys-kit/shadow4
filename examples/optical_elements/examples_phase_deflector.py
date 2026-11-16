@@ -33,7 +33,7 @@ def main():
         with h5py.File(mesh, "w") as handle:
             handle["surface_file/X"] = x
             handle["surface_file/Y"] = y
-            handle["surface_file/Z"] = profile  # OASYS HDF5 order is (y, x).
+            handle["surface_file/Z"] = profile   # OASYS HDF5 order is (y, x).
 
         optic = S4NumericalMeshPhaseDeflector(
             name="Thin wedge", surface_data_file=str(mesh), f_r_ind=0,
