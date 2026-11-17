@@ -380,36 +380,6 @@ class S4PhaseDeflectorElement(S4BeamlineElement):
         """
         return self.__stored_optical_constants
 
-    def _apply_phase_deflection(self, beam, delta, beta, *, flag_lost_value=-1.0, apply_to_lost=True):
-        """
-        Apply the phase-gradient deflection to a beam already expressed in
-        the element's local reference frame.
-
-        This plays the same role as ``S4Interface._apply_interface_refraction``
-        (called the same way, from :meth:`trace_beam`, right after the beam
-        has been put into the element reference system), but instead of a
-        Snell's-law ray/surface intersection it advances each ray to the
-        flat element plane (Z=0) and then applies the local thickness map's
-        attenuation, OPD/phase and phase-gradient kicks (see
-        :func:`apply_phase_deflection`). Kept here (on the beamline element,
-        not on ``S4PhaseDeflector``) since everything it needs -- the
-        optical element and the beam already in the local frame -- is
-        already local to :meth:`trace_beam`.
-        """
-        soe = self.get_optical_element()
-        k = beam.get_column(11) * 100.0
-        _advance_rays_to_local_surface(beam)
-        return apply_phase_deflection(
-            beam,
-            soe.get_thickness_map(),
-            k,
-            delta,
-            beta,
-            flag_lost_value=flag_lost_value,
-            apply_to_lost=apply_to_lost,
-            duplicate=False,
-        )
-
     def trace_beam(self, **params):
         """
         Runs (ray tracing) the input beam through the element.
@@ -469,9 +439,8 @@ class S4PhaseDeflectorElement(S4BeamlineElement):
 
         # element movement:
         movements = self.get_movements()
-        if movements is not None:
-            if movements.f_move:
-                raise NotImplementedError("S4PhaseDeflector movements are not implemented yet.")
+        if movements is not None and movements.f_move:
+            raise NotImplementedError("S4PhaseDeflector movements are not implemented yet.")
 
         #
         # apply the phase-gradient deflection
@@ -505,7 +474,36 @@ class S4PhaseDeflectorElement(S4BeamlineElement):
         """
         raise NotImplementedError("To be implemented in the children class")
 
+    def _apply_phase_deflection(self, beam, delta, beta, *, flag_lost_value=-1.0, apply_to_lost=True):
+        """
+        Apply the phase-gradient deflection to a beam already expressed in
+        the element's local reference frame.
 
+        This plays the same role as ``S4Interface._apply_interface_refraction``
+        (called the same way, from :meth:`trace_beam`, right after the beam
+        has been put into the element reference system), but instead of a
+        Snell's-law ray/surface intersection it advances each ray to the
+        flat element plane (Z=0) and then applies the local thickness map's
+        attenuation, OPD/phase and phase-gradient kicks (see
+        :func:`apply_phase_deflection`). Kept here (on the beamline element,
+        not on ``S4PhaseDeflector``) since everything it needs -- the
+        optical element and the beam already in the local frame -- is
+        already local to :meth:`trace_beam`.
+        """
+        soe = self.get_optical_element()
+        k = beam.get_column(11) * 100.0
+        _advance_rays_to_local_surface(beam)
+        return apply_phase_deflection(
+            beam,
+            soe.get_thickness_map(),
+            k,
+            delta,
+            beta,
+            flag_lost_value=flag_lost_value,
+            apply_to_lost=apply_to_lost,
+            duplicate=False,
+        )
+    
 def _advance_rays_to_local_surface(beam: S4Beam) -> None:
     """
     Propagate every ray, in place and using its own direction, from its
