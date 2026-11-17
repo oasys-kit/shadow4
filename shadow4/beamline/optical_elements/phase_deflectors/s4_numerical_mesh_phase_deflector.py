@@ -12,10 +12,8 @@ with ``S4NumericalMeshOpticalElementDecorator`` for the surface (here, the
 projected-thickness) mesh, and implements :meth:`S4PhaseDeflector.get_thickness_map`
 from it.
 
-Unlike ``S4NumericalMeshInterface``, only a file source is accepted for the
-mesh (no ``xx``/``yy``/``zz`` arrays): passing arrays directly cannot be
-recovered by ``to_python_code()``, so the constructor only takes
-``surface_data_file``.
+The thickness mesh can come from in-memory arrays or a surface file.
+Python code generation requires a file-backed mesh.
 
 This element reproduces the numerical-mesh thin-transmission element
 previously implemented as ``S4ThinTransmission`` in
@@ -54,8 +52,7 @@ class S4NumericalMeshPhaseDeflector(S4PhaseDeflector, S4NumericalMeshOpticalElem
         The boundary shape of the element.
     surface_data_file : str, optional
         File (HDF5, or 3-column ASCII) with the projected-thickness mesh, in
-        the standard OASYS surface convention. This is the only supported
-        mesh source (see module docstring).
+        the standard OASYS surface convention. Supply either a file or arrays.
     material : str, optional
         String with the material element symbol or compound formula (used
         when ``ri_calculation_mode`` is 2 or 3).
@@ -88,6 +85,11 @@ class S4NumericalMeshPhaseDeflector(S4PhaseDeflector, S4NumericalMeshOpticalElem
     invert_surface : bool, optional
         If True, negate the thickness profile (after scaling) before the
         (optional) zero-shift.
+    xx, yy : ndarray, optional
+        One-dimensional X and Y coordinate axes, in metres.
+    zz : ndarray, optional
+        Thickness in metres, indexed as ``zz[ix, iy]`` with shape
+        ``(len(xx), len(yy))``. Supply all three arrays together.
 
     Returns
     -------
@@ -109,8 +111,28 @@ class S4NumericalMeshPhaseDeflector(S4PhaseDeflector, S4NumericalMeshOpticalElem
                  thickness_scaling=1.0,
                  coordinate_scaling=1.0,
                  invert_surface=False,
+                 *,
+                 xx=None,
+                 yy=None,
+                 zz=None,
                  ):
-        S4NumericalMeshOpticalElementDecorator.__init__(self, xx=None, yy=None, zz=None,
+        if any(array is not None for array in (xx, yy, zz)):
+            if surface_data_file is not None:
+                raise ValueError("Supply either xx, yy and zz or surface_data_file.")
+            if any(array is None for array in (xx, yy, zz)):
+                raise ValueError("Supply xx, yy and zz together.")
+            xx = numpy.asarray(xx, dtype=float)
+            yy = numpy.asarray(yy, dtype=float)
+            zz = numpy.asarray(zz, dtype=float)
+            if xx.ndim != 1 or yy.ndim != 1:
+                raise ValueError("xx and yy must be one-dimensional.")
+            if zz.shape != (xx.size, yy.size):
+                raise ValueError("zz must have shape (len(xx), len(yy)).")
+
+            # The decorator's NumericalMesh stores the OASYS (ny, nx) layout.
+            zz = zz.T
+
+        S4NumericalMeshOpticalElementDecorator.__init__(self, xx=xx, yy=yy, zz=zz,
                                                          surface_data_file=surface_data_file)
         S4PhaseDeflector.__init__(self,
                                   name=name,
@@ -186,7 +208,9 @@ class S4NumericalMeshPhaseDeflector(S4PhaseDeflector, S4NumericalMeshOpticalElem
         txt += "  Invert surface: %s\n" % self._invert_surface
 
         thickness_mesh = self.get_surface_shape_instance()
-        if thickness_mesh is not None and thickness_mesh.has_surface_data_file():
+        if thickness_mesh is not None and thickness_mesh.has_surface_data():
+            txt += "  Thickness data: in-memory arrays\n"
+        elif thickness_mesh is not None and thickness_mesh.has_surface_data_file():
             txt += "  Thickness data file: %s\n" % thickness_mesh._surface_data_file
         else:
             txt += "  Thickness data: undefined\n"
@@ -201,15 +225,18 @@ class S4NumericalMeshPhaseDeflector(S4PhaseDeflector, S4NumericalMeshOpticalElem
         validated default.
         """
         thickness_mesh = self.get_surface_shape_instance()
-        if thickness_mesh is None or not thickness_mesh.has_surface_data_file():
-            raise ValueError("No surface_data_file supplied.")
-
-        mesh = self.get_optical_surface_instance()
-        x_axis, y_axis = mesh.get_mesh_x_y()
-        # S4Mesh stores its z grid as (len(x_axis), len(y_axis)); the phase-
-        # deflection kernel (and numpy.gradient(profile, y_axis, x_axis))
-        # expects the transposed (len(y_axis), len(x_axis)) convention.
-        profile = mesh.get_mesh_z().T
+        if thickness_mesh.has_surface_data():
+            # The phase kernel interpolates this (ny, nx) profile directly.
+            # No surface spline is needed for in-memory thickness data.
+            x_axis = thickness_mesh._xx
+            y_axis = thickness_mesh._yy
+            profile = thickness_mesh._zz
+        elif thickness_mesh.has_surface_data_file():
+            mesh = self.get_optical_surface_instance()
+            x_axis, y_axis = mesh.get_mesh_x_y()
+            profile = mesh.get_mesh_z().T  # Convert S4Mesh (nx, ny) to (ny, nx).
+        else:
+            raise ValueError("No thickness mesh supplied. Provide xx, yy and zz or surface_data_file.")
 
         x_axis = numpy.asarray(x_axis, dtype=float) * self._coordinate_scaling
         y_axis = numpy.asarray(y_axis, dtype=float) * self._coordinate_scaling
@@ -245,7 +272,18 @@ class S4NumericalMeshPhaseDeflector(S4PhaseDeflector, S4NumericalMeshOpticalElem
         -------
         str
             Python code.
+
+        Raises
+        ------
+        NotImplementedError
+            If the thickness mesh is supplied as arrays.
         """
+        if self.get_surface_shape_instance().has_surface_data():
+            raise NotImplementedError(
+                "Python export of an in-memory thickness mesh requires a mesh file. "
+                "Save the mesh and construct the element with surface_data_file."
+            )
+
         txt = self.to_python_code_boundary_shape()
         txt += "\nfrom shadow4.beamline.optical_elements.phase_deflectors.s4_numerical_mesh_phase_deflector import S4NumericalMeshPhaseDeflector"
         txt += "\noptical_element = S4NumericalMeshPhaseDeflector(name='%s', boundary_shape=boundary_shape," % self.__inputs["name"]

@@ -379,7 +379,7 @@ class TestS4NumericalMeshPhaseDeflectorConstruction:
 
 
 class TestGetThicknessMap:
-    def test_requires_file(self):
+    def test_requires_mesh(self):
         oe = S4NumericalMeshPhaseDeflector()
         with pytest.raises(ValueError):
             oe.get_thickness_map()
@@ -396,6 +396,37 @@ class TestGetThicknessMap:
         assert numpy.allclose(tm["x_axis"], x_axis)
         assert numpy.allclose(tm["y_axis"], y_axis)
         assert numpy.allclose(tm["profile"], z_nx_ny.T)
+
+    def test_array_mesh_matches_file_mesh(self, tmp_path):
+        options = dict(refraction_index=1.0 - 5e-6, attenuation_coefficient=300.0,
+                       thickness_scaling=2.0, coordinate_scaling=1.5)
+        file_element, xx, yy, zz = _make_phase_deflector(
+            tmp_path, lambda X, Y: 1e-3 + 0.02 * X + 0.04 * Y,
+            nx=11, ny=9, **options,
+        )
+        array_element = S4NumericalMeshPhaseDeflector(xx=xx, yy=yy, zz=zz, **options)
+        for key, expected in file_element.get_thickness_map().items():
+            numpy.testing.assert_array_equal(array_element.get_thickness_map()[key], expected)
+
+        coordinates = ElementCoordinates(p=1.0, q=2.0, angle_radial=0, angle_radial_out=numpy.pi)
+        beam = S4Beam.initialize_as_pencil(1)
+        beam.set_photon_energy_eV(9000.0)
+        array_trace = S4NumericalMeshPhaseDeflectorElement(array_element, coordinates, input_beam=beam)
+        file_trace = S4NumericalMeshPhaseDeflectorElement(file_element, coordinates, input_beam=beam)
+        for actual, expected in zip(array_trace.trace_beam(), file_trace.trace_beam()):
+            numpy.testing.assert_array_equal(actual.rays, expected.rays)
+            assert actual.get_column(10)[0] > 0
+
+    def test_array_mesh_rejects_partial_or_conflicting_sources(self):
+        xx = numpy.arange(4)
+        yy = numpy.arange(5)
+        zz = numpy.ones((4, 5))
+        with pytest.raises(ValueError, match="together"):
+            S4NumericalMeshPhaseDeflector(xx=xx, zz=zz)
+        with pytest.raises(ValueError, match="either"):
+            S4NumericalMeshPhaseDeflector(xx=xx, yy=yy, zz=zz, surface_data_file="mesh.h5")
+        with pytest.raises(ValueError, match="shape"):
+            S4NumericalMeshPhaseDeflector(xx=xx, yy=yy, zz=zz.T)
 
     def test_thickness_scaling_multiplies_profile_only(self, tmp_path):
         oe, x_axis, y_axis, z_nx_ny = _make_phase_deflector(
@@ -444,6 +475,15 @@ class TestGetThicknessMap:
 
 
 class TestToPythonCode:
+    def test_array_mesh_requires_file_for_python_export(self):
+        axis = numpy.arange(4)
+        optical_element = S4NumericalMeshPhaseDeflector(xx=axis, yy=axis, zz=numpy.ones((4, 4)))
+        beamline_element = S4NumericalMeshPhaseDeflectorElement(optical_element)
+        with pytest.raises(NotImplementedError, match="surface_data_file"):
+            optical_element.to_python_code()
+        with pytest.raises(NotImplementedError, match="surface_data_file"):
+            beamline_element.to_python_code()
+
     def test_none_fields_are_not_quoted(self):
         oe = S4NumericalMeshPhaseDeflector(name="pd2")
         code = oe.to_python_code()
