@@ -372,8 +372,8 @@ class TestS4NumericalMeshPhaseDeflectorConstruction:
 
     def test_support_dictionary_registers_mesh_specific_fields(self):
         oe = S4NumericalMeshPhaseDeflector()
-        for key in ("surface_data_file", "apply_to_lost", "shift_thickness_to_zero",
-                    "thickness_scaling", "coordinate_scaling", "invert_surface"):
+        for key in ("surface_data_file", "apply_to_lost", "thickness_scaling",
+                    "coordinate_scaling", "subtract_minimum_thickness"):
             assert key in oe._support_dictionary
         assert "dabax" not in oe._support_dictionary
 
@@ -455,22 +455,22 @@ class TestGetThicknessMap:
         tm = oe.get_thickness_map(validate=False)
         assert numpy.any(tm["profile"] < 0.0)
 
-    def test_shift_thickness_to_zero(self, tmp_path):
+    def test_subtract_minimum_thickness(self, tmp_path):
         oe, *_ = _make_phase_deflector(
-            tmp_path, lambda X, Y: X + 0.0 * Y, shift_thickness_to_zero=True,
+            tmp_path, lambda X, Y: X + 0.0 * Y, subtract_minimum_thickness=True,
         )
         tm = oe.get_thickness_map()
         assert numpy.isclose(numpy.nanmin(tm["profile"]), 0.0)
         assert numpy.all(tm["profile"] >= -1e-15)
 
-    def test_invert_surface_with_shift(self, tmp_path):
+    def test_negative_thickness_scaling_before_subtracting_minimum(self, tmp_path):
         oe, x_axis, y_axis, z_nx_ny = _make_phase_deflector(
             tmp_path, lambda X, Y: numpy.abs(X) + numpy.abs(Y),
-            invert_surface=True, shift_thickness_to_zero=True,
+            thickness_scaling=-2.0, subtract_minimum_thickness=True,
         )
         tm = oe.get_thickness_map()
-        profile_no_invert = z_nx_ny.T
-        expected = -profile_no_invert - numpy.nanmin(-profile_no_invert)
+        scaled_profile = -2.0 * z_nx_ny.T
+        expected = scaled_profile - numpy.nanmin(scaled_profile)
         assert numpy.allclose(tm["profile"], expected)
 
 

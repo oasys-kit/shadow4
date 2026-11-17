@@ -74,17 +74,15 @@ class S4NumericalMeshPhaseDeflector(S4PhaseDeflector, S4NumericalMeshOpticalElem
         overridden per call): if True, apply the phase deflection to rays
         already marked lost before this element too, as long as they land on
         valid thickness support; their negative flag is preserved.
-    shift_thickness_to_zero : bool, optional
-        If True, subtract the finite minimum from the thickness profile
-        (after scaling/inversion) so it is non-negative everywhere.
     thickness_scaling : float, optional
-        Scale factor applied to the thickness profile.
+        Scale factor applied to the thickness profile. A negative factor
+        reverses the profile.
     coordinate_scaling : float, optional
         Scale factor applied to the mesh's X and Y axes. Must be finite and
         strictly positive.
-    invert_surface : bool, optional
-        If True, negate the thickness profile (after scaling) before the
-        (optional) zero-shift.
+    subtract_minimum_thickness : bool, optional
+        If True, subtract the minimum of the scaled thickness profile
+        so the minimum thickness is zero.
     xx, yy : ndarray, optional
         One-dimensional X and Y coordinate axes, in metres.
     zz : ndarray, optional
@@ -107,10 +105,9 @@ class S4NumericalMeshPhaseDeflector(S4PhaseDeflector, S4NumericalMeshOpticalElem
                  attenuation_coefficient=0.0,
                  dabax=None,
                  apply_to_lost=True,
-                 shift_thickness_to_zero=False,
                  thickness_scaling=1.0,
                  coordinate_scaling=1.0,
-                 invert_surface=False,
+                 subtract_minimum_thickness=False,
                  *,
                  xx=None,
                  yy=None,
@@ -154,10 +151,9 @@ class S4NumericalMeshPhaseDeflector(S4PhaseDeflector, S4NumericalMeshOpticalElem
 
         self._surface_data_file = surface_data_file
         self._apply_to_lost = apply_to_lost
-        self._shift_thickness_to_zero = shift_thickness_to_zero
         self._thickness_scaling = float(thickness_scaling)
         self._coordinate_scaling = float(coordinate_scaling)
-        self._invert_surface = bool(invert_surface)
+        self._subtract_minimum_thickness = subtract_minimum_thickness
 
         # support text containing name of variable, help text and unit. Will be stored in self._support_dictionary
         # NOTE: "surface_data_file" is also stored as a plain attribute (self._surface_data_file) above,
@@ -167,10 +163,9 @@ class S4NumericalMeshPhaseDeflector(S4PhaseDeflector, S4NumericalMeshOpticalElem
         self._add_support_text([
                     ("surface_data_file",       "File with the thickness mesh (HDF5 or 3-column ASCII)", ""),
                     ("apply_to_lost",           "Apply the phase deflection to already-lost rays too",   ""),
-                    ("shift_thickness_to_zero", "Shift the thickness profile so its minimum is zero",    ""),
                     ("thickness_scaling",       "Scale factor applied to the thickness profile",         ""),
                     ("coordinate_scaling",      "Scale factor applied to the mesh X/Y axes",              ""),
-                    ("invert_surface",          "Invert (negate) the thickness profile",                  ""),
+                    ("subtract_minimum_thickness", "Subtract the minimum of the scaled thickness profile",    ""),
             ] )
 
         self.__inputs = {
@@ -185,10 +180,9 @@ class S4NumericalMeshPhaseDeflector(S4PhaseDeflector, S4NumericalMeshOpticalElem
             "attenuation_coefficient": attenuation_coefficient,
             "dabax": self._get_dabax_txt(),
             "apply_to_lost": apply_to_lost,
-            "shift_thickness_to_zero": shift_thickness_to_zero,
             "thickness_scaling": thickness_scaling,
             "coordinate_scaling": coordinate_scaling,
-            "invert_surface": invert_surface,
+            "subtract_minimum_thickness": subtract_minimum_thickness,
         }
 
     def get_info(self):
@@ -202,10 +196,9 @@ class S4NumericalMeshPhaseDeflector(S4PhaseDeflector, S4NumericalMeshOpticalElem
         """
         txt = super().get_info()
         txt += "  apply_to_lost: %s\n" % self._apply_to_lost
-        txt += "  shift_thickness_to_zero: %s\n" % self._shift_thickness_to_zero
         txt += "  Thickness scaling: %g\n" % self._thickness_scaling
         txt += "  Coordinate scaling: %g\n" % self._coordinate_scaling
-        txt += "  Invert surface: %s\n" % self._invert_surface
+        txt += "  subtract_minimum_thickness: %s\n" % self._subtract_minimum_thickness
 
         thickness_mesh = self.get_surface_shape_instance()
         if thickness_mesh is not None and thickness_mesh.has_surface_data():
@@ -226,8 +219,6 @@ class S4NumericalMeshPhaseDeflector(S4PhaseDeflector, S4NumericalMeshOpticalElem
         """
         thickness_mesh = self.get_surface_shape_instance()
         if thickness_mesh.has_surface_data():
-            # The phase kernel interpolates this (ny, nx) profile directly.
-            # No surface spline is needed for in-memory thickness data.
             x_axis = thickness_mesh._xx
             y_axis = thickness_mesh._yy
             profile = thickness_mesh._zz
@@ -241,17 +232,15 @@ class S4NumericalMeshPhaseDeflector(S4PhaseDeflector, S4NumericalMeshOpticalElem
         x_axis = numpy.asarray(x_axis, dtype=float) * self._coordinate_scaling
         y_axis = numpy.asarray(y_axis, dtype=float) * self._coordinate_scaling
         profile = numpy.asarray(profile, dtype=float) * self._thickness_scaling
-        if self._invert_surface:
-            profile = -profile
 
-        if self._shift_thickness_to_zero:
+        if self._subtract_minimum_thickness:
             finite = numpy.isfinite(profile)
             if numpy.any(finite):
                 profile = profile - numpy.nanmin(profile)
         elif validate and numpy.any(profile[numpy.isfinite(profile)] < 0.0):
             raise ValueError(
                 "Thickness profile contains negative values. Use "
-                "shift_thickness_to_zero=True to subtract the finite minimum."
+                "subtract_minimum_thickness=True to subtract the finite minimum."
             )
 
         return {
@@ -295,10 +284,9 @@ class S4NumericalMeshPhaseDeflector(S4PhaseDeflector, S4NumericalMeshOpticalElem
         txt += "\n    attenuation_coefficient=%g," % self.__inputs["attenuation_coefficient"]
         txt += "\n    dabax=%s," % self.__inputs["dabax"]
         txt += "\n    apply_to_lost=%s," % repr(self.__inputs["apply_to_lost"])
-        txt += "\n    shift_thickness_to_zero=%s," % repr(self.__inputs["shift_thickness_to_zero"])
         txt += "\n    thickness_scaling=%g," % self.__inputs["thickness_scaling"]
         txt += "\n    coordinate_scaling=%g," % self.__inputs["coordinate_scaling"]
-        txt += "\n    invert_surface=%s," % repr(self.__inputs["invert_surface"])
+        txt += "\n    subtract_minimum_thickness=%s," % repr(self.__inputs["subtract_minimum_thickness"])
         txt += "\n    )"
         return txt
 
@@ -408,10 +396,9 @@ if __name__ == "__main__":
         attenuation_coefficient=0,
         dabax=DabaxXraylib(file_f1f2="f1f2_Windt.dat", file_CrossSec="CrossSec_EPDL97.dat"),
         apply_to_lost=True,
-        shift_thickness_to_zero=False,
         thickness_scaling=1,
         coordinate_scaling=1,
-        invert_surface=False,
+        subtract_minimum_thickness=False,
     )
 
     coordinates = ElementCoordinates(p=10, q=0, angle_radial=0, angle_azimuthal=0, angle_radial_out=3.141592654)
