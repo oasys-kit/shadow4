@@ -600,8 +600,7 @@ def apply_phase_deflection(
     (rays reaching the element travel in -Z).
 
     Shadow4 lost-ray flags are used throughout: column 10 > 0 means alive,
-    column 10 < 0 means lost. This function does not use the barc4beams
-    ``0 = alive, 1 = lost`` convention. Rays that are already lost are still
+    column 10 < 0 means lost. Rays that are already lost are still
     propagated through the phase-deflection calculation when they land on
     valid thickness support if ``apply_to_lost`` is True; their negative
     flag is preserved.

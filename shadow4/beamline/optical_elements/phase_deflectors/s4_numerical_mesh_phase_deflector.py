@@ -14,14 +14,6 @@ from it.
 
 The thickness mesh can come from in-memory arrays or a surface file.
 Python code generation requires a file-backed mesh.
-
-This element reproduces the numerical-mesh thin-transmission element
-previously implemented as ``S4ThinTransmission`` in
-``shadow4.beamline.optical_elements.refractors.s4_thin_element`` (which
-inherited ``S4Interface`` and used a Snell's-law refraction step): same
-mesh loading/scaling/inversion, same optical constants, same ray-tracing
-result, but built on the ``S4PhaseDeflector`` family instead of the
-refractors family.
 """
 from __future__ import annotations
 
@@ -327,8 +319,7 @@ class S4NumericalMeshPhaseDeflectorElement(S4PhaseDeflectorElement):
         Same as :meth:`S4PhaseDeflectorElement.trace_beam`, except that
         ``apply_to_lost``, if not explicitly given in ``**params``, defaults
         to the optical element's own persisted ``apply_to_lost`` setting
-        (matching the old ``S4ThinTransmission``'s behavior) rather than
-        unconditionally to True.
+        rather than unconditionally to True.
 
         Parameters
         ----------
@@ -387,9 +378,15 @@ if __name__ == "__main__":
     # optical element number XX
     boundary_shape = None
 
+    # thickness of a parabolic lens (radius 50 um, 1 mm aperture), zz[ix, iy] in m
+    xx = np.linspace(-0.5e-3, 0.5e-3, 101)
+    yy = np.linspace(-0.5e-3, 0.5e-3, 101)
+    XX, YY = np.meshgrid(xx, yy, indexing='ij')
+    zz = (XX ** 2 + YY ** 2) / (2 * 50e-6)
+
     optical_element = S4NumericalMeshPhaseDeflector(
         name='Phase Deflector', boundary_shape=boundary_shape,
-        surface_data_file='/home/srio/Oasys2/lens_interface_1.h5',
+        xx=xx, yy=yy, zz=zz,
         material='Be', density=1.85,
         ri_calculation_mode=3,  # 0=constant, 1=file, 2=xraylib, 3=dabax
         refraction_index=1,

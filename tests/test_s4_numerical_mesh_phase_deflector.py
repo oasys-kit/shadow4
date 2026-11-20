@@ -6,8 +6,7 @@ Tests for shadow4.beamline.optical_elements.phase_deflectors.
 
 Covers both the generic base (S4PhaseDeflector / S4PhaseDeflectorElement,
 and the module-level kernel) and the concrete numerical-mesh element
-(S4NumericalMeshPhaseDeflector / S4NumericalMeshPhaseDeflectorElement), which
-replaces the old refractors-based S4ThinTransmission.
+(S4NumericalMeshPhaseDeflector / S4NumericalMeshPhaseDeflectorElement).
 """
 
 import h5py
@@ -496,7 +495,7 @@ class TestToPythonCode:
                                         ri_calculation_mode=1, prerefl_file="material.dat")
         code = oe.to_python_code()
         assert "prerefl_file='material.dat'," in code
-        assert "surface_data_file='%s'," % str(tmp_path / "mesh.h5") in code
+        assert "surface_data_file=%r," % str(tmp_path / "mesh.h5") in code
 
     def test_generated_code_reproduces_thickness_map(self, tmp_path):
         oe, x_axis, y_axis, z_nx_ny = _make_phase_deflector(
@@ -674,8 +673,7 @@ class TestTraceBeam:
         assert numpy.allclose(out.get_column(13), expected_opd)
 
     def test_apply_to_lost_defaults_from_optical_element_setting(self, tmp_path):
-        # Reproduces old S4ThinTransmission behavior: apply_to_lost is a
-        # persisted optical-element setting, used as the trace_beam default,
+        # apply_to_lost is a persisted optical-element setting, used as the trace_beam default,
         # but still overridable per call.
         oe = self._element(tmp_path, apply_to_lost=True)
         coordinates = ElementCoordinates(p=0.0, q=0.0, angle_radial=0.0, angle_radial_out=numpy.pi)
